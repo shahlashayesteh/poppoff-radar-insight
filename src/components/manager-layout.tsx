@@ -36,8 +36,10 @@ export function ManagerLayout({ children }: { children: React.ReactNode }) {
           <Link to="/"><Logo className="text-2xl" /></Link>
         </div>
         <nav className="flex-1 px-3 py-2 space-y-1">
-          {items.map((it, i) => {
-            const active = (it.key ? false : (path === it.to || (it.to !== "/manager" && path.startsWith(it.to)))) && i === items.findIndex(x => x.to === it.to && !x.key);
+          {items.map((it) => {
+            const active = it.to === "/manager"
+              ? path === "/manager"
+              : path === it.to;
             return (
               <Link
                 key={(it.key ?? "") + it.to + it.label}
