@@ -9,13 +9,24 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ServerIndexRouteImport } from './routes/server.index'
+import { Route as ManagerIndexRouteImport } from './routes/manager.index'
 import { Route as ServerWelcomeRouteImport } from './routes/server.welcome'
 import { Route as ServerProgressRouteImport } from './routes/server.progress'
 import { Route as ServerMenuRouteImport } from './routes/server.menu'
+import { Route as ManagerTeamRouteImport } from './routes/manager.team'
+import { Route as ManagerPrioritiesRouteImport } from './routes/manager.priorities'
+import { Route as ManagerMenuRouteImport } from './routes/manager.menu'
+import { Route as ManagerServerIdRouteImport } from './routes/manager.server.$id'
 
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
@@ -29,6 +40,11 @@ const IndexRoute = IndexRouteImport.update({
 const ServerIndexRoute = ServerIndexRouteImport.update({
   id: '/server/',
   path: '/server/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ManagerIndexRoute = ManagerIndexRouteImport.update({
+  id: '/manager/',
+  path: '/manager/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ServerWelcomeRoute = ServerWelcomeRouteImport.update({
@@ -46,70 +62,139 @@ const ServerMenuRoute = ServerMenuRouteImport.update({
   path: '/server/menu',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ManagerTeamRoute = ManagerTeamRouteImport.update({
+  id: '/manager/team',
+  path: '/manager/team',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ManagerPrioritiesRoute = ManagerPrioritiesRouteImport.update({
+  id: '/manager/priorities',
+  path: '/manager/priorities',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ManagerMenuRoute = ManagerMenuRouteImport.update({
+  id: '/manager/menu',
+  path: '/manager/menu',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ManagerServerIdRoute = ManagerServerIdRouteImport.update({
+  id: '/manager/server/$id',
+  path: '/manager/server/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/settings': typeof SettingsRoute
+  '/manager/menu': typeof ManagerMenuRoute
+  '/manager/priorities': typeof ManagerPrioritiesRoute
+  '/manager/team': typeof ManagerTeamRoute
   '/server/menu': typeof ServerMenuRoute
   '/server/progress': typeof ServerProgressRoute
   '/server/welcome': typeof ServerWelcomeRoute
+  '/manager/': typeof ManagerIndexRoute
   '/server/': typeof ServerIndexRoute
+  '/manager/server/$id': typeof ManagerServerIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/settings': typeof SettingsRoute
+  '/manager/menu': typeof ManagerMenuRoute
+  '/manager/priorities': typeof ManagerPrioritiesRoute
+  '/manager/team': typeof ManagerTeamRoute
   '/server/menu': typeof ServerMenuRoute
   '/server/progress': typeof ServerProgressRoute
   '/server/welcome': typeof ServerWelcomeRoute
+  '/manager': typeof ManagerIndexRoute
   '/server': typeof ServerIndexRoute
+  '/manager/server/$id': typeof ManagerServerIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/settings': typeof SettingsRoute
+  '/manager/menu': typeof ManagerMenuRoute
+  '/manager/priorities': typeof ManagerPrioritiesRoute
+  '/manager/team': typeof ManagerTeamRoute
   '/server/menu': typeof ServerMenuRoute
   '/server/progress': typeof ServerProgressRoute
   '/server/welcome': typeof ServerWelcomeRoute
+  '/manager/': typeof ManagerIndexRoute
   '/server/': typeof ServerIndexRoute
+  '/manager/server/$id': typeof ManagerServerIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
     | '/login'
+    | '/settings'
+    | '/manager/menu'
+    | '/manager/priorities'
+    | '/manager/team'
     | '/server/menu'
     | '/server/progress'
     | '/server/welcome'
+    | '/manager/'
     | '/server/'
+    | '/manager/server/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/login'
+    | '/settings'
+    | '/manager/menu'
+    | '/manager/priorities'
+    | '/manager/team'
     | '/server/menu'
     | '/server/progress'
     | '/server/welcome'
+    | '/manager'
     | '/server'
+    | '/manager/server/$id'
   id:
     | '__root__'
     | '/'
     | '/login'
+    | '/settings'
+    | '/manager/menu'
+    | '/manager/priorities'
+    | '/manager/team'
     | '/server/menu'
     | '/server/progress'
     | '/server/welcome'
+    | '/manager/'
     | '/server/'
+    | '/manager/server/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   LoginRoute: typeof LoginRoute
+  SettingsRoute: typeof SettingsRoute
+  ManagerMenuRoute: typeof ManagerMenuRoute
+  ManagerPrioritiesRoute: typeof ManagerPrioritiesRoute
+  ManagerTeamRoute: typeof ManagerTeamRoute
   ServerMenuRoute: typeof ServerMenuRoute
   ServerProgressRoute: typeof ServerProgressRoute
   ServerWelcomeRoute: typeof ServerWelcomeRoute
+  ManagerIndexRoute: typeof ManagerIndexRoute
   ServerIndexRoute: typeof ServerIndexRoute
+  ManagerServerIdRoute: typeof ManagerServerIdRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/login': {
       id: '/login'
       path: '/login'
@@ -129,6 +214,13 @@ declare module '@tanstack/react-router' {
       path: '/server'
       fullPath: '/server/'
       preLoaderRoute: typeof ServerIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/manager/': {
+      id: '/manager/'
+      path: '/manager'
+      fullPath: '/manager/'
+      preLoaderRoute: typeof ManagerIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/server/welcome': {
@@ -152,16 +244,50 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ServerMenuRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/manager/team': {
+      id: '/manager/team'
+      path: '/manager/team'
+      fullPath: '/manager/team'
+      preLoaderRoute: typeof ManagerTeamRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/manager/priorities': {
+      id: '/manager/priorities'
+      path: '/manager/priorities'
+      fullPath: '/manager/priorities'
+      preLoaderRoute: typeof ManagerPrioritiesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/manager/menu': {
+      id: '/manager/menu'
+      path: '/manager/menu'
+      fullPath: '/manager/menu'
+      preLoaderRoute: typeof ManagerMenuRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/manager/server/$id': {
+      id: '/manager/server/$id'
+      path: '/manager/server/$id'
+      fullPath: '/manager/server/$id'
+      preLoaderRoute: typeof ManagerServerIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   LoginRoute: LoginRoute,
+  SettingsRoute: SettingsRoute,
+  ManagerMenuRoute: ManagerMenuRoute,
+  ManagerPrioritiesRoute: ManagerPrioritiesRoute,
+  ManagerTeamRoute: ManagerTeamRoute,
   ServerMenuRoute: ServerMenuRoute,
   ServerProgressRoute: ServerProgressRoute,
   ServerWelcomeRoute: ServerWelcomeRoute,
+  ManagerIndexRoute: ManagerIndexRoute,
   ServerIndexRoute: ServerIndexRoute,
+  ManagerServerIdRoute: ManagerServerIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
