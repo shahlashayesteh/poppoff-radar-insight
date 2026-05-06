@@ -17,6 +17,7 @@ import { Route as ManagerIndexRouteImport } from './routes/manager.index'
 import { Route as ServerWelcomeRouteImport } from './routes/server.welcome'
 import { Route as ServerProgressRouteImport } from './routes/server.progress'
 import { Route as ServerMenuRouteImport } from './routes/server.menu'
+import { Route as ServerLeaderboardRouteImport } from './routes/server.leaderboard'
 import { Route as ManagerTeamRouteImport } from './routes/manager.team'
 import { Route as ManagerPrioritiesRouteImport } from './routes/manager.priorities'
 import { Route as ManagerMenuRouteImport } from './routes/manager.menu'
@@ -62,6 +63,11 @@ const ServerMenuRoute = ServerMenuRouteImport.update({
   path: '/server/menu',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ServerLeaderboardRoute = ServerLeaderboardRouteImport.update({
+  id: '/server/leaderboard',
+  path: '/server/leaderboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ManagerTeamRoute = ManagerTeamRouteImport.update({
   id: '/manager/team',
   path: '/manager/team',
@@ -90,6 +96,7 @@ export interface FileRoutesByFullPath {
   '/manager/menu': typeof ManagerMenuRoute
   '/manager/priorities': typeof ManagerPrioritiesRoute
   '/manager/team': typeof ManagerTeamRoute
+  '/server/leaderboard': typeof ServerLeaderboardRoute
   '/server/menu': typeof ServerMenuRoute
   '/server/progress': typeof ServerProgressRoute
   '/server/welcome': typeof ServerWelcomeRoute
@@ -104,6 +111,7 @@ export interface FileRoutesByTo {
   '/manager/menu': typeof ManagerMenuRoute
   '/manager/priorities': typeof ManagerPrioritiesRoute
   '/manager/team': typeof ManagerTeamRoute
+  '/server/leaderboard': typeof ServerLeaderboardRoute
   '/server/menu': typeof ServerMenuRoute
   '/server/progress': typeof ServerProgressRoute
   '/server/welcome': typeof ServerWelcomeRoute
@@ -119,6 +127,7 @@ export interface FileRoutesById {
   '/manager/menu': typeof ManagerMenuRoute
   '/manager/priorities': typeof ManagerPrioritiesRoute
   '/manager/team': typeof ManagerTeamRoute
+  '/server/leaderboard': typeof ServerLeaderboardRoute
   '/server/menu': typeof ServerMenuRoute
   '/server/progress': typeof ServerProgressRoute
   '/server/welcome': typeof ServerWelcomeRoute
@@ -135,6 +144,7 @@ export interface FileRouteTypes {
     | '/manager/menu'
     | '/manager/priorities'
     | '/manager/team'
+    | '/server/leaderboard'
     | '/server/menu'
     | '/server/progress'
     | '/server/welcome'
@@ -149,6 +159,7 @@ export interface FileRouteTypes {
     | '/manager/menu'
     | '/manager/priorities'
     | '/manager/team'
+    | '/server/leaderboard'
     | '/server/menu'
     | '/server/progress'
     | '/server/welcome'
@@ -163,6 +174,7 @@ export interface FileRouteTypes {
     | '/manager/menu'
     | '/manager/priorities'
     | '/manager/team'
+    | '/server/leaderboard'
     | '/server/menu'
     | '/server/progress'
     | '/server/welcome'
@@ -178,6 +190,7 @@ export interface RootRouteChildren {
   ManagerMenuRoute: typeof ManagerMenuRoute
   ManagerPrioritiesRoute: typeof ManagerPrioritiesRoute
   ManagerTeamRoute: typeof ManagerTeamRoute
+  ServerLeaderboardRoute: typeof ServerLeaderboardRoute
   ServerMenuRoute: typeof ServerMenuRoute
   ServerProgressRoute: typeof ServerProgressRoute
   ServerWelcomeRoute: typeof ServerWelcomeRoute
@@ -244,6 +257,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ServerMenuRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/server/leaderboard': {
+      id: '/server/leaderboard'
+      path: '/server/leaderboard'
+      fullPath: '/server/leaderboard'
+      preLoaderRoute: typeof ServerLeaderboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/manager/team': {
       id: '/manager/team'
       path: '/manager/team'
@@ -282,6 +302,7 @@ const rootRouteChildren: RootRouteChildren = {
   ManagerMenuRoute: ManagerMenuRoute,
   ManagerPrioritiesRoute: ManagerPrioritiesRoute,
   ManagerTeamRoute: ManagerTeamRoute,
+  ServerLeaderboardRoute: ServerLeaderboardRoute,
   ServerMenuRoute: ServerMenuRoute,
   ServerProgressRoute: ServerProgressRoute,
   ServerWelcomeRoute: ServerWelcomeRoute,
@@ -292,13 +313,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
