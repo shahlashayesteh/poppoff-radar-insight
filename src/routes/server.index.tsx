@@ -1,119 +1,130 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ServerLayout } from "@/components/server-layout";
-import { StatusCircle, StatusBadge } from "@/components/status";
-import { Button } from "@/components/ui/button";
-import { sarahCategories, statusColor, restaurant } from "@/lib/sample-data";
-import { Sparkles, Flame, Trophy, ChevronRight } from "lucide-react";
+import { Bell, ChevronDown, Trophy, Award, Flame, ArrowRight } from "lucide-react";
 
 export const Route = createFileRoute("/server/")({
   component: ServerDashboard,
 });
 
+function Ring({ value, color, label }: { value: number; color: string; label: string }) {
+  const r = 42;
+  const c = 2 * Math.PI * r;
+  const offset = c - (value / 100) * c;
+  return (
+    <div className="flex flex-col items-center gap-2">
+      <div className="relative h-28 w-28">
+        <svg viewBox="0 0 100 100" className="h-full w-full -rotate-90">
+          <circle cx="50" cy="50" r={r} fill="none" stroke={`color-mix(in oklab, ${color} 18%, white)`} strokeWidth="9" />
+          <circle
+            cx="50" cy="50" r={r} fill="none" stroke={color} strokeWidth="9"
+            strokeDasharray={c} strokeDashoffset={offset} strokeLinecap="round"
+          />
+        </svg>
+        <div className="absolute inset-0 grid place-items-center">
+          <span className="font-display text-2xl font-bold">{value}%</span>
+        </div>
+      </div>
+      <div className="text-sm font-semibold">{label}</div>
+    </div>
+  );
+}
+
 function ServerDashboard() {
-  const focus = sarahCategories.find((c) => c.key === "wine")!;
-  const strongest = sarahCategories.find((c) => c.key === "desserts")!;
   return (
     <ServerLayout>
       <div className="px-5 pt-6">
-        <div className="text-xs uppercase tracking-widest text-muted-foreground">Sarah · {restaurant.week}</div>
-        <h1 className="font-display text-3xl font-semibold mt-2 leading-tight">
-          Your Popp Off stats just dropped <span className="inline-block">🟢</span>
+        <div className="flex items-start justify-between">
+          <div className="flex items-center gap-2 text-sm">
+            <span className="text-xl">👋</span>
+            <span className="font-medium">Hey Sarah!</span>
+          </div>
+          <button className="relative h-9 w-9 grid place-items-center rounded-full border border-border">
+            <Bell className="h-4 w-4" />
+            <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-brand-orange" />
+          </button>
+        </div>
+
+        <h1 className="mt-4 font-display text-[44px] leading-[1] font-extrabold tracking-tight">
+          Stats just<br />
+          <span style={{ color: "var(--brand-green)" }}>dropped</span> 🎉
         </h1>
+        <p className="mt-4 text-sm text-foreground/80">Here's how you crushed it</p>
+        <button className="mt-1 inline-flex items-center gap-1 text-sm font-medium">
+          15th – 21st May 2025 <ChevronDown className="h-4 w-4" />
+        </button>
       </div>
 
-      {/* Hero focus card */}
-      <div className="px-5 mt-5">
-        <div className="rounded-3xl gradient-hero text-white p-6 relative overflow-hidden">
-          <div className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-2.5 py-1 text-[11px] text-white/80">
-            <Sparkles className="h-3 w-3" /> Weekly Focus
-          </div>
-          <p className="mt-4 text-lg leading-snug font-medium">
-            This week try: increase wine confidence with seafood tables.
-          </p>
-          <p className="mt-3 text-sm text-white/70">
-            Your strongest area is <span className="text-success font-medium">desserts</span>. Your biggest opportunity
-            this week is <span className="text-white font-medium">wine</span>.
-          </p>
-          <div className="mt-5 flex items-center justify-between">
-            <Button size="sm" className="bg-success text-ink hover:bg-success/90 rounded-full">Acknowledge</Button>
-            <Link to="/server/progress" className="text-xs text-white/70 hover:text-white inline-flex items-center gap-1">
-              Previous weeks <ChevronRight className="h-3 w-3" />
-            </Link>
-          </div>
-        </div>
-      </div>
-
-      {/* Status circles */}
-      <div className="px-5 mt-8">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="font-display text-lg font-semibold">This week's stats</h2>
-          <span className="text-xs text-muted-foreground">Percentage to personal target</span>
-        </div>
-        <div className="grid grid-cols-4 gap-y-6 gap-x-2">
-          {sarahCategories.map((c) => (
-            <StatusCircle key={c.key} status={c.status} label={c.name} score={c.score} size={68} />
-          ))}
-        </div>
-      </div>
-
-      {/* Hero category — Wine */}
-      <div className="px-5 mt-8">
-        <div className="rounded-2xl bg-white border border-border p-5">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-xs uppercase tracking-widest text-muted-foreground">{focus.name}</div>
-              <div className="mt-1 font-display text-xl font-semibold">Opportunity</div>
+      {/* Top 3 rings */}
+      <div className="px-5 mt-6">
+        <div className="rounded-3xl bg-white border border-border p-5 shadow-sm">
+          <div className="font-semibold">Your Top 3</div>
+          <div className="mt-4 grid grid-cols-3 gap-2">
+            <div className="flex flex-col items-center">
+              <div className="text-xs text-muted-foreground mb-2">Wine</div>
+              <Ring value={78} color="var(--brand-orange)" label="" />
+              <div className="mt-1 text-xs text-brand-green font-semibold">↑ +12%</div>
+              <div className="text-[10px] text-muted-foreground">vs last week</div>
             </div>
-            <StatusBadge status={focus.status} />
-          </div>
-          <p className="mt-3 text-sm text-foreground">{focus.message}</p>
-          {focus.recommendation && (
-            <div className="mt-4 rounded-xl p-4" style={{ backgroundColor: "color-mix(in oklab, var(--success) 8%, white)", border: "1px solid color-mix(in oklab, var(--success) 30%, transparent)" }}>
-              <div className="text-xs font-medium text-success uppercase tracking-widest">Menu Recommendation</div>
-              <p className="mt-2 text-sm">{focus.recommendation}</p>
+            <div className="flex flex-col items-center">
+              <div className="text-xs text-muted-foreground mb-2">Cocktails</div>
+              <Ring value={72} color="var(--brand-green)" label="" />
+              <div className="mt-1 text-xs text-brand-green font-semibold">↑ +8%</div>
+              <div className="text-[10px] text-muted-foreground">vs last week</div>
             </div>
-          )}
+            <div className="flex flex-col items-center">
+              <div className="text-xs text-muted-foreground mb-2">Desserts</div>
+              <Ring value={64} color="oklch(0.82 0.16 80)" label="" />
+              <div className="mt-1 text-xs text-brand-green font-semibold">↑ +18%</div>
+              <div className="text-[10px] text-muted-foreground">vs last week</div>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Strongest area */}
+      {/* Smashed it card */}
       <div className="px-5 mt-4">
-        <div className="rounded-2xl bg-white border border-border p-5">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-xs uppercase tracking-widest text-muted-foreground">{strongest.name}</div>
-              <div className="mt-1 font-display text-xl font-semibold">Your strongest area</div>
+        <div className="rounded-3xl border-2 p-5 flex items-center gap-4"
+          style={{ borderColor: "color-mix(in oklab, var(--brand-green) 40%, transparent)", background: "color-mix(in oklab, var(--brand-green) 8%, white)" }}>
+          <Trophy className="h-12 w-12 text-brand-green shrink-0" />
+          <div className="flex-1">
+            <div className="font-display text-lg font-bold leading-tight">
+              You smashed <span className="text-brand-green">desserts</span> this week!
             </div>
-            <StatusBadge status={strongest.status}>Strong</StatusBadge>
+            <div className="mt-1 text-xs"><span className="text-brand-green font-semibold">+18%</span> <span className="text-muted-foreground">vs last week</span></div>
           </div>
-          <p className="mt-3 text-sm text-foreground">{strongest.message}</p>
+          <div className="h-9 w-9 rounded-full bg-brand-green text-white grid place-items-center text-sm">✓</div>
         </div>
       </div>
 
-      {/* Progress */}
-      <div className="px-5 mt-8">
-        <h2 className="font-display text-lg font-semibold mb-3">Your progress</h2>
-        <div className="grid grid-cols-2 gap-3">
-          <div className="rounded-2xl bg-ink text-white p-4">
-            <Flame className="h-5 w-5 text-warning" />
-            <div className="mt-3 font-display text-3xl font-semibold">3</div>
-            <div className="text-xs text-white/60 mt-1">Week streak</div>
-          </div>
-          <div className="rounded-2xl bg-white border border-border p-4">
-            <Trophy className="h-5 w-5 text-success" />
-            <div className="mt-3 text-sm font-medium">Personal best</div>
-            <div className="text-xs text-muted-foreground mt-1">Desserts hit green 4 weeks in a row</div>
-          </div>
-        </div>
-        <div className="mt-3 rounded-2xl bg-white border border-border p-5">
-          <div className="flex items-center justify-between text-sm">
-            <span className="font-medium">Popp Off Certified High Performer</span>
-            <span className="text-muted-foreground">4 / 24 weeks</span>
+      {/* Daily Goal */}
+      <div className="px-5 mt-4">
+        <div className="rounded-3xl bg-white border border-border p-5">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="font-semibold text-sm">Daily Goal</div>
+              <div className="mt-1 font-display"><span className="text-3xl font-extrabold">£160</span> <span className="text-muted-foreground text-sm">/ £200</span></div>
+            </div>
+            <Award className="h-10 w-10" style={{ color: "oklch(0.55 0.18 270)" }} />
           </div>
           <div className="mt-3 h-2 rounded-full bg-muted overflow-hidden">
-            <div className="h-full rounded-full" style={{ width: "16%", backgroundColor: statusColor("green") }} />
+            <div className="h-full rounded-full bg-brand-green" style={{ width: "80%" }} />
           </div>
+          <div className="mt-2 text-xs text-brand-green font-semibold">80% of your goal</div>
         </div>
+      </div>
+
+      {/* Streak preview */}
+      <div className="px-5 mt-4">
+        <Link to="/server/progress" className="block rounded-3xl bg-white border border-border p-4 flex items-center gap-3 hover:border-brand-green transition">
+          <div className="h-10 w-10 rounded-full bg-brand-orange/15 grid place-items-center">
+            <Flame className="h-5 w-5 text-brand-orange" />
+          </div>
+          <div className="flex-1">
+            <div className="text-sm font-semibold">Current streak: 12 days 🔥</div>
+            <div className="text-xs text-muted-foreground">View milestones & rewards</div>
+          </div>
+          <ArrowRight className="h-4 w-4 text-muted-foreground" />
+        </Link>
       </div>
     </ServerLayout>
   );

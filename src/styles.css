@@ -52,9 +52,11 @@
 
 :root {
   --radius: 1rem;
-  /* Brand: deep black ink, off white canvas */
-  --ink: oklch(0.13 0 0);          /* #0A0A0A */
-  --canvas: oklch(0.975 0 0);      /* #F7F7F7 */
+  /* Brand */
+  --ink: oklch(0.18 0 0);
+  --canvas: oklch(0.985 0 0);
+  --brand-orange: oklch(0.78 0.17 60);   /* Popp orange #F4A23C */
+  --brand-green: oklch(0.66 0.20 145);   /* Off green #1FAA4A */
 
   --background: oklch(1 0 0);
   --foreground: oklch(0.13 0 0);
@@ -74,12 +76,12 @@
   --destructive-foreground: oklch(0.985 0 0);
 
   /* Status palette */
-  --success: oklch(0.72 0.2 145);              /* #00C853 */
-  --success-foreground: oklch(0.13 0 0);
-  --warning: oklch(0.82 0.17 80);              /* #FFB300 */
-  --warning-foreground: oklch(0.13 0 0);
-  --opportunity: oklch(0.62 0.22 27);          /* red opportunity */
-  --opportunity-foreground: oklch(0.985 0 0);
+  --success: oklch(0.66 0.20 145);             /* green */
+  --success-foreground: oklch(0.99 0 0);
+  --warning: oklch(0.78 0.17 60);              /* orange */
+  --warning-foreground: oklch(0.18 0 0);
+  --opportunity: oklch(0.62 0.22 27);          /* red */
+  --opportunity-foreground: oklch(0.99 0 0);
 
   --border: oklch(0.92 0 0);
   --input: oklch(0.92 0 0);
@@ -153,16 +155,23 @@
   .text-warning { color: var(--warning); }
   .bg-opportunity { background-color: var(--opportunity); }
   .text-opportunity { color: var(--opportunity); }
+  .text-brand-orange { color: var(--brand-orange); }
+  .text-brand-green { color: var(--brand-green); }
+  .bg-brand-orange { background-color: var(--brand-orange); }
+  .bg-brand-green { background-color: var(--brand-green); }
   .gradient-ink {
-    background: linear-gradient(135deg, oklch(0.13 0 0), oklch(0.22 0 0));
+    background: linear-gradient(135deg, oklch(0.18 0 0), oklch(0.28 0 0));
   }
   .gradient-hero {
     background:
-      radial-gradient(1200px 600px at 80% -10%, color-mix(in oklab, var(--success) 18%, transparent), transparent 60%),
-      radial-gradient(900px 500px at -10% 110%, color-mix(in oklab, var(--warning) 18%, transparent), transparent 60%),
+      radial-gradient(1200px 600px at 80% -10%, color-mix(in oklab, var(--success) 22%, transparent), transparent 60%),
+      radial-gradient(900px 500px at -10% 110%, color-mix(in oklab, var(--brand-orange) 22%, transparent), transparent 60%),
       var(--ink);
   }
-  .ring-status-success { box-shadow: 0 0 0 6px color-mix(in oklab, var(--success) 18%, transparent); }
-  .ring-status-warning { box-shadow: 0 0 0 6px color-mix(in oklab, var(--warning) 18%, transparent); }
-  .ring-status-opportunity { box-shadow: 0 0 0 6px color-mix(in oklab, var(--opportunity) 18%, transparent); }
+  .gradient-confetti {
+    background:
+      radial-gradient(circle at 20% 20%, color-mix(in oklab, var(--brand-orange) 18%, transparent), transparent 50%),
+      radial-gradient(circle at 80% 60%, color-mix(in oklab, var(--brand-green) 18%, transparent), transparent 50%),
+      var(--canvas);
+  }
 }
