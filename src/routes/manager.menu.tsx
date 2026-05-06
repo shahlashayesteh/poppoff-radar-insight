@@ -1,105 +1,160 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { ManagerLayout } from "@/components/manager-layout";
-import { menuItems } from "@/lib/sample-data";
-import { Button } from "@/components/ui/button";
-import { Upload, FileText, Image as ImageIcon, FileType } from "lucide-react";
+import { Brain, ChevronRight, Utensils, Wine, Star, Camera, FileText, Sparkles, TrendingUp, Lightbulb } from "lucide-react";
 
 export const Route = createFileRoute("/manager/menu")({
   component: MenuIntel,
 });
 
 const uploads = [
-  { label: "Upload Food Menu", icon: FileText },
-  { label: "Upload Wine List", icon: FileText },
-  { label: "Upload Specials", icon: FileText },
-  { label: "Upload Menu Photo", icon: ImageIcon },
-  { label: "Upload PDF", icon: FileType },
+  { icon: Utensils, label: "Upload Food Menu", sub: "PDF, Word, Excel, or Image", c: "var(--brand-green)" },
+  { icon: Wine, label: "Upload Wine List", sub: "PDF, Word, Excel, or Image", c: "oklch(0.5 0.18 290)" },
+  { icon: Star, label: "Upload Specials", sub: "PDF, Word, Excel, or Image", c: "var(--brand-orange)" },
+  { icon: Camera, label: "Upload Menu Photo", sub: "JPG, PNG, or HEIC", c: "oklch(0.65 0.15 240)" },
+  { icon: FileText, label: "Upload PDF", sub: "Full menu document", c: "var(--opportunity)" },
 ];
 
-const aiExamples = [
-  { tag: "If server is weak on wine", text: "After the salmon, try: \u201CWould you like to try our Sancerre? It is one of our most popular pairings.\u201D" },
-  { tag: "If server is weak on sides", text: "With the ribeye, try: \u201CWould you like to add truffle fries or seasonal greens with that?\u201D" },
-  { tag: "If server is weak on bottled water", text: "At the start of the table, try: \u201CWould you prefer still or sparkling water for the table?\u201D" },
+const rows = [
+  { name: "Grilled Salmon", cat: "Main Course", price: "£24", margin: "High", marginC: "var(--brand-green)", pair: "Sancerre", prio: "High Priority", prioC: "orange", status: "Promote" },
+  { name: "Ribeye Steak", cat: "Main Course", price: "£36", margin: "High", marginC: "var(--brand-green)", pair: "Malbec", prio: "High Priority", prioC: "orange", status: "Promote" },
+  { name: "Chocolate Fondant", cat: "Dessert", price: "£12", margin: "Medium", marginC: "var(--brand-orange)", pair: "Espresso Martini", prio: "Standard", prioC: "gray", status: "Consider" },
+  { name: "Truffle Fries", cat: "Side", price: "£7", margin: "High", marginC: "var(--brand-green)", pair: "Ribeye Steak", prio: "High Priority", prioC: "orange", status: "Promote" },
+  { name: "Sancerre", cat: "Wine by Glass", price: "£14", margin: "High", marginC: "var(--brand-green)", pair: "Grilled Salmon", prio: "High Priority", prioC: "orange", status: "Promote" },
+  { name: "Sparkling Water", cat: "Bottled Water", price: "£5", margin: "High", marginC: "var(--brand-green)", pair: "Start of Service", prio: "Standard", prioC: "gray", status: "Keep" },
 ];
+
+const recs = [
+  { i: TrendingUp, t: "Push High Margin Items", d: "Grilled Salmon and Ribeye Steak have strong margins and pair well with your top wines.", cta: "Coach your team to lead with these." },
+  { i: Wine, t: "Pair to Impress", d: "Sancerre is an ideal match for Grilled Salmon. Train your team to suggest this pairing.", cta: "Build pairing confidence." },
+  { i: Star, t: "Highlight Desserts", d: "Chocolate Fondant is a crowd favorite. Feature it in your verbal close.", cta: "Make dessert irresistible." },
+  { i: FileText, t: "Don't Forget the Basics", d: "Sparkling Water is a low-effort add that boosts check averages. Start every table.", cta: "Turn basics into wins." },
+];
+
+const flagStyle = (c: string) => c === "orange"
+  ? { bg: "color-mix(in oklab, var(--brand-orange) 18%, white)", fg: "var(--brand-orange)" }
+  : { bg: "var(--muted)", fg: "var(--muted-foreground)" };
 
 function MenuIntel() {
   return (
     <ManagerLayout>
-      <div className="px-8 py-8">
-        <div className="text-xs uppercase tracking-widest text-muted-foreground">Menu Intelligence</div>
-        <h1 className="font-display text-4xl font-semibold tracking-tight mt-2">Turn your menu into personalised coaching.</h1>
-        <p className="mt-3 text-muted-foreground max-w-3xl">
-          Managers upload the menu once during setup. Popp Off reads the menu and connects server stats to specific
-          recommendations, pairings, and weekly priorities.
-        </p>
-
-        {/* Upload row */}
-        <div className="mt-8 grid grid-cols-2 md:grid-cols-5 gap-3">
-          {uploads.map((u) => (
-            <button key={u.label} className="rounded-2xl border border-dashed border-border bg-white hover:border-ink hover:bg-canvas p-5 text-left transition">
-              <div className="flex items-center gap-2">
-                <u.icon className="h-4 w-4 text-muted-foreground" />
-                <Upload className="h-3 w-3 text-muted-foreground ml-auto" />
-              </div>
-              <div className="mt-3 text-sm font-medium">{u.label}</div>
-              <div className="text-xs text-muted-foreground mt-1">Sample data shown</div>
-            </button>
-          ))}
+      <div className="px-8 py-7">
+        <div className="flex items-start justify-between gap-6 flex-wrap">
+          <div>
+            <h1 className="font-display text-5xl font-extrabold tracking-tight inline-flex items-center gap-3">
+              Menu Intelligence <span className="text-brand-orange text-3xl">⚡</span>
+            </h1>
+            <div className="mt-2 font-bold text-brand-green">Turn your menu into coaching.</div>
+            <p className="mt-2 text-sm text-foreground/70 max-w-xl">
+              Upload your menu, we'll do the rest. Get insights, pairings, and priority guidance to help your team sell what shines.
+            </p>
+          </div>
+          <div className="rounded-2xl border border-border p-5 flex items-start gap-3 max-w-sm bg-white">
+            <Brain className="h-7 w-7 text-brand-green shrink-0" />
+            <div>
+              <div className="font-bold text-brand-green">AI-Powered Analysis</div>
+              <div className="text-sm text-muted-foreground mt-1">Our AI reads your menu and delivers coaching that's specific to your menu.</div>
+            </div>
+          </div>
         </div>
 
-        {/* Menu table */}
-        <div className="mt-10 rounded-2xl bg-white border border-border overflow-hidden">
-          <div className="px-5 py-4 border-b border-border flex items-center justify-between">
-            <h2 className="font-display text-lg font-semibold">Parsed menu</h2>
-            <span className="text-xs text-muted-foreground">Sample data</span>
+        <div className="mt-8 grid lg:grid-cols-12 gap-5">
+          {/* Upload column */}
+          <div className="lg:col-span-4 rounded-2xl bg-white border border-border p-5">
+            <h3 className="font-display font-bold text-lg mb-4">Upload Your Menu</h3>
+            <div className="space-y-3">
+              {uploads.map((u) => (
+                <button key={u.label} className="w-full rounded-xl border border-border p-3 flex items-center gap-3 text-left hover:border-brand-green transition">
+                  <div className="h-10 w-10 rounded-lg grid place-items-center" style={{ background: `color-mix(in oklab, ${u.c} 12%, white)` }}>
+                    <u.icon className="h-5 w-5" style={{ color: u.c }} />
+                  </div>
+                  <div className="flex-1">
+                    <div className="font-semibold text-sm">{u.label}</div>
+                    <div className="text-xs text-muted-foreground">{u.sub}</div>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                </button>
+              ))}
+            </div>
+            <div className="mt-4 rounded-xl px-3 py-2 text-xs flex items-center gap-2"
+              style={{ background: "color-mix(in oklab, var(--brand-green) 10%, white)", color: "var(--brand-green)" }}>
+              ✓ We'll parse your files and extract items, categories, prices, and more.
+            </div>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-canvas text-xs uppercase tracking-widest text-muted-foreground">
-                <tr>
-                  <th className="text-left px-5 py-3">Item</th>
-                  <th className="text-left px-3 py-3">Category</th>
-                  <th className="text-left px-3 py-3">Price</th>
-                  <th className="text-left px-3 py-3">Margin</th>
-                  <th className="text-left px-3 py-3">Pairing</th>
-                  <th className="text-left px-3 py-3">Priority</th>
-                  <th className="text-left px-3 py-3">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {menuItems.map((m) => (
-                  <tr key={m.name} className="border-t border-border">
-                    <td className="px-5 py-3 font-medium">{m.name}</td>
-                    <td className="px-3">{m.category}</td>
-                    <td className="px-3">£{m.price}</td>
-                    <td className="px-3">{m.margin}</td>
-                    <td className="px-3">{m.pairing}</td>
-                    <td className="px-3">
-                      <span className={`text-xs px-2 py-1 rounded-full ${m.priority === "High Priority" ? "bg-success/15 text-success" : "bg-muted text-muted-foreground"}`}>
-                        {m.priority}
-                      </span>
-                    </td>
-                    <td className="px-3">
-                      <Button size="sm" variant="ghost" className="h-7 text-xs">{m.status}</Button>
-                    </td>
-                  </tr>
+
+          {/* Parsed table */}
+          <div className="lg:col-span-8 space-y-5">
+            <div className="rounded-2xl bg-white border border-border p-5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <h3 className="font-display font-bold text-lg">Parsed Menu Data</h3>
+                  <span className="text-xs font-semibold px-2 py-1 rounded-md"
+                    style={{ background: "color-mix(in oklab, var(--brand-green) 14%, white)", color: "var(--brand-green)" }}>24 items parsed</span>
+                </div>
+              </div>
+              <div className="mt-4 overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="text-xs text-muted-foreground">
+                    <tr className="text-left">
+                      <th className="font-medium pb-3">Item Name</th>
+                      <th className="font-medium pb-3">Category</th>
+                      <th className="font-medium pb-3">Price</th>
+                      <th className="font-medium pb-3">Margin</th>
+                      <th className="font-medium pb-3">Pairing</th>
+                      <th className="font-medium pb-3">Priority</th>
+                      <th className="font-medium pb-3">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rows.map((r) => {
+                      const f = flagStyle(r.prioC);
+                      return (
+                        <tr key={r.name} className="border-t border-border">
+                          <td className="py-3 font-semibold flex items-center gap-2">
+                            <span className="h-6 w-6 rounded grid place-items-center text-xs" style={{ background: "color-mix(in oklab, var(--brand-green) 14%, white)", color: "var(--brand-green)" }}>●</span>
+                            {r.name}
+                          </td>
+                          <td className="py-3">{r.cat}</td>
+                          <td className="py-3 font-semibold">{r.price}</td>
+                          <td className="py-3 font-semibold" style={{ color: r.marginC }}>{r.margin}</td>
+                          <td className="py-3">{r.pair}</td>
+                          <td className="py-3"><span className="text-xs font-semibold px-2 py-1 rounded" style={{ background: f.bg, color: f.fg }}>{r.prio}</span></td>
+                          <td className="py-3"><span className="text-xs font-semibold px-2 py-1 rounded" style={{ background: "color-mix(in oklab, var(--brand-green) 14%, white)", color: "var(--brand-green)" }}>{r.status}</span></td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              <div className="mt-3 text-xs text-muted-foreground inline-flex items-center gap-2">
+                <Sparkles className="h-3.5 w-3.5 text-brand-orange" /> Items parsed and analyzed with AI. Review and adjust anytime.
+              </div>
+            </div>
+
+            <div className="rounded-2xl bg-white border border-border p-5">
+              <h3 className="font-display font-bold text-brand-green">AI Recommendations – Menu-Specific Coaching</h3>
+              <div className="mt-4 grid grid-cols-2 lg:grid-cols-4 gap-3">
+                {recs.map((r) => (
+                  <div key={r.t} className="rounded-xl border border-border p-4">
+                    <r.i className="h-5 w-5 text-brand-orange" />
+                    <div className="font-semibold mt-2">{r.t}</div>
+                    <div className="text-xs text-muted-foreground mt-1">{r.d}</div>
+                    <div className="mt-2 text-xs text-brand-green font-semibold">{r.cta}</div>
+                  </div>
                 ))}
-              </tbody>
-            </table>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* AI examples */}
-        <div className="mt-10">
-          <h2 className="font-display text-2xl font-semibold">AI recommendation examples</h2>
-          <div className="mt-4 grid md:grid-cols-3 gap-4">
-            {aiExamples.map((a) => (
-              <div key={a.tag} className="rounded-2xl bg-ink text-white p-6">
-                <div className="text-xs uppercase tracking-widest text-success">{a.tag}</div>
-                <p className="mt-3 text-sm text-white/85">{a.text}</p>
-              </div>
-            ))}
+        <div className="mt-5 rounded-xl px-5 py-3 flex items-center justify-between"
+          style={{ background: "color-mix(in oklab, var(--brand-green) 10%, white)" }}>
+          <div className="text-sm inline-flex items-center gap-2">
+            <Lightbulb className="h-4 w-4 text-brand-orange" /> <span className="font-semibold">Tip:</span> Review your parsed items, adjust categories or pairings, and set weekly priorities to guide your team.
           </div>
+          <Link to="/manager/priorities" className="rounded-lg px-4 py-2 text-sm font-bold inline-flex items-center gap-2"
+            style={{ background: "var(--brand-green)", color: "white" }}>
+            Go to Weekly Priorities <ChevronRight className="h-4 w-4" />
+          </Link>
         </div>
       </div>
     </ManagerLayout>
