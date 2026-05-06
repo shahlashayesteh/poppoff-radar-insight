@@ -76,12 +76,12 @@
   --destructive-foreground: oklch(0.985 0 0);
 
   /* Status palette */
-  --success: oklch(0.72 0.2 145);              /* #00C853 */
-  --success-foreground: oklch(0.13 0 0);
-  --warning: oklch(0.82 0.17 80);              /* #FFB300 */
-  --warning-foreground: oklch(0.13 0 0);
-  --opportunity: oklch(0.62 0.22 27);          /* red opportunity */
-  --opportunity-foreground: oklch(0.985 0 0);
+  --success: oklch(0.66 0.20 145);             /* green */
+  --success-foreground: oklch(0.99 0 0);
+  --warning: oklch(0.78 0.17 60);              /* orange */
+  --warning-foreground: oklch(0.18 0 0);
+  --opportunity: oklch(0.62 0.22 27);          /* red */
+  --opportunity-foreground: oklch(0.99 0 0);
 
   --border: oklch(0.92 0 0);
   --input: oklch(0.92 0 0);
