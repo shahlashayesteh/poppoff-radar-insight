@@ -1,5 +1,52 @@
-import { Status, statusColor } from "@/lib/sample-data";
+import { Status, statusColor, deltaPct, progressPct, thresholdStatus, WeeklyStat } from "@/lib/sample-data";
 import { cn } from "@/lib/utils";
+import { ArrowDown, ArrowUp } from "lucide-react";
+
+export function DeltaChip({ value, suffix = "vs last week" }: { value: number; suffix?: string }) {
+  const up = value >= 0;
+  const color = up ? "var(--success)" : "var(--opportunity)";
+  return (
+    <span
+      className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold"
+      style={{ background: `color-mix(in oklab, ${color} 14%, transparent)`, color }}
+    >
+      {up ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
+      {Math.abs(value)}%<span className="font-medium opacity-70 ml-0.5">{suffix}</span>
+    </span>
+  );
+}
+
+export function StatTile({ stat }: { stat: WeeklyStat }) {
+  const dPct = deltaPct(stat.units, stat.prevUnits);
+  const pPct = progressPct(stat.units, stat.target);
+  const status = thresholdStatus(pPct);
+  const color = statusColor(status);
+  return (
+    <div
+      className="rounded-2xl border p-4"
+      style={{
+        background: `color-mix(in oklab, ${color} 7%, white)`,
+        borderColor: `color-mix(in oklab, ${color} 28%, transparent)`,
+      }}
+    >
+      <div className="flex items-start justify-between">
+        <div className="text-2xl">{stat.emoji}</div>
+        <DeltaChip value={dPct} />
+      </div>
+      <div className="mt-2 font-display text-4xl font-extrabold leading-none" style={{ color }}>
+        {stat.units}
+      </div>
+      <div className="mt-1 text-xs font-medium text-foreground/80">{stat.label} this week</div>
+      <div className="mt-3 h-1.5 rounded-full bg-muted overflow-hidden">
+        <div className="h-full rounded-full" style={{ width: `${pPct}%`, backgroundColor: color }} />
+      </div>
+      <div className="mt-1 flex items-center justify-between text-[10px] text-muted-foreground">
+        <span>{pPct}% of target</span>
+        <span>target {stat.target}</span>
+      </div>
+    </div>
+  );
+}
 
 export function StatusDot({ status, className }: { status: Status; className?: string }) {
   return (
