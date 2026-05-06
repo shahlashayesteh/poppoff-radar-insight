@@ -11,7 +11,10 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ServerIndexRouteImport } from './routes/server.index'
 import { Route as ServerWelcomeRouteImport } from './routes/server.welcome'
+import { Route as ServerProgressRouteImport } from './routes/server.progress'
+import { Route as ServerMenuRouteImport } from './routes/server.menu'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -23,40 +26,86 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ServerIndexRoute = ServerIndexRouteImport.update({
+  id: '/server/',
+  path: '/server/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ServerWelcomeRoute = ServerWelcomeRouteImport.update({
   id: '/server/welcome',
   path: '/server/welcome',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ServerProgressRoute = ServerProgressRouteImport.update({
+  id: '/server/progress',
+  path: '/server/progress',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ServerMenuRoute = ServerMenuRouteImport.update({
+  id: '/server/menu',
+  path: '/server/menu',
   getParentRoute: () => rootRouteImport,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/server/menu': typeof ServerMenuRoute
+  '/server/progress': typeof ServerProgressRoute
   '/server/welcome': typeof ServerWelcomeRoute
+  '/server/': typeof ServerIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/server/menu': typeof ServerMenuRoute
+  '/server/progress': typeof ServerProgressRoute
   '/server/welcome': typeof ServerWelcomeRoute
+  '/server': typeof ServerIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/server/menu': typeof ServerMenuRoute
+  '/server/progress': typeof ServerProgressRoute
   '/server/welcome': typeof ServerWelcomeRoute
+  '/server/': typeof ServerIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login' | '/server/welcome'
+  fullPaths:
+    | '/'
+    | '/login'
+    | '/server/menu'
+    | '/server/progress'
+    | '/server/welcome'
+    | '/server/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/login' | '/server/welcome'
-  id: '__root__' | '/' | '/login' | '/server/welcome'
+  to:
+    | '/'
+    | '/login'
+    | '/server/menu'
+    | '/server/progress'
+    | '/server/welcome'
+    | '/server'
+  id:
+    | '__root__'
+    | '/'
+    | '/login'
+    | '/server/menu'
+    | '/server/progress'
+    | '/server/welcome'
+    | '/server/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   LoginRoute: typeof LoginRoute
+  ServerMenuRoute: typeof ServerMenuRoute
+  ServerProgressRoute: typeof ServerProgressRoute
   ServerWelcomeRoute: typeof ServerWelcomeRoute
+  ServerIndexRoute: typeof ServerIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -75,11 +124,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/server/': {
+      id: '/server/'
+      path: '/server'
+      fullPath: '/server/'
+      preLoaderRoute: typeof ServerIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/server/welcome': {
       id: '/server/welcome'
       path: '/server/welcome'
       fullPath: '/server/welcome'
       preLoaderRoute: typeof ServerWelcomeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/server/progress': {
+      id: '/server/progress'
+      path: '/server/progress'
+      fullPath: '/server/progress'
+      preLoaderRoute: typeof ServerProgressRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/server/menu': {
+      id: '/server/menu'
+      path: '/server/menu'
+      fullPath: '/server/menu'
+      preLoaderRoute: typeof ServerMenuRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -88,7 +158,10 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   LoginRoute: LoginRoute,
+  ServerMenuRoute: ServerMenuRoute,
+  ServerProgressRoute: ServerProgressRoute,
   ServerWelcomeRoute: ServerWelcomeRoute,
+  ServerIndexRoute: ServerIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
