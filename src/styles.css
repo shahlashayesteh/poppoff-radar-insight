@@ -52,9 +52,11 @@
 
 :root {
   --radius: 1rem;
-  /* Brand: deep black ink, off white canvas */
-  --ink: oklch(0.13 0 0);          /* #0A0A0A */
-  --canvas: oklch(0.975 0 0);      /* #F7F7F7 */
+  /* Brand */
+  --ink: oklch(0.18 0 0);
+  --canvas: oklch(0.985 0 0);
+  --brand-orange: oklch(0.78 0.17 60);   /* Popp orange #F4A23C */
+  --brand-green: oklch(0.66 0.20 145);   /* Off green #1FAA4A */
 
   --background: oklch(1 0 0);
   --foreground: oklch(0.13 0 0);
