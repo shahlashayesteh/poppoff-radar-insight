@@ -1,87 +1,93 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Button } from "@/components/ui/button";
-import { Sparkles } from "lucide-react";
+import { ServerLayout } from "@/components/server-layout";
+import { Sparkles, TrendingUp, ChevronRight } from "lucide-react";
 
 export const Route = createFileRoute("/server/welcome")({
-  component: Welcome,
+  component: SmartRecs,
 });
 
-const reasons = [
-  "Better upselling shows confidence and product knowledge.",
-  "Strong sales performance can help you stand out to managers.",
-  "Consistent improvement can support promotion opportunities.",
-  "Understanding revenue makes you more commercially aware.",
-  "Commercial awareness is a key skill for supervisors and managers.",
-  "Better recommendations can improve the guest experience.",
-  "Small improvements each week can build into strong long-term performance.",
+const picks = [
+  {
+    name: "Espresso Martini",
+    blurb: "High-margin, high signal",
+    note: "+23% vs last week",
+    badge: "Best",
+    badgeBg: "var(--brand-green)",
+    badgeFg: "white",
+    emoji: "🍸",
+  },
+  {
+    name: "Truffle Fries",
+    blurb: "Perfect pairing, high upsell",
+    note: "Recommend it!",
+    badge: "New",
+    badgeBg: "var(--brand-orange)",
+    badgeFg: "white",
+    emoji: "🍟",
+  },
+  {
+    name: "Bottled Water",
+    blurb: "Easy win. Add it up.",
+    note: "",
+    badge: "Easy",
+    badgeBg: "color-mix(in oklab, var(--brand-green) 18%, white)",
+    badgeFg: "var(--brand-green)",
+    emoji: "💧",
+  },
 ];
 
-function Welcome() {
+function SmartRecs() {
   return (
-    <div className="min-h-screen bg-canvas">
-      <div className="gradient-hero text-white px-6 pt-14 pb-20">
-        <div className="mx-auto max-w-2xl">
-          <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs text-white/80">
-            <Sparkles className="h-3 w-3" /> Welcome to Popp Off
+    <ServerLayout>
+      <div className="px-5 pt-6">
+        <div className="flex items-start gap-3">
+          <Sparkles className="h-7 w-7 text-brand-orange shrink-0 mt-1" />
+          <div className="flex-1">
+            <h1 className="font-display text-3xl font-extrabold tracking-tight leading-tight">Smart recs for you</h1>
+            <p className="mt-1 text-sm text-muted-foreground">Personalised picks to boost your week</p>
           </div>
-          <h1 className="mt-5 font-display text-4xl md:text-5xl font-semibold tracking-tight leading-[1.05]">
-            Your performance matters.
-          </h1>
-          <p className="mt-5 text-white/80 leading-relaxed">
-            Great service is not only about taking orders. It is about understanding the guest, recognising opportunities,
-            and helping the restaurant perform better while giving guests a better experience.
-          </p>
+          <div className="h-12 w-12 rounded-full border border-border grid place-items-center">
+            <TrendingUp className="h-5 w-5 text-brand-green" />
+          </div>
         </div>
-      </div>
 
-      <div className="mx-auto max-w-2xl px-6 -mt-12 pb-12">
-        <div className="rounded-2xl bg-white border border-border p-6 md:p-8 shadow-sm">
-          <p className="text-foreground leading-relaxed">
-            This scorecard is designed to help you see where you are already strong and where you can improve. It is not
-            here to criticise you. It is here to help you build the skills that make strong servers stand out.
-          </p>
-          <p className="mt-4 text-foreground leading-relaxed">
-            Improving your sales performance can help you become more confident with guests, better at recommending
-            products, more valuable to your team, and more prepared for future progression into senior server, supervisor,
-            assistant manager, or management roles.
-          </p>
-          <p className="mt-4 text-foreground leading-relaxed">
-            Each week, you will see simple feedback across key categories such as wine, bottled water, cocktails, desserts,
-            sides, and specials.
-          </p>
+        {/* Opportunity card */}
+        <div className="mt-5 rounded-3xl border border-border p-6 relative overflow-hidden"
+          style={{ background: "color-mix(in oklab, var(--brand-orange) 7%, white)" }}>
+          <div className="text-sm font-semibold">This week's opportunity</div>
+          <div className="font-display text-6xl font-extrabold mt-2">+£230</div>
+          <div className="text-lg font-semibold">potential lift</div>
+          <p className="mt-3 text-sm text-foreground/80 max-w-[60%]">Focus on these high-performing menu items.</p>
+          <div className="absolute right-4 top-6 text-5xl">📈</div>
+        </div>
 
-          <div className="mt-6 grid grid-cols-3 gap-3">
-            {[
-              { c: "var(--success)", t: "Green", d: "Performing strongly or improving." },
-              { c: "var(--warning)", t: "Amber", d: "Room to strengthen consistency." },
-              { c: "var(--opportunity)", t: "Red", d: "Clear opportunity to focus on next week." },
-            ].map((s) => (
-              <div key={s.t} className="rounded-xl border border-border p-3">
-                <span className="inline-block h-3 w-3 rounded-full" style={{ backgroundColor: s.c }} />
-                <div className="font-semibold mt-2 text-sm">{s.t}</div>
-                <div className="text-xs text-muted-foreground mt-1">{s.d}</div>
+        {/* Top picks */}
+        <div className="mt-6 flex items-center justify-between">
+          <div className="font-semibold">Top picks for you 🔥</div>
+          <span className="text-sm text-brand-green font-semibold">3 actions</span>
+        </div>
+
+        <div className="mt-3 space-y-3">
+          {picks.map((p) => (
+            <div key={p.name} className="rounded-2xl bg-white border border-border p-3 flex items-center gap-3">
+              <div className="h-14 w-14 rounded-xl grid place-items-center text-2xl"
+                style={{ background: "color-mix(in oklab, var(--brand-orange) 8%, white)" }}>{p.emoji}</div>
+              <div className="flex-1 min-w-0">
+                <div className="font-semibold text-sm">{p.name}</div>
+                <div className="text-xs text-muted-foreground">{p.blurb}</div>
+                {p.note && <div className="text-xs text-brand-green font-semibold mt-1">↗ {p.note}</div>}
               </div>
-            ))}
-          </div>
-
-          <p className="mt-6 font-medium text-ink">The goal is simple: improve one area at a time.</p>
-        </div>
-
-        <h2 className="mt-10 font-display text-2xl font-semibold tracking-tight">Why this matters for you</h2>
-        <div className="mt-4 grid sm:grid-cols-2 gap-3">
-          {reasons.map((r) => (
-            <div key={r} className="rounded-xl bg-white border border-border p-4 text-sm">
-              {r}
+              <span className="text-xs font-bold rounded-lg px-3 py-1.5"
+                style={{ background: p.badgeBg, color: p.badgeFg }}>{p.badge}</span>
+              <ChevronRight className="h-4 w-4 text-muted-foreground" />
             </div>
           ))}
         </div>
 
-        <div className="mt-10 flex justify-center">
-          <Button asChild size="lg" className="rounded-full bg-ink text-white hover:bg-ink/90 px-8">
-            <Link to="/server">View My Scorecard</Link>
-          </Button>
-        </div>
+        <Link to="/server" className="mt-5 block w-full rounded-2xl py-4 text-center font-display text-lg font-bold bg-brand-orange text-white">
+          Let's go! 🚀
+        </Link>
       </div>
-    </div>
+    </ServerLayout>
   );
 }
