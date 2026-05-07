@@ -1,63 +1,99 @@
-# Fix: Manager dashboard shows "No venue yet" after a successful checkout
+# Full Cleanup: Real Data Only, No Hardcoded Content
 
-## What's actually happening
+Scope: bind two missing DB triggers, then rewrite every manager and server page (plus shared layouts and sample-data file) to query live data with empty states. No design / colour / font / layout changes.
 
-Your backend is fine. After your last checkout, the database already contains:
+## Step 1 — Database triggers (migration)
 
-- `venues`: `ivy` with join code `484194`, owned by your user
-- `user_roles`: `manager` for your user
-- `subscriptions`: `trialing`, sandbox env
+One migration that:
 
-So the Paddle webhook fired and `handleSubscriptionCreated` correctly created the venue + role.
+- Drops + recreates `on_auth_user_created` BEFORE INSERT trigger on `auth.users` calling `public.handle_new_user()`.
+- Drops + recreates `set_venue_join_code_trigger` BEFORE INSERT trigger on `public.venues` calling `public.set_venue_join_code()`.
 
-The UI bug is two separate things:
+Both use `CREATE OR REPLACE TRIGGER` style (`DROP TRIGGER IF EXISTS ... ; CREATE TRIGGER ...`).
 
-1. **Paddle overlay didn't redirect to `/checkout/success`.** It just closed and left you on `/manager`. So the `claim_manager_account` RPC fallback (which lives on the success page) never ran, and the page never re-mounted to re-query.
-2. **`JoinCodeCard` queries once on mount.** It ran *before* the webhook wrote the venue row, got `null`, cached "No venue yet", and never refetched.
+## Step 2 — Delete the hardcoded data module
 
-The "demo data" (team table, KPIs, charts) is hardcoded sample data in `manager.index.tsx` — that's intentional for now and out of scope.
+Delete `src/lib/sample-data.ts`. After this step nothing in the app may import from it; build will catch any stragglers.
 
-## Plan
+## Step 3 — Rewrites (file-by-file)
 
-### 1. Make Paddle reliably redirect after checkout
+For every page below: keep the existing layout shell, Tailwind classes, Card components, headings styling. Replace inner content with React Query against Supabase. Show a Skeleton/`Loading…` while pending and the prescribed empty-state copy when no rows.
 
-In `src/lib/paddle.ts`, the existing `eventCallback` already logs every event. Extend it to also handle `checkout.completed`:
+### `src/routes/manager.index.tsx`
+- Query venue: `venues` filtered by `manager_id = auth.uid()` limit 1.
+- Render venue `name` + `join_code` prominently at top (already partially handled by `JoinCodeCard`; reuse it).
+- Query `venue_members` where `venue_id = venue.id` for server count.
+- Empty states:
+  - No venue → "No venue yet. Complete checkout to set one up."
+  - No servers → "No servers yet. Share your join code with your team."
+- No performance section rendered (placeholder removed entirely).
 
-- On `checkout.completed`, navigate the top window to `/checkout/success` (use `window.location.assign`, not router — Paddle overlay lives outside the router).
-- Keep the existing `successUrl` setting as a backup; some payment methods honour it, some don't, so explicit navigation on the event is the reliable path.
+### `src/routes/manager.team.tsx`
+- Query: `venue_members` where `venue_id = manager's venue id`, then second query `profiles` where `id IN (member user_ids)`. (Two queries because no FK declared between them.)
+- Render rows with `profiles.full_name` (fallback "Unnamed server" if null).
+- Empty: "No servers have joined yet."
+- Strip Sarah/Maria/James/Ahmed/Chloe and any fake stats columns.
 
-### 2. Make `JoinCodeCard` self-heal when the webhook lands
+### `src/routes/manager.server.$id.tsx`
+- Read `:id` from params.
+- Verify membership: select 1 from `venue_members` where `user_id = :id AND venue_id = manager's venue id`. If not found render `404` empty state ("Server not found in your team.").
+- Query `profiles` where `id = :id`, render `full_name`.
+- All stats sections show "No data yet."
 
-In `src/components/JoinCodeCard.tsx`:
+### `src/routes/manager.menu.tsx`, `src/routes/manager.priorities.tsx`
+- Remove all hardcoded items/charts.
+- Single empty state per page: "No data yet. Data will appear here once your team starts logging shifts."
+- (No "trends" or "reports" route exists in this project — listed in the request but not present; nothing to do for those.)
 
-- After the initial query, if `venue` is `null`, subscribe to Postgres changes on `public.venues` filtered by `manager_id = auth.uid()` via Supabase realtime. When an INSERT arrives, set the venue and unsubscribe.
-- As a belt-and-braces fallback (in case realtime isn't enabled on the table), poll every 3 seconds for up to ~30 seconds while `venue` is null.
-- Change the empty-state copy from "No venue yet. Complete checkout to set one up." to "Setting up your venue…" while polling, and only show the original message if 30 s elapses with no row.
+### `src/routes/server.index.tsx`
+- Query venue via `venue_members` join: `.from('venue_members').select('venue:venues(name, join_code)').eq('user_id', uid).maybeSingle()`.
+- Query `profiles` where `id = auth.uid()` for `full_name`.
+- Show greeting with real name and venue name.
+- Empty states for stats / streak / milestones blocks: "No data yet."
+- Strip all hardcoded numbers.
 
-This requires enabling realtime on `public.venues` via a migration:
+### `src/routes/server.progress.tsx`, `src/routes/server.menu.tsx`, `src/routes/server.welcome.tsx`
+- Replace any hardcoded stats / menu items with the empty-state line above.
+- `server.welcome.tsx` may keep onboarding copy (no fake names/numbers); review and strip the listed strings only.
 
-```sql
-ALTER PUBLICATION supabase_realtime ADD TABLE public.venues;
-```
+### `src/components/manager-layout.tsx`, `src/components/server-layout.tsx`
+- Remove any hardcoded user name / venue name / avatar text from the chrome; replace with live `profiles.full_name` query (or hide if not loaded).
 
-### 3. Tighten `/checkout/success` so it always reflects current state
+## Step 4 — Global string sweep
 
-`src/routes/checkout.success.tsx` already calls `claim_manager_account` as a fallback. Keep that, but after the RPC succeeds, briefly poll `venues` (same 30 s / 3 s loop) before enabling the "Open your dashboard" link, so the user never lands on a dashboard that's still missing its venue row.
+After edits, run `rg` for: `Sarah|Maria|James|Ahmed|Chloe|Demo Restaurant|Garden Table|URBAN PLATE|NORTH & OAK|£58\.40|812|£1,420|484194|295344|\bdemo\b|\bsample\b|\bplaceholder\b|\bmock\b|\bfake\b` across `src/`. Required result: zero matches in app code (excluding shadcn `placeholder` HTML attribute usage in `ui/input.tsx`, `ui/textarea.tsx`, `ui/select.tsx`, `ui/command.tsx` — those are valid React props, not content; will be left untouched).
 
-## Files touched
+If any non-shadcn match remains, fix before declaring done.
 
-- `src/lib/paddle.ts` — add `checkout.completed` → `window.location.assign("/checkout/success")` in `eventCallback`
-- `src/components/JoinCodeCard.tsx` — realtime subscription + poll fallback + "Setting up your venue…" copy
-- `src/routes/checkout.success.tsx` — wait until venue row visible before enabling CTA
-- New migration — enable realtime on `public.venues`
+## Files changed (final list)
+
+Migration:
+- `supabase/migrations/<new>.sql`
+
+Deleted:
+- `src/lib/sample-data.ts`
+
+Rewritten:
+- `src/routes/manager.index.tsx`
+- `src/routes/manager.team.tsx`
+- `src/routes/manager.server.$id.tsx`
+- `src/routes/manager.menu.tsx`
+- `src/routes/manager.priorities.tsx`
+- `src/routes/server.index.tsx`
+- `src/routes/server.menu.tsx`
+- `src/routes/server.progress.tsx`
+- `src/routes/server.welcome.tsx`
+- `src/components/manager-layout.tsx`
+- `src/components/server-layout.tsx`
 
 ## Out of scope
 
-- Replacing the hardcoded sample data on the manager dashboard
-- Any change to live (production) checkout, the webhook handler, the catalog, or auth
+- Design tokens, colours, fonts, spacing, layout structure.
+- Auth flow, checkout flow, Paddle webhook, RLS policies (already correct).
+- Adding new tables for shifts/stats — those don't exist yet, so pages just show empty states.
 
-## How to verify after implementation
+## Technical notes
 
-1. Refresh `/manager` now — the existing `ivy` venue + code `484194` should appear.
-2. Sign up a brand-new manager, complete sandbox checkout with `4242 4242 4242 4242` — you should be redirected to `/checkout/success`, then land on `/manager` with the join code already visible (no manual refresh).
-3. Backend state for the new user should match: one row each in `venues`, `user_roles` (manager), `subscriptions`.
+- `venue_members → profiles` has no FK, so PostgREST embedded selects (`profiles(*)`) won't work. Use two sequential queries and join in JS.
+- For the `auth.users` trigger we use `CREATE TRIGGER` (Postgres has no `CREATE OR REPLACE TRIGGER` before v14; project is PG14.5 per types but `DROP IF EXISTS` + `CREATE` is portable and safe).
+- Trigger on `auth.users` is allowed because it only calls a `public` SECURITY DEFINER function and does not mutate auth schema objects (matches Supabase's documented `handle_new_user` pattern).
