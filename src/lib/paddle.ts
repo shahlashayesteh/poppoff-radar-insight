@@ -30,6 +30,10 @@ export async function initializePaddle() {
           if (typeof e?.name === "string" && e.name.startsWith("checkout.")) {
             // eslint-disable-next-line no-console
             console.log("[paddle]", e.name, e.data);
+            if (e.name === "checkout.completed") {
+              window.location.assign("/checkout/success");
+              return;
+            }
             if (e.name === "checkout.error" || e.name === "checkout.payment.failed") {
               const detail =
                 e?.data?.error?.detail ||
