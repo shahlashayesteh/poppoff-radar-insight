@@ -1,9 +1,8 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { Logo } from "@/components/logo";
 import { Star, Trophy, Award, Check, ShieldCheck, BarChart3, Users, BookOpen, Target } from "lucide-react";
 import { usePaddleCheckout } from "@/hooks/usePaddleCheckout";
 import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
-import { useAuth } from "@/hooks/useAuth";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -28,20 +27,6 @@ function PhoneFrame({ children }: { children: React.ReactNode }) {
 
 function Landing() {
   const { openCheckout, loading } = usePaddleCheckout();
-  const { user } = useAuth();
-  const navigate = useNavigate();
-
-  const handleSubscribe = (priceId: string) => {
-    if (!user) {
-      navigate({ to: "/login", search: { redirect: "/#pricing" } });
-      return;
-    }
-    openCheckout({
-      priceId,
-      customerEmail: user.email,
-      customData: { userId: user.id },
-    });
-  };
   return (
     <div className="bg-white text-ink">
       <PaymentTestModeBanner />
@@ -56,8 +41,8 @@ function Landing() {
             <a href="#about" className="hover:text-brand-green">About</a>
           </nav>
           <div className="flex items-center gap-3">
-            <Link to="/login" search={{ redirect: undefined }} className="text-sm font-medium hidden sm:inline">Login</Link>
-            <Link to="/login" search={{ redirect: undefined }} className="rounded-xl px-4 py-2 text-sm font-bold text-white" style={{ background: "var(--brand-orange)" }}>Book a Demo</Link>
+            <Link to="/login" className="text-sm font-medium hidden sm:inline">Login</Link>
+            <Link to="/login" className="rounded-xl px-4 py-2 text-sm font-bold text-white" style={{ background: "var(--brand-orange)" }}>Book a Demo</Link>
           </div>
         </div>
       </header>
@@ -79,10 +64,10 @@ function Landing() {
               We turn your numbers into momentum and more money in your pocket.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
-              <Link to="/login" search={{ redirect: undefined }} className="rounded-xl px-6 py-3 text-sm font-bold text-white inline-flex items-center gap-2" style={{ background: "var(--brand-orange)" }}>
+              <Link to="/login" className="rounded-xl px-6 py-3 text-sm font-bold text-white inline-flex items-center gap-2" style={{ background: "var(--brand-orange)" }}>
                 Book a Demo
               </Link>
-              <Link to="/login" search={{ redirect: undefined }} className="rounded-xl px-6 py-3 text-sm font-bold border-2 border-foreground inline-flex items-center gap-2">
+              <Link to="/login" className="rounded-xl px-6 py-3 text-sm font-bold border-2 border-foreground inline-flex items-center gap-2">
                 Start Your Pilot
               </Link>
             </div>
@@ -233,7 +218,7 @@ function Landing() {
           </div>
           <div className="inline-flex items-center gap-3">
             <span className="text-sm font-bold text-brand-green">Ready to see your team win?</span>
-            <Link to="/login" search={{ redirect: undefined }} className="rounded-xl px-4 py-2 text-sm font-bold text-white" style={{ background: "var(--brand-orange)" }}>Book a Demo</Link>
+            <Link to="/login" className="rounded-xl px-4 py-2 text-sm font-bold text-white" style={{ background: "var(--brand-orange)" }}>Book a Demo</Link>
           </div>
         </div>
       </section>
@@ -266,92 +251,30 @@ function Landing() {
           <h2 className="font-display text-4xl md:text-5xl font-extrabold tracking-tight">Simple, transparent pricing</h2>
           <div className="mt-10 grid md:grid-cols-3 gap-5">
             {[
-              {
-                name: "Starter",
-                price: "£99",
-                note: "/ month",
-                venues: "1 venue",
-                priceId: "poppoff_pro_monthly",
-                contact: false,
-                featured: false,
-                features: [
-                  "Visual performance circles per server",
-                  "AI coaching based on weekly stats",
-                  "Menu intelligence & pairing suggestions",
-                  "Monday stats drop with push notification",
-                  "Streaks, personal bests & milestones",
-                  "No leaderboards — personal targets only",
-                ],
-                cta: "Start Free Trial",
-              },
-              {
-                name: "Pro",
-                price: "£199",
-                note: "/ month",
-                venues: "Up to 3 venues",
-                priceId: "poppoff_enterprise_monthly",
-                contact: false,
-                featured: true,
-                features: [
-                  "Everything in Starter",
-                  "Manage up to 3 venues from one account",
-                  "Cross-venue performance insights",
-                ],
-                cta: "Start Free Trial",
-              },
-              {
-                name: "Enterprise",
-                price: "Contact us",
-                note: "",
-                venues: "4+ venues",
-                priceId: null as string | null,
-                contact: true,
-                featured: false,
-                features: [
-                  "Everything in Pro",
-                  "Dedicated onboarding",
-                  "Priority support",
-                  "Custom setup for your group",
-                ],
-                cta: "Let's Talk",
-              },
+              { name: "Starter", price: "£99", priceId: "poppoff_pro_monthly", note: "/ venue / month", featured: false, features: ["Personal server scorecards", "All coaching", "Menu intelligence", "Team dashboard", "Email support"], cta: "Start 30-Day Trial" },
+              { name: "Premium", price: "£199", priceId: "poppoff_enterprise_monthly", note: "/ venue / month", featured: true, badge: "Most Popular", features: ["Everything in Starter", "Weekly win priorities", "Advanced insights", "Priority support"], cta: "Start 30-Day Trial" },
+              { name: "Founder Rate", price: "£49", priceId: "poppoff_starter_monthly", note: "/ venue / month", featured: false, features: ["Locked in forever", "First venues only", "Everything in Starter"], cta: "Claim Founder Rate" },
             ].map((p) => (
               <div key={p.name} className={`relative rounded-2xl border-2 p-6 ${p.featured ? "border-brand-orange" : "border-border bg-white"}`}>
                 {p.featured && (
                   <span className="absolute -top-3 left-6 px-3 py-1 rounded-full text-[11px] font-bold text-white" style={{ background: "var(--brand-orange)" }}>Most Popular</span>
                 )}
                 <div className="font-bold">{p.name}</div>
-                <div className="mt-3 flex items-baseline gap-1">
-                  <span className="font-display text-5xl font-extrabold">{p.price}</span>
-                  {p.note && <span className="text-sm text-muted-foreground">{p.note}</span>}
-                </div>
-                <div className="mt-1 text-xs font-semibold text-brand-green">{p.venues}</div>
+                <div className="mt-3 flex items-baseline gap-1"><span className="font-display text-5xl font-extrabold">{p.price}</span><span className="text-sm text-muted-foreground">{p.note}</span></div>
                 <ul className="mt-5 space-y-2 text-sm">
-                  {p.features.map((f) => <li key={f} className="flex items-start gap-2"><Check className="h-4 w-4 text-brand-green mt-0.5 shrink-0" />{f}</li>)}
+                  {p.features.map((f) => <li key={f} className="flex items-center gap-2"><Check className="h-4 w-4 text-brand-green" />{f}</li>)}
                 </ul>
-                {p.contact ? (
-                  <a
-                    href="mailto:hello@poppoffstats.com?subject=Enterprise%20enquiry"
-                    className={`mt-6 block w-full text-center rounded-xl py-3 text-sm font-bold border-2 border-brand-orange text-brand-orange`}
-                  >
-                    {p.cta}
-                  </a>
-                ) : (
-                  <button
-                    onClick={() => handleSubscribe(p.priceId!)}
-                    disabled={loading}
-                    className={`mt-6 block w-full text-center rounded-xl py-3 text-sm font-bold disabled:opacity-60 ${p.featured ? "text-white" : "border-2 border-brand-orange text-brand-orange"}`}
-                    style={p.featured ? { background: "var(--brand-orange)" } : {}}
-                  >
-                    {loading ? "Opening…" : p.cta}
-                  </button>
-                )}
+                <button
+                  onClick={() => openCheckout({ priceId: p.priceId })}
+                  disabled={loading}
+                  className={`mt-6 block w-full text-center rounded-xl py-3 text-sm font-bold disabled:opacity-60 ${p.featured ? "text-white" : "border-2 border-brand-orange text-brand-orange"}`}
+                  style={p.featured ? { background: "var(--brand-orange)" } : {}}
+                >
+                  {loading ? "Opening…" : p.cta}
+                </button>
               </div>
             ))}
           </div>
-          <p className="mt-6 text-center text-xs text-muted-foreground">
-            No credit card required. 30-day free trial on Starter. Cancel anytime.
-          </p>
         </div>
       </section>
 
