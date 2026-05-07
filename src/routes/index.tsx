@@ -1,6 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Logo } from "@/components/logo";
-import { Star, Flame, Gift, Sparkles, Trophy, Award, ArrowRight, Check, ShieldCheck, BarChart3, Users, BookOpen, Target } from "lucide-react";
+import { Star, Trophy, Award, Check, ShieldCheck, BarChart3, Users, BookOpen, Target } from "lucide-react";
+import { usePaddleCheckout } from "@/hooks/usePaddleCheckout";
+import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -247,9 +249,9 @@ function Landing() {
           <h2 className="font-display text-4xl md:text-5xl font-extrabold tracking-tight">Simple, transparent pricing</h2>
           <div className="mt-10 grid md:grid-cols-3 gap-5">
             {[
-              { name: "Starter", price: "£99", note: "/ venue / month", featured: false, features: ["Personal server scorecards", "All coaching", "Menu intelligence", "Team dashboard", "Email support"], cta: "Start 30-Day Trial" },
-              { name: "Premium", price: "£199", note: "/ venue / month", featured: true, badge: "Most Popular", features: ["Everything in Starter", "Weekly win priorities", "Advanced insights", "Priority support"], cta: "Start 30-Day Trial" },
-              { name: "Founder Rate", price: "£49", note: "/ venue / month", featured: false, features: ["Locked in forever", "First venues only", "Everything in Starter"], cta: "Claim Founder Rate" },
+              { name: "Starter", price: "£99", priceId: "poppoff_pro_monthly", note: "/ venue / month", featured: false, features: ["Personal server scorecards", "All coaching", "Menu intelligence", "Team dashboard", "Email support"], cta: "Start 30-Day Trial" },
+              { name: "Premium", price: "£199", priceId: "poppoff_enterprise_monthly", note: "/ venue / month", featured: true, badge: "Most Popular", features: ["Everything in Starter", "Weekly win priorities", "Advanced insights", "Priority support"], cta: "Start 30-Day Trial" },
+              { name: "Founder Rate", price: "£49", priceId: "poppoff_starter_monthly", note: "/ venue / month", featured: false, features: ["Locked in forever", "First venues only", "Everything in Starter"], cta: "Claim Founder Rate" },
             ].map((p) => (
               <div key={p.name} className={`relative rounded-2xl border-2 p-6 ${p.featured ? "border-brand-orange" : "border-border bg-white"}`}>
                 {p.featured && (
@@ -260,10 +262,14 @@ function Landing() {
                 <ul className="mt-5 space-y-2 text-sm">
                   {p.features.map((f) => <li key={f} className="flex items-center gap-2"><Check className="h-4 w-4 text-brand-green" />{f}</li>)}
                 </ul>
-                <Link to="/login" className={`mt-6 block text-center rounded-xl py-3 text-sm font-bold ${p.featured ? "text-white" : "border-2 border-brand-orange text-brand-orange"}`}
-                  style={p.featured ? { background: "var(--brand-orange)" } : {}}>
-                  {p.cta}
-                </Link>
+                <button
+                  onClick={() => openCheckout({ priceId: p.priceId })}
+                  disabled={loading}
+                  className={`mt-6 block w-full text-center rounded-xl py-3 text-sm font-bold disabled:opacity-60 ${p.featured ? "text-white" : "border-2 border-brand-orange text-brand-orange"}`}
+                  style={p.featured ? { background: "var(--brand-orange)" } : {}}
+                >
+                  {loading ? "Opening…" : p.cta}
+                </button>
               </div>
             ))}
           </div>
