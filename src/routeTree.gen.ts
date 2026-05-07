@@ -11,7 +11,6 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as LoginRouteImport } from './routes/login'
-import { Route as DemoRouteImport } from './routes/demo'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ServerIndexRouteImport } from './routes/server.index'
 import { Route as ManagerIndexRouteImport } from './routes/manager.index'
@@ -22,16 +21,7 @@ import { Route as ManagerTeamRouteImport } from './routes/manager.team'
 import { Route as ManagerPrioritiesRouteImport } from './routes/manager.priorities'
 import { Route as ManagerMenuRouteImport } from './routes/manager.menu'
 import { Route as CheckoutSuccessRouteImport } from './routes/checkout.success'
-import { Route as DemoServerIndexRouteImport } from './routes/demo.server.index'
-import { Route as DemoManagerIndexRouteImport } from './routes/demo.manager.index'
 import { Route as ManagerServerIdRouteImport } from './routes/manager.server.$id'
-import { Route as DemoServerWelcomeRouteImport } from './routes/demo.server.welcome'
-import { Route as DemoServerProgressRouteImport } from './routes/demo.server.progress'
-import { Route as DemoServerMenuRouteImport } from './routes/demo.server.menu'
-import { Route as DemoManagerTeamRouteImport } from './routes/demo.manager.team'
-import { Route as DemoManagerPrioritiesRouteImport } from './routes/demo.manager.priorities'
-import { Route as DemoManagerMenuRouteImport } from './routes/demo.manager.menu'
-import { Route as DemoManagerServerIdRouteImport } from './routes/demo.manager.server.$id'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
 
 const SettingsRoute = SettingsRouteImport.update({
@@ -42,11 +32,6 @@ const SettingsRoute = SettingsRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DemoRoute = DemoRouteImport.update({
-  id: '/demo',
-  path: '/demo',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -99,55 +84,10 @@ const CheckoutSuccessRoute = CheckoutSuccessRouteImport.update({
   path: '/checkout/success',
   getParentRoute: () => rootRouteImport,
 } as any)
-const DemoServerIndexRoute = DemoServerIndexRouteImport.update({
-  id: '/server/',
-  path: '/server/',
-  getParentRoute: () => DemoRoute,
-} as any)
-const DemoManagerIndexRoute = DemoManagerIndexRouteImport.update({
-  id: '/manager/',
-  path: '/manager/',
-  getParentRoute: () => DemoRoute,
-} as any)
 const ManagerServerIdRoute = ManagerServerIdRouteImport.update({
   id: '/manager/server/$id',
   path: '/manager/server/$id',
   getParentRoute: () => rootRouteImport,
-} as any)
-const DemoServerWelcomeRoute = DemoServerWelcomeRouteImport.update({
-  id: '/server/welcome',
-  path: '/server/welcome',
-  getParentRoute: () => DemoRoute,
-} as any)
-const DemoServerProgressRoute = DemoServerProgressRouteImport.update({
-  id: '/server/progress',
-  path: '/server/progress',
-  getParentRoute: () => DemoRoute,
-} as any)
-const DemoServerMenuRoute = DemoServerMenuRouteImport.update({
-  id: '/server/menu',
-  path: '/server/menu',
-  getParentRoute: () => DemoRoute,
-} as any)
-const DemoManagerTeamRoute = DemoManagerTeamRouteImport.update({
-  id: '/manager/team',
-  path: '/manager/team',
-  getParentRoute: () => DemoRoute,
-} as any)
-const DemoManagerPrioritiesRoute = DemoManagerPrioritiesRouteImport.update({
-  id: '/manager/priorities',
-  path: '/manager/priorities',
-  getParentRoute: () => DemoRoute,
-} as any)
-const DemoManagerMenuRoute = DemoManagerMenuRouteImport.update({
-  id: '/manager/menu',
-  path: '/manager/menu',
-  getParentRoute: () => DemoRoute,
-} as any)
-const DemoManagerServerIdRoute = DemoManagerServerIdRouteImport.update({
-  id: '/manager/server/$id',
-  path: '/manager/server/$id',
-  getParentRoute: () => DemoRoute,
 } as any)
 const ApiPublicPaymentsWebhookRoute =
   ApiPublicPaymentsWebhookRouteImport.update({
@@ -158,7 +98,6 @@ const ApiPublicPaymentsWebhookRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/demo': typeof DemoRouteWithChildren
   '/login': typeof LoginRoute
   '/settings': typeof SettingsRoute
   '/checkout/success': typeof CheckoutSuccessRoute
@@ -170,21 +109,11 @@ export interface FileRoutesByFullPath {
   '/server/welcome': typeof ServerWelcomeRoute
   '/manager/': typeof ManagerIndexRoute
   '/server/': typeof ServerIndexRoute
-  '/demo/manager/menu': typeof DemoManagerMenuRoute
-  '/demo/manager/priorities': typeof DemoManagerPrioritiesRoute
-  '/demo/manager/team': typeof DemoManagerTeamRoute
-  '/demo/server/menu': typeof DemoServerMenuRoute
-  '/demo/server/progress': typeof DemoServerProgressRoute
-  '/demo/server/welcome': typeof DemoServerWelcomeRoute
   '/manager/server/$id': typeof ManagerServerIdRoute
-  '/demo/manager/': typeof DemoManagerIndexRoute
-  '/demo/server/': typeof DemoServerIndexRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
-  '/demo/manager/server/$id': typeof DemoManagerServerIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/demo': typeof DemoRouteWithChildren
   '/login': typeof LoginRoute
   '/settings': typeof SettingsRoute
   '/checkout/success': typeof CheckoutSuccessRoute
@@ -196,22 +125,12 @@ export interface FileRoutesByTo {
   '/server/welcome': typeof ServerWelcomeRoute
   '/manager': typeof ManagerIndexRoute
   '/server': typeof ServerIndexRoute
-  '/demo/manager/menu': typeof DemoManagerMenuRoute
-  '/demo/manager/priorities': typeof DemoManagerPrioritiesRoute
-  '/demo/manager/team': typeof DemoManagerTeamRoute
-  '/demo/server/menu': typeof DemoServerMenuRoute
-  '/demo/server/progress': typeof DemoServerProgressRoute
-  '/demo/server/welcome': typeof DemoServerWelcomeRoute
   '/manager/server/$id': typeof ManagerServerIdRoute
-  '/demo/manager': typeof DemoManagerIndexRoute
-  '/demo/server': typeof DemoServerIndexRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
-  '/demo/manager/server/$id': typeof DemoManagerServerIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/demo': typeof DemoRouteWithChildren
   '/login': typeof LoginRoute
   '/settings': typeof SettingsRoute
   '/checkout/success': typeof CheckoutSuccessRoute
@@ -223,23 +142,13 @@ export interface FileRoutesById {
   '/server/welcome': typeof ServerWelcomeRoute
   '/manager/': typeof ManagerIndexRoute
   '/server/': typeof ServerIndexRoute
-  '/demo/manager/menu': typeof DemoManagerMenuRoute
-  '/demo/manager/priorities': typeof DemoManagerPrioritiesRoute
-  '/demo/manager/team': typeof DemoManagerTeamRoute
-  '/demo/server/menu': typeof DemoServerMenuRoute
-  '/demo/server/progress': typeof DemoServerProgressRoute
-  '/demo/server/welcome': typeof DemoServerWelcomeRoute
   '/manager/server/$id': typeof ManagerServerIdRoute
-  '/demo/manager/': typeof DemoManagerIndexRoute
-  '/demo/server/': typeof DemoServerIndexRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
-  '/demo/manager/server/$id': typeof DemoManagerServerIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/demo'
     | '/login'
     | '/settings'
     | '/checkout/success'
@@ -251,21 +160,11 @@ export interface FileRouteTypes {
     | '/server/welcome'
     | '/manager/'
     | '/server/'
-    | '/demo/manager/menu'
-    | '/demo/manager/priorities'
-    | '/demo/manager/team'
-    | '/demo/server/menu'
-    | '/demo/server/progress'
-    | '/demo/server/welcome'
     | '/manager/server/$id'
-    | '/demo/manager/'
-    | '/demo/server/'
     | '/api/public/payments/webhook'
-    | '/demo/manager/server/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/demo'
     | '/login'
     | '/settings'
     | '/checkout/success'
@@ -277,21 +176,11 @@ export interface FileRouteTypes {
     | '/server/welcome'
     | '/manager'
     | '/server'
-    | '/demo/manager/menu'
-    | '/demo/manager/priorities'
-    | '/demo/manager/team'
-    | '/demo/server/menu'
-    | '/demo/server/progress'
-    | '/demo/server/welcome'
     | '/manager/server/$id'
-    | '/demo/manager'
-    | '/demo/server'
     | '/api/public/payments/webhook'
-    | '/demo/manager/server/$id'
   id:
     | '__root__'
     | '/'
-    | '/demo'
     | '/login'
     | '/settings'
     | '/checkout/success'
@@ -303,22 +192,12 @@ export interface FileRouteTypes {
     | '/server/welcome'
     | '/manager/'
     | '/server/'
-    | '/demo/manager/menu'
-    | '/demo/manager/priorities'
-    | '/demo/manager/team'
-    | '/demo/server/menu'
-    | '/demo/server/progress'
-    | '/demo/server/welcome'
     | '/manager/server/$id'
-    | '/demo/manager/'
-    | '/demo/server/'
     | '/api/public/payments/webhook'
-    | '/demo/manager/server/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  DemoRoute: typeof DemoRouteWithChildren
   LoginRoute: typeof LoginRoute
   SettingsRoute: typeof SettingsRoute
   CheckoutSuccessRoute: typeof CheckoutSuccessRoute
@@ -348,13 +227,6 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/demo': {
-      id: '/demo'
-      path: '/demo'
-      fullPath: '/demo'
-      preLoaderRoute: typeof DemoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -427,75 +299,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CheckoutSuccessRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/demo/server/': {
-      id: '/demo/server/'
-      path: '/server'
-      fullPath: '/demo/server/'
-      preLoaderRoute: typeof DemoServerIndexRouteImport
-      parentRoute: typeof DemoRoute
-    }
-    '/demo/manager/': {
-      id: '/demo/manager/'
-      path: '/manager'
-      fullPath: '/demo/manager/'
-      preLoaderRoute: typeof DemoManagerIndexRouteImport
-      parentRoute: typeof DemoRoute
-    }
     '/manager/server/$id': {
       id: '/manager/server/$id'
       path: '/manager/server/$id'
       fullPath: '/manager/server/$id'
       preLoaderRoute: typeof ManagerServerIdRouteImport
       parentRoute: typeof rootRouteImport
-    }
-    '/demo/server/welcome': {
-      id: '/demo/server/welcome'
-      path: '/server/welcome'
-      fullPath: '/demo/server/welcome'
-      preLoaderRoute: typeof DemoServerWelcomeRouteImport
-      parentRoute: typeof DemoRoute
-    }
-    '/demo/server/progress': {
-      id: '/demo/server/progress'
-      path: '/server/progress'
-      fullPath: '/demo/server/progress'
-      preLoaderRoute: typeof DemoServerProgressRouteImport
-      parentRoute: typeof DemoRoute
-    }
-    '/demo/server/menu': {
-      id: '/demo/server/menu'
-      path: '/server/menu'
-      fullPath: '/demo/server/menu'
-      preLoaderRoute: typeof DemoServerMenuRouteImport
-      parentRoute: typeof DemoRoute
-    }
-    '/demo/manager/team': {
-      id: '/demo/manager/team'
-      path: '/manager/team'
-      fullPath: '/demo/manager/team'
-      preLoaderRoute: typeof DemoManagerTeamRouteImport
-      parentRoute: typeof DemoRoute
-    }
-    '/demo/manager/priorities': {
-      id: '/demo/manager/priorities'
-      path: '/manager/priorities'
-      fullPath: '/demo/manager/priorities'
-      preLoaderRoute: typeof DemoManagerPrioritiesRouteImport
-      parentRoute: typeof DemoRoute
-    }
-    '/demo/manager/menu': {
-      id: '/demo/manager/menu'
-      path: '/manager/menu'
-      fullPath: '/demo/manager/menu'
-      preLoaderRoute: typeof DemoManagerMenuRouteImport
-      parentRoute: typeof DemoRoute
-    }
-    '/demo/manager/server/$id': {
-      id: '/demo/manager/server/$id'
-      path: '/manager/server/$id'
-      fullPath: '/demo/manager/server/$id'
-      preLoaderRoute: typeof DemoManagerServerIdRouteImport
-      parentRoute: typeof DemoRoute
     }
     '/api/public/payments/webhook': {
       id: '/api/public/payments/webhook'
@@ -507,35 +316,8 @@ declare module '@tanstack/react-router' {
   }
 }
 
-interface DemoRouteChildren {
-  DemoManagerMenuRoute: typeof DemoManagerMenuRoute
-  DemoManagerPrioritiesRoute: typeof DemoManagerPrioritiesRoute
-  DemoManagerTeamRoute: typeof DemoManagerTeamRoute
-  DemoServerMenuRoute: typeof DemoServerMenuRoute
-  DemoServerProgressRoute: typeof DemoServerProgressRoute
-  DemoServerWelcomeRoute: typeof DemoServerWelcomeRoute
-  DemoManagerIndexRoute: typeof DemoManagerIndexRoute
-  DemoServerIndexRoute: typeof DemoServerIndexRoute
-  DemoManagerServerIdRoute: typeof DemoManagerServerIdRoute
-}
-
-const DemoRouteChildren: DemoRouteChildren = {
-  DemoManagerMenuRoute: DemoManagerMenuRoute,
-  DemoManagerPrioritiesRoute: DemoManagerPrioritiesRoute,
-  DemoManagerTeamRoute: DemoManagerTeamRoute,
-  DemoServerMenuRoute: DemoServerMenuRoute,
-  DemoServerProgressRoute: DemoServerProgressRoute,
-  DemoServerWelcomeRoute: DemoServerWelcomeRoute,
-  DemoManagerIndexRoute: DemoManagerIndexRoute,
-  DemoServerIndexRoute: DemoServerIndexRoute,
-  DemoManagerServerIdRoute: DemoManagerServerIdRoute,
-}
-
-const DemoRouteWithChildren = DemoRoute._addFileChildren(DemoRouteChildren)
-
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  DemoRoute: DemoRouteWithChildren,
   LoginRoute: LoginRoute,
   SettingsRoute: SettingsRoute,
   CheckoutSuccessRoute: CheckoutSuccessRoute,
