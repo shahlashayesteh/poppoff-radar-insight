@@ -68,9 +68,16 @@ export function ManagerLayout({ children }: { children: React.ReactNode }) {
           <Link to="/" className="flex items-center gap-2 rounded-xl px-3 py-2 text-xs text-muted-foreground hover:text-foreground">
             <HelpCircle className="h-3.5 w-3.5" /> Need help?
           </Link>
-          <Link to="/login" className="flex items-center gap-2 rounded-xl px-3 py-2 text-xs text-muted-foreground hover:text-foreground">
+          <button
+            onClick={async () => {
+              const { supabase } = await import("@/integrations/supabase/client");
+              await supabase.auth.signOut();
+              window.location.href = "/";
+            }}
+            className="w-full flex items-center gap-2 rounded-xl px-3 py-2 text-xs text-muted-foreground hover:text-foreground text-left"
+          >
             <LogOut className="h-3.5 w-3.5" /> Sign out
-          </Link>
+          </button>
         </div>
       </aside>
       <main className="flex-1 min-w-0">{children}</main>
