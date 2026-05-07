@@ -38,7 +38,7 @@ function Landing() {
           </nav>
           <div className="flex items-center gap-3">
             <Link to="/login" className="text-sm font-medium hidden sm:inline">Login</Link>
-            <a href="#demo" className="rounded-xl px-4 py-2 text-sm font-bold text-white" style={{ background: "var(--brand-orange)" }}>Book a Demo</a>
+            <Link to="/login" className="rounded-xl px-4 py-2 text-sm font-bold text-white" style={{ background: "var(--brand-orange)" }}>Book a Demo</Link>
           </div>
         </div>
       </header>
@@ -60,9 +60,9 @@ function Landing() {
               We turn your numbers into momentum and more money in your pocket.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
-              <a href="#demo" className="rounded-xl px-6 py-3 text-sm font-bold text-white inline-flex items-center gap-2" style={{ background: "var(--brand-orange)" }}>
+              <Link to="/login" className="rounded-xl px-6 py-3 text-sm font-bold text-white inline-flex items-center gap-2" style={{ background: "var(--brand-orange)" }}>
                 Book a Demo
-              </a>
+              </Link>
               <Link to="/login" className="rounded-xl px-6 py-3 text-sm font-bold border-2 border-foreground inline-flex items-center gap-2">
                 Start Your Pilot
               </Link>
@@ -81,7 +81,7 @@ function Landing() {
           </div>
 
           {/* Phone mockups */}
-          <div id="demo" className="flex gap-4 justify-center overflow-hidden lg:overflow-visible scroll-mt-24">
+          <div className="flex gap-4 justify-center overflow-hidden lg:overflow-visible">
             <PhoneFrame>
               <div className="text-center">
                 <div className="text-brand-orange font-bold text-xs">🔥 Current streak</div>
@@ -214,7 +214,7 @@ function Landing() {
           </div>
           <div className="inline-flex items-center gap-3">
             <span className="text-sm font-bold text-brand-green">Ready to see your team win?</span>
-            <a href="#demo" className="rounded-xl px-4 py-2 text-sm font-bold text-white" style={{ background: "var(--brand-orange)" }}>Book a Demo</a>
+            <Link to="/login" className="rounded-xl px-4 py-2 text-sm font-bold text-white" style={{ background: "var(--brand-orange)" }}>Book a Demo</Link>
           </div>
         </div>
       </section>
