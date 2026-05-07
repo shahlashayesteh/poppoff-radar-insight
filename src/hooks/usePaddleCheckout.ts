@@ -32,9 +32,7 @@ export function usePaddleCheckout() {
 
       window.Paddle.Checkout.open({
         items: [{ priceId: paddlePriceId, quantity: options.quantity ?? 1 }],
-        customer: options.customerEmail
-          ? { email: options.customerEmail, address: { countryCode: "GB" } }
-          : { address: { countryCode: "GB" } },
+        customer: options.customerEmail ? { email: options.customerEmail } : undefined,
         customData: options.customData,
         settings: {
           displayMode: "overlay",
