@@ -132,7 +132,7 @@ function Landing() {
 
             <PhoneFrame>
               <div>
-                <div className="font-bold text-xs">👋 Hey there!</div>
+                <div className="font-bold text-xs">👋 Hey Sarah!</div>
                 <div className="font-display text-2xl font-extrabold leading-none mt-1">Stats just<br /><span className="text-brand-green">dropped</span> 🎉</div>
                 <div className="text-[10px] text-muted-foreground mt-1">Here's how you crushed it<br />this week (May 4 – May 10)</div>
                 <div className="mt-3 rounded-lg border border-border p-2">
