@@ -128,6 +128,10 @@ function Login() {
               <>Already have an account? <button className="font-semibold text-foreground underline" onClick={() => setMode("signin")}>Sign in</button></>
             )}
           </div>
+          <div className="mt-2 text-center text-xs text-muted-foreground">
+            Server with a join code?{" "}
+            <Link to="/join" className="font-semibold text-foreground underline">Join your team</Link>
+          </div>
         </div>
       </div>
     </div>
