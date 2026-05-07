@@ -14,7 +14,6 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Logo } from "./logo";
-import { RequireAuth } from "./RequireAuth";
 
 const items = [
   { to: "/manager", label: "Dashboard", icon: LayoutDashboard },
@@ -31,7 +30,6 @@ const items = [
 export function ManagerLayout({ children }: { children: React.ReactNode }) {
   const path = useRouterState({ select: (s) => s.location.pathname });
   return (
-    <RequireAuth>
     <div className="min-h-screen flex bg-white">
       <aside className="hidden md:flex w-60 flex-col bg-white border-r border-border sticky top-0 h-screen">
         <div className="px-6 py-6">
@@ -70,20 +68,12 @@ export function ManagerLayout({ children }: { children: React.ReactNode }) {
           <Link to="/" className="flex items-center gap-2 rounded-xl px-3 py-2 text-xs text-muted-foreground hover:text-foreground">
             <HelpCircle className="h-3.5 w-3.5" /> Need help?
           </Link>
-          <button
-            onClick={async () => {
-              const { supabase } = await import("@/integrations/supabase/client");
-              await supabase.auth.signOut();
-              window.location.href = "/";
-            }}
-            className="w-full flex items-center gap-2 rounded-xl px-3 py-2 text-xs text-muted-foreground hover:text-foreground text-left"
-          >
+          <Link to="/login" className="flex items-center gap-2 rounded-xl px-3 py-2 text-xs text-muted-foreground hover:text-foreground">
             <LogOut className="h-3.5 w-3.5" /> Sign out
-          </button>
+          </Link>
         </div>
       </aside>
       <main className="flex-1 min-w-0">{children}</main>
     </div>
-    </RequireAuth>
   );
 }
