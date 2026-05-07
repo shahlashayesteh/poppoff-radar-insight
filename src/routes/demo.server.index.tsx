@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ServerLayout } from "@/components/server-layout";
+import { DemoServerLayout } from "@/components/demo-server-layout";
 import { Bell, ChevronDown, Trophy, Award, Flame, ArrowRight } from "lucide-react";
 
 export const Route = createFileRoute("/demo/server/")({
@@ -31,7 +31,7 @@ function Ring({ value, color, label }: { value: number; color: string; label: st
 
 function ServerDashboard() {
   return (
-    <ServerLayout>
+    <DemoServerLayout>
       <div className="px-5 pt-6">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-2 text-sm">
@@ -115,7 +115,7 @@ function ServerDashboard() {
 
       {/* Streak preview */}
       <div className="px-5 mt-4">
-        <Link to="/server/progress" className="block rounded-3xl bg-white border border-border p-4 flex items-center gap-3 hover:border-brand-green transition">
+        <Link to="/demo/server/progress" className="block rounded-3xl bg-white border border-border p-4 flex items-center gap-3 hover:border-brand-green transition">
           <div className="h-10 w-10 rounded-full bg-brand-orange/15 grid place-items-center">
             <Flame className="h-5 w-5 text-brand-orange" />
           </div>
@@ -126,6 +126,6 @@ function ServerDashboard() {
           <ArrowRight className="h-4 w-4 text-muted-foreground" />
         </Link>
       </div>
-    </ServerLayout>
+    </DemoServerLayout>
   );
 }

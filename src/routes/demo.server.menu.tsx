@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { ServerLayout } from "@/components/server-layout";
+import { DemoServerLayout } from "@/components/demo-server-layout";
 import { menuItems } from "@/lib/sample-data";
 import { Sparkles } from "lucide-react";
 
@@ -18,7 +18,7 @@ const emoji: Record<string, string> = {
 
 function ServerMenu() {
   return (
-    <ServerLayout>
+    <DemoServerLayout>
       <div className="px-5 pt-6">
         <h1 className="font-display text-3xl font-extrabold tracking-tight">Coaching</h1>
         <p className="text-sm text-muted-foreground mt-1">This week's pairings and priorities.</p>
@@ -55,6 +55,6 @@ function ServerMenu() {
           ))}
         </div>
       </div>
-    </ServerLayout>
+    </DemoServerLayout>
   );
 }

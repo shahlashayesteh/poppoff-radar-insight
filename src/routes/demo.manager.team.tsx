@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { ManagerLayout } from "@/components/manager-layout";
+import { DemoManagerLayout } from "@/components/demo-manager-layout";
 import { servers } from "@/lib/sample-data";
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid } from "recharts";
 
@@ -32,7 +32,7 @@ function ChartCard({ title, children }: any) {
 
 function TeamTrends() {
   return (
-    <ManagerLayout>
+    <DemoManagerLayout>
       <div className="px-8 py-8">
         <div className="text-xs uppercase tracking-widest text-muted-foreground">Team Trends</div>
         <h1 className="font-display text-4xl font-semibold tracking-tight mt-2">How the team is moving.</h1>
@@ -112,6 +112,6 @@ function TeamTrends() {
           </div>
         </div>
       </div>
-    </ManagerLayout>
+    </DemoManagerLayout>
   );
 }

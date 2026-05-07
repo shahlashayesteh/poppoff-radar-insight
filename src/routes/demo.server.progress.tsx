@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { ServerLayout } from "@/components/server-layout";
+import { DemoServerLayout } from "@/components/demo-server-layout";
 import { Share2, Flame, Award, Rocket } from "lucide-react";
 
 export const Route = createFileRoute("/demo/server/progress")({
@@ -11,7 +11,7 @@ const done = [true, true, true, true, true, false, false];
 
 function ServerProgress() {
   return (
-    <ServerLayout>
+    <DemoServerLayout>
       <div className="px-5 pt-6">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-2 text-brand-orange font-semibold">
@@ -101,6 +101,6 @@ function ServerProgress() {
           <div className="h-9 w-9 rounded-full bg-brand-green text-white grid place-items-center">↗</div>
         </div>
       </div>
-    </ServerLayout>
+    </DemoServerLayout>
   );
 }

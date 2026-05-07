@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ServerLayout } from "@/components/server-layout";
+import { DemoServerLayout } from "@/components/demo-server-layout";
 import { Sparkles, TrendingUp, ChevronRight } from "lucide-react";
 
 export const Route = createFileRoute("/demo/server/welcome")({
@@ -38,7 +38,7 @@ const picks = [
 
 function SmartRecs() {
   return (
-    <ServerLayout>
+    <DemoServerLayout>
       <div className="px-5 pt-6">
         <div className="flex items-start gap-3">
           <Sparkles className="h-7 w-7 text-brand-orange shrink-0 mt-1" />
@@ -84,10 +84,10 @@ function SmartRecs() {
           ))}
         </div>
 
-        <Link to="/server" className="mt-5 block w-full rounded-2xl py-4 text-center font-display text-lg font-bold bg-brand-orange text-white">
+        <Link to="/demo/server" className="mt-5 block w-full rounded-2xl py-4 text-center font-display text-lg font-bold bg-brand-orange text-white">
           Let's go! 🚀
         </Link>
       </div>
-    </ServerLayout>
+    </DemoServerLayout>
   );
 }

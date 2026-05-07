@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ManagerLayout } from "@/components/manager-layout";
+import { DemoManagerLayout } from "@/components/demo-manager-layout";
 import { servers } from "@/lib/sample-data";
 import { Bell, ChevronDown, Calendar, Users, PoundSterling, TrendingUp, Eye, Wine, Cake, Droplet, Target, Flame, MoreVertical } from "lucide-react";
 
@@ -40,7 +40,7 @@ const cats: Array<{ key: keyof typeof servers[0]; label: string }> = [
 
 function ManagerDashboard() {
   return (
-    <ManagerLayout>
+    <DemoManagerLayout>
       <div className="px-8 py-7">
         {/* Top row */}
         <div className="flex items-start justify-between gap-4 flex-wrap">
@@ -105,7 +105,7 @@ function ManagerDashboard() {
                     <td className={`px-3 text-center font-semibold ${s.viewed ? "text-brand-green" : "text-opportunity"}`}>{s.viewed ? "Yes" : "No"}</td>
                     <td className={`px-3 text-center font-semibold ${s.acknowledged ? "text-brand-green" : "text-opportunity"}`}>{s.acknowledged ? "Yes" : "No"}</td>
                     <td className="px-3">
-                      <Link to="/manager/server/$id" params={{ id: s.id }} className="text-muted-foreground hover:text-foreground">
+                      <Link to="/demo/manager/server/$id" params={{ id: s.id }} className="text-muted-foreground hover:text-foreground">
                         <MoreVertical className="h-4 w-4" />
                       </Link>
                     </td>
@@ -184,6 +184,6 @@ function ManagerDashboard() {
           <span><span className="font-bold" style={{ color: "var(--brand-orange)" }}>Popp</span><span className="font-bold" style={{ color: "var(--brand-green)" }}>Off</span>. Every shift. Every win.</span>
         </div>
       </div>
-    </ManagerLayout>
+    </DemoManagerLayout>
   );
 }

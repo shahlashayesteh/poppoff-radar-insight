@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ManagerLayout } from "@/components/manager-layout";
+import { DemoManagerLayout } from "@/components/demo-manager-layout";
 import { Target, ChevronRight, MoreHorizontal, CheckCircle2 } from "lucide-react";
 import { useState } from "react";
 
@@ -27,10 +27,10 @@ const flagStyle = (c: string) => {
 function Priorities() {
   const [saved, setSaved] = useState(false);
   return (
-    <ManagerLayout>
+    <DemoManagerLayout>
       <div className="px-8 py-7">
         <div className="text-sm flex items-center gap-2">
-          <Link to="/manager" className="text-brand-green font-medium">Manager Dashboard</Link>
+          <Link to="/demo/manager" className="text-brand-green font-medium">Manager Dashboard</Link>
           <ChevronRight className="h-3 w-3 text-muted-foreground" />
           <span className="text-foreground font-medium">Weekly Win Priorities</span>
         </div>
@@ -100,6 +100,6 @@ function Priorities() {
           </div>
         )}
       </div>
-    </ManagerLayout>
+    </DemoManagerLayout>
   );
 }

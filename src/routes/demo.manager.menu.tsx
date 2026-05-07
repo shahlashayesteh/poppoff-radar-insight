@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ManagerLayout } from "@/components/manager-layout";
+import { DemoManagerLayout } from "@/components/demo-manager-layout";
 import { Brain, ChevronRight, Utensils, Wine, Star, Camera, FileText, Sparkles, TrendingUp, Lightbulb } from "lucide-react";
 
 export const Route = createFileRoute("/demo/manager/menu")({
@@ -36,7 +36,7 @@ const flagStyle = (c: string) => c === "orange"
 
 function MenuIntel() {
   return (
-    <ManagerLayout>
+    <DemoManagerLayout>
       <div className="px-8 py-7">
         <div className="flex items-start justify-between gap-6 flex-wrap">
           <div>
@@ -151,12 +151,12 @@ function MenuIntel() {
           <div className="text-sm inline-flex items-center gap-2">
             <Lightbulb className="h-4 w-4 text-brand-orange" /> <span className="font-semibold">Tip:</span> Review your parsed items, adjust categories or pairings, and set weekly priorities to guide your team.
           </div>
-          <Link to="/manager/priorities" className="rounded-lg px-4 py-2 text-sm font-bold inline-flex items-center gap-2"
+          <Link to="/demo/manager/priorities" className="rounded-lg px-4 py-2 text-sm font-bold inline-flex items-center gap-2"
             style={{ background: "var(--brand-green)", color: "white" }}>
             Go to Weekly Priorities <ChevronRight className="h-4 w-4" />
           </Link>
         </div>
       </div>
-    </ManagerLayout>
+    </DemoManagerLayout>
   );
 }
