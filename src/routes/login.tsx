@@ -14,12 +14,25 @@ export const Route = createFileRoute("/login")({
 function Login() {
   const navigate = useNavigate();
   const search = useSearch({ from: "/login" });
-  const redirect = search.redirect ?? "/manager";
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
+  const goAfterAuth = async () => {
+    if (search.redirect) { navigate({ to: search.redirect }); return; }
+    const { data: sess } = await supabase.auth.getSession();
+    if (!sess.session) { navigate({ to: "/" }); return; }
+    const { data: r } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", sess.session.user.id)
+      .maybeSingle();
+    if (r?.role === "manager") navigate({ to: "/manager" });
+    else if (r?.role === "server") navigate({ to: "/server" });
+    else navigate({ to: "/" });
+  };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,14 +43,14 @@ function Login() {
         const { error } = await supabase.auth.signUp({
           email,
           password,
-          options: { emailRedirectTo: window.location.origin + redirect },
+          options: { emailRedirectTo: window.location.origin + (search.redirect ?? "/") },
         });
         if (error) throw error;
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
       }
-      navigate({ to: redirect });
+      await goAfterAuth();
     } catch (err: any) {
       setError(err.message ?? "Something went wrong");
     } finally {
@@ -48,14 +61,14 @@ function Login() {
   const google = async () => {
     setError(null);
     const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin + redirect,
+      redirect_uri: window.location.origin + (search.redirect ?? "/"),
     });
     if (result.error) {
       setError(result.error.message ?? "Google sign-in failed");
       return;
     }
     if (result.redirected) return;
-    navigate({ to: redirect });
+    await goAfterAuth();
   };
 
   return (
