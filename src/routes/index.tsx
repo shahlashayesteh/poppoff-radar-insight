@@ -41,7 +41,6 @@ function Landing() {
             <a href="#about" className="hover:text-brand-green">About</a>
           </nav>
           <div className="flex items-center gap-3">
-            <Link to="/login" className="text-sm font-medium hidden sm:inline">Login</Link>
             <Link to="/login" className="rounded-xl px-4 py-2 text-sm font-bold text-white" style={{ background: "var(--brand-orange)" }}>Book a Demo</Link>
           </div>
         </div>

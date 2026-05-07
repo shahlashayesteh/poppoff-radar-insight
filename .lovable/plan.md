@@ -1,29 +1,12 @@
 ## Goal
-Enable Paddle payments for Popp Off and wire up the three subscription tiers (£49, £99, £199 / venue / month) shown on the landing page so restaurants can subscribe.
+On the landing page header, replace the "Login" text link with nothing — leaving a single "Book a Demo" button as the only CTA in that header group.
 
-## Steps
+## File to change
+- `src/routes/index.tsx` (line 44) — remove the `<Link to="/login">Login</Link>` element. The adjacent "Book a Demo" button on line 45 stays exactly as it is.
 
-1. **Enable Paddle** on the project (creates a test/sandbox environment immediately; live payments require Paddle verification later).
+## Out of scope
+- No other links, buttons, styles, or routes change.
+- The secondary header further down (line 221) already only shows "Book a Demo" — untouched.
+- No new routes, no auth changes.
 
-2. **Create the 3 subscription products** in Paddle matching the landing page pricing:
-   - Server Starter — £49/month per venue
-   - Pro — £99/month per venue
-   - Enterprise — £199/month per venue
-
-3. **Wire checkout buttons** on the landing page (`/`) pricing section so each "Get started" CTA opens a Paddle checkout for the matching plan.
-
-4. **Add a success page** (`/checkout/success`) shown after payment completes.
-
-5. **Add a webhook handler** (`/api/public/webhooks/paddle`) to record subscription status in the backend so we know who's a paying customer.
-
-6. **Add a minimal subscription record** in Lovable Cloud (one table: `subscriptions` with customer email, plan, status) — used by the webhook and viewable later for a billing screen.
-
-## Out of scope (for this step)
-- Gating manager/server dashboards behind subscription status (can come next).
-- Billing portal / cancel flow inside the app (Paddle hosts this for now).
-- Going live — that needs Paddle account verification done by you after testing.
-
-## Technical notes
-- Uses Lovable's built-in Paddle integration (no Paddle account needed to start in test mode).
-- Checkout uses Paddle.js overlay on the landing page — no redirect.
-- Webhook signature is verified inside the handler before any DB write.
+Note: `src/routes/index.tsx` was on your earlier protected list. This plan requires editing it. Approving this plan authorizes that one edit.
