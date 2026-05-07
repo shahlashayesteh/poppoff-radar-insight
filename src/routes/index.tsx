@@ -270,14 +270,13 @@ function Landing() {
                     {p.cta}
                   </a>
                 ) : (
-                  <Link
-                    to="/signup/manager"
-                    search={{ priceId: p.priceId }}
+                  <a
+                    href={`/signup/manager?priceId=${p.priceId}`}
                     className="mt-6 block w-full text-center rounded-xl py-3 text-sm font-bold text-white"
                     style={{ background: "var(--brand-orange)" }}
                   >
                     {p.cta}
-                  </Link>
+                  </a>
                 )}
               </div>
             ))}
