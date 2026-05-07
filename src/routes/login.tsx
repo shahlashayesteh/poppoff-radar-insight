@@ -5,15 +5,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
 
 export const Route = createFileRoute("/login")({
-  validateSearch: (s: Record<string, unknown>) => ({
-    redirect: typeof s.redirect === "string" ? s.redirect : "/manager",
+  validateSearch: (s: Record<string, unknown>): { redirect?: string } => ({
+    redirect: typeof s.redirect === "string" ? s.redirect : undefined,
   }),
   component: Login,
 });
 
 function Login() {
   const navigate = useNavigate();
-  const { redirect } = useSearch({ from: "/login" });
+  const search = useSearch({ from: "/login" });
+  const redirect = search.redirect ?? "/manager";
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
