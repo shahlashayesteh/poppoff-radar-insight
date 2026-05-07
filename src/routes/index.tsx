@@ -1,7 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Logo } from "@/components/logo";
 import { Star, Trophy, Award, Check, ShieldCheck, BarChart3, Users, BookOpen, Target } from "lucide-react";
-import { usePaddleCheckout } from "@/hooks/usePaddleCheckout";
 import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
 
 export const Route = createFileRoute("/")({
@@ -26,7 +25,6 @@ function PhoneFrame({ children }: { children: React.ReactNode }) {
 }
 
 function Landing() {
-  const { openCheckout, loading } = usePaddleCheckout();
   return (
     <div className="bg-white text-ink">
       <PaymentTestModeBanner />
