@@ -302,6 +302,11 @@ function Landing() {
       <footer className="px-6 py-8 border-t border-border text-sm">
         <div className="mx-auto max-w-7xl flex flex-wrap items-center justify-between gap-4">
           <Logo />
+          <nav className="flex flex-wrap gap-4 text-muted-foreground">
+            <Link to="/terms" className="hover:text-foreground">Terms</Link>
+            <Link to="/privacy" className="hover:text-foreground">Privacy</Link>
+            <Link to="/refund" className="hover:text-foreground">Refunds</Link>
+          </nav>
           <div className="text-muted-foreground">© 2026 PoppOff. Every shift. Every win.</div>
         </div>
       </footer>
