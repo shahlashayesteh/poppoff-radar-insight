@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Copy, Check, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -7,70 +7,23 @@ type Venue = { id: string; name: string; join_code: string };
 export function JoinCodeCard() {
   const [venue, setVenue] = useState<Venue | null>(null);
   const [loading, setLoading] = useState(true);
-  const [waiting, setWaiting] = useState(false);
   const [copied, setCopied] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
   const [confirmRegen, setConfirmRegen] = useState(false);
-  const stop = useRef(false);
 
-  const fetchVenue = async () => {
+  const load = async () => {
+    setLoading(true);
     const { data } = await supabase
       .from("venues")
       .select("id, name, join_code")
       .order("created_at", { ascending: true })
       .limit(1)
       .maybeSingle();
-    return (data as Venue | null) ?? null;
+    setVenue(data ?? null);
+    setLoading(false);
   };
 
-  useEffect(() => {
-    stop.current = false;
-    let channel: ReturnType<typeof supabase.channel> | null = null;
-    let pollTimer: number | null = null;
-    let stopTimer: number | null = null;
-
-    (async () => {
-      setLoading(true);
-      const v = await fetchVenue();
-      setLoading(false);
-      if (v) { setVenue(v); return; }
-
-      // No venue yet — wait for the webhook to land it.
-      setWaiting(true);
-      const { data: sess } = await supabase.auth.getSession();
-      const uid = sess.session?.user.id;
-
-      if (uid) {
-        channel = supabase
-          .channel(`venues-self-${uid}`)
-          .on(
-            "postgres_changes",
-            { event: "INSERT", schema: "public", table: "venues", filter: `manager_id=eq.${uid}` },
-            (payload) => {
-              const row = payload.new as Venue;
-              if (row?.id) { setVenue(row); setWaiting(false); stop.current = true; }
-            }
-          )
-          .subscribe();
-      }
-
-      const tick = async () => {
-        if (stop.current) return;
-        const v2 = await fetchVenue();
-        if (v2) { setVenue(v2); setWaiting(false); stop.current = true; return; }
-        pollTimer = window.setTimeout(tick, 3000);
-      };
-      pollTimer = window.setTimeout(tick, 3000);
-      stopTimer = window.setTimeout(() => { stop.current = true; setWaiting(false); }, 30000);
-    })();
-
-    return () => {
-      stop.current = true;
-      if (pollTimer) clearTimeout(pollTimer);
-      if (stopTimer) clearTimeout(stopTimer);
-      if (channel) supabase.removeChannel(channel);
-    };
-  }, []);
+  useEffect(() => { load(); }, []);
 
   const copy = async () => {
     if (!venue) return;
@@ -101,9 +54,7 @@ export function JoinCodeCard() {
   if (!venue) {
     return (
       <div className="rounded-2xl bg-white border border-border p-5">
-        <div className="text-sm text-muted-foreground">
-          {waiting ? "Setting up your venue…" : "No venue yet. Complete checkout to set one up."}
-        </div>
+        <div className="text-sm text-muted-foreground">No venue yet. Complete checkout to set one up.</div>
       </div>
     );
   }

@@ -22,21 +22,13 @@ function CheckoutSuccess() {
         if (!cancelled) { setStatus("error"); setError("You're not signed in. Please sign in to access your dashboard."); }
         return;
       }
-      const uid = data.session.user.id;
-      const { data: profile } = await supabase.from("profiles").select("business_name").eq("id", uid).maybeSingle();
+      const { data: profile } = await supabase.from("profiles").select("business_name").eq("id", data.session.user.id).maybeSingle();
       const { error: rpcErr } = await supabase.rpc("claim_manager_account", {
         _business_name: profile?.business_name ?? "",
       });
       if (cancelled) return;
       if (rpcErr) { setStatus("error"); setError(rpcErr.message); return; }
-
-      // Wait until the venue row is visible (webhook may still be in flight).
-      for (let i = 0; i < 10 && !cancelled; i++) {
-        const { data: v } = await supabase.from("venues").select("id").eq("manager_id", uid).limit(1).maybeSingle();
-        if (v) break;
-        await new Promise((r) => setTimeout(r, 1500));
-      }
-      if (!cancelled) setStatus("ready");
+      setStatus("ready");
     })();
     return () => { cancelled = true; };
   }, [navigate]);

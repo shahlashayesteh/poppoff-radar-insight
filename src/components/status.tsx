@@ -1,9 +1,5 @@
+import { Status, statusColor } from "@/lib/sample-data";
 import { cn } from "@/lib/utils";
-
-export type Status = "green" | "amber" | "red";
-
-export const statusColor = (s: Status) =>
-  s === "green" ? "var(--success)" : s === "amber" ? "var(--warning)" : "var(--opportunity)";
 
 export function StatusDot({ status, className }: { status: Status; className?: string }) {
   return (

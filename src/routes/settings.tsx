@@ -9,9 +9,9 @@ export const Route = createFileRoute("/settings")({
 });
 
 const sections = [
-  { title: "Restaurant profile", items: [["Restaurant name", ""], ["Cuisine", ""], ["Cover capacity", ""]] },
-  { title: "POS system", items: [["Provider", ""], ["Sync frequency", ""], ["Last upload", ""]] },
-  { title: "Menu categories", items: [["Active categories", ""], ["Premium mains", ""], ["Bottled water", ""]] },
+  { title: "Restaurant profile", items: [["Restaurant name", "The Demo Restaurant"], ["Cuisine", "Modern European"], ["Cover capacity", "120"]] },
+  { title: "POS system", items: [["Provider", "Lightspeed"], ["Sync frequency", "Weekly"], ["Last upload", "10 May 2026"]] },
+  { title: "Menu categories", items: [["Active categories", "11"], ["Premium mains", "On"], ["Bottled water", "On"]] },
   { title: "Score thresholds", items: [["Green", "≥ 80%"], ["Amber", "55–79%"], ["Opportunity", "< 55%"]] },
 ];
 
