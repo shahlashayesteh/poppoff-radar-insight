@@ -28,6 +28,20 @@ function PhoneFrame({ children }: { children: React.ReactNode }) {
 
 function Landing() {
   const { openCheckout, loading } = usePaddleCheckout();
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSubscribe = (priceId: string) => {
+    if (!user) {
+      navigate({ to: "/login", search: { redirect: "/#pricing" } });
+      return;
+    }
+    openCheckout({
+      priceId,
+      customerEmail: user.email,
+      customData: { userId: user.id },
+    });
+  };
   return (
     <div className="bg-white text-ink">
       <PaymentTestModeBanner />
