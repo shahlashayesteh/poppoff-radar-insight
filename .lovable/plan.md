@@ -1,66 +1,63 @@
-# Fix: Paddle sandbox checkout declining test cards on preview
+# Fix: Manager dashboard shows "No venue yet" after a successful checkout
 
-## What I verified
+## What's actually happening
 
-- Preview is correctly in **sandbox** mode: orange test banner shows, client token starts with `test_`, `Paddle.Environment.set("sandbox")` is being called.
-- Sandbox catalog is healthy: 3 active products + 3 active prices (`poppoff_starter_monthly` £49, `poppoff_pro_monthly` £99 with 30‑day trial, `poppoff_enterprise_monthly` £199).
-- Sandbox webhooks are registered and active.
-- Sandbox transaction list is **empty** — meaning the checkout is failing **before** a transaction is even created. That rules out our webhook/back-end code; the rejection is happening inside Paddle's checkout iframe itself.
+Your backend is fine. After your last checkout, the database already contains:
 
-So the message "We are unable to take payment at this time" is coming from Paddle's sandbox account, not from our app. This is a known Paddle sandbox-account-config issue, not a code bug.
+- `venues`: `ivy` with join code `484194`, owned by your user
+- `user_roles`: `manager` for your user
+- `subscriptions`: `trialing`, sandbox env
 
-## Likely root causes (in order)
+So the Paddle webhook fired and `handleSubscriptionCreated` correctly created the venue + role.
 
-1. **Sandbox account "Checkout settings" missing a default payment method / country.** A new Paddle sandbox seller must enable cards under *Checkout settings → Payment methods* and set at least one supported billing country. Until that's done, every card (including 4242) is declined with exactly this generic message.
-2. **Browser / extension blocking Paddle's risk scripts** (ad blockers, strict tracking protection, Brave shields). Paddle's anti-fraud check fails closed and shows the same generic decline.
-3. **Card number entered with spaces / wrong test card.** Only the official Paddle sandbox test cards work — `4242 4242 4242 4242` is correct, but `4111…` (Stripe's test card) is not.
-4. **Trial price + zero-auth issue.** `poppoff_pro_monthly` has a 30-day trial with `requires_payment_method: true`; if the sandbox seller hasn't enabled "card on file" auth, the £0 auth charge fails.
+The UI bug is two separate things:
+
+1. **Paddle overlay didn't redirect to `/checkout/success`.** It just closed and left you on `/manager`. So the `claim_manager_account` RPC fallback (which lives on the success page) never ran, and the page never re-mounted to re-query.
+2. **`JoinCodeCard` queries once on mount.** It ran *before* the webhook wrote the venue row, got `null`, cached "No venue yet", and never refetched.
+
+The "demo data" (team table, KPIs, charts) is hardcoded sample data in `manager.index.tsx` — that's intentional for now and out of scope.
 
 ## Plan
 
-### Step 1 — Confirm it's a Paddle account-side issue (no code changes)
+### 1. Make Paddle reliably redirect after checkout
 
-Have you try the exact same flow in an **incognito window with no extensions**, and paste the card with **no spaces**: `4242424242424242`, any future expiry, CVC `100`, ZIP `10000`, name `Test`. If it still says "unable to take payment", we've confirmed it's the sandbox seller config (cause #1).
+In `src/lib/paddle.ts`, the existing `eventCallback` already logs every event. Extend it to also handle `checkout.completed`:
 
-### Step 2 — Add a checkout error listener so we can read Paddle's real reason
+- On `checkout.completed`, navigate the top window to `/checkout/success` (use `window.location.assign`, not router — Paddle overlay lives outside the router).
+- Keep the existing `successUrl` setting as a backup; some payment methods honour it, some don't, so explicit navigation on the event is the reliable path.
 
-Right now `Paddle.Checkout.open()` is called with no event callbacks, so we only see the generic UI message. I'll wire `eventCallback` into `initializePaddle()` and log every `checkout.*` event (especially `checkout.error` and `checkout.payment.failed`) to the browser console with the underlying Paddle error code. That gives us the actual reason instead of the polite UI string.
+### 2. Make `JoinCodeCard` self-heal when the webhook lands
 
-Files touched:
-- `src/lib/paddle.ts` — add `eventCallback` to `Paddle.Initialize({ ... })`
-- `src/hooks/usePaddleCheckout.ts` — surface the error to the caller (toast)
+In `src/components/JoinCodeCard.tsx`:
 
-### Step 3 — Pre-flight checkout config
+- After the initial query, if `venue` is `null`, subscribe to Postgres changes on `public.venues` filtered by `manager_id = auth.uid()` via Supabase realtime. When an INSERT arrives, set the venue and unsubscribe.
+- As a belt-and-braces fallback (in case realtime isn't enabled on the table), poll every 3 seconds for up to ~30 seconds while `venue` is null.
+- Change the empty-state copy from "No venue yet. Complete checkout to set one up." to "Setting up your venue…" while polling, and only show the original message if 30 s elapses with no row.
 
-Add a one-time guard in `usePaddleCheckout` that:
-- logs the resolved Paddle price ID + currency before opening checkout, so we can confirm the preview is hitting the sandbox price (`pri_…`) and not a stale/cached live ID.
-- defaults `customer.address.countryCode` to `GB` (matches GBP pricing) — Paddle sandbox often refuses cards when address country is unset for GBP prices.
+This requires enabling realtime on `public.venues` via a migration:
 
-### Step 4 — If Step 2 logs reveal a `seller_settings_*` or `payment_method_unavailable` code
+```sql
+ALTER PUBLICATION supabase_realtime ADD TABLE public.venues;
+```
 
-That confirms the sandbox account itself needs configuring. I'll point you to the exact toggle in the Paddle sandbox dashboard (it's outside our code), and the fix is one click — no app change needed.
+### 3. Tighten `/checkout/success` so it always reflects current state
 
-### Step 5 — Re-test
+`src/routes/checkout.success.tsx` already calls `claim_manager_account` as a fallback. Keep that, but after the RPC succeeds, briefly poll `venues` (same 30 s / 3 s loop) before enabling the "Open your dashboard" link, so the user never lands on a dashboard that's still missing its venue row.
 
-Open `/` in incognito → click "Start Free Trial" on Starter (no trial, simplest path) → enter `4242424242424242` / `12/29` / `100` / country `GB` / postcode `SW1A 1AA`. Expected: checkout completes, `transaction.completed` webhook fires, `/manager` shows the join code.
+## Files touched
+
+- `src/lib/paddle.ts` — add `checkout.completed` → `window.location.assign("/checkout/success")` in `eventCallback`
+- `src/components/JoinCodeCard.tsx` — realtime subscription + poll fallback + "Setting up your venue…" copy
+- `src/routes/checkout.success.tsx` — wait until venue row visible before enabling CTA
+- New migration — enable realtime on `public.venues`
 
 ## Out of scope
 
-- No changes to live checkout, Paddle live token, or `.env.production`.
-- No changes to landing-page design, copy, colours, or pricing tiles.
-- No changes to the role/auth/join-code system already built.
+- Replacing the hardcoded sample data on the manager dashboard
+- Any change to live (production) checkout, the webhook handler, the catalog, or auth
 
-## Technical details
+## How to verify after implementation
 
-- `src/lib/paddle.ts` — extend the `Paddle.Initialize` call:
-  ```ts
-  window.Paddle.Initialize({
-    token: clientToken,
-    eventCallback: (e) => {
-      if (e.name?.startsWith("checkout.")) console.log("[paddle]", e.name, e.data);
-    },
-  });
-  ```
-- `src/hooks/usePaddleCheckout.ts` — also pass `customer.address: { countryCode: "GB" }` when no address is supplied; show a toast on `checkout.error`.
-
-That's it. The most likely fix is Paddle sandbox account config (Step 1/4); the code changes in Steps 2–3 just make the failure observable so we stop guessing.
+1. Refresh `/manager` now — the existing `ivy` venue + code `484194` should appear.
+2. Sign up a brand-new manager, complete sandbox checkout with `4242 4242 4242 4242` — you should be redirected to `/checkout/success`, then land on `/manager` with the join code already visible (no manual refresh).
+3. Backend state for the new user should match: one row each in `venues`, `user_roles` (manager), `subscriptions`.
