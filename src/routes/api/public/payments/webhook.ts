@@ -33,7 +33,8 @@ async function handleSubscriptionCreated(data: any, env: PaddleEnv) {
     return;
   }
 
-  await getSupabase().from("subscriptions").upsert(
+  const sb = getSupabase();
+  await sb.from("subscriptions").upsert(
     {
       user_id: userId,
       paddle_subscription_id: id,
@@ -48,6 +49,27 @@ async function handleSubscriptionCreated(data: any, env: PaddleEnv) {
     },
     { onConflict: "paddle_subscription_id" }
   );
+
+  // Ensure manager role + first venue exist (idempotent fallback)
+  await sb.from("user_roles").upsert(
+    { user_id: userId, role: "manager" },
+    { onConflict: "user_id,role" }
+  );
+  const { data: existingVenue } = await sb
+    .from("venues")
+    .select("id")
+    .eq("manager_id", userId)
+    .limit(1)
+    .maybeSingle();
+  if (!existingVenue) {
+    const { data: profile } = await sb
+      .from("profiles")
+      .select("business_name")
+      .eq("id", userId)
+      .maybeSingle();
+    const name = profile?.business_name?.trim() || "My Venue";
+    await sb.from("venues").insert({ manager_id: userId, name });
+  }
 }
 
 async function handleSubscriptionUpdated(data: any, env: PaddleEnv) {
