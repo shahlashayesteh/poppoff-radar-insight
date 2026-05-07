@@ -1,13 +1,10 @@
 import { Link, useRouterState } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import {
   LayoutDashboard,
   Users,
-  User,
-  TrendingUp,
   BookOpen,
   CalendarCheck,
-  Target,
-  FileBarChart,
   Settings as SettingsIcon,
   LogOut,
   HelpCircle,
@@ -15,21 +12,43 @@ import {
 import { cn } from "@/lib/utils";
 import { Logo } from "./logo";
 import { RequireAuth } from "./RequireAuth";
+import { supabase } from "@/integrations/supabase/client";
 
 const items = [
   { to: "/manager", label: "Dashboard", icon: LayoutDashboard },
   { to: "/manager/team", label: "Team", icon: Users },
-  { to: "/manager/server/sarah", label: "Individual", icon: User },
-  { to: "/manager/team", label: "Trends", icon: TrendingUp, key: "trends" },
   { to: "/manager/menu", label: "Menu Intelligence", icon: BookOpen },
   { to: "/manager/priorities", label: "Weekly Priorities", icon: CalendarCheck },
-  { to: "/manager/priorities", label: "Coaching", icon: Target, key: "coaching" },
-  { to: "/manager", label: "Reports", icon: FileBarChart, key: "reports" },
   { to: "/settings", label: "Settings", icon: SettingsIcon },
-];
+] as const;
 
 export function ManagerLayout({ children }: { children: React.ReactNode }) {
   const path = useRouterState({ select: (s) => s.location.pathname });
+  const [name, setName] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data: auth } = await supabase.auth.getUser();
+      const uid = auth.user?.id;
+      if (!uid) return;
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("id", uid)
+        .maybeSingle();
+      if (!cancelled) setName(profile?.full_name ?? null);
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const initials = (name ?? "")
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((p) => p[0]?.toUpperCase() ?? "")
+    .join("") || "··";
+
   return (
     <RequireAuth role="manager">
     <div className="min-h-screen flex bg-white">
@@ -44,7 +63,7 @@ export function ManagerLayout({ children }: { children: React.ReactNode }) {
               : path === it.to;
             return (
               <Link
-                key={(it.key ?? "") + it.to + it.label}
+                key={it.to + it.label}
                 to={it.to}
                 className={cn(
                   "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors",
@@ -61,10 +80,12 @@ export function ManagerLayout({ children }: { children: React.ReactNode }) {
         </nav>
         <div className="p-3 border-t border-border space-y-1">
           <div className="flex items-center gap-3 rounded-xl bg-muted/60 px-3 py-2.5">
-            <div className="h-8 w-8 rounded-full bg-brand-green/15 grid place-items-center text-brand-green text-xs font-bold">MG</div>
+            <div className="h-8 w-8 rounded-full bg-brand-green/15 grid place-items-center text-brand-green text-xs font-bold">
+              {initials}
+            </div>
             <div className="flex-1 min-w-0">
-              <div className="text-sm font-semibold truncate">Megan Green</div>
-              <div className="text-[11px] text-muted-foreground truncate">General Manager</div>
+              <div className="text-sm font-semibold truncate">{name ?? "—"}</div>
+              <div className="text-[11px] text-muted-foreground truncate">Manager</div>
             </div>
           </div>
           <Link to="/" className="flex items-center gap-2 rounded-xl px-3 py-2 text-xs text-muted-foreground hover:text-foreground">
@@ -72,7 +93,6 @@ export function ManagerLayout({ children }: { children: React.ReactNode }) {
           </Link>
           <button
             onClick={async () => {
-              const { supabase } = await import("@/integrations/supabase/client");
               await supabase.auth.signOut();
               window.location.href = "/";
             }}
