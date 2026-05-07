@@ -1,19 +1,44 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Logo } from "@/components/logo";
-import { User, Shield, Briefcase, Building2 } from "lucide-react";
+import { useState, type FormEvent } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/login")({
   component: Login,
 });
 
-const roles = [
-  { label: "Server", to: "/server", icon: User, sub: "Sarah · Front of house", c: "var(--brand-green)" },
-  { label: "Manager", to: "/manager", icon: Shield, sub: "The Demo Restaurant", c: "var(--brand-orange)" },
-  { label: "Smart Recs (Server)", to: "/server/welcome", icon: Briefcase, sub: "Personalised picks", c: "oklch(0.5 0.18 290)" },
-  { label: "Streak (Server)", to: "/server/progress", icon: Building2, sub: "Milestones & rewards", c: "oklch(0.65 0.15 240)" },
-];
-
 function Login() {
+  const navigate = useNavigate();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  async function onSubmit(e: FormEvent) {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+    const { data, error: signErr } = await supabase.auth.signInWithPassword({ email, password });
+    if (signErr || !data.user) {
+      setError(signErr?.message ?? "Sign in failed");
+      setLoading(false);
+      return;
+    }
+    const { data: roleRow } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", data.user.id)
+      .maybeSingle();
+    const role = roleRow?.role;
+    if (role === "manager") navigate({ to: "/manager" });
+    else if (role === "server") navigate({ to: "/server" });
+    else {
+      await supabase.auth.signOut();
+      setError("Account setup incomplete. Please contact support.");
+      setLoading(false);
+    }
+  }
+
   return (
     <div className="min-h-screen bg-white flex flex-col">
       <header className="px-6 py-4 border-b border-border">
@@ -22,27 +47,41 @@ function Login() {
           <Link to="/" className="text-sm text-muted-foreground">← Back home</Link>
         </div>
       </header>
-
       <div className="flex-1 grid place-items-center px-6 py-12">
-        <div className="w-full max-w-2xl text-center">
-          <div className="inline-flex items-center gap-2 rounded-full border border-border px-3 py-1 text-xs font-semibold">🔥 Demo access</div>
-          <h1 className="mt-5 font-display text-5xl font-extrabold tracking-tight">Welcome to <Logo className="text-5xl" /></h1>
-          <p className="mt-3 text-foreground/70">Pick a view to explore the prototype.</p>
+        <div className="w-full max-w-md">
+          <h1 className="font-display text-4xl font-extrabold tracking-tight text-center">Welcome back</h1>
+          <p className="mt-2 text-center text-sm text-muted-foreground">Sign in to your PoppOff account.</p>
 
-          <div className="mt-10 grid sm:grid-cols-2 gap-3">
-            {roles.map((r) => (
-              <Link key={r.label} to={r.to} className="text-left flex items-center gap-3 rounded-2xl border border-border bg-white p-4 hover:border-brand-green transition">
-                <span className="h-11 w-11 rounded-xl grid place-items-center"
-                  style={{ background: `color-mix(in oklab, ${r.c} 14%, white)` }}>
-                  <r.icon className="h-5 w-5" style={{ color: r.c }} />
-                </span>
-                <div className="flex-1">
-                  <div className="font-bold text-sm">Login as {r.label}</div>
-                  <div className="text-xs text-muted-foreground">{r.sub}</div>
-                </div>
-                <span className="text-muted-foreground">→</span>
-              </Link>
-            ))}
+          <form onSubmit={onSubmit} className="mt-8 space-y-4">
+            <div>
+              <label className="text-sm font-semibold">Email</label>
+              <input
+                type="email" required value={email} onChange={(e) => setEmail(e.target.value)}
+                className="mt-1 w-full rounded-xl border border-border px-4 py-3 text-sm"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-semibold">Password</label>
+              <input
+                type="password" required value={password} onChange={(e) => setPassword(e.target.value)}
+                className="mt-1 w-full rounded-xl border border-border px-4 py-3 text-sm"
+              />
+            </div>
+            {error && <div className="text-sm text-opportunity">{error}</div>}
+            <button
+              disabled={loading}
+              className="w-full rounded-xl py-3 text-sm font-bold text-white disabled:opacity-60"
+              style={{ background: "var(--brand-orange)" }}
+            >
+              {loading ? "Signing in…" : "Sign in"}
+            </button>
+          </form>
+
+          <div className="mt-6 text-center text-sm text-muted-foreground">
+            Server? <Link to="/join" className="font-semibold text-brand-green">Join your venue here.</Link>
+          </div>
+          <div className="mt-2 text-center text-sm text-muted-foreground">
+            New restaurant? <Link to="/" className="font-semibold text-brand-green">See pricing</Link>
           </div>
         </div>
       </div>
