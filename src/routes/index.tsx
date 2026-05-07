@@ -26,9 +26,11 @@ function PhoneFrame({ children }: { children: React.ReactNode }) {
 }
 
 function Landing() {
+  const { openCheckout, loading } = usePaddleCheckout();
   return (
     <div className="bg-white text-ink">
-      {/* Nav */}
+      <PaymentTestModeBanner />
+
       <header className="sticky top-0 z-30 bg-white/90 backdrop-blur border-b border-border">
         <div className="mx-auto max-w-7xl px-6 py-4 flex items-center justify-between">
           <Logo className="text-2xl" />
