@@ -14,13 +14,17 @@ import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as RefundRouteImport } from './routes/refund'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as JoinRouteImport } from './routes/join'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ServerIndexRouteImport } from './routes/server.index'
 import { Route as ManagerIndexRouteImport } from './routes/manager.index'
+import { Route as SignupManagerRouteImport } from './routes/signup.manager'
 import { Route as ServerWelcomeRouteImport } from './routes/server.welcome'
 import { Route as ServerProgressRouteImport } from './routes/server.progress'
 import { Route as ServerMenuRouteImport } from './routes/server.menu'
+import { Route as ManagerTrendsRouteImport } from './routes/manager.trends'
 import { Route as ManagerTeamRouteImport } from './routes/manager.team'
+import { Route as ManagerReportsRouteImport } from './routes/manager.reports'
 import { Route as ManagerPrioritiesRouteImport } from './routes/manager.priorities'
 import { Route as ManagerMenuRouteImport } from './routes/manager.menu'
 import { Route as CheckoutSuccessRouteImport } from './routes/checkout.success'
@@ -52,6 +56,11 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const JoinRoute = JoinRouteImport.update({
+  id: '/join',
+  path: '/join',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -65,6 +74,11 @@ const ServerIndexRoute = ServerIndexRouteImport.update({
 const ManagerIndexRoute = ManagerIndexRouteImport.update({
   id: '/manager/',
   path: '/manager/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SignupManagerRoute = SignupManagerRouteImport.update({
+  id: '/signup/manager',
+  path: '/signup/manager',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ServerWelcomeRoute = ServerWelcomeRouteImport.update({
@@ -82,9 +96,19 @@ const ServerMenuRoute = ServerMenuRouteImport.update({
   path: '/server/menu',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ManagerTrendsRoute = ManagerTrendsRouteImport.update({
+  id: '/manager/trends',
+  path: '/manager/trends',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ManagerTeamRoute = ManagerTeamRouteImport.update({
   id: '/manager/team',
   path: '/manager/team',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ManagerReportsRoute = ManagerReportsRouteImport.update({
+  id: '/manager/reports',
+  path: '/manager/reports',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ManagerPrioritiesRoute = ManagerPrioritiesRouteImport.update({
@@ -116,6 +140,7 @@ const ApiPublicPaymentsWebhookRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/join': typeof JoinRoute
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
   '/refund': typeof RefundRoute
@@ -124,10 +149,13 @@ export interface FileRoutesByFullPath {
   '/checkout/success': typeof CheckoutSuccessRoute
   '/manager/menu': typeof ManagerMenuRoute
   '/manager/priorities': typeof ManagerPrioritiesRoute
+  '/manager/reports': typeof ManagerReportsRoute
   '/manager/team': typeof ManagerTeamRoute
+  '/manager/trends': typeof ManagerTrendsRoute
   '/server/menu': typeof ServerMenuRoute
   '/server/progress': typeof ServerProgressRoute
   '/server/welcome': typeof ServerWelcomeRoute
+  '/signup/manager': typeof SignupManagerRoute
   '/manager/': typeof ManagerIndexRoute
   '/server/': typeof ServerIndexRoute
   '/manager/server/$id': typeof ManagerServerIdRoute
@@ -135,6 +163,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/join': typeof JoinRoute
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
   '/refund': typeof RefundRoute
@@ -143,10 +172,13 @@ export interface FileRoutesByTo {
   '/checkout/success': typeof CheckoutSuccessRoute
   '/manager/menu': typeof ManagerMenuRoute
   '/manager/priorities': typeof ManagerPrioritiesRoute
+  '/manager/reports': typeof ManagerReportsRoute
   '/manager/team': typeof ManagerTeamRoute
+  '/manager/trends': typeof ManagerTrendsRoute
   '/server/menu': typeof ServerMenuRoute
   '/server/progress': typeof ServerProgressRoute
   '/server/welcome': typeof ServerWelcomeRoute
+  '/signup/manager': typeof SignupManagerRoute
   '/manager': typeof ManagerIndexRoute
   '/server': typeof ServerIndexRoute
   '/manager/server/$id': typeof ManagerServerIdRoute
@@ -155,6 +187,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/join': typeof JoinRoute
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
   '/refund': typeof RefundRoute
@@ -163,10 +196,13 @@ export interface FileRoutesById {
   '/checkout/success': typeof CheckoutSuccessRoute
   '/manager/menu': typeof ManagerMenuRoute
   '/manager/priorities': typeof ManagerPrioritiesRoute
+  '/manager/reports': typeof ManagerReportsRoute
   '/manager/team': typeof ManagerTeamRoute
+  '/manager/trends': typeof ManagerTrendsRoute
   '/server/menu': typeof ServerMenuRoute
   '/server/progress': typeof ServerProgressRoute
   '/server/welcome': typeof ServerWelcomeRoute
+  '/signup/manager': typeof SignupManagerRoute
   '/manager/': typeof ManagerIndexRoute
   '/server/': typeof ServerIndexRoute
   '/manager/server/$id': typeof ManagerServerIdRoute
@@ -176,6 +212,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/join'
     | '/login'
     | '/privacy'
     | '/refund'
@@ -184,10 +221,13 @@ export interface FileRouteTypes {
     | '/checkout/success'
     | '/manager/menu'
     | '/manager/priorities'
+    | '/manager/reports'
     | '/manager/team'
+    | '/manager/trends'
     | '/server/menu'
     | '/server/progress'
     | '/server/welcome'
+    | '/signup/manager'
     | '/manager/'
     | '/server/'
     | '/manager/server/$id'
@@ -195,6 +235,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/join'
     | '/login'
     | '/privacy'
     | '/refund'
@@ -203,10 +244,13 @@ export interface FileRouteTypes {
     | '/checkout/success'
     | '/manager/menu'
     | '/manager/priorities'
+    | '/manager/reports'
     | '/manager/team'
+    | '/manager/trends'
     | '/server/menu'
     | '/server/progress'
     | '/server/welcome'
+    | '/signup/manager'
     | '/manager'
     | '/server'
     | '/manager/server/$id'
@@ -214,6 +258,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/join'
     | '/login'
     | '/privacy'
     | '/refund'
@@ -222,10 +267,13 @@ export interface FileRouteTypes {
     | '/checkout/success'
     | '/manager/menu'
     | '/manager/priorities'
+    | '/manager/reports'
     | '/manager/team'
+    | '/manager/trends'
     | '/server/menu'
     | '/server/progress'
     | '/server/welcome'
+    | '/signup/manager'
     | '/manager/'
     | '/server/'
     | '/manager/server/$id'
@@ -234,6 +282,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  JoinRoute: typeof JoinRoute
   LoginRoute: typeof LoginRoute
   PrivacyRoute: typeof PrivacyRoute
   RefundRoute: typeof RefundRoute
@@ -242,10 +291,13 @@ export interface RootRouteChildren {
   CheckoutSuccessRoute: typeof CheckoutSuccessRoute
   ManagerMenuRoute: typeof ManagerMenuRoute
   ManagerPrioritiesRoute: typeof ManagerPrioritiesRoute
+  ManagerReportsRoute: typeof ManagerReportsRoute
   ManagerTeamRoute: typeof ManagerTeamRoute
+  ManagerTrendsRoute: typeof ManagerTrendsRoute
   ServerMenuRoute: typeof ServerMenuRoute
   ServerProgressRoute: typeof ServerProgressRoute
   ServerWelcomeRoute: typeof ServerWelcomeRoute
+  SignupManagerRoute: typeof SignupManagerRoute
   ManagerIndexRoute: typeof ManagerIndexRoute
   ServerIndexRoute: typeof ServerIndexRoute
   ManagerServerIdRoute: typeof ManagerServerIdRoute
@@ -289,6 +341,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/join': {
+      id: '/join'
+      path: '/join'
+      fullPath: '/join'
+      preLoaderRoute: typeof JoinRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -308,6 +367,13 @@ declare module '@tanstack/react-router' {
       path: '/manager'
       fullPath: '/manager/'
       preLoaderRoute: typeof ManagerIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/signup/manager': {
+      id: '/signup/manager'
+      path: '/signup/manager'
+      fullPath: '/signup/manager'
+      preLoaderRoute: typeof SignupManagerRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/server/welcome': {
@@ -331,11 +397,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ServerMenuRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/manager/trends': {
+      id: '/manager/trends'
+      path: '/manager/trends'
+      fullPath: '/manager/trends'
+      preLoaderRoute: typeof ManagerTrendsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/manager/team': {
       id: '/manager/team'
       path: '/manager/team'
       fullPath: '/manager/team'
       preLoaderRoute: typeof ManagerTeamRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/manager/reports': {
+      id: '/manager/reports'
+      path: '/manager/reports'
+      fullPath: '/manager/reports'
+      preLoaderRoute: typeof ManagerReportsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/manager/priorities': {
@@ -378,6 +458,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  JoinRoute: JoinRoute,
   LoginRoute: LoginRoute,
   PrivacyRoute: PrivacyRoute,
   RefundRoute: RefundRoute,
@@ -386,10 +467,13 @@ const rootRouteChildren: RootRouteChildren = {
   CheckoutSuccessRoute: CheckoutSuccessRoute,
   ManagerMenuRoute: ManagerMenuRoute,
   ManagerPrioritiesRoute: ManagerPrioritiesRoute,
+  ManagerReportsRoute: ManagerReportsRoute,
   ManagerTeamRoute: ManagerTeamRoute,
+  ManagerTrendsRoute: ManagerTrendsRoute,
   ServerMenuRoute: ServerMenuRoute,
   ServerProgressRoute: ServerProgressRoute,
   ServerWelcomeRoute: ServerWelcomeRoute,
+  SignupManagerRoute: SignupManagerRoute,
   ManagerIndexRoute: ManagerIndexRoute,
   ServerIndexRoute: ServerIndexRoute,
   ManagerServerIdRoute: ManagerServerIdRoute,
