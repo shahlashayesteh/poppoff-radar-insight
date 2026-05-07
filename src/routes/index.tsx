@@ -93,7 +93,9 @@ function Landing() {
               <span className="text-sm font-semibold">4.9 / 5 from 500+ servers</span>
             </div>
             <div className="mt-6 flex flex-wrap items-center gap-x-8 gap-y-2 text-xs text-muted-foreground tracking-wider uppercase">
-              <span className="font-bold">Trusted by hospitality teams</span>
+              <span className="font-bold">⚓ Garden Table</span>
+              <span className="font-bold">URBAN PLATE</span>
+              <span className="font-bold">NORTH & OAK</span>
             </div>
           </div>
 
