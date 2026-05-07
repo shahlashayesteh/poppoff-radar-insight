@@ -168,6 +168,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      claim_manager_account: {
+        Args: { _business_name: string }
+        Returns: string
+      }
       generate_unique_join_code: { Args: never; Returns: string }
       has_role: {
         Args: {
