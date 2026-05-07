@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Logo } from "@/components/logo";
-import { Star, Flame, Gift, Sparkles, Trophy, Award, ArrowRight, Check, ShieldCheck, BarChart3, Users, BookOpen, Target } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Star, Flame, Gift, Upload, Trophy, Award, ArrowRight, Check, ShieldCheck, BarChart3, Users, BookOpen, Target } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -220,14 +221,18 @@ function Landing() {
       </section>
 
       {/* Demo CTA */}
-      <section id="demo" className="px-6 pb-16 scroll-mt-24">
-        <div className="mx-auto max-w-5xl rounded-3xl text-white p-12 md:p-16 text-center" style={{ background: "linear-gradient(135deg, var(--brand-green), color-mix(in oklab, var(--brand-green) 70%, black))" }}>
-          <Sparkles className="h-6 w-6 mx-auto" />
+      <section id="demo" className="px-6 pb-24">
+        <div className="mx-auto max-w-5xl rounded-3xl gradient-hero text-white p-12 md:p-16 text-center">
+          <Upload className="h-6 w-6 text-success mx-auto" />
           <h2 className="mt-4 font-display text-3xl md:text-5xl font-semibold tracking-tight">See your team's weekly focus.</h2>
-          <p className="mt-4 text-white/80 max-w-xl mx-auto">Book a 20-minute demo and we will show you the live server dashboard, AI coaching, and menu intelligence with your menu.</p>
+          <p className="mt-4 text-white/75 max-w-xl mx-auto">Book a 20-minute demo and we will show you the live server dashboard, AI coaching, and menu intelligence with your menu.</p>
           <div className="mt-8 flex justify-center gap-3 flex-wrap">
-            <Link to="/login" className="rounded-full px-7 py-3 text-sm font-bold text-ink" style={{ background: "var(--brand-orange)" }}>Try the demo</Link>
-            <a href="#pricing" className="rounded-full px-7 py-3 text-sm font-bold border-2 border-white/30 bg-white/5 text-white hover:bg-white/10">Start pilot</a>
+            <Button asChild size="lg" className="bg-success text-ink hover:bg-success/90 rounded-full px-7">
+              <Link to="/login">Try the demo</Link>
+            </Button>
+            <Button asChild size="lg" variant="outline" className="rounded-full border-white/20 bg-white/5 text-white hover:bg-white/10">
+              <a href="#pricing">Start pilot</a>
+            </Button>
           </div>
         </div>
       </section>
