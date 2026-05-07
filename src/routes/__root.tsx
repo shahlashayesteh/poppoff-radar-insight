@@ -78,6 +78,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { property: "og:description", content: "Personal scorecards, AI coaching and menu-specific upsells for premium restaurants." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: "Popp Off — Personal stats for every server" },
+      { name: "twitter:description", content: "Personal scorecards, AI coaching and menu-specific upsells for premium restaurants." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/0384944f-38d4-4ea2-b7a6-c804f50ed234/id-preview-ca88a953--af1ebe93-3732-42dc-b865-a7e858845056.lovable.app-1778108648347.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/0384944f-38d4-4ea2-b7a6-c804f50ed234/id-preview-ca88a953--af1ebe93-3732-42dc-b865-a7e858845056.lovable.app-1778108648347.png" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
