@@ -172,7 +172,15 @@ export type Database = {
         Args: { _business_name: string }
         Returns: string
       }
+      claim_manager_account_for: {
+        Args: { _business_name: string; _user_id: string }
+        Returns: string
+      }
       generate_unique_join_code: { Args: never; Returns: string }
+      has_active_subscription: {
+        Args: { check_env?: string; user_uuid: string }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
