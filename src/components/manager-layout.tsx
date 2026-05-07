@@ -31,7 +31,7 @@ const items = [
 export function ManagerLayout({ children }: { children: React.ReactNode }) {
   const path = useRouterState({ select: (s) => s.location.pathname });
   return (
-    <RequireAuth role="manager">
+    <RequireAuth>
     <div className="min-h-screen flex bg-white">
       <aside className="hidden md:flex w-60 flex-col bg-white border-r border-border sticky top-0 h-screen">
         <div className="px-6 py-6">

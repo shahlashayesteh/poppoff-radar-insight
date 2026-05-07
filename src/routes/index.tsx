@@ -33,7 +33,7 @@ function Landing() {
 
   const handleSubscribe = (priceId: string) => {
     if (!user) {
-      navigate({ to: "/signup/manager", search: { priceId } });
+      navigate({ to: "/login", search: { redirect: "/#pricing" } });
       return;
     }
     openCheckout({

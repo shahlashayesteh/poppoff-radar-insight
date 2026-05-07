@@ -24,23 +24,7 @@ export async function initializePaddle() {
     script.onload = () => {
       const paddleJsEnvironment = getPaddleEnvironment() === "sandbox" ? "sandbox" : "production";
       window.Paddle.Environment.set(paddleJsEnvironment);
-      window.Paddle.Initialize({
-        token: clientToken,
-        eventCallback: (e: any) => {
-          if (typeof e?.name === "string" && e.name.startsWith("checkout.")) {
-            // eslint-disable-next-line no-console
-            console.log("[paddle]", e.name, e.data);
-            if (e.name === "checkout.error" || e.name === "checkout.payment.failed") {
-              const detail =
-                e?.data?.error?.detail ||
-                e?.data?.error?.message ||
-                e?.data?.error?.code ||
-                JSON.stringify(e?.data?.error || e?.data || {});
-              window.dispatchEvent(new CustomEvent("paddle:checkout-error", { detail }));
-            }
-          }
-        },
-      });
+      window.Paddle.Initialize({ token: clientToken });
       paddleInitialized = true;
       resolve();
     };

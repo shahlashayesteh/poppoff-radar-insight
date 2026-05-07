@@ -15,7 +15,7 @@ const items = [
 export function ServerLayout({ children }: { children: React.ReactNode }) {
   const path = useRouterState({ select: (s) => s.location.pathname });
   return (
-    <RequireAuth role="server">
+    <RequireAuth>
     <div className="min-h-screen bg-white">
       <header className="sticky top-0 z-20 bg-white/90 backdrop-blur border-b border-border">
         <div className="mx-auto max-w-xl px-5 py-3 flex items-center justify-between">
