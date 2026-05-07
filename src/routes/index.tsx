@@ -38,7 +38,7 @@ function Landing() {
           </nav>
           <div className="flex items-center gap-3">
             <Link to="/login" className="text-sm font-medium hidden sm:inline">Login</Link>
-            <Link to="/demo" className="rounded-xl px-4 py-2 text-sm font-bold text-white" style={{ background: "var(--brand-orange)" }}>Book a Demo</Link>
+            <a href="#demo" className="rounded-xl px-4 py-2 text-sm font-bold text-white" style={{ background: "var(--brand-orange)" }}>Book a Demo</a>
           </div>
         </div>
       </header>
@@ -60,9 +60,9 @@ function Landing() {
               We turn your numbers into momentum and more money in your pocket.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
-              <Link to="/demo" className="rounded-xl px-6 py-3 text-sm font-bold text-white inline-flex items-center gap-2" style={{ background: "var(--brand-orange)" }}>
+              <a href="#demo" className="rounded-xl px-6 py-3 text-sm font-bold text-white inline-flex items-center gap-2" style={{ background: "var(--brand-orange)" }}>
                 Book a Demo
-              </Link>
+              </a>
               <Link to="/login" className="rounded-xl px-6 py-3 text-sm font-bold border-2 border-foreground inline-flex items-center gap-2">
                 Start Your Pilot
               </Link>
@@ -214,7 +214,20 @@ function Landing() {
           </div>
           <div className="inline-flex items-center gap-3">
             <span className="text-sm font-bold text-brand-green">Ready to see your team win?</span>
-            <Link to="/demo" className="rounded-xl px-4 py-2 text-sm font-bold text-white" style={{ background: "var(--brand-orange)" }}>Book a Demo</Link>
+            <a href="#demo" className="rounded-xl px-4 py-2 text-sm font-bold text-white" style={{ background: "var(--brand-orange)" }}>Book a Demo</a>
+          </div>
+        </div>
+      </section>
+
+      {/* Demo CTA */}
+      <section id="demo" className="px-6 pb-16 scroll-mt-24">
+        <div className="mx-auto max-w-5xl rounded-3xl text-white p-12 md:p-16 text-center" style={{ background: "linear-gradient(135deg, var(--brand-green), color-mix(in oklab, var(--brand-green) 70%, black))" }}>
+          <Sparkles className="h-6 w-6 mx-auto" />
+          <h2 className="mt-4 font-display text-3xl md:text-5xl font-semibold tracking-tight">See your team's weekly focus.</h2>
+          <p className="mt-4 text-white/80 max-w-xl mx-auto">Book a 20-minute demo and we will show you the live server dashboard, AI coaching, and menu intelligence with your menu.</p>
+          <div className="mt-8 flex justify-center gap-3 flex-wrap">
+            <Link to="/login" className="rounded-full px-7 py-3 text-sm font-bold text-ink" style={{ background: "var(--brand-orange)" }}>Try the demo</Link>
+            <a href="#pricing" className="rounded-full px-7 py-3 text-sm font-bold border-2 border-white/30 bg-white/5 text-white hover:bg-white/10">Start pilot</a>
           </div>
         </div>
       </section>
