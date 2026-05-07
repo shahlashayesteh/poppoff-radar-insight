@@ -20,7 +20,9 @@ import { Route as ServerMenuRouteImport } from './routes/server.menu'
 import { Route as ManagerTeamRouteImport } from './routes/manager.team'
 import { Route as ManagerPrioritiesRouteImport } from './routes/manager.priorities'
 import { Route as ManagerMenuRouteImport } from './routes/manager.menu'
+import { Route as CheckoutSuccessRouteImport } from './routes/checkout.success'
 import { Route as ManagerServerIdRouteImport } from './routes/manager.server.$id'
+import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
 
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
@@ -77,16 +79,28 @@ const ManagerMenuRoute = ManagerMenuRouteImport.update({
   path: '/manager/menu',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CheckoutSuccessRoute = CheckoutSuccessRouteImport.update({
+  id: '/checkout/success',
+  path: '/checkout/success',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ManagerServerIdRoute = ManagerServerIdRouteImport.update({
   id: '/manager/server/$id',
   path: '/manager/server/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicPaymentsWebhookRoute =
+  ApiPublicPaymentsWebhookRouteImport.update({
+    id: '/api/public/payments/webhook',
+    path: '/api/public/payments/webhook',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/settings': typeof SettingsRoute
+  '/checkout/success': typeof CheckoutSuccessRoute
   '/manager/menu': typeof ManagerMenuRoute
   '/manager/priorities': typeof ManagerPrioritiesRoute
   '/manager/team': typeof ManagerTeamRoute
@@ -96,11 +110,13 @@ export interface FileRoutesByFullPath {
   '/manager/': typeof ManagerIndexRoute
   '/server/': typeof ServerIndexRoute
   '/manager/server/$id': typeof ManagerServerIdRoute
+  '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/settings': typeof SettingsRoute
+  '/checkout/success': typeof CheckoutSuccessRoute
   '/manager/menu': typeof ManagerMenuRoute
   '/manager/priorities': typeof ManagerPrioritiesRoute
   '/manager/team': typeof ManagerTeamRoute
@@ -110,12 +126,14 @@ export interface FileRoutesByTo {
   '/manager': typeof ManagerIndexRoute
   '/server': typeof ServerIndexRoute
   '/manager/server/$id': typeof ManagerServerIdRoute
+  '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/settings': typeof SettingsRoute
+  '/checkout/success': typeof CheckoutSuccessRoute
   '/manager/menu': typeof ManagerMenuRoute
   '/manager/priorities': typeof ManagerPrioritiesRoute
   '/manager/team': typeof ManagerTeamRoute
@@ -125,6 +143,7 @@ export interface FileRoutesById {
   '/manager/': typeof ManagerIndexRoute
   '/server/': typeof ServerIndexRoute
   '/manager/server/$id': typeof ManagerServerIdRoute
+  '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -132,6 +151,7 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/settings'
+    | '/checkout/success'
     | '/manager/menu'
     | '/manager/priorities'
     | '/manager/team'
@@ -141,11 +161,13 @@ export interface FileRouteTypes {
     | '/manager/'
     | '/server/'
     | '/manager/server/$id'
+    | '/api/public/payments/webhook'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/login'
     | '/settings'
+    | '/checkout/success'
     | '/manager/menu'
     | '/manager/priorities'
     | '/manager/team'
@@ -155,11 +177,13 @@ export interface FileRouteTypes {
     | '/manager'
     | '/server'
     | '/manager/server/$id'
+    | '/api/public/payments/webhook'
   id:
     | '__root__'
     | '/'
     | '/login'
     | '/settings'
+    | '/checkout/success'
     | '/manager/menu'
     | '/manager/priorities'
     | '/manager/team'
@@ -169,12 +193,14 @@ export interface FileRouteTypes {
     | '/manager/'
     | '/server/'
     | '/manager/server/$id'
+    | '/api/public/payments/webhook'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   LoginRoute: typeof LoginRoute
   SettingsRoute: typeof SettingsRoute
+  CheckoutSuccessRoute: typeof CheckoutSuccessRoute
   ManagerMenuRoute: typeof ManagerMenuRoute
   ManagerPrioritiesRoute: typeof ManagerPrioritiesRoute
   ManagerTeamRoute: typeof ManagerTeamRoute
@@ -184,6 +210,7 @@ export interface RootRouteChildren {
   ManagerIndexRoute: typeof ManagerIndexRoute
   ServerIndexRoute: typeof ServerIndexRoute
   ManagerServerIdRoute: typeof ManagerServerIdRoute
+  ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -265,11 +292,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ManagerMenuRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/checkout/success': {
+      id: '/checkout/success'
+      path: '/checkout/success'
+      fullPath: '/checkout/success'
+      preLoaderRoute: typeof CheckoutSuccessRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/manager/server/$id': {
       id: '/manager/server/$id'
       path: '/manager/server/$id'
       fullPath: '/manager/server/$id'
       preLoaderRoute: typeof ManagerServerIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/payments/webhook': {
+      id: '/api/public/payments/webhook'
+      path: '/api/public/payments/webhook'
+      fullPath: '/api/public/payments/webhook'
+      preLoaderRoute: typeof ApiPublicPaymentsWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -279,6 +320,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   LoginRoute: LoginRoute,
   SettingsRoute: SettingsRoute,
+  CheckoutSuccessRoute: CheckoutSuccessRoute,
   ManagerMenuRoute: ManagerMenuRoute,
   ManagerPrioritiesRoute: ManagerPrioritiesRoute,
   ManagerTeamRoute: ManagerTeamRoute,
@@ -288,6 +330,7 @@ const rootRouteChildren: RootRouteChildren = {
   ManagerIndexRoute: ManagerIndexRoute,
   ServerIndexRoute: ServerIndexRoute,
   ManagerServerIdRoute: ManagerServerIdRoute,
+  ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
