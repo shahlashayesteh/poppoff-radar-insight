@@ -48,15 +48,6 @@ async function handleSubscriptionCreated(data: any, env: PaddleEnv) {
     },
     { onConflict: "paddle_subscription_id" }
   );
-
-  // Fallback: ensure manager role + venue exist even if user closed the tab before /checkout/success
-  if (customData?.role === "manager") {
-    const { error: rpcErr } = await getSupabase().rpc("claim_manager_account_for", {
-      _user_id: userId,
-      _business_name: customData?.businessName ?? "",
-    });
-    if (rpcErr) console.error("claim_manager_account_for failed:", rpcErr);
-  }
 }
 
 async function handleSubscriptionUpdated(data: any, env: PaddleEnv) {
