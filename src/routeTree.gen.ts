@@ -18,6 +18,7 @@ import { Route as JoinRouteImport } from './routes/join'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ServerIndexRouteImport } from './routes/server.index'
 import { Route as ManagerIndexRouteImport } from './routes/manager.index'
+import { Route as DemoIndexRouteImport } from './routes/demo.index'
 import { Route as SignupManagerRouteImport } from './routes/signup.manager'
 import { Route as ServerWelcomeRouteImport } from './routes/server.welcome'
 import { Route as ServerProgressRouteImport } from './routes/server.progress'
@@ -27,6 +28,8 @@ import { Route as ManagerTeamRouteImport } from './routes/manager.team'
 import { Route as ManagerReportsRouteImport } from './routes/manager.reports'
 import { Route as ManagerPrioritiesRouteImport } from './routes/manager.priorities'
 import { Route as ManagerMenuRouteImport } from './routes/manager.menu'
+import { Route as DemoPrioritiesRouteImport } from './routes/demo.priorities'
+import { Route as DemoMenuRouteImport } from './routes/demo.menu'
 import { Route as CheckoutSuccessRouteImport } from './routes/checkout.success'
 import { Route as ManagerServerIdRouteImport } from './routes/manager.server.$id'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
@@ -76,6 +79,11 @@ const ManagerIndexRoute = ManagerIndexRouteImport.update({
   path: '/manager/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DemoIndexRoute = DemoIndexRouteImport.update({
+  id: '/demo/',
+  path: '/demo/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SignupManagerRoute = SignupManagerRouteImport.update({
   id: '/signup/manager',
   path: '/signup/manager',
@@ -121,6 +129,16 @@ const ManagerMenuRoute = ManagerMenuRouteImport.update({
   path: '/manager/menu',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DemoPrioritiesRoute = DemoPrioritiesRouteImport.update({
+  id: '/demo/priorities',
+  path: '/demo/priorities',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DemoMenuRoute = DemoMenuRouteImport.update({
+  id: '/demo/menu',
+  path: '/demo/menu',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CheckoutSuccessRoute = CheckoutSuccessRouteImport.update({
   id: '/checkout/success',
   path: '/checkout/success',
@@ -147,6 +165,8 @@ export interface FileRoutesByFullPath {
   '/settings': typeof SettingsRoute
   '/terms': typeof TermsRoute
   '/checkout/success': typeof CheckoutSuccessRoute
+  '/demo/menu': typeof DemoMenuRoute
+  '/demo/priorities': typeof DemoPrioritiesRoute
   '/manager/menu': typeof ManagerMenuRoute
   '/manager/priorities': typeof ManagerPrioritiesRoute
   '/manager/reports': typeof ManagerReportsRoute
@@ -156,6 +176,7 @@ export interface FileRoutesByFullPath {
   '/server/progress': typeof ServerProgressRoute
   '/server/welcome': typeof ServerWelcomeRoute
   '/signup/manager': typeof SignupManagerRoute
+  '/demo/': typeof DemoIndexRoute
   '/manager/': typeof ManagerIndexRoute
   '/server/': typeof ServerIndexRoute
   '/manager/server/$id': typeof ManagerServerIdRoute
@@ -170,6 +191,8 @@ export interface FileRoutesByTo {
   '/settings': typeof SettingsRoute
   '/terms': typeof TermsRoute
   '/checkout/success': typeof CheckoutSuccessRoute
+  '/demo/menu': typeof DemoMenuRoute
+  '/demo/priorities': typeof DemoPrioritiesRoute
   '/manager/menu': typeof ManagerMenuRoute
   '/manager/priorities': typeof ManagerPrioritiesRoute
   '/manager/reports': typeof ManagerReportsRoute
@@ -179,6 +202,7 @@ export interface FileRoutesByTo {
   '/server/progress': typeof ServerProgressRoute
   '/server/welcome': typeof ServerWelcomeRoute
   '/signup/manager': typeof SignupManagerRoute
+  '/demo': typeof DemoIndexRoute
   '/manager': typeof ManagerIndexRoute
   '/server': typeof ServerIndexRoute
   '/manager/server/$id': typeof ManagerServerIdRoute
@@ -194,6 +218,8 @@ export interface FileRoutesById {
   '/settings': typeof SettingsRoute
   '/terms': typeof TermsRoute
   '/checkout/success': typeof CheckoutSuccessRoute
+  '/demo/menu': typeof DemoMenuRoute
+  '/demo/priorities': typeof DemoPrioritiesRoute
   '/manager/menu': typeof ManagerMenuRoute
   '/manager/priorities': typeof ManagerPrioritiesRoute
   '/manager/reports': typeof ManagerReportsRoute
@@ -203,6 +229,7 @@ export interface FileRoutesById {
   '/server/progress': typeof ServerProgressRoute
   '/server/welcome': typeof ServerWelcomeRoute
   '/signup/manager': typeof SignupManagerRoute
+  '/demo/': typeof DemoIndexRoute
   '/manager/': typeof ManagerIndexRoute
   '/server/': typeof ServerIndexRoute
   '/manager/server/$id': typeof ManagerServerIdRoute
@@ -219,6 +246,8 @@ export interface FileRouteTypes {
     | '/settings'
     | '/terms'
     | '/checkout/success'
+    | '/demo/menu'
+    | '/demo/priorities'
     | '/manager/menu'
     | '/manager/priorities'
     | '/manager/reports'
@@ -228,6 +257,7 @@ export interface FileRouteTypes {
     | '/server/progress'
     | '/server/welcome'
     | '/signup/manager'
+    | '/demo/'
     | '/manager/'
     | '/server/'
     | '/manager/server/$id'
@@ -242,6 +272,8 @@ export interface FileRouteTypes {
     | '/settings'
     | '/terms'
     | '/checkout/success'
+    | '/demo/menu'
+    | '/demo/priorities'
     | '/manager/menu'
     | '/manager/priorities'
     | '/manager/reports'
@@ -251,6 +283,7 @@ export interface FileRouteTypes {
     | '/server/progress'
     | '/server/welcome'
     | '/signup/manager'
+    | '/demo'
     | '/manager'
     | '/server'
     | '/manager/server/$id'
@@ -265,6 +298,8 @@ export interface FileRouteTypes {
     | '/settings'
     | '/terms'
     | '/checkout/success'
+    | '/demo/menu'
+    | '/demo/priorities'
     | '/manager/menu'
     | '/manager/priorities'
     | '/manager/reports'
@@ -274,6 +309,7 @@ export interface FileRouteTypes {
     | '/server/progress'
     | '/server/welcome'
     | '/signup/manager'
+    | '/demo/'
     | '/manager/'
     | '/server/'
     | '/manager/server/$id'
@@ -289,6 +325,8 @@ export interface RootRouteChildren {
   SettingsRoute: typeof SettingsRoute
   TermsRoute: typeof TermsRoute
   CheckoutSuccessRoute: typeof CheckoutSuccessRoute
+  DemoMenuRoute: typeof DemoMenuRoute
+  DemoPrioritiesRoute: typeof DemoPrioritiesRoute
   ManagerMenuRoute: typeof ManagerMenuRoute
   ManagerPrioritiesRoute: typeof ManagerPrioritiesRoute
   ManagerReportsRoute: typeof ManagerReportsRoute
@@ -298,6 +336,7 @@ export interface RootRouteChildren {
   ServerProgressRoute: typeof ServerProgressRoute
   ServerWelcomeRoute: typeof ServerWelcomeRoute
   SignupManagerRoute: typeof SignupManagerRoute
+  DemoIndexRoute: typeof DemoIndexRoute
   ManagerIndexRoute: typeof ManagerIndexRoute
   ServerIndexRoute: typeof ServerIndexRoute
   ManagerServerIdRoute: typeof ManagerServerIdRoute
@@ -369,6 +408,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ManagerIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/demo/': {
+      id: '/demo/'
+      path: '/demo'
+      fullPath: '/demo/'
+      preLoaderRoute: typeof DemoIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/signup/manager': {
       id: '/signup/manager'
       path: '/signup/manager'
@@ -432,6 +478,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ManagerMenuRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/demo/priorities': {
+      id: '/demo/priorities'
+      path: '/demo/priorities'
+      fullPath: '/demo/priorities'
+      preLoaderRoute: typeof DemoPrioritiesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/demo/menu': {
+      id: '/demo/menu'
+      path: '/demo/menu'
+      fullPath: '/demo/menu'
+      preLoaderRoute: typeof DemoMenuRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/checkout/success': {
       id: '/checkout/success'
       path: '/checkout/success'
@@ -465,6 +525,8 @@ const rootRouteChildren: RootRouteChildren = {
   SettingsRoute: SettingsRoute,
   TermsRoute: TermsRoute,
   CheckoutSuccessRoute: CheckoutSuccessRoute,
+  DemoMenuRoute: DemoMenuRoute,
+  DemoPrioritiesRoute: DemoPrioritiesRoute,
   ManagerMenuRoute: ManagerMenuRoute,
   ManagerPrioritiesRoute: ManagerPrioritiesRoute,
   ManagerReportsRoute: ManagerReportsRoute,
@@ -474,6 +536,7 @@ const rootRouteChildren: RootRouteChildren = {
   ServerProgressRoute: ServerProgressRoute,
   ServerWelcomeRoute: ServerWelcomeRoute,
   SignupManagerRoute: SignupManagerRoute,
+  DemoIndexRoute: DemoIndexRoute,
   ManagerIndexRoute: ManagerIndexRoute,
   ServerIndexRoute: ServerIndexRoute,
   ManagerServerIdRoute: ManagerServerIdRoute,
@@ -482,3 +545,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
