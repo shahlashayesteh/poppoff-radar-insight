@@ -38,6 +38,179 @@ export type Database = {
         }
         Relationships: []
       }
+      server_milestones: {
+        Row: {
+          id: string
+          milestone_type: string
+          unlocked_at: string
+          user_id: string
+          venue_id: string
+        }
+        Insert: {
+          id?: string
+          milestone_type: string
+          unlocked_at?: string
+          user_id: string
+          venue_id: string
+        }
+        Update: {
+          id?: string
+          milestone_type?: string
+          unlocked_at?: string
+          user_id?: string
+          venue_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "server_milestones_venue_id_fkey"
+            columns: ["venue_id"]
+            isOneToOne: false
+            referencedRelation: "venues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      server_stats: {
+        Row: {
+          cocktail_conversion: number | null
+          cocktail_sales: number
+          created_at: string
+          dessert_conversion: number | null
+          dessert_sales: number
+          id: string
+          spend_per_cover: number | null
+          total_covers: number
+          total_sales: number
+          user_id: string
+          venue_id: string
+          week_start: string
+          wine_conversion: number | null
+          wine_sales: number
+        }
+        Insert: {
+          cocktail_conversion?: number | null
+          cocktail_sales?: number
+          created_at?: string
+          dessert_conversion?: number | null
+          dessert_sales?: number
+          id?: string
+          spend_per_cover?: number | null
+          total_covers?: number
+          total_sales?: number
+          user_id: string
+          venue_id: string
+          week_start: string
+          wine_conversion?: number | null
+          wine_sales?: number
+        }
+        Update: {
+          cocktail_conversion?: number | null
+          cocktail_sales?: number
+          created_at?: string
+          dessert_conversion?: number | null
+          dessert_sales?: number
+          id?: string
+          spend_per_cover?: number | null
+          total_covers?: number
+          total_sales?: number
+          user_id?: string
+          venue_id?: string
+          week_start?: string
+          wine_conversion?: number | null
+          wine_sales?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "server_stats_venue_id_fkey"
+            columns: ["venue_id"]
+            isOneToOne: false
+            referencedRelation: "venues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      server_streaks: {
+        Row: {
+          current_streak: number
+          id: string
+          last_hit_week: string | null
+          longest_streak: number
+          updated_at: string
+          user_id: string
+          venue_id: string
+        }
+        Insert: {
+          current_streak?: number
+          id?: string
+          last_hit_week?: string | null
+          longest_streak?: number
+          updated_at?: string
+          user_id: string
+          venue_id: string
+        }
+        Update: {
+          current_streak?: number
+          id?: string
+          last_hit_week?: string | null
+          longest_streak?: number
+          updated_at?: string
+          user_id?: string
+          venue_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "server_streaks_venue_id_fkey"
+            columns: ["venue_id"]
+            isOneToOne: false
+            referencedRelation: "venues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      server_targets: {
+        Row: {
+          cocktail_target: number
+          created_at: string
+          dessert_target: number
+          id: string
+          spend_per_cover_target: number
+          updated_at: string
+          user_id: string
+          venue_id: string
+          wine_target: number
+        }
+        Insert: {
+          cocktail_target?: number
+          created_at?: string
+          dessert_target?: number
+          id?: string
+          spend_per_cover_target?: number
+          updated_at?: string
+          user_id: string
+          venue_id: string
+          wine_target?: number
+        }
+        Update: {
+          cocktail_target?: number
+          created_at?: string
+          dessert_target?: number
+          id?: string
+          spend_per_cover_target?: number
+          updated_at?: string
+          user_id?: string
+          venue_id?: string
+          wine_target?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "server_targets_venue_id_fkey"
+            columns: ["venue_id"]
+            isOneToOne: false
+            referencedRelation: "venues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subscriptions: {
         Row: {
           cancel_at_period_end: boolean | null
@@ -136,6 +309,35 @@ export type Database = {
           },
         ]
       }
+      venue_menu: {
+        Row: {
+          id: string
+          menu_text: string
+          uploaded_at: string
+          venue_id: string
+        }
+        Insert: {
+          id?: string
+          menu_text: string
+          uploaded_at?: string
+          venue_id: string
+        }
+        Update: {
+          id?: string
+          menu_text?: string
+          uploaded_at?: string
+          venue_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "venue_menu_venue_id_fkey"
+            columns: ["venue_id"]
+            isOneToOne: false
+            referencedRelation: "venues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       venues: {
         Row: {
           created_at: string
@@ -168,6 +370,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      calculate_performance_colour: {
+        Args: { actual: number; target: number }
+        Returns: string
+      }
       claim_manager_account: {
         Args: { _business_name: string }
         Returns: string
@@ -189,9 +395,17 @@ export type Database = {
         Returns: boolean
       }
       join_venue_with_code: { Args: { _code: string }; Returns: string }
+      process_csv_upload: {
+        Args: { _csv_data: Json; _venue_id: string; _week_start: string }
+        Returns: Json
+      }
       regenerate_venue_join_code: {
         Args: { _venue_id: string }
         Returns: string
+      }
+      update_streaks_and_milestones: {
+        Args: { _user_id: string; _venue_id: string; _week_start: string }
+        Returns: undefined
       }
     }
     Enums: {

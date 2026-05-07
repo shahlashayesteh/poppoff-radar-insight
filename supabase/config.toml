@@ -1,1 +1,7 @@
 project_id = "vikzyljnnrhxzmlkixqu"
+
+[functions.ai-menu]
+verify_jwt = false
+
+[functions.ai-recs]
+verify_jwt = false
