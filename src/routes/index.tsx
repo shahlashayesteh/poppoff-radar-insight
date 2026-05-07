@@ -57,7 +57,7 @@ function Landing() {
           </nav>
           <div className="flex items-center gap-3">
             <Link to="/login" search={{ redirect: undefined }} className="text-sm font-medium hidden sm:inline">Login</Link>
-            <Link to="/login" search={{ redirect: undefined }} className="rounded-xl px-4 py-2 text-sm font-bold text-white" style={{ background: "var(--brand-orange)" }}>Get Started</Link>
+            <Link to="/login" search={{ redirect: undefined }} className="rounded-xl px-4 py-2 text-sm font-bold text-white" style={{ background: "var(--brand-orange)" }}>Book a Demo</Link>
           </div>
         </div>
       </header>
@@ -80,7 +80,7 @@ function Landing() {
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Link to="/login" search={{ redirect: undefined }} className="rounded-xl px-6 py-3 text-sm font-bold text-white inline-flex items-center gap-2" style={{ background: "var(--brand-orange)" }}>
-                Get Started
+                Book a Demo
               </Link>
               <Link to="/login" search={{ redirect: undefined }} className="rounded-xl px-6 py-3 text-sm font-bold border-2 border-foreground inline-flex items-center gap-2">
                 Start Your Pilot
@@ -93,7 +93,9 @@ function Landing() {
               <span className="text-sm font-semibold">4.9 / 5 from 500+ servers</span>
             </div>
             <div className="mt-6 flex flex-wrap items-center gap-x-8 gap-y-2 text-xs text-muted-foreground tracking-wider uppercase">
-              <span className="font-bold">Trusted by hospitality teams</span>
+              <span className="font-bold">⚓ Garden Table</span>
+              <span className="font-bold">URBAN PLATE</span>
+              <span className="font-bold">NORTH & OAK</span>
             </div>
           </div>
 
@@ -132,7 +134,7 @@ function Landing() {
 
             <PhoneFrame>
               <div>
-                <div className="font-bold text-xs">👋 Hey there!</div>
+                <div className="font-bold text-xs">👋 Hey Sarah!</div>
                 <div className="font-display text-2xl font-extrabold leading-none mt-1">Stats just<br /><span className="text-brand-green">dropped</span> 🎉</div>
                 <div className="text-[10px] text-muted-foreground mt-1">Here's how you crushed it<br />this week (May 4 – May 10)</div>
                 <div className="mt-3 rounded-lg border border-border p-2">
@@ -231,7 +233,7 @@ function Landing() {
           </div>
           <div className="inline-flex items-center gap-3">
             <span className="text-sm font-bold text-brand-green">Ready to see your team win?</span>
-            <Link to="/login" search={{ redirect: undefined }} className="rounded-xl px-4 py-2 text-sm font-bold text-white" style={{ background: "var(--brand-orange)" }}>Get Started</Link>
+            <Link to="/login" search={{ redirect: undefined }} className="rounded-xl px-4 py-2 text-sm font-bold text-white" style={{ background: "var(--brand-orange)" }}>Book a Demo</Link>
           </div>
         </div>
       </section>
