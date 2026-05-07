@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ManagerLayout } from "@/components/manager-layout";
+import { JoinCodeCard } from "@/components/JoinCodeCard";
 import { servers } from "@/lib/sample-data";
 import { Bell, ChevronDown, Calendar, Users, PoundSterling, TrendingUp, Eye, Wine, Cake, Droplet, Target, Flame, MoreVertical } from "lucide-react";
 
@@ -62,6 +63,11 @@ function ManagerDashboard() {
               <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-brand-green" />
             </button>
           </div>
+        </div>
+
+        {/* Join code */}
+        <div className="mt-6">
+          <JoinCodeCard />
         </div>
 
         {/* KPI grid 4x2 */}
