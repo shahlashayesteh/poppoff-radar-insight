@@ -1,29 +1,20 @@
 ## Goal
-Enable Paddle payments for Popp Off and wire up the three subscription tiers (£49, £99, £199 / venue / month) shown on the landing page so restaurants can subscribe.
+In `src/routes/index.tsx` only:
+1. Stop the demo buttons from redirecting to `/login`. Make them scroll to an in-page `#demo` section.
+2. Rename the button label from "Book a Demo" to "See Demo" everywhere it appears.
 
-## Steps
+## Changes (only `src/routes/index.tsx`)
 
-1. **Enable Paddle** on the project (creates a test/sandbox environment immediately; live payments require Paddle verification later).
+1. **Replace the three "Book a Demo" buttons** with `<a href="#demo">See Demo</a>`, keeping all existing classes/styles intact:
+   - Header nav (~line 43)
+   - Hero CTA (~line 65)
+   - Mobile/sticky nav (~line 219)
 
-2. **Create the 3 subscription products** in Paddle matching the landing page pricing:
-   - Server Starter — £49/month per venue
-   - Pro — £99/month per venue
-   - Enterprise — £199/month per venue
+2. **Add a `#demo` section** above the footer: a dark CTA band with heading "See PoppOff in action", a short subtitle, and one "Book a 20-minute demo" link to `/login` so the booking destination is still reachable after the user scrolls.
 
-3. **Wire checkout buttons** on the landing page (`/`) pricing section so each "Get started" CTA opens a Paddle checkout for the matching plan.
+## Untouched
+Hero copy, "How it works", phone mockups, pricing tiles, animations, scroll behavior, footer, "Start Your Pilot" button, header "Login" link, and every other file in the project.
 
-4. **Add a success page** (`/checkout/success`) shown after payment completes.
-
-5. **Add a webhook handler** (`/api/public/webhooks/paddle`) to record subscription status in the backend so we know who's a paying customer.
-
-6. **Add a minimal subscription record** in Lovable Cloud (one table: `subscriptions` with customer email, plan, status) — used by the webhook and viewable later for a billing screen.
-
-## Out of scope (for this step)
-- Gating manager/server dashboards behind subscription status (can come next).
-- Billing portal / cancel flow inside the app (Paddle hosts this for now).
-- Going live — that needs Paddle account verification done by you after testing.
-
-## Technical notes
-- Uses Lovable's built-in Paddle integration (no Paddle account needed to start in test mode).
-- Checkout uses Paddle.js overlay on the landing page — no redirect.
-- Webhook signature is verified inside the handler before any DB write.
+## Verification
+- Click each "See Demo" button on `/` → smooth-scrolls to the `#demo` section, no navigation.
+- All other links/buttons behave exactly as they do now.
