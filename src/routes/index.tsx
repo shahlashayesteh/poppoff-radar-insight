@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Logo } from "@/components/logo";
 import { Star, Trophy, Award, Check, ShieldCheck, BarChart3, Users, BookOpen, Target } from "lucide-react";
+import { usePaddleCheckout } from "@/hooks/usePaddleCheckout";
 import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
 
 export const Route = createFileRoute("/")({
@@ -25,6 +26,7 @@ function PhoneFrame({ children }: { children: React.ReactNode }) {
 }
 
 function Landing() {
+  const { openCheckout, loading } = usePaddleCheckout();
   return (
     <div className="bg-white text-ink">
       <PaymentTestModeBanner />
@@ -40,7 +42,7 @@ function Landing() {
           </nav>
           <div className="flex items-center gap-3">
             <Link to="/login" className="text-sm font-medium hidden sm:inline">Login</Link>
-            <Link to="/demo" className="rounded-xl px-4 py-2 text-sm font-bold text-white" style={{ background: "var(--brand-orange)" }}>Book a Demo</Link>
+            <Link to="/login" className="rounded-xl px-4 py-2 text-sm font-bold text-white" style={{ background: "var(--brand-orange)" }}>Book a Demo</Link>
           </div>
         </div>
       </header>
@@ -62,7 +64,7 @@ function Landing() {
               We turn your numbers into momentum and more money in your pocket.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
-              <Link to="/demo" className="rounded-xl px-6 py-3 text-sm font-bold text-white inline-flex items-center gap-2" style={{ background: "var(--brand-orange)" }}>
+              <Link to="/login" className="rounded-xl px-6 py-3 text-sm font-bold text-white inline-flex items-center gap-2" style={{ background: "var(--brand-orange)" }}>
                 Book a Demo
               </Link>
               <Link to="/login" className="rounded-xl px-6 py-3 text-sm font-bold border-2 border-foreground inline-flex items-center gap-2">
@@ -216,7 +218,7 @@ function Landing() {
           </div>
           <div className="inline-flex items-center gap-3">
             <span className="text-sm font-bold text-brand-green">Ready to see your team win?</span>
-            <Link to="/demo" className="rounded-xl px-4 py-2 text-sm font-bold text-white" style={{ background: "var(--brand-orange)" }}>Book a Demo</Link>
+            <Link to="/login" className="rounded-xl px-4 py-2 text-sm font-bold text-white" style={{ background: "var(--brand-orange)" }}>Book a Demo</Link>
           </div>
         </div>
       </section>
@@ -249,39 +251,30 @@ function Landing() {
           <h2 className="font-display text-4xl md:text-5xl font-extrabold tracking-tight">Simple, transparent pricing</h2>
           <div className="mt-10 grid md:grid-cols-3 gap-5">
             {[
-              { name: "Starter", price: "£99", note: "/ month", limit: "1 venue", featured: false, features: ["1 venue", "30 day free trial", "Personal server scorecards", "All coaching", "Menu intelligence", "Team dashboard", "Email support"], cta: "Start Free Trial", to: "/signup/manager", priceId: "poppoff_starter_monthly" as const, kind: "checkout" as const },
-              { name: "Pro", price: "£199", note: "/ month", limit: "Up to 3 venues", featured: true, features: ["Up to 3 venues", "Everything in Starter", "Weekly win priorities", "Advanced insights", "Priority support"], cta: "Get Started", to: "/signup/manager", priceId: "poppoff_pro_monthly" as const, kind: "checkout" as const },
-              { name: "Enterprise", price: "Contact us", note: "", limit: "4+ venues", featured: false, features: ["4+ venues", "Custom onboarding", "Dedicated success manager", "Priority SLA"], cta: "Let's Talk", kind: "mailto" as const, mailto: "mailto:hello@poppoffstats.com" },
+              { name: "Starter", price: "£99", priceId: "poppoff_pro_monthly", note: "/ venue / month", featured: false, features: ["Personal server scorecards", "All coaching", "Menu intelligence", "Team dashboard", "Email support"], cta: "Start 30-Day Trial" },
+              { name: "Premium", price: "£199", priceId: "poppoff_enterprise_monthly", note: "/ venue / month", featured: true, badge: "Most Popular", features: ["Everything in Starter", "Weekly win priorities", "Advanced insights", "Priority support"], cta: "Start 30-Day Trial" },
+              { name: "Founder Rate", price: "£49", priceId: "poppoff_starter_monthly", note: "/ venue / month", featured: false, features: ["Locked in forever", "First venues only", "Everything in Starter"], cta: "Claim Founder Rate" },
             ].map((p) => (
               <div key={p.name} className={`relative rounded-2xl border-2 p-6 ${p.featured ? "border-brand-orange" : "border-border bg-white"}`}>
                 {p.featured && (
                   <span className="absolute -top-3 left-6 px-3 py-1 rounded-full text-[11px] font-bold text-white" style={{ background: "var(--brand-orange)" }}>Most Popular</span>
                 )}
                 <div className="font-bold">{p.name}</div>
-                <div className="mt-3 flex items-baseline gap-1"><span className="font-display text-5xl font-extrabold">{p.price}</span>{p.note && <span className="text-sm text-muted-foreground">{p.note}</span>}</div>
+                <div className="mt-3 flex items-baseline gap-1"><span className="font-display text-5xl font-extrabold">{p.price}</span><span className="text-sm text-muted-foreground">{p.note}</span></div>
                 <ul className="mt-5 space-y-2 text-sm">
                   {p.features.map((f) => <li key={f} className="flex items-center gap-2"><Check className="h-4 w-4 text-brand-green" />{f}</li>)}
                 </ul>
-                {p.kind === "mailto" ? (
-                  <a
-                    href={p.mailto}
-                    className="mt-6 block w-full text-center rounded-xl py-3 text-sm font-bold border-2 border-foreground text-foreground"
-                  >
-                    {p.cta}
-                  </a>
-                ) : (
-                  <a
-                    href={`/signup/manager?priceId=${p.priceId}`}
-                    className="mt-6 block w-full text-center rounded-xl py-3 text-sm font-bold text-white"
-                    style={{ background: "var(--brand-orange)" }}
-                  >
-                    {p.cta}
-                  </a>
-                )}
+                <button
+                  onClick={() => openCheckout({ priceId: p.priceId })}
+                  disabled={loading}
+                  className={`mt-6 block w-full text-center rounded-xl py-3 text-sm font-bold disabled:opacity-60 ${p.featured ? "text-white" : "border-2 border-brand-orange text-brand-orange"}`}
+                  style={p.featured ? { background: "var(--brand-orange)" } : {}}
+                >
+                  {loading ? "Opening…" : p.cta}
+                </button>
               </div>
             ))}
           </div>
-          <p className="mt-6 text-center text-sm text-muted-foreground">No credit card required on Starter trial. Cancel anytime.</p>
         </div>
       </section>
 
