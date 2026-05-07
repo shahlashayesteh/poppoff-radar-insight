@@ -22,7 +22,9 @@ import { Route as SignupManagerRouteImport } from './routes/signup.manager'
 import { Route as ServerWelcomeRouteImport } from './routes/server.welcome'
 import { Route as ServerProgressRouteImport } from './routes/server.progress'
 import { Route as ServerMenuRouteImport } from './routes/server.menu'
+import { Route as ManagerTrendsRouteImport } from './routes/manager.trends'
 import { Route as ManagerTeamRouteImport } from './routes/manager.team'
+import { Route as ManagerReportsRouteImport } from './routes/manager.reports'
 import { Route as ManagerPrioritiesRouteImport } from './routes/manager.priorities'
 import { Route as ManagerMenuRouteImport } from './routes/manager.menu'
 import { Route as CheckoutSuccessRouteImport } from './routes/checkout.success'
@@ -94,9 +96,19 @@ const ServerMenuRoute = ServerMenuRouteImport.update({
   path: '/server/menu',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ManagerTrendsRoute = ManagerTrendsRouteImport.update({
+  id: '/manager/trends',
+  path: '/manager/trends',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ManagerTeamRoute = ManagerTeamRouteImport.update({
   id: '/manager/team',
   path: '/manager/team',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ManagerReportsRoute = ManagerReportsRouteImport.update({
+  id: '/manager/reports',
+  path: '/manager/reports',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ManagerPrioritiesRoute = ManagerPrioritiesRouteImport.update({
@@ -137,7 +149,9 @@ export interface FileRoutesByFullPath {
   '/checkout/success': typeof CheckoutSuccessRoute
   '/manager/menu': typeof ManagerMenuRoute
   '/manager/priorities': typeof ManagerPrioritiesRoute
+  '/manager/reports': typeof ManagerReportsRoute
   '/manager/team': typeof ManagerTeamRoute
+  '/manager/trends': typeof ManagerTrendsRoute
   '/server/menu': typeof ServerMenuRoute
   '/server/progress': typeof ServerProgressRoute
   '/server/welcome': typeof ServerWelcomeRoute
@@ -158,7 +172,9 @@ export interface FileRoutesByTo {
   '/checkout/success': typeof CheckoutSuccessRoute
   '/manager/menu': typeof ManagerMenuRoute
   '/manager/priorities': typeof ManagerPrioritiesRoute
+  '/manager/reports': typeof ManagerReportsRoute
   '/manager/team': typeof ManagerTeamRoute
+  '/manager/trends': typeof ManagerTrendsRoute
   '/server/menu': typeof ServerMenuRoute
   '/server/progress': typeof ServerProgressRoute
   '/server/welcome': typeof ServerWelcomeRoute
@@ -180,7 +196,9 @@ export interface FileRoutesById {
   '/checkout/success': typeof CheckoutSuccessRoute
   '/manager/menu': typeof ManagerMenuRoute
   '/manager/priorities': typeof ManagerPrioritiesRoute
+  '/manager/reports': typeof ManagerReportsRoute
   '/manager/team': typeof ManagerTeamRoute
+  '/manager/trends': typeof ManagerTrendsRoute
   '/server/menu': typeof ServerMenuRoute
   '/server/progress': typeof ServerProgressRoute
   '/server/welcome': typeof ServerWelcomeRoute
@@ -203,7 +221,9 @@ export interface FileRouteTypes {
     | '/checkout/success'
     | '/manager/menu'
     | '/manager/priorities'
+    | '/manager/reports'
     | '/manager/team'
+    | '/manager/trends'
     | '/server/menu'
     | '/server/progress'
     | '/server/welcome'
@@ -224,7 +244,9 @@ export interface FileRouteTypes {
     | '/checkout/success'
     | '/manager/menu'
     | '/manager/priorities'
+    | '/manager/reports'
     | '/manager/team'
+    | '/manager/trends'
     | '/server/menu'
     | '/server/progress'
     | '/server/welcome'
@@ -245,7 +267,9 @@ export interface FileRouteTypes {
     | '/checkout/success'
     | '/manager/menu'
     | '/manager/priorities'
+    | '/manager/reports'
     | '/manager/team'
+    | '/manager/trends'
     | '/server/menu'
     | '/server/progress'
     | '/server/welcome'
@@ -267,7 +291,9 @@ export interface RootRouteChildren {
   CheckoutSuccessRoute: typeof CheckoutSuccessRoute
   ManagerMenuRoute: typeof ManagerMenuRoute
   ManagerPrioritiesRoute: typeof ManagerPrioritiesRoute
+  ManagerReportsRoute: typeof ManagerReportsRoute
   ManagerTeamRoute: typeof ManagerTeamRoute
+  ManagerTrendsRoute: typeof ManagerTrendsRoute
   ServerMenuRoute: typeof ServerMenuRoute
   ServerProgressRoute: typeof ServerProgressRoute
   ServerWelcomeRoute: typeof ServerWelcomeRoute
@@ -371,11 +397,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ServerMenuRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/manager/trends': {
+      id: '/manager/trends'
+      path: '/manager/trends'
+      fullPath: '/manager/trends'
+      preLoaderRoute: typeof ManagerTrendsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/manager/team': {
       id: '/manager/team'
       path: '/manager/team'
       fullPath: '/manager/team'
       preLoaderRoute: typeof ManagerTeamRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/manager/reports': {
+      id: '/manager/reports'
+      path: '/manager/reports'
+      fullPath: '/manager/reports'
+      preLoaderRoute: typeof ManagerReportsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/manager/priorities': {
@@ -427,7 +467,9 @@ const rootRouteChildren: RootRouteChildren = {
   CheckoutSuccessRoute: CheckoutSuccessRoute,
   ManagerMenuRoute: ManagerMenuRoute,
   ManagerPrioritiesRoute: ManagerPrioritiesRoute,
+  ManagerReportsRoute: ManagerReportsRoute,
   ManagerTeamRoute: ManagerTeamRoute,
+  ManagerTrendsRoute: ManagerTrendsRoute,
   ServerMenuRoute: ServerMenuRoute,
   ServerProgressRoute: ServerProgressRoute,
   ServerWelcomeRoute: ServerWelcomeRoute,
@@ -440,3 +482,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
