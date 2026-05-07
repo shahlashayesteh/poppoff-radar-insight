@@ -2,6 +2,7 @@ import { Link, useRouterState } from "@tanstack/react-router";
 import { Home, BarChart3, Target, Gift, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Logo } from "./logo";
+import { RequireAuth } from "./RequireAuth";
 
 const items = [
   { to: "/server", label: "Home", icon: Home },
@@ -14,6 +15,7 @@ const items = [
 export function ServerLayout({ children }: { children: React.ReactNode }) {
   const path = useRouterState({ select: (s) => s.location.pathname });
   return (
+    <RequireAuth>
     <div className="min-h-screen bg-white">
       <header className="sticky top-0 z-20 bg-white/90 backdrop-blur border-b border-border">
         <div className="mx-auto max-w-xl px-5 py-3 flex items-center justify-between">
@@ -43,5 +45,6 @@ export function ServerLayout({ children }: { children: React.ReactNode }) {
         </div>
       </nav>
     </div>
+    </RequireAuth>
   );
 }
