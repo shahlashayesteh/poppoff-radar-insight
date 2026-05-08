@@ -31,13 +31,18 @@ function MenuIntel() {
     setMenus(((data ?? []) as unknown) as Menu[]);
   };
 
+  const loadPairings = async (v: string) => {
+    const { data } = await supabase.from("venue_pairings").select("item, pair_with, why, priority, category, position").eq("venue_id", v).order("position", { ascending: true });
+    setPairings(((data ?? []) as unknown) as Pairing[]);
+  };
+
   useEffect(() => {
     (async () => {
       const venue = await getManagerVenue();
       const v = venue?.id;
       if (!v) return;
       setVenueId(v);
-      await loadMenus(v);
+      await Promise.all([loadMenus(v), loadPairings(v)]);
     })();
   }, []);
 
