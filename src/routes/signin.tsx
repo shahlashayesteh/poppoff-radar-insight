@@ -55,7 +55,7 @@ function SignIn() {
             </button>
           </form>
           <div className="mt-5 space-y-2 text-sm">
-            <div><span className="text-muted-foreground">Server? </span><Link to="/join" className="font-semibold text-brand-green">Join your venue</Link></div>
+            <div><span className="text-muted-foreground">New server? </span><Link to="/join" className="font-semibold text-brand-green">Join your venue</Link></div>
             <div><span className="text-muted-foreground">New restaurant? </span><Link to="/" hash="pricing" className="font-semibold text-brand-orange">Start your free trial</Link></div>
           </div>
         </div>
