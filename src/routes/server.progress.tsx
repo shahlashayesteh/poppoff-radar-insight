@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { ServerLayout } from "@/components/server-layout";
 import { supabase } from "@/integrations/supabase/client";
+import { claimServerCsvData } from "@/lib/server-data";
 import { Flame, Award } from "lucide-react";
 
 export const Route = createFileRoute("/server/progress")({ component: ServerProgress });
@@ -23,6 +24,7 @@ function ServerProgress() {
     (async () => {
       const { data: u } = await supabase.auth.getUser();
       if (!u.user) return;
+      await claimServerCsvData();
       const { data: vm } = await supabase.from("venue_members").select("venue_id").eq("user_id", u.user.id).limit(1);
       const venueId = vm?.[0]?.venue_id;
       if (!venueId) return;
