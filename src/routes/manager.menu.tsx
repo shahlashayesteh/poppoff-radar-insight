@@ -292,8 +292,8 @@ function MenuIntel() {
               )
             : pairings;
           const CAT_META: Record<string, { emoji: string; label: string; tint: string; ink: string }> = {
-            wine_bottle: { emoji: "🍷", label: "Wine (Bottle)",       tint: "color-mix(in oklab, var(--brand-orange) 16%, white)", ink: "var(--brand-orange)" },
-            wine_glass:  { emoji: "🥂", label: "Wine (by the Glass)", tint: "color-mix(in oklab, var(--brand-orange) 8%, white)",  ink: "var(--brand-orange)" },
+            wine_bottle: { emoji: "🍾", label: "Wine (Bottle)",       tint: "color-mix(in oklab, var(--brand-orange) 16%, white)", ink: "var(--brand-orange)" },
+            wine_glass:  { emoji: "🍷", label: "Wine (Glass)",        tint: "color-mix(in oklab, var(--brand-orange) 8%, white)",  ink: "var(--brand-orange)" },
             cocktail:    { emoji: "🍸", label: "Cocktail",            tint: "color-mix(in oklab, var(--brand-green) 14%, white)",  ink: "var(--brand-green)" },
             sake:        { emoji: "🍶", label: "Sake",                tint: "color-mix(in oklab, var(--brand-orange) 10%, white)", ink: "var(--brand-orange)" },
             beer:        { emoji: "🍺", label: "Beer",                tint: "color-mix(in oklab, var(--brand-green) 10%, white)",  ink: "var(--brand-green)" },
@@ -361,9 +361,15 @@ function MenuIntel() {
                 <div className="space-y-5">
                   {Array.from(groups.entries()).map(([item, rows]) => {
                     const byCat = new Map<string, Pairing[]>();
+                    const hasStyleTag = (s: string) => /^\s*\[(white|red|ros[eé]|champ|sparkl|prosec|cava|cr[eé]mant|blanc)/i.test(s);
+                    const looksLikeGlass = (s: string) => /\b(glass|125\s*ml|175\s*ml|by\s*the\s*glass)\b/i.test(s);
                     for (const r of rows) {
                       let c = (r.category || "other").toLowerCase();
                       if (c === "wine") c = "wine_bottle"; // legacy rows
+                      // Reclassify any legacy "other" row that is clearly a wine
+                      if (c === "other" && hasStyleTag(r.pair_with)) {
+                        c = looksLikeGlass(r.pair_with) ? "wine_glass" : "wine_bottle";
+                      }
                       if (!byCat.has(c)) byCat.set(c, []);
                       byCat.get(c)!.push(r);
                     }
@@ -396,6 +402,7 @@ function MenuIntel() {
                                     const wine = isWine ? parseWine(p.pair_with) : null;
                                     const style = wine?.styleKey ? STYLE_META[wine.styleKey] : null;
                                     const displayName = wine ? wine.name : p.pair_with;
+                                    const hasPrice = /[£$€]\s*\d|\d+\s*(gbp|usd|eur)\b/i.test(displayName);
                                     return (
                                       <li key={i} className="text-sm">
                                         <div className="flex items-center justify-between gap-2 flex-wrap">
@@ -407,6 +414,12 @@ function MenuIntel() {
                                               </span>
                                             )}
                                             <span className="font-semibold">{displayName}</span>
+                                            {!hasPrice && (
+                                              <span className="text-[10px] font-medium px-1.5 py-0.5 rounded shrink-0"
+                                                style={{ background: "var(--muted)", color: "var(--muted-foreground)" }}>
+                                                price on menu
+                                              </span>
+                                            )}
                                           </div>
                                           {p.priority === "High" && (
                                             <span className="text-[10px] font-bold px-1.5 py-0.5 rounded"
