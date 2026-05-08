@@ -6,6 +6,7 @@ import { useRoleGate } from "@/lib/auth-gate";
 import { Users, PoundSterling, TrendingUp, Eye, Wine, Cake, Droplet, Target, Copy, Upload, Download, RefreshCw, MoreVertical } from "lucide-react";
 import { downloadCsvTemplate, parseStatsCsv } from "@/lib/csv";
 import { getMondayOfWeek, toISODate, formatWeekRange, performanceColour } from "@/lib/week";
+import { getManagerVenue } from "@/lib/manager-venue";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/manager/")({ component: ManagerDashboard });
@@ -69,19 +70,8 @@ function ManagerDashboard() {
   const weekStart = useMemo(() => toISODate(getMondayOfWeek()), []);
 
   const load = async () => {
-    const { data: u } = await supabase.auth.getUser();
-    if (!u.user) return;
-    let { data: vs } = await supabase.from("venues").select("id, name, join_code").eq("manager_id", u.user.id).limit(1);
-    let v = vs?.[0];
-    if (!v) {
-      // Auto-claim: create a venue for this manager if missing (e.g. signup hiccup)
-      const { data: prof } = await supabase.from("profiles").select("business_name").eq("id", u.user.id).maybeSingle();
-      const { error: claimErr } = await supabase.rpc("claim_manager_account", { _business_name: prof?.business_name ?? "My Venue" });
-      if (claimErr) { toast.error(claimErr.message); return; }
-      const { data: vs2 } = await supabase.from("venues").select("id, name, join_code").eq("manager_id", u.user.id).limit(1);
-      v = vs2?.[0];
-      if (!v) return;
-    }
+    const v = await getManagerVenue();
+    if (!v) return;
     setVenue(v);
     const { data: vm } = await supabase.from("venue_members").select("user_id").eq("venue_id", v.id);
     const ids = (vm ?? []).map((x) => x.user_id);
