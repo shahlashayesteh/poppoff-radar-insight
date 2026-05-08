@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ManagerLayout } from "@/components/manager-layout";
 import { supabase } from "@/integrations/supabase/client";
 import { useRoleGate } from "@/lib/auth-gate";
+import type { LucideIcon } from "lucide-react";
 import {
   Users,
   PoundSterling,
@@ -54,7 +55,15 @@ type TargetRow = {
   sparkling_target: number;
 };
 
-const Stat = ({ icon: Icon, tone, label, value, sub }: any) => (
+type StatProps = {
+  icon: LucideIcon;
+  tone: string;
+  label: string;
+  value: string | number;
+  sub?: string;
+};
+
+const Stat = ({ icon: Icon, tone, label, value, sub }: StatProps) => (
   <div className="rounded-2xl bg-white border border-border p-4">
     <div className="flex items-start gap-3">
       <div
@@ -277,8 +286,8 @@ function ManagerDashboard() {
       setDisplayWeekStart(weeks[0] || importWeek);
       await load();
       setUploadStatus(`Imported ${importedCount} server week${importedCount === 1 ? "" : "s"}.`);
-    } catch (err: any) {
-      const message = err.message || "Upload failed";
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Upload failed";
       setUploadStatus(message);
       toast.error(message);
     } finally {
