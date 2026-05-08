@@ -1,46 +1,51 @@
-# Server home page rework
+## Problem
 
-Scope: `src/routes/server.index.tsx` only. No DB or layout changes.
+Clicking **Generate pairings** calls the `ai-assist` edge function, which asks Gemini Flash to produce, in one shot, pairings for every food item × 6 categories × up to 3 suggestions. That response is so large it doesn't finish in time and the edge function connection is dropped — surfacing as `non-2xx status code` in the UI.
 
-## 1. Top 3 rings show item counts, not percentages
+We do **not** need to revert. The pairing quality you asked for is fine; the call just needs to be split into smaller chunks so each one finishes well within the time limit.
 
-- Fetch venue average prices via `fetchVenueAvgPrices(venueId)` (already in `@/lib/server-data`).
-- For each of Wine, Cocktails, Desserts, compute `estimateItemsSold(stat[<cat>_sales], <cat>, prices)`.
-- Update `Ring` to accept an optional `displayValue` (e.g. `78`) and `displayUnit` (e.g. `sold`) so the centre text shows `78` with a tiny `sold` label, while the arc still fills based on conversion% vs target (so ring length stays meaningful).
-- Keep the `↑ +12%` / `↓ -8%` delta line under each ring (already item-count based after this change — compare current items vs previous-week items).
+## Fix: chunked pairing generation
 
-## 2. Red colour for low performance
+### High-level
 
-- Already wired through `toneFor(actual, target)` → `performanceColour()`:
-  - ≥80% of target → green
-  - 55–79% → amber
-  - <55% → red (`var(--opportunity)`)
-- Confirm both the ring arc colour AND the centre number use this `tone`, so a low value renders in red.
-- Delta line keeps green for ↑ and red for ↓ (already correct).
+1. The edge function first asks the AI for the **list of food item names** only (fast, ~1–2s).
+2. The frontend then loops over those food items in **batches of 5–8** and calls a new `pair_chunk` action, which generates premium pairings for that small batch only.
+3. Results are merged in the UI as each chunk returns. A progress indicator ("Generating 12/40…") shows live progress.
+4. Pairings are cached in a new `venue_pairings` table so repeat opens are instant and don't re-bill the AI.
 
-## 3. Replace "This week's coaching" card with "You smashed X" card
+### Technical changes
 
-- Remove the existing bottom Link-to-`/server/menu` "This week's coaching" card.
-- Replace it with a green-tinted insight card: **"You smashed {category} this week!"** + `+X% vs last week` + ✓ chip.
-- Category picked = the one with the highest **positive** week-over-week delta across all 6 categories (wine, cocktail, dessert, sides, spirits, sparkling). If no positive delta exists, hide this card.
-- This replaces the existing "insight" card logic that currently shows either smashed OR focus — split into two separate cards (see #4).
+**Edge function `ai-assist/index.ts`** — replace the single `generate_pairings` action with two:
+- `list_food_items` — returns `{ items: string[] }` from menu text only. Tiny prompt, tiny output.
+- `pair_chunk` — input `{ items: string[] }` (max 8). Same premium-pairing rules as today (3 most expensive per category when applicable, real menu names, emojis-friendly fields). Returns `{ pairings: [...] }` for just that batch.
 
-## 4. New "You need to work on" card underneath
+**New table `venue_pairings`** (migration):
+- `venue_id uuid`, `item text`, `category text`, `pair_with text`, `why text`, `priority text`, `position int`, `generated_at timestamptz`
+- RLS: managers of the venue can read/write.
+- Unique on `(venue_id, item, category, pair_with)` so re-runs upsert cleanly.
 
-- Directly below the smashed card, add a red-tinted card: **"You need to work on {category} this week!"** + `-X% vs last week` styled in red (`var(--opportunity)`).
-- Category picked = the one with the **lowest** week-over-week delta (most negative), OR if all deltas are positive, the category furthest below its AI target (lowest `actual/target` ratio, must be amber/red).
-- Always shown when stats exist (so server always sees what to improve), styled with red border + red icon (e.g. `TrendingDown` from lucide-react).
+**Frontend `manager.menu.tsx`**:
+- "Generate pairings" button now:
+  1. calls `list_food_items` once,
+  2. chunks the result into groups of 6,
+  3. fires `pair_chunk` requests sequentially (or 2 in parallel) with a progress bar,
+  4. upserts each chunk into `venue_pairings` and merges into local state immediately so the user sees pairings appear progressively,
+  5. stops gracefully if any chunk fails — already-generated pairings remain.
+- On page load, read existing rows from `venue_pairings` so prior results show instantly.
+- Existing search + grouped card UI is unchanged.
 
-## Order of cards on the page (top to bottom)
+### What stays the same
 
-1. Greeting + "Stats just dropped" header (unchanged)
-2. Top 3 rings card (now showing item counts, red when low)
-3. **You smashed {X} this week!** (green, only if any positive delta)
-4. **You need to work on {Y} this week!** (red, always shown when stats exist)
-5. Streak link (unchanged)
+- Premium-pricing logic, 3-per-category cap, emoji styling, search, brand colours — all unchanged.
+- `parse_menu`, `generate_priorities`, `coaching`, `server_coaching` actions — unchanged.
 
-## Technical notes
+### Why this works
 
-- Uses existing helpers: `pctDelta`, `estimateItemsSold`, `fetchVenueAvgPrices`, `performanceColour`, `toneFor`.
-- No new imports beyond `TrendingDown` from `lucide-react`.
-- No DB migration, no edge function, no manager-side changes.
+Each `pair_chunk` call handles ~6 dishes, so the AI returns in ~5–15 seconds — comfortably under the edge function limit. Total wall time for a 40-dish menu is ~1–2 minutes, but the user sees results streaming in instead of waiting on one giant call that times out.
+
+## Outcome
+
+- No revert needed.
+- "Generate pairings" reliably completes for menus of any realistic size.
+- Pairings persist between sessions.
+- Progress is visible to the manager while it runs.
