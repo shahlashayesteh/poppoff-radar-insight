@@ -32,6 +32,8 @@ const items: NavItem[] = [
 
 export function ManagerLayout({ children }: { children: React.ReactNode }) {
   const path = useRouterState({ select: (s) => s.location.pathname });
+  const isDemo = path.startsWith("/demo");
+  const prefix = (to: string) => (isDemo ? `/demo${to}` : to);
   const navigate = useNavigate();
   const [name, setName] = useState<string>("");
   const [initials, setInitials] = useState<string>("");
