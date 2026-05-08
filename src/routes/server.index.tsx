@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { ServerLayout } from "@/components/server-layout";
 import { supabase } from "@/integrations/supabase/client";
+import { useRoleGate } from "@/lib/auth-gate";
 import { Trophy, Award, Flame, ArrowRight } from "lucide-react";
 import { getMondayOfWeek, toISODate, formatWeekRange, performanceColour } from "@/lib/week";
 
@@ -41,6 +42,7 @@ function Ring({ value, color, label }: { value: number; color: string; label: st
 }
 
 function ServerDashboard() {
+  useRoleGate("server");
   const [name, setName] = useState("");
   const [stat, setStat] = useState<Stat | null>(null);
   const [target, setTarget] = useState<Targets | null>(null);

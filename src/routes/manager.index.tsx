@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ManagerLayout } from "@/components/manager-layout";
 import { supabase } from "@/integrations/supabase/client";
+import { useRoleGate } from "@/lib/auth-gate";
 import { Users, PoundSterling, TrendingUp, Eye, Wine, Cake, Droplet, Target, Copy, Upload, Download, RefreshCw, MoreVertical } from "lucide-react";
 import { downloadCsvTemplate, parseStatsCsv } from "@/lib/csv";
 import { getMondayOfWeek, toISODate, formatWeekRange, performanceColour } from "@/lib/week";
@@ -56,6 +57,7 @@ const Dot = ({ s }: { s: "green" | "amber" | "red" }) => (
 );
 
 function ManagerDashboard() {
+  useRoleGate("manager");
   const [venue, setVenue] = useState<Venue | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
   const [stats, setStats] = useState<StatRow[]>([]);
