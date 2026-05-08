@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { ManagerLayout } from "@/components/manager-layout";
 import { supabase } from "@/integrations/supabase/client";
 import { getManagerVenue } from "@/lib/manager-venue";
-import { getMondayOfWeek, toISODate, formatWeekRange, performanceColour } from "@/lib/week";
+import { getMondayOfWeek, toISODate, formatWeekRange, performanceColour, latestStatsWeek } from "@/lib/week";
 
 export const Route = createFileRoute("/manager/server/$id")({ component: ServerView });
 
@@ -26,6 +26,7 @@ function ServerView() {
   const [acked, setAcked] = useState(false);
   const [logins, setLogins] = useState(0);
   const weekStart = toISODate(getMondayOfWeek());
+  const [displayWeekStart, setDisplayWeekStart] = useState<string>(weekStart);
 
   useEffect(() => {
     (async () => {
@@ -34,15 +35,20 @@ function ServerView() {
       if (!v) return;
       const { data: prof } = await supabase.from("profiles").select("full_name").eq("id", id).maybeSingle();
       setName(prof?.full_name || "Server");
-      const { data: st } = await supabase.from("server_stats").select("*").eq("user_id", id).eq("venue_id", v).eq("week_start", weekStart).maybeSingle();
+      const visibleWeek = await latestStatsWeek(
+        supabase.from("server_stats").select("week_start").eq("user_id", id).eq("venue_id", v).order("week_start", { ascending: false }).limit(1),
+        weekStart,
+      );
+      setDisplayWeekStart(visibleWeek);
+      const { data: st } = await supabase.from("server_stats").select("*").eq("user_id", id).eq("venue_id", v).eq("week_start", visibleWeek).maybeSingle();
       setStat(st);
       const { data: tg } = await supabase.from("server_targets").select("*").eq("user_id", id).eq("venue_id", v).maybeSingle();
       setTarget(tg);
       const { data: sk } = await supabase.from("server_streaks").select("current_streak").eq("user_id", id).eq("venue_id", v).maybeSingle();
       setStreak((sk as any)?.current_streak ?? 0);
-      const { data: vw } = await supabase.from("server_stat_views").select("id").eq("user_id", id).eq("venue_id", v).eq("week_start", weekStart).maybeSingle();
+      const { data: vw } = await supabase.from("server_stat_views").select("id").eq("user_id", id).eq("venue_id", v).eq("week_start", visibleWeek).maybeSingle();
       setViewed(!!vw);
-      const { data: ak } = await supabase.from("server_focus_acks").select("id").eq("user_id", id).eq("venue_id", v).eq("week_start", weekStart).maybeSingle();
+      const { data: ak } = await supabase.from("server_focus_acks").select("id").eq("user_id", id).eq("venue_id", v).eq("week_start", visibleWeek).maybeSingle();
       setAcked(!!ak);
       const { count: lc } = await supabase.from("server_logins").select("id", { count: "exact", head: true }).eq("user_id", id).eq("venue_id", v);
       setLogins(lc ?? 0);
@@ -57,7 +63,7 @@ function ServerView() {
           <div>
             <div className="text-xs uppercase tracking-widest text-muted-foreground">Server</div>
             <h1 className="font-display text-4xl font-extrabold tracking-tight mt-1">{name}</h1>
-            <div className="text-xs text-muted-foreground mt-1">{formatWeekRange(weekStart)}</div>
+            <div className="text-xs text-muted-foreground mt-1">{formatWeekRange(displayWeekStart)}</div>
           </div>
         </div>
 
