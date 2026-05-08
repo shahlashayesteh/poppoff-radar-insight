@@ -4,7 +4,7 @@ import { ServerLayout } from "@/components/server-layout";
 import { supabase } from "@/integrations/supabase/client";
 import { useRoleGate } from "@/lib/auth-gate";
 import { claimServerCsvData, recordLogin, pctDelta } from "@/lib/server-data";
-import { Trophy, Award, Flame, ArrowRight } from "lucide-react";
+import { Trophy, Flame, ArrowRight } from "lucide-react";
 import { getMondayOfWeek, toISODate, formatWeekRange, performanceColour } from "@/lib/week";
 
 export const Route = createFileRoute("/server/")({ component: ServerDashboard });
@@ -76,20 +76,44 @@ function ServerDashboard() {
     })();
   }, [weekStart]);
 
-  const wine = Number(stat?.wine_conversion ?? 0);
-  const cocktails = Number(stat?.cocktail_conversion ?? 0);
-  const desserts = Number(stat?.dessert_conversion ?? 0);
-
-  const catKeys = ["wine_conversion", "dessert_conversion", "cocktail_conversion", "sides_conversion", "spirits_conversion", "sparkling_conversion"] as const;
-  const avgOf = (s: Stat | null) => {
-    if (!s) return 0;
-    const vals = catKeys.map((k) => Number((s as any)[k] ?? 0));
-    return vals.reduce((a, b) => a + b, 0) / vals.length;
+  const toneFor = (actual: number, target: number) => {
+    const colour = performanceColour(actual, target);
+    return colour === "green" ? "var(--brand-green)" : colour === "amber" ? "var(--brand-orange)" : "var(--opportunity)";
   };
-  const upsell = avgOf(stat);
-  const prevUpsell = avgOf(prevStat);
-  const delta = pctDelta(upsell, prevUpsell);
-  const upPct = Math.min(100, Math.max(0, upsell));
+
+  const top3 = [
+    { label: "Wine", key: "wine_conversion", t: "wine_target" },
+    { label: "Cocktails", key: "cocktail_conversion", t: "cocktail_target" },
+    { label: "Desserts", key: "dessert_conversion", t: "dessert_target" },
+  ] as const;
+
+  const allCats = [
+    { label: "wine", key: "wine_conversion" },
+    { label: "cocktails", key: "cocktail_conversion" },
+    { label: "desserts", key: "dessert_conversion" },
+    { label: "sides", key: "sides_conversion" },
+    { label: "spirits", key: "spirits_conversion" },
+    { label: "sparkling", key: "sparkling_conversion" },
+  ] as const;
+
+  // Pick best (or worst) category by week-over-week delta
+  let insight: { label: string; delta: number; positive: boolean } | null = null;
+  if (stat) {
+    const deltas = allCats.map((c) => {
+      const cur = Number((stat as any)[c.key] ?? 0);
+      const prev = Number((prevStat as any)?.[c.key] ?? 0);
+      const d = pctDelta(cur, prev);
+      return { label: c.label, d };
+    }).filter((x) => x.d !== null) as { label: string; d: number }[];
+    if (deltas.length) {
+      const best = deltas.reduce((a, b) => (b.d > a.d ? b : a));
+      if (best.d > 0) insight = { label: best.label, delta: best.d, positive: true };
+      else {
+        const worst = deltas.reduce((a, b) => (b.d < a.d ? b : a));
+        insight = { label: worst.label, delta: worst.d, positive: false };
+      }
+    }
+  }
 
   return (
     <ServerLayout>
