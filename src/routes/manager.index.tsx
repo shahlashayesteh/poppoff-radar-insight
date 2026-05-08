@@ -68,6 +68,7 @@ function ManagerDashboard() {
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const weekStart = useMemo(() => toISODate(getMondayOfWeek()), []);
+  const [uploadWeek, setUploadWeek] = useState<string>(toISODate(getMondayOfWeek()));
 
   const load = async () => {
     const v = await getManagerVenue();
