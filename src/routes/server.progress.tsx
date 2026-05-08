@@ -69,6 +69,16 @@ function ServerProgress() {
           </div>
         </div>
 
+        {position && (
+          <div className="mt-4 rounded-2xl bg-white border border-border p-4 flex items-center gap-4">
+            <div className="h-14 w-14 rounded-full grid place-items-center bg-brand-green/15 font-display font-extrabold text-brand-green">#{position.pos}</div>
+            <div className="flex-1">
+              <div className="text-sm font-semibold">Your position this week</div>
+              <div className="font-display text-xl font-extrabold">#{position.pos} of {position.total}</div>
+            </div>
+          </div>
+        )}
+
         <h2 className="mt-6 font-display text-xl font-extrabold">Milestones</h2>
         {milestones.length === 0 ? (
           <p className="mt-2 text-sm text-muted-foreground">Complete a week of stats to unlock your first milestone.</p>
