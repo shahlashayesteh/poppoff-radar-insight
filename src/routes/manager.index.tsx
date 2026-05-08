@@ -16,6 +16,7 @@ import {
   Download,
   RefreshCw,
   MoreVertical,
+  Trash2,
 } from "lucide-react";
 import { downloadCsvTemplate, parseStatsCsv } from "@/lib/csv";
 import {
@@ -288,6 +289,30 @@ function ManagerDashboard() {
     }
   };
 
+  const deleteAllUploads = async () => {
+    if (!venue) return;
+    if (
+      !window.confirm(
+        "Delete ALL uploaded CSV stats for this venue? This removes every week of server stats, views, acks, coaching and priorities. This cannot be undone.",
+      )
+    )
+      return;
+    try {
+      const { data, error } = await supabase.rpc("delete_csv_uploads", {
+        _venue_id: venue.id,
+        _weeks: null as unknown as never,
+      });
+      if (error) throw error;
+      const result = data as { deleted_rows: number };
+      toast.success(`Deleted ${result?.deleted_rows ?? 0} stat rows`);
+      setUploadStatus("All uploaded CSV data deleted.");
+      await load();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Delete failed";
+      toast.error(message);
+    }
+  };
+
   const cats: Array<{ key: keyof StatRow; tKey: keyof TargetRow; label: string }> = [
     { key: "wine_conversion", tKey: "wine_target", label: "Wine" },
     { key: "cocktail_conversion", tKey: "cocktail_target", label: "Cocktails" },
@@ -383,6 +408,13 @@ function ManagerDashboard() {
                 className="inline-flex items-center gap-2 rounded-xl border border-border px-4 py-2 text-sm font-semibold"
               >
                 <Download className="h-4 w-4" /> Template
+              </button>
+              <button
+                onClick={deleteAllUploads}
+                disabled={uploading || !venue || stats.length === 0}
+                className="inline-flex items-center gap-2 rounded-xl border border-destructive/40 text-destructive px-4 py-2 text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:bg-destructive/5"
+              >
+                <Trash2 className="h-4 w-4" /> Delete all uploads
               </button>
             </div>
             <div className="mt-2 text-xs text-muted-foreground">
