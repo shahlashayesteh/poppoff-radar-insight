@@ -53,7 +53,7 @@ function Landing() {
         <div className="mx-auto max-w-7xl grid lg:grid-cols-2 gap-10 items-center">
           <div>
             <div className="inline-flex items-center gap-2 rounded-full border border-border bg-white px-3 py-1 text-xs font-semibold">
-              🔥 Loved by servers. Trusted by top restaurants.
+              ✨ Built for modern restaurant teams.
             </div>
             <h1 className="mt-5 font-display font-extrabold tracking-tight text-6xl md:text-7xl leading-[0.95]">
               Popp Off.<br />
@@ -72,17 +72,9 @@ function Landing() {
                 Start Your Pilot
               </Link>
             </div>
-            <div className="mt-6 flex items-center gap-3">
-              <div className="flex text-brand-orange">
-                {Array.from({ length: 5 }).map((_, i) => <Star key={i} className="h-5 w-5 fill-current" />)}
-              </div>
-              <span className="text-sm font-semibold">4.9 / 5 from 500+ servers</span>
-            </div>
-            <div className="mt-6 flex flex-wrap items-center gap-x-8 gap-y-2 text-xs text-muted-foreground tracking-wider uppercase">
-              <span className="font-bold">⚓ Garden Table</span>
-              <span className="font-bold">URBAN PLATE</span>
-              <span className="font-bold">NORTH & OAK</span>
-            </div>
+            <p className="mt-6 text-sm text-foreground/70 max-w-md">
+              Designed to help servers improve performance — turning sales data into coaching, motivation, and revenue growth.
+            </p>
           </div>
 
           {/* Phone mockups */}
