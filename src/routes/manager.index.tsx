@@ -409,6 +409,13 @@ function ManagerDashboard() {
               >
                 <Download className="h-4 w-4" /> Template
               </button>
+              <button
+                onClick={deleteAllUploads}
+                disabled={uploading || !venue || stats.length === 0}
+                className="inline-flex items-center gap-2 rounded-xl border border-destructive/40 text-destructive px-4 py-2 text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:bg-destructive/5"
+              >
+                <Trash2 className="h-4 w-4" /> Delete all uploads
+              </button>
             </div>
             <div className="mt-2 text-xs text-muted-foreground">
               If the file has dates, those weeks are used. If not, the filename date or current week
