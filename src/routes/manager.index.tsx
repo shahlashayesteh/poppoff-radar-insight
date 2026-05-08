@@ -58,8 +58,8 @@ const Dot = ({ s }: { s: "green" | "amber" | "red" }) => (
 function ManagerDashboard() {
   const [venue, setVenue] = useState<Venue | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
-  const [stats, setStats] = useState<Stat[]>([]);
-  const [targets, setTargets] = useState<Target[]>([]);
+  const [stats, setStats] = useState<StatRow[]>([]);
+  const [targets, setTargets] = useState<TargetRow[]>([]);
   const [views, setViews] = useState<Record<string, boolean>>({});
   const [acks, setAcks] = useState<Record<string, boolean>>({});
   const [uploading, setUploading] = useState(false);
@@ -82,9 +82,9 @@ function ManagerDashboard() {
     }
     setMembers(mems);
     const { data: st } = await supabase.from("server_stats").select("*").eq("venue_id", v.id).eq("week_start", weekStart);
-    setStats((st ?? []) as Stat[]);
+    setStats((st ?? []) as StatRow[]);
     const { data: tg } = await supabase.from("server_targets").select("*").eq("venue_id", v.id);
-    setTargets((tg ?? []) as Target[]);
+    setTargets((tg ?? []) as TargetRow[]);
     const { data: vw } = await supabase.from("server_stat_views").select("user_id").eq("venue_id", v.id).eq("week_start", weekStart);
     setViews(Object.fromEntries((vw ?? []).map((r) => [r.user_id, true])));
     const { data: ak } = await supabase.from("server_focus_acks").select("user_id").eq("venue_id", v.id).eq("week_start", weekStart);
@@ -142,7 +142,7 @@ function ManagerDashboard() {
     }
   };
 
-  const cats: Array<{ key: keyof Stat; tKey: keyof Target; label: string }> = [
+  const cats: Array<{ key: keyof StatRow; tKey: keyof TargetRow; label: string }> = [
     { key: "wine_conversion", tKey: "wine_target", label: "Wine" },
     { key: "cocktail_conversion", tKey: "cocktail_target", label: "Cocktails" },
     { key: "dessert_conversion", tKey: "dessert_target", label: "Desserts" },
