@@ -88,32 +88,28 @@ function numberFromCsv(value: unknown): number {
 }
 
 export async function parseStatsCsv(file: File): Promise<CsvRow[]> {
-  return new Promise((resolve, reject) => {
-    Papa.parse<Record<string, string>>(file, {
-      header: true,
-      transformHeader: canonicalHeader,
-      skipEmptyLines: true,
-      complete: (result) => {
-        try {
-          const rows = (result.data || [])
-            .filter((r) => r.server_name && r.server_name.trim() !== "")
-            .map<CsvRow>((r) => ({
-              server_name: String(r.server_name).trim(),
-              total_covers: numberFromCsv(r.total_covers),
-              total_sales: numberFromCsv(r.total_sales),
-              wine_sales: numberFromCsv(r.wine_sales),
-              dessert_sales: numberFromCsv(r.dessert_sales),
-              cocktail_sales: numberFromCsv(r.cocktail_sales),
-              sides_sales: numberFromCsv(r.sides_sales),
-              spirits_sales: numberFromCsv(r.spirits_sales),
-              sparkling_sales: numberFromCsv(r.sparkling_sales),
-            }));
-          resolve(rows);
-        } catch (e) {
-          reject(e);
-        }
-      },
-      error: reject,
-    });
+  const text = await file.text();
+  const result = Papa.parse<Record<string, string>>(text, {
+    header: true,
+    transformHeader: canonicalHeader,
+    skipEmptyLines: true,
   });
+
+  if (result.errors.length) {
+    throw new Error(result.errors[0]?.message || "CSV could not be parsed");
+  }
+
+  return (result.data || [])
+    .filter((r) => r.server_name && r.server_name.trim() !== "")
+    .map<CsvRow>((r) => ({
+      server_name: String(r.server_name).trim(),
+      total_covers: numberFromCsv(r.total_covers),
+      total_sales: numberFromCsv(r.total_sales),
+      wine_sales: numberFromCsv(r.wine_sales),
+      dessert_sales: numberFromCsv(r.dessert_sales),
+      cocktail_sales: numberFromCsv(r.cocktail_sales),
+      sides_sales: numberFromCsv(r.sides_sales),
+      spirits_sales: numberFromCsv(r.spirits_sales),
+      sparkling_sales: numberFromCsv(r.sparkling_sales),
+    }));
 }
