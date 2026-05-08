@@ -293,7 +293,7 @@ function MenuIntel() {
             : pairings;
           const CAT_META: Record<string, { emoji: string; label: string; tint: string; ink: string }> = {
             wine_bottle: { emoji: "🍾", label: "Wine (Bottle)",       tint: "color-mix(in oklab, var(--brand-orange) 16%, white)", ink: "var(--brand-orange)" },
-            wine_glass:  { emoji: "🥂", label: "Wine (by the Glass)", tint: "color-mix(in oklab, var(--brand-orange) 8%, white)",  ink: "var(--brand-orange)" },
+            wine_glass:  { emoji: "🍷", label: "Wine (Glass)",        tint: "color-mix(in oklab, var(--brand-orange) 8%, white)",  ink: "var(--brand-orange)" },
             cocktail:    { emoji: "🍸", label: "Cocktail",            tint: "color-mix(in oklab, var(--brand-green) 14%, white)",  ink: "var(--brand-green)" },
             sake:        { emoji: "🍶", label: "Sake",                tint: "color-mix(in oklab, var(--brand-orange) 10%, white)", ink: "var(--brand-orange)" },
             beer:        { emoji: "🍺", label: "Beer",                tint: "color-mix(in oklab, var(--brand-green) 10%, white)",  ink: "var(--brand-green)" },
