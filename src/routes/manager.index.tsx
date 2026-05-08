@@ -146,25 +146,36 @@ function ManagerDashboard() {
       const rows = parsed.flat();
       if (!rows.length) { toast.error("No rows found in CSV"); return; }
       const importWeek = rows[0]?.week_start || weekStart;
-      const { data, error } = await supabase.rpc("process_csv_upload", {
-        _venue_id: venue.id, _week_start: importWeek, _csv_data: rows as unknown as never,
-      });
-      if (error) throw error;
-      const result = data as { matched_count: number; created_count?: number; unmatched_names: string[]; weeks?: string[] };
-      const importedWeeks = result.weeks?.length ? result.weeks : Array.from(new Set(rows.map((row) => row.week_start || importWeek)));
-      toast.success(`Imported ${result.matched_count} server week${result.matched_count === 1 ? "" : "s"} from ${files.length} CSV${files.length === 1 ? "" : "s"}`);
-      if (result.created_count && result.created_count > 0) {
-        toast.info(`Added ${result.created_count} new server${result.created_count === 1 ? "" : "s"} to your team: ${result.unmatched_names.join(", ")}`);
+      const batches = Array.from({ length: Math.ceil(rows.length / 250) }, (_, i) => rows.slice(i * 250, i * 250 + 250));
+      const importedWeeks = new Set<string>();
+      const createdNames = new Set<string>();
+      let importedCount = 0;
+
+      for (const batch of batches) {
+        const { data, error } = await supabase.rpc("process_csv_upload", {
+          _venue_id: venue.id, _week_start: batch[0]?.week_start || importWeek, _csv_data: batch as unknown as never,
+        });
+        if (error) throw error;
+        const result = data as { matched_count: number; created_count?: number; unmatched_names?: string[]; weeks?: string[] };
+        importedCount += result.matched_count || 0;
+        (result.weeks?.length ? result.weeks : batch.map((row) => row.week_start || importWeek)).forEach((week) => importedWeeks.add(week));
+        (result.unmatched_names ?? []).forEach((name) => createdNames.add(name));
+      }
+
+      const weeks = Array.from(importedWeeks);
+      toast.success(`Imported ${importedCount} server week${importedCount === 1 ? "" : "s"} from ${files.length} CSV${files.length === 1 ? "" : "s"}`);
+      if (createdNames.size > 0) {
+        toast.info(`Added ${createdNames.size} new server${createdNames.size === 1 ? "" : "s"} to your team: ${Array.from(createdNames).join(", ")}`);
       }
       // Auto-generate weekly priorities via AI
       toast.info("Generating weekly priorities with AI…");
-      await Promise.all(importedWeeks.map(async (week) => {
+      await Promise.all(weeks.map(async (week) => {
         const { error: aiErr } = await supabase.functions.invoke("ai-assist", {
           body: { action: "generate_priorities", venueId: venue.id, payload: { weekStart: week } },
         });
         if (aiErr) toast.error(`AI: ${aiErr.message}`);
       }));
-      setDisplayWeekStart(importedWeeks[0] || importWeek);
+      setDisplayWeekStart(weeks[0] || importWeek);
       await load();
     } catch (err: any) {
       toast.error(err.message || "Upload failed");
