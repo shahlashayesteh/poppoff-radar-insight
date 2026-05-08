@@ -66,6 +66,7 @@ function ManagerDashboard() {
   const [views, setViews] = useState<Record<string, boolean>>({});
   const [acks, setAcks] = useState<Record<string, boolean>>({});
   const [uploading, setUploading] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState<string>("");
   const fileRef = useRef<HTMLInputElement>(null);
   const weekStart = useMemo(() => toISODate(getMondayOfWeek()), []);
   const [displayWeekStart, setDisplayWeekStart] = useState<string>(weekStart);
@@ -139,19 +140,27 @@ function ManagerDashboard() {
 
   const onFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
-    if (!files.length || !venue) return;
+    if (!files.length) return;
+    if (!venue) { toast.error("Your venue is still loading — try again in a moment"); return; }
     setUploading(true);
+    setUploadStatus(`Reading ${files.length} CSV${files.length === 1 ? "" : "s"}…`);
     try {
       const parsed = await Promise.all(files.map(parseStatsCsv));
       const rows = parsed.flat();
-      if (!rows.length) { toast.error("No rows found in CSV"); return; }
+      if (!rows.length) {
+        const message = "No server sales rows were found. The CSV needs at least a staff/server name plus sales, covers, or item/category amounts.";
+        setUploadStatus(message);
+        toast.error(message);
+        return;
+      }
       const importWeek = rows[0]?.week_start || weekStart;
       const batches = Array.from({ length: Math.ceil(rows.length / 250) }, (_, i) => rows.slice(i * 250, i * 250 + 250));
       const importedWeeks = new Set<string>();
       const createdNames = new Set<string>();
       let importedCount = 0;
 
-      for (const batch of batches) {
+      for (const [index, batch] of batches.entries()) {
+        setUploadStatus(`Importing batch ${index + 1} of ${batches.length}…`);
         const { data, error } = await supabase.rpc("process_csv_upload", {
           _venue_id: venue.id, _week_start: batch[0]?.week_start || importWeek, _csv_data: batch as unknown as never,
         });
@@ -168,6 +177,7 @@ function ManagerDashboard() {
         toast.info(`Added ${createdNames.size} new server${createdNames.size === 1 ? "" : "s"} to your team: ${Array.from(createdNames).join(", ")}`);
       }
       // Auto-generate weekly priorities via AI
+      setUploadStatus("Refreshing dashboards and generating priorities…");
       toast.info("Generating weekly priorities with AI…");
       await Promise.all(weeks.map(async (week) => {
         const { error: aiErr } = await supabase.functions.invoke("ai-assist", {
@@ -177,8 +187,11 @@ function ManagerDashboard() {
       }));
       setDisplayWeekStart(weeks[0] || importWeek);
       await load();
+      setUploadStatus(`Imported ${importedCount} server week${importedCount === 1 ? "" : "s"}.`);
     } catch (err: any) {
-      toast.error(err.message || "Upload failed");
+      const message = err.message || "Upload failed";
+      setUploadStatus(message);
+      toast.error(message);
     } finally {
       setUploading(false);
       if (fileRef.current) fileRef.current.value = "";
@@ -251,6 +264,7 @@ function ManagerDashboard() {
               </button>
             </div>
             <div className="mt-2 text-xs text-muted-foreground">If the file has dates, those weeks are used. If not, the filename date or current week is used.</div>
+            {uploadStatus && <div className="mt-2 text-xs font-semibold text-foreground/80">{uploadStatus}</div>}
           </div>
         </div>
 
