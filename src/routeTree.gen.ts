@@ -24,6 +24,7 @@ import { Route as ManagerTeamRouteImport } from './routes/manager.team'
 import { Route as ManagerPrioritiesRouteImport } from './routes/manager.priorities'
 import { Route as ManagerMenuRouteImport } from './routes/manager.menu'
 import { Route as CheckoutSuccessRouteImport } from './routes/checkout.success'
+import { Route as CheckoutRetryRouteImport } from './routes/checkout.retry'
 import { Route as DemoServerIndexRouteImport } from './routes/demo.server.index'
 import { Route as DemoManagerIndexRouteImport } from './routes/demo.manager.index'
 import { Route as ManagerServerIdRouteImport } from './routes/manager.server.$id'
@@ -111,6 +112,11 @@ const CheckoutSuccessRoute = CheckoutSuccessRouteImport.update({
   path: '/checkout/success',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CheckoutRetryRoute = CheckoutRetryRouteImport.update({
+  id: '/checkout/retry',
+  path: '/checkout/retry',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DemoServerIndexRoute = DemoServerIndexRouteImport.update({
   id: '/demo/server/',
   path: '/demo/server/',
@@ -174,6 +180,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/settings': typeof SettingsRoute
   '/signin': typeof SigninRoute
+  '/checkout/retry': typeof CheckoutRetryRoute
   '/checkout/success': typeof CheckoutSuccessRoute
   '/manager/menu': typeof ManagerMenuRoute
   '/manager/priorities': typeof ManagerPrioritiesRoute
@@ -202,6 +209,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/settings': typeof SettingsRoute
   '/signin': typeof SigninRoute
+  '/checkout/retry': typeof CheckoutRetryRoute
   '/checkout/success': typeof CheckoutSuccessRoute
   '/manager/menu': typeof ManagerMenuRoute
   '/manager/priorities': typeof ManagerPrioritiesRoute
@@ -231,6 +239,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/settings': typeof SettingsRoute
   '/signin': typeof SigninRoute
+  '/checkout/retry': typeof CheckoutRetryRoute
   '/checkout/success': typeof CheckoutSuccessRoute
   '/manager/menu': typeof ManagerMenuRoute
   '/manager/priorities': typeof ManagerPrioritiesRoute
@@ -261,6 +270,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/settings'
     | '/signin'
+    | '/checkout/retry'
     | '/checkout/success'
     | '/manager/menu'
     | '/manager/priorities'
@@ -289,6 +299,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/settings'
     | '/signin'
+    | '/checkout/retry'
     | '/checkout/success'
     | '/manager/menu'
     | '/manager/priorities'
@@ -317,6 +328,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/settings'
     | '/signin'
+    | '/checkout/retry'
     | '/checkout/success'
     | '/manager/menu'
     | '/manager/priorities'
@@ -346,6 +358,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   SettingsRoute: typeof SettingsRoute
   SigninRoute: typeof SigninRoute
+  CheckoutRetryRoute: typeof CheckoutRetryRoute
   CheckoutSuccessRoute: typeof CheckoutSuccessRoute
   ManagerMenuRoute: typeof ManagerMenuRoute
   ManagerPrioritiesRoute: typeof ManagerPrioritiesRoute
@@ -476,6 +489,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CheckoutSuccessRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/checkout/retry': {
+      id: '/checkout/retry'
+      path: '/checkout/retry'
+      fullPath: '/checkout/retry'
+      preLoaderRoute: typeof CheckoutRetryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/demo/server/': {
       id: '/demo/server/'
       path: '/demo/server'
@@ -562,6 +582,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   SettingsRoute: SettingsRoute,
   SigninRoute: SigninRoute,
+  CheckoutRetryRoute: CheckoutRetryRoute,
   CheckoutSuccessRoute: CheckoutSuccessRoute,
   ManagerMenuRoute: ManagerMenuRoute,
   ManagerPrioritiesRoute: ManagerPrioritiesRoute,
