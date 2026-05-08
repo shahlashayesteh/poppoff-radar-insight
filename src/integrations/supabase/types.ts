@@ -486,6 +486,42 @@ export type Database = {
           },
         ]
       }
+      venue_pairings: {
+        Row: {
+          category: string
+          generated_at: string
+          id: string
+          item: string
+          pair_with: string
+          position: number
+          priority: string | null
+          venue_id: string
+          why: string | null
+        }
+        Insert: {
+          category: string
+          generated_at?: string
+          id?: string
+          item: string
+          pair_with: string
+          position?: number
+          priority?: string | null
+          venue_id: string
+          why?: string | null
+        }
+        Update: {
+          category?: string
+          generated_at?: string
+          id?: string
+          item?: string
+          pair_with?: string
+          position?: number
+          priority?: string | null
+          venue_id?: string
+          why?: string | null
+        }
+        Relationships: []
+      }
       venue_settings: {
         Row: {
           allow_assistant_manager_priorities: boolean

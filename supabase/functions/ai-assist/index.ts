@@ -74,13 +74,40 @@ Deno.serve(async (req) => {
       return Response.json({ ok: true, items, menu: ins.data }, { headers: cors });
     }
 
-    if (action === "generate_pairings") {
-      const { data: menus } = await admin.from("venue_menu").select("id, menu_text, parsed_items").eq("venue_id", venueId).order("uploaded_at", { ascending: false }).limit(10);
-      const summary = (menus ?? []).map((m, i) => `--- Menu ${i + 1} ---\n${m.menu_text?.slice(0, 4000) || JSON.stringify(m.parsed_items)?.slice(0, 4000)}`).join("\n\n");
-      const sys = "You are an expert sommelier, mixologist and pastry chef. For EVERY food item across the menus (starters, mains, sides — NOT drinks/desserts as the 'item'), produce pairings in EACH applicable category present on the menus: wine, cocktail, sake, beer, spirit, AND a dessert for palate cleansing. RULES: (1) For each food item × category, give UP TO 3 suggestions but ONLY if that many genuinely pair well — if only 2 beers truly suit the dish, return just those 2; if none, omit that category for that dish. (2) When more than 3 candidates pair well, pick the 3 MOST EXPENSIVE / premium options to maximise upsell. (3) Use ACTUAL menu items by name (with price if visible). (4) Output one row per (food item, single pairing). Reply ONLY with JSON: {\"pairings\":[{\"item\":string,\"pair_with\":string,\"category\":\"wine\"|\"cocktail\"|\"sake\"|\"beer\"|\"spirit\"|\"dessert\"|\"other\",\"why\":string,\"priority\":\"High\"|\"Medium\"|\"Low\"}]}. Be exhaustive across food items — up to 300 rows. Order pairings within a (food, category) group from most to least premium.";
+    if (action === "list_food_items") {
+      const { data: menus } = await admin.from("venue_menu").select("menu_text, parsed_items").eq("venue_id", venueId).order("uploaded_at", { ascending: false }).limit(10);
+      const summary = (menus ?? []).map((m, i) => `--- Menu ${i + 1} ---\n${m.menu_text?.slice(0, 3500) || JSON.stringify(m.parsed_items)?.slice(0, 3500)}`).join("\n\n");
+      const sys = "Extract ONLY the food item names (starters, mains, sides — NOT drinks, NOT desserts) from the menus below. Reply ONLY with JSON: {\"items\":[string]}. Use exact menu names. Max 60 items.";
       const out = await callAI([{ role: "system", content: sys }, { role: "user", content: summary }], true);
+      let items: string[] = [];
+      try { const o = JSON.parse(out); items = (o.items ?? []).map((x: any) => String(x)).filter(Boolean); } catch {}
+      return Response.json({ ok: true, items }, { headers: cors });
+    }
+
+    if (action === "pair_chunk") {
+      const items: string[] = Array.isArray(payload?.items) ? payload.items.slice(0, 8) : [];
+      if (items.length === 0) return Response.json({ ok: true, pairings: [] }, { headers: cors });
+      const { data: menus } = await admin.from("venue_menu").select("menu_text, parsed_items").eq("venue_id", venueId).order("uploaded_at", { ascending: false }).limit(10);
+      const summary = (menus ?? []).map((m, i) => `--- Menu ${i + 1} ---\n${m.menu_text?.slice(0, 3500) || JSON.stringify(m.parsed_items)?.slice(0, 3500)}`).join("\n\n");
+      const sys = "You are an expert sommelier, mixologist and pastry chef. For ONLY the food items listed by the user, produce pairings drawn from the venue's actual drinks/desserts menus. For each food item, give pairings in EACH applicable category present on the menus: wine, cocktail, sake, beer, spirit, AND a dessert for palate cleansing. RULES: (1) For each food item × category, give UP TO 3 suggestions but ONLY if that many genuinely pair well — if only 2 beers truly suit, return just those 2; if none, omit that category. (2) When more than 3 candidates pair well, pick the 3 MOST EXPENSIVE / premium options to maximise upsell. (3) Use ACTUAL menu items by name (with price if visible). (4) Output one row per (food item, single pairing). Reply ONLY with JSON: {\"pairings\":[{\"item\":string,\"pair_with\":string,\"category\":\"wine\"|\"cocktail\"|\"sake\"|\"beer\"|\"spirit\"|\"dessert\"|\"other\",\"why\":string,\"priority\":\"High\"|\"Medium\"|\"Low\"}]}. Order within each (food, category) group most-to-least premium.";
+      const usr = `Food items to pair:\n${items.map((s) => `- ${s}`).join("\n")}\n\nMenus:\n${summary}`;
+      const out = await callAI([{ role: "system", content: sys }, { role: "user", content: usr }], true);
       let pairings: any[] = [];
       try { const o = JSON.parse(out); pairings = o.pairings ?? []; } catch {}
+
+      // Persist for caching
+      const rows = pairings.slice(0, 200).map((p: any, idx: number) => ({
+        venue_id: venueId,
+        item: String(p.item || "").slice(0, 200),
+        category: String(p.category || "other").toLowerCase().slice(0, 30),
+        pair_with: String(p.pair_with || "").slice(0, 200),
+        why: p.why ? String(p.why).slice(0, 600) : null,
+        priority: p.priority ? String(p.priority).slice(0, 20) : null,
+        position: idx,
+      })).filter((r: any) => r.item && r.pair_with);
+      if (rows.length) {
+        await admin.from("venue_pairings").upsert(rows, { onConflict: "venue_id,item,category,pair_with" });
+      }
       return Response.json({ ok: true, pairings }, { headers: cors });
     }
 
