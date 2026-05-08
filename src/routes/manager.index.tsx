@@ -11,7 +11,7 @@ export const Route = createFileRoute("/manager/")({ component: ManagerDashboard 
 
 type Venue = { id: string; name: string; join_code: string };
 type Member = { id: string; full_name: string | null };
-type Stat = {
+type StatRow = {
   user_id: string;
   total_covers: number;
   total_sales: number;
@@ -23,7 +23,7 @@ type Stat = {
   spirits_conversion: number | null;
   sparkling_conversion: number | null;
 };
-type Target = {
+type TargetRow = {
   user_id: string;
   spend_per_cover_target: number;
   wine_target: number;
