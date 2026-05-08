@@ -292,15 +292,33 @@ function MenuIntel() {
               )
             : pairings;
           const CAT_META: Record<string, { emoji: string; label: string; tint: string; ink: string }> = {
-            wine:     { emoji: "🍷", label: "Wine",     tint: "color-mix(in oklab, var(--brand-orange) 14%, white)", ink: "var(--brand-orange)" },
-            cocktail: { emoji: "🍸", label: "Cocktail", tint: "color-mix(in oklab, var(--brand-green) 14%, white)",  ink: "var(--brand-green)" },
-            sake:     { emoji: "🍶", label: "Sake",     tint: "color-mix(in oklab, var(--brand-orange) 10%, white)", ink: "var(--brand-orange)" },
-            beer:     { emoji: "🍺", label: "Beer",     tint: "color-mix(in oklab, var(--brand-green) 10%, white)",  ink: "var(--brand-green)" },
-            spirit:   { emoji: "🥃", label: "Spirit",   tint: "color-mix(in oklab, var(--brand-orange) 10%, white)", ink: "var(--brand-orange)" },
-            dessert:  { emoji: "🍰", label: "Dessert",  tint: "color-mix(in oklab, var(--brand-green) 10%, white)",  ink: "var(--brand-green)" },
-            other:    { emoji: "✨", label: "Other",    tint: "var(--muted)",                                         ink: "var(--muted-foreground)" },
+            wine_bottle: { emoji: "🍷", label: "Wine (Bottle)",       tint: "color-mix(in oklab, var(--brand-orange) 16%, white)", ink: "var(--brand-orange)" },
+            wine_glass:  { emoji: "🥂", label: "Wine (by the Glass)", tint: "color-mix(in oklab, var(--brand-orange) 8%, white)",  ink: "var(--brand-orange)" },
+            cocktail:    { emoji: "🍸", label: "Cocktail",            tint: "color-mix(in oklab, var(--brand-green) 14%, white)",  ink: "var(--brand-green)" },
+            sake:        { emoji: "🍶", label: "Sake",                tint: "color-mix(in oklab, var(--brand-orange) 10%, white)", ink: "var(--brand-orange)" },
+            beer:        { emoji: "🍺", label: "Beer",                tint: "color-mix(in oklab, var(--brand-green) 10%, white)",  ink: "var(--brand-green)" },
+            spirit:      { emoji: "🥃", label: "Spirit",              tint: "color-mix(in oklab, var(--brand-orange) 10%, white)", ink: "var(--brand-orange)" },
+            dessert:     { emoji: "🍰", label: "Dessert",             tint: "color-mix(in oklab, var(--brand-green) 10%, white)",  ink: "var(--brand-green)" },
+            other:       { emoji: "✨", label: "Other",               tint: "var(--muted)",                                         ink: "var(--muted-foreground)" },
           };
-          const CAT_ORDER = ["wine", "cocktail", "sake", "beer", "spirit", "dessert", "other"];
+          const CAT_ORDER = ["wine_bottle", "wine_glass", "cocktail", "sake", "beer", "spirit", "dessert", "other"];
+          const STYLE_META: Record<string, { label: string; bg: string; fg: string }> = {
+            white:     { label: "White",     bg: "color-mix(in oklab, oklch(0.92 0.13 95) 70%, white)",  fg: "oklch(0.42 0.10 80)" },
+            red:       { label: "Red",       bg: "color-mix(in oklab, oklch(0.55 0.20 25) 28%, white)", fg: "oklch(0.40 0.18 25)" },
+            rose:      { label: "Rosé",      bg: "color-mix(in oklab, oklch(0.78 0.14 10) 35%, white)", fg: "oklch(0.45 0.16 10)" },
+            champagne: { label: "Champagne", bg: "color-mix(in oklab, oklch(0.85 0.13 90) 50%, white)", fg: "oklch(0.45 0.10 80)" },
+          };
+          const parseWine = (raw: string): { styleKey: string | null; name: string } => {
+            const m = raw.match(/^\s*\[([^\]]+)\]\s*(.*)$/);
+            if (!m) return { styleKey: null, name: raw };
+            const tag = m[1].toLowerCase();
+            let styleKey: string | null = null;
+            if (/champ|sparkl|prosec|cava|crémant|cremant/.test(tag)) styleKey = "champagne";
+            else if (/ros[eé]/.test(tag)) styleKey = "rose";
+            else if (/red/.test(tag)) styleKey = "red";
+            else if (/white|blanc/.test(tag)) styleKey = "white";
+            return { styleKey, name: m[2] || raw };
+          };
           const itemEmoji = (name: string) => {
             const n = name.toLowerCase();
             if (/(salmon|tuna|cod|sea bass|prawn|shrimp|oyster|scallop|fish|crab|lobster)/.test(n)) return "🐟";
