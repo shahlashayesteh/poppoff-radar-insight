@@ -10,7 +10,7 @@ export const Route = createFileRoute("/manager/menu")({ component: MenuIntel });
 
 type ParsedItem = { name: string; category?: string; price?: string; pairing?: string; priority?: string };
 type Menu = { id: string; menu_text: string; parsed_items: ParsedItem[] | null; uploaded_at: string };
-type Pairing = { item: string; pair_with: string; why: string; priority?: string };
+type Pairing = { item: string; pair_with: string; why: string; priority?: string; category?: string };
 
 const MAX_MENUS = 10;
 
@@ -22,6 +22,7 @@ function MenuIntel() {
   const [loading, setLoading] = useState(false);
   const [pairings, setPairings] = useState<Pairing[]>([]);
   const [pairingLoading, setPairingLoading] = useState(false);
+  const [pairingSearch, setPairingSearch] = useState("");
   const menuFilesRef = useRef<HTMLInputElement>(null);
 
   const loadMenus = async (v: string) => {
@@ -243,29 +244,65 @@ function MenuIntel() {
           </div>
         </div>
 
-        {pairings.length > 0 && (
-          <div className="mt-6 rounded-2xl bg-white border border-border p-5">
-            <h3 className="font-display font-bold mb-3">AI pairings across your menus</h3>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="text-xs text-muted-foreground"><tr className="text-left"><th className="pb-2">Item</th><th>Pair with</th><th>Why</th><th>Priority</th></tr></thead>
-                <tbody>
-                  {pairings.map((p, i) => (
-                    <tr key={i} className="border-t border-border">
-                      <td className="py-3 font-semibold">{p.item}</td>
-                      <td className="py-3">{p.pair_with}</td>
-                      <td className="py-3 text-foreground/75">{p.why}</td>
-                      <td className="py-3"><span className="text-xs font-semibold px-2 py-1 rounded" style={{
-                        background: p.priority === "High" ? "color-mix(in oklab, var(--brand-orange) 18%, white)" : "var(--muted)",
-                        color: p.priority === "High" ? "var(--brand-orange)" : "var(--muted-foreground)",
-                      }}>{p.priority || "Medium"}</span></td>
-                    </tr>
+        {pairings.length > 0 && (() => {
+          const q = pairingSearch.trim().toLowerCase();
+          const filtered = q
+            ? pairings.filter((p) =>
+                [p.item, p.pair_with, p.why, p.category].some((f) => (f || "").toLowerCase().includes(q)),
+              )
+            : pairings;
+          const groups = new Map<string, Pairing[]>();
+          for (const p of filtered) {
+            const key = p.item || "Other";
+            if (!groups.has(key)) groups.set(key, []);
+            groups.get(key)!.push(p);
+          }
+          return (
+            <div className="mt-6 rounded-2xl bg-white border border-border p-5">
+              <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
+                <h3 className="font-display font-bold">AI pairings across your menus</h3>
+                <input
+                  value={pairingSearch}
+                  onChange={(e) => setPairingSearch(e.target.value)}
+                  placeholder="Search a food item, drink or dessert…"
+                  className="rounded-xl border border-border px-3 py-2 text-sm w-full sm:w-72"
+                />
+              </div>
+              <div className="text-xs text-muted-foreground mb-3">
+                {filtered.length} pairing{filtered.length === 1 ? "" : "s"} across {groups.size} item{groups.size === 1 ? "" : "s"}
+              </div>
+              {filtered.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No pairings match "{pairingSearch}".</p>
+              ) : (
+                <div className="space-y-5">
+                  {Array.from(groups.entries()).map(([item, rows]) => (
+                    <div key={item}>
+                      <div className="font-display font-bold text-base mb-2">{item}</div>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead className="text-xs text-muted-foreground"><tr className="text-left"><th className="pb-2 w-24">Category</th><th>Pair with</th><th>Why</th><th className="w-20">Priority</th></tr></thead>
+                          <tbody>
+                            {rows.map((p, i) => (
+                              <tr key={i} className="border-t border-border">
+                                <td className="py-2 capitalize text-muted-foreground">{p.category || "—"}</td>
+                                <td className="py-2 font-semibold">{p.pair_with}</td>
+                                <td className="py-2 text-foreground/75">{p.why}</td>
+                                <td className="py-2"><span className="text-xs font-semibold px-2 py-1 rounded" style={{
+                                  background: p.priority === "High" ? "color-mix(in oklab, var(--brand-orange) 18%, white)" : "var(--muted)",
+                                  color: p.priority === "High" ? "var(--brand-orange)" : "var(--muted-foreground)",
+                                }}>{p.priority || "Medium"}</span></td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
                   ))}
-                </tbody>
-              </table>
+                </div>
+              )}
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         <div className="mt-5 rounded-xl px-5 py-3 flex items-center justify-between flex-wrap gap-3"
           style={{ background: "color-mix(in oklab, var(--brand-green) 10%, white)" }}>
