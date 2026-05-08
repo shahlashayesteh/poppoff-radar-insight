@@ -142,10 +142,10 @@ function ManagerDashboard() {
         _venue_id: venue.id, _week_start: weekStart, _csv_data: rows as unknown as never,
       });
       if (error) throw error;
-      const result = data as { matched_count: number; unmatched_names: string[] };
+      const result = data as { matched_count: number; created_count?: number; unmatched_names: string[] };
       toast.success(`Imported ${result.matched_count} server${result.matched_count === 1 ? "" : "s"}`);
-      if (result.unmatched_names?.length) {
-        toast.warning(`Unmatched: ${result.unmatched_names.join(", ")}`);
+      if (result.created_count && result.created_count > 0) {
+        toast.info(`Added ${result.created_count} new server${result.created_count === 1 ? "" : "s"} to your team: ${result.unmatched_names.join(", ")}`);
       }
       // Auto-generate weekly priorities via AI
       toast.info("Generating weekly priorities with AI…");
