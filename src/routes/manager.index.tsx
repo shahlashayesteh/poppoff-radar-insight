@@ -216,7 +216,7 @@ function ManagerDashboard() {
 
           <div className="rounded-2xl p-5 border border-border bg-white">
             <div className="text-xs uppercase tracking-widest text-muted-foreground font-bold">Upload weekly stats</div>
-            <p className="mt-2 text-sm text-foreground/75">CSV with columns: server_name, total_covers, total_sales, wine_sales, dessert_sales, cocktail_sales, sides_sales, spirits_sales, sparkling_sales.</p>
+            <p className="mt-2 text-sm text-foreground/75">Upload any restaurant stats CSV. Server names, dates, totals, covers, categories and item lines are detected automatically.</p>
             <div className="mt-3 flex items-center gap-2 flex-wrap">
               <label
                 className={`relative inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-bold text-white overflow-hidden ${uploading || !venue ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
@@ -237,19 +237,7 @@ function ManagerDashboard() {
                 <Download className="h-4 w-4" /> Template
               </button>
             </div>
-            <div className="mt-3 flex items-center gap-2 flex-wrap">
-              <label className="text-xs text-muted-foreground">Week starting (Mon)</label>
-              <input
-                type="date"
-                value={uploadWeek}
-                onChange={(e) => {
-                  const d = new Date(e.target.value + "T00:00:00");
-                  setUploadWeek(toISODate(getMondayOfWeek(d)));
-                }}
-                className="rounded-lg border border-border px-2 py-1 text-sm"
-              />
-            </div>
-            <div className="mt-1 text-xs text-muted-foreground">Importing into week of {formatWeekRange(uploadWeek)}</div>
+            <div className="mt-2 text-xs text-muted-foreground">If the file has dates, those weeks are used. If not, the filename date or current week is used.</div>
           </div>
         </div>
 
