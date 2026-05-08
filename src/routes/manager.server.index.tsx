@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { ManagerLayout } from "@/components/manager-layout";
 import { supabase } from "@/integrations/supabase/client";
+import { getManagerVenue } from "@/lib/manager-venue";
 
 export const Route = createFileRoute("/manager/server/")({ component: Page });
 
@@ -9,10 +10,8 @@ function Page() {
   const [members, setMembers] = useState<{ id: string; full_name: string | null }[]>([]);
   useEffect(() => {
     (async () => {
-      const { data: u } = await supabase.auth.getUser();
-      if (!u.user) return;
-      const { data: venues } = await supabase.from("venues").select("id").eq("manager_id", u.user.id).limit(1);
-      const venueId = venues?.[0]?.id;
+      const venue = await getManagerVenue();
+      const venueId = venue?.id;
       if (!venueId) return;
       const { data: vm } = await supabase.from("venue_members").select("user_id").eq("venue_id", venueId);
       const ids = (vm ?? []).map((x) => x.user_id);
