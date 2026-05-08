@@ -68,6 +68,7 @@ function ManagerDashboard() {
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const weekStart = useMemo(() => toISODate(getMondayOfWeek()), []);
+  const [uploadWeek, setUploadWeek] = useState<string>(toISODate(getMondayOfWeek()));
 
   const load = async () => {
     const v = await getManagerVenue();
@@ -139,7 +140,7 @@ function ManagerDashboard() {
       const rows = await parseStatsCsv(file);
       if (!rows.length) { toast.error("No rows found in CSV"); return; }
       const { data, error } = await supabase.rpc("process_csv_upload", {
-        _venue_id: venue.id, _week_start: weekStart, _csv_data: rows as unknown as never,
+        _venue_id: venue.id, _week_start: uploadWeek, _csv_data: rows as unknown as never,
       });
       if (error) throw error;
       const result = data as { matched_count: number; created_count?: number; unmatched_names: string[] };
@@ -150,7 +151,7 @@ function ManagerDashboard() {
       // Auto-generate weekly priorities via AI
       toast.info("Generating weekly priorities with AI…");
       const { data: ai, error: aiErr } = await supabase.functions.invoke("ai-assist", {
-        body: { action: "generate_priorities", venueId: venue.id, payload: { weekStart } },
+        body: { action: "generate_priorities", venueId: venue.id, payload: { weekStart: uploadWeek } },
       });
       if (aiErr) toast.error(`AI: ${aiErr.message}`);
       else if (ai?.priorities?.length) toast.success(`Created ${ai.priorities.length} priorities`);
@@ -227,7 +228,19 @@ function ManagerDashboard() {
                 <Download className="h-4 w-4" /> Template
               </button>
             </div>
-            <div className="mt-3 text-xs text-muted-foreground">Week of {formatWeekRange(weekStart)}</div>
+            <div className="mt-3 flex items-center gap-2 flex-wrap">
+              <label className="text-xs text-muted-foreground">Week starting (Mon)</label>
+              <input
+                type="date"
+                value={uploadWeek}
+                onChange={(e) => {
+                  const d = new Date(e.target.value + "T00:00:00");
+                  setUploadWeek(toISODate(getMondayOfWeek(d)));
+                }}
+                className="rounded-lg border border-border px-2 py-1 text-sm"
+              />
+            </div>
+            <div className="mt-1 text-xs text-muted-foreground">Importing into week of {formatWeekRange(uploadWeek)}</div>
           </div>
         </div>
 
