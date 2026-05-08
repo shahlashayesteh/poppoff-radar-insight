@@ -24,6 +24,7 @@ function ServerView() {
   const [streak, setStreak] = useState(0);
   const [viewed, setViewed] = useState(false);
   const [acked, setAcked] = useState(false);
+  const [logins, setLogins] = useState(0);
   const weekStart = toISODate(getMondayOfWeek());
 
   useEffect(() => {
@@ -43,6 +44,8 @@ function ServerView() {
       setViewed(!!vw);
       const { data: ak } = await supabase.from("server_focus_acks").select("id").eq("user_id", id).eq("venue_id", v).eq("week_start", weekStart).maybeSingle();
       setAcked(!!ak);
+      const { count: lc } = await supabase.from("server_logins").select("id", { count: "exact", head: true }).eq("user_id", id).eq("venue_id", v);
+      setLogins(lc ?? 0);
     })();
   }, [id, weekStart]);
 
@@ -72,6 +75,7 @@ function ServerView() {
             <div className="text-xs text-muted-foreground">Engagement</div>
             <div className="mt-2 text-sm">Stats viewed: <span className={`font-semibold ${viewed ? "text-brand-green" : "text-muted-foreground"}`}>{viewed ? "Yes" : "Not yet"}</span></div>
             <div className="text-sm">Focus ack'd: <span className={`font-semibold ${acked ? "text-brand-green" : "text-muted-foreground"}`}>{acked ? "Yes" : "Not yet"}</span></div>
+            <div className="text-sm">Total logins: <span className="font-semibold">{logins}</span></div>
           </div>
         </div>
 
