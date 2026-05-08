@@ -107,6 +107,40 @@ Deno.serve(async (req) => {
       return Response.json({ ok: true, priorities }, { headers: cors });
     }
 
+    if (action === "server_coaching") {
+      const weekStart = payload?.weekStart;
+      const userId = payload?.userId;
+      if (!userId || !weekStart) {
+        return new Response(JSON.stringify({ error: "userId and weekStart required" }), { status: 400, headers: { ...cors, "Content-Type": "application/json" } });
+      }
+      const { data: cached } = await admin.from("server_coaching").select("suggestions, generated_at").eq("user_id", userId).eq("venue_id", venueId).eq("week_start", weekStart).maybeSingle();
+      if (cached?.suggestions && Array.isArray(cached.suggestions) && (cached.suggestions as any[]).length > 0) {
+        return Response.json({ ok: true, suggestions: cached.suggestions, cached: true }, { headers: cors });
+      }
+      const { data: cur } = await admin.from("server_stats").select("*").eq("venue_id", venueId).eq("user_id", userId).eq("week_start", weekStart).maybeSingle();
+      const { data: prev } = await admin.from("server_stats").select("*").eq("venue_id", venueId).eq("user_id", userId).lt("week_start", weekStart).order("week_start", { ascending: false }).limit(1).maybeSingle();
+      const { data: tg } = await admin.from("server_targets").select("*").eq("venue_id", venueId).eq("user_id", userId).maybeSingle();
+      const { data: menus } = await admin.from("venue_menu").select("parsed_items").eq("venue_id", venueId).order("uploaded_at", { ascending: false }).limit(3);
+      const menuItems = (menus ?? []).flatMap((m: any) => (m.parsed_items ?? [])).slice(0, 60);
+      const cats = ["wine", "dessert", "cocktail", "sides", "spirits", "sparkling"];
+      const lines = cats.map((c) => {
+        const a = Number((cur as any)?.[`${c}_conversion`] ?? 0);
+        const p = Number((prev as any)?.[`${c}_conversion`] ?? 0);
+        const t = Number((tg as any)?.[`${c}_target`] ?? 0);
+        const delta = p ? (a - p) : 0;
+        return `${c}: ${a.toFixed(0)}% (target ${t.toFixed(0)}%, ${delta >= 0 ? "+" : ""}${delta.toFixed(0)}% vs last week)`;
+      }).join("\n");
+      const sys = "You are a hospitality coach. Given a single server's weekly performance vs target and last week, plus the venue menu, return 3-4 short, specific, actionable coaching tips. Reply ONLY with JSON: {\"suggestions\":[{\"category\":\"wine\"|\"dessert\"|\"cocktail\"|\"sides\"|\"spirits\"|\"sparkling\"|\"general\",\"tip\":string}]}. Mention real menu items where helpful.";
+      const usr = `Performance:\n${lines}\nMenu items: ${menuItems.map((i: any) => i.name).filter(Boolean).slice(0, 40).join(", ") || "(none)"}`;
+      const out = await callAI([{ role: "system", content: sys }, { role: "user", content: usr }], true);
+      let suggestions: any[] = [];
+      try { const o = JSON.parse(out); suggestions = o.suggestions ?? []; } catch {}
+      await admin.from("server_coaching").upsert({
+        venue_id: venueId, user_id: userId, week_start: weekStart, suggestions, generated_at: new Date().toISOString(),
+      }, { onConflict: "user_id,venue_id,week_start" });
+      return Response.json({ ok: true, suggestions, cached: false }, { headers: cors });
+    }
+
     if (action === "coaching") {
       const weekStart = payload?.weekStart;
       const { data: stats } = await admin.from("server_stats").select("*").eq("venue_id", venueId).eq("week_start", weekStart);
