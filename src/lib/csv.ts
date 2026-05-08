@@ -42,7 +42,7 @@ export type CsvRow = {
 type CanonicalField = keyof CsvRow | "date" | "category" | "item" | "quantity" | "check_id";
 type RawRow = Record<string, string>;
 
-type Accumulator = CsvRow & { coverCandidates: number[] };
+type Accumulator = CsvRow & { coverCandidates: number[]; checkIds: Set<string> };
 
 const HEADER_ALIASES: Record<string, CanonicalField> = {
   servername: "server_name",
@@ -114,7 +114,7 @@ const HEADER_ALIASES: Record<string, CanonicalField> = {
   businessdate: "date",
   tradingdate: "date",
   closeddate: "date",
-  saleDate: "date",
+  saledate: "date",
   orderdate: "date",
   category: "category",
   menucategory: "category",
@@ -252,6 +252,7 @@ function emptyAccumulator(serverName: string, weekStart: string): Accumulator {
     spirits_sales: 0,
     sparkling_sales: 0,
     coverCandidates: [],
+    checkIds: new Set<string>(),
   };
 }
 
@@ -281,6 +282,7 @@ export async function parseStatsCsv(file: File): Promise<CsvRow[]> {
   const dateHeader = pickFirstHeader(headers, ["date"]);
   const categoryHeader = pickFirstHeader(headers, ["category"]);
   const itemHeader = pickFirstHeader(headers, ["item"]);
+  const checkHeader = pickFirstHeader(headers, ["check_id"]);
   const defaultWeek = inferWeekFromFileName(file.name);
 
   if (!serverHeader) {
@@ -317,15 +319,16 @@ export async function parseStatsCsv(file: File): Promise<CsvRow[]> {
 
     const covers = numberFromCsv(raw.total_covers ?? (coversHeader ? raw[coversHeader] : 0));
     if (covers > 0) acc.coverCandidates.push(covers);
+    if (checkHeader && String(raw[checkHeader] ?? "").trim()) acc.checkIds.add(String(raw[checkHeader]).trim());
 
     grouped.set(key, acc);
   });
 
   return Array.from(grouped.values())
-    .map(({ coverCandidates, ...row }) => {
+    .map(({ coverCandidates, checkIds, ...row }) => {
       const categoryTotal = row.wine_sales + row.dessert_sales + row.cocktail_sales + row.sides_sales + row.spirits_sales + row.sparkling_sales;
       const total_sales = row.total_sales || categoryTotal;
-      const total_covers = coverCandidates.length > 1 ? Math.max(...coverCandidates) : (coverCandidates[0] || row.total_covers || 0);
+      const total_covers = coverCandidates.length > 1 ? Math.max(...coverCandidates) : (coverCandidates[0] || checkIds.size || row.total_covers || 0);
       return { ...row, total_sales, total_covers };
     })
     .filter((row) => row.server_name && (row.total_sales > 0 || row.total_covers > 0));
