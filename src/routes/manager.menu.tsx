@@ -60,6 +60,41 @@ function MenuIntel() {
     }
   };
 
+  const fileToDataUrl = (file: File) => new Promise<string>((res, rej) => {
+    const r = new FileReader();
+    r.onload = () => res(String(r.result));
+    r.onerror = () => rej(r.error);
+    r.readAsDataURL(file);
+  });
+
+  const extractPdfText = async (file: File): Promise<{ text: string; images: string[] }> => {
+    const pdfjs: any = await import("pdfjs-dist");
+    // @ts-ignore
+    const workerSrc = (await import("pdfjs-dist/build/pdf.worker.min.mjs?url")).default;
+    pdfjs.GlobalWorkerOptions.workerSrc = workerSrc;
+    const buf = await file.arrayBuffer();
+    const doc = await pdfjs.getDocument({ data: buf }).promise;
+    let text = "";
+    const images: string[] = [];
+    const maxPages = Math.min(doc.numPages, 8);
+    for (let i = 1; i <= maxPages; i++) {
+      const page = await doc.getPage(i);
+      const tc = await page.getTextContent();
+      const pageText = tc.items.map((it: any) => it.str).join(" ");
+      text += pageText + "\n";
+      // If page has very little text, render it to image for OCR via vision model
+      if (pageText.trim().length < 40) {
+        const viewport = page.getViewport({ scale: 1.4 });
+        const canvas = document.createElement("canvas");
+        canvas.width = viewport.width; canvas.height = viewport.height;
+        const ctx = canvas.getContext("2d")!;
+        await page.render({ canvasContext: ctx, viewport, canvas } as any).promise;
+        images.push(canvas.toDataURL("image/jpeg", 0.7));
+      }
+    }
+    return { text: text.trim(), images };
+  };
+
   const uploadMenuFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
     if (!venueId || files.length === 0) return;
@@ -71,11 +106,27 @@ function MenuIntel() {
     try {
       let added = 0;
       for (const file of selected) {
-        const raw = await file.text();
-        const menuText = `# ${file.name.replace(/\.[^.]+$/, "") || "Uploaded menu"}\n\n${raw}`.slice(0, 20000);
-        if (menuText.trim().length < 8) continue;
+        const ext = file.name.toLowerCase().split(".").pop() || "";
+        const isImage = file.type.startsWith("image/");
+        const isPdf = file.type === "application/pdf" || ext === "pdf";
+        const label = `# ${file.name.replace(/\.[^.]+$/, "") || "Uploaded menu"}\n\n`;
+        let menuText = "";
+        let images: string[] = [];
+        if (isImage) {
+          images = [await fileToDataUrl(file)];
+          menuText = label;
+        } else if (isPdf) {
+          toast.info(`Reading ${file.name}…`);
+          const out = await extractPdfText(file);
+          menuText = label + out.text;
+          images = out.images;
+        } else {
+          const raw = await file.text();
+          menuText = (label + raw).slice(0, 20000);
+        }
+        if (!images.length && menuText.trim().length < 8) continue;
         const { error } = await supabase.functions.invoke("ai-assist", {
-          body: { action: "parse_menu", venueId, payload: { menu_text: menuText } },
+          body: { action: "parse_menu", venueId, payload: { menu_text: menuText.slice(0, 20000), images } },
         });
         if (error) throw error;
         added += 1;
@@ -140,7 +191,7 @@ function MenuIntel() {
                 ref={menuFilesRef}
                 type="file"
                 multiple
-                accept=".txt,.csv,.md,.menu,text/plain,text/csv,text/markdown"
+                accept=".txt,.csv,.md,.menu,.pdf,.png,.jpg,.jpeg,.webp,.heic,text/plain,text/csv,text/markdown,application/pdf,image/*"
                 onChange={uploadMenuFiles}
                 disabled={loading || !venueId || menus.length >= MAX_MENUS}
                 aria-label="Upload menu files"
@@ -148,7 +199,7 @@ function MenuIntel() {
               />
               <Upload className="h-5 w-5 text-brand-green" />
               <span className="text-sm font-bold">Upload menu files</span>
-              <span className="text-xs text-muted-foreground">Select up to {MAX_MENUS - menus.length} text, CSV, or markdown menus</span>
+              <span className="text-xs text-muted-foreground">PDF, images (JPG/PNG), text, CSV or markdown — up to {MAX_MENUS - menus.length} more</span>
             </label>
             <input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Label (e.g. Wine list, Spring menu)" className="w-full rounded-xl border border-border px-3 py-2 text-sm mb-2" />
             <textarea value={text} onChange={(e) => setText(e.target.value)} rows={12}
