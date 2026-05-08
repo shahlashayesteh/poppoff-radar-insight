@@ -42,7 +42,11 @@ export type CsvRow = {
 type CanonicalField = keyof CsvRow | "date" | "category" | "item" | "quantity" | "check_id";
 type RawRow = Record<string, string>;
 
-type Accumulator = CsvRow & { coverCandidates: number[]; checkIds: Set<string>; sumCoverCandidates: boolean };
+type Accumulator = CsvRow & {
+  coverCandidates: number[];
+  checkIds: Set<string>;
+  sumCoverCandidates: boolean;
+};
 
 const HEADER_ALIASES: Record<string, CanonicalField> = {
   servername: "server_name",
@@ -144,13 +148,80 @@ const HEADER_ALIASES: Record<string, CanonicalField> = {
   billid: "check_id",
 };
 
-const CATEGORY_KEYWORDS: Record<Exclude<keyof CsvRow, "server_name" | "total_covers" | "total_sales" | "week_start">, string[]> = {
+const CATEGORY_KEYWORDS: Record<
+  Exclude<keyof CsvRow, "server_name" | "total_covers" | "total_sales" | "week_start">,
+  string[]
+> = {
   sparkling_sales: ["sparkling", "champagne", "prosecco", "cava", "crémant", "cremant"],
-  wine_sales: ["wine", "merlot", "pinot", "rioja", "malbec", "cabernet", "sauvignon", "chardonnay", "rosé", "rose", "riesling", "shiraz", "syrah", "tempranillo", "zinfandel"],
-  dessert_sales: ["dessert", "pudding", "sweet", "cake", "ice cream", "gelato", "sorbet", "brownie", "tart", "cheesecake", "chocolate"],
-  cocktail_sales: ["cocktail", "martini", "margarita", "mojito", "negroni", "spritz", "daiquiri", "cosmopolitan", "old fashioned", "espresso martini"],
-  sides_sales: ["side", "chips", "fries", "potato", "veg", "vegetable", "salad", "bread", "rice", "mash", "onion rings"],
-  spirits_sales: ["spirit", "vodka", "gin", "rum", "whisky", "whiskey", "tequila", "brandy", "cognac", "liqueur", "bourbon", "scotch"],
+  wine_sales: [
+    "wine",
+    "merlot",
+    "pinot",
+    "rioja",
+    "malbec",
+    "cabernet",
+    "sauvignon",
+    "chardonnay",
+    "rosé",
+    "rose",
+    "riesling",
+    "shiraz",
+    "syrah",
+    "tempranillo",
+    "zinfandel",
+  ],
+  dessert_sales: [
+    "dessert",
+    "pudding",
+    "sweet",
+    "cake",
+    "ice cream",
+    "gelato",
+    "sorbet",
+    "brownie",
+    "tart",
+    "cheesecake",
+    "chocolate",
+  ],
+  cocktail_sales: [
+    "cocktail",
+    "martini",
+    "margarita",
+    "mojito",
+    "negroni",
+    "spritz",
+    "daiquiri",
+    "cosmopolitan",
+    "old fashioned",
+    "espresso martini",
+  ],
+  sides_sales: [
+    "side",
+    "chips",
+    "fries",
+    "potato",
+    "veg",
+    "vegetable",
+    "salad",
+    "bread",
+    "rice",
+    "mash",
+    "onion rings",
+  ],
+  spirits_sales: [
+    "spirit",
+    "vodka",
+    "gin",
+    "rum",
+    "whisky",
+    "whiskey",
+    "tequila",
+    "brandy",
+    "cognac",
+    "liqueur",
+    "bourbon",
+    "scotch",
+  ],
 };
 
 function normalize(value: string) {
@@ -204,19 +275,35 @@ function inferWeekFromFileName(fileName: string) {
 function countMappedHeaders(headers: string[]) {
   return headers.filter((header) => {
     const canonical = canonicalHeader(header);
-    return canonical !== header.trim() || CSV_HEADERS.includes(canonical as (typeof CSV_HEADERS)[number]) || ["date", "category", "item", "quantity", "check_id"].includes(canonical);
+    return (
+      canonical !== header.trim() ||
+      CSV_HEADERS.includes(canonical as (typeof CSV_HEADERS)[number]) ||
+      ["date", "category", "item", "quantity", "check_id"].includes(canonical)
+    );
   }).length;
 }
 
 function parseCsvText(text: string) {
-  const direct = Papa.parse<RawRow>(text, { header: true, transformHeader: canonicalHeader, skipEmptyLines: true });
+  const direct = Papa.parse<RawRow>(text, {
+    header: true,
+    transformHeader: canonicalHeader,
+    skipEmptyLines: true,
+  });
   const directHeaders = direct.meta.fields ?? [];
   if (direct.errors.length === 0 && countMappedHeaders(directHeaders) > 0) return direct;
 
   const lines = text.split(/\r?\n/);
-  const headerIndex = lines.findIndex((line) => countMappedHeaders(line.split(",").map((part) => part.replace(/^['\"]|['\"]$/g, "").trim())) > 0);
+  const headerIndex = lines.findIndex(
+    (line) =>
+      countMappedHeaders(line.split(",").map((part) => part.replace(/^['\"]|['\"]$/g, "").trim())) >
+      0,
+  );
   if (headerIndex > 0) {
-    return Papa.parse<RawRow>(lines.slice(headerIndex).join("\n"), { header: true, transformHeader: canonicalHeader, skipEmptyLines: true });
+    return Papa.parse<RawRow>(lines.slice(headerIndex).join("\n"), {
+      header: true,
+      transformHeader: canonicalHeader,
+      skipEmptyLines: true,
+    });
   }
 
   return direct;
@@ -224,7 +311,9 @@ function parseCsvText(text: string) {
 
 function looksLikeName(value: unknown) {
   const text = String(value ?? "").trim();
-  return /[a-z]/i.test(text) && text.length >= 2 && !parseDateValue(text) && numberFromCsv(text) === 0;
+  return (
+    /[a-z]/i.test(text) && text.length >= 2 && !parseDateValue(text) && numberFromCsv(text) === 0
+  );
 }
 
 function pickFirstHeader(headers: string[], fields: CanonicalField[]) {
@@ -236,8 +325,16 @@ function inferServerHeader(headers: string[], rows: RawRow[]) {
   if (exact) return exact;
   return headers.find((h) => {
     const headerText = normalize(h);
-    if (["category", "department", "item", "product", "description", "date", "week"].some((x) => headerText.includes(x))) return false;
-    const sample = rows.slice(0, 25).map((r) => r[h]).filter(Boolean);
+    if (
+      ["category", "department", "item", "product", "description", "date", "week"].some((x) =>
+        headerText.includes(x),
+      )
+    )
+      return false;
+    const sample = rows
+      .slice(0, 25)
+      .map((r) => r[h])
+      .filter(Boolean);
     return sample.length > 0 && sample.filter(looksLikeName).length / sample.length >= 0.65;
   });
 }
@@ -246,16 +343,25 @@ function inferSalesHeader(headers: string[], rows: RawRow[]) {
   const exact = pickFirstHeader(headers, ["total_sales"]);
   if (exact) return exact;
   const numericHeaders = headers
-    .map((h) => ({ h, score: rows.slice(0, 25).filter((r) => Math.abs(numberFromCsv(r[h])) > 0).length }))
+    .map((h) => ({
+      h,
+      score: rows.slice(0, 25).filter((r) => Math.abs(numberFromCsv(r[h])) > 0).length,
+    }))
     .filter((x) => x.score > 0)
     .sort((a, b) => b.score - a.score);
   return numericHeaders[0]?.h;
 }
 
-function categoryBucket(value: unknown): keyof Omit<CsvRow, "server_name" | "total_covers" | "total_sales" | "week_start"> | null {
+function categoryBucket(
+  value: unknown,
+): keyof Omit<CsvRow, "server_name" | "total_covers" | "total_sales" | "week_start"> | null {
   const text = String(value ?? "").toLowerCase();
   for (const [bucket, terms] of Object.entries(CATEGORY_KEYWORDS)) {
-    if (terms.some((term) => text.includes(term))) return bucket as keyof Omit<CsvRow, "server_name" | "total_covers" | "total_sales" | "week_start">;
+    if (terms.some((term) => text.includes(term)))
+      return bucket as keyof Omit<
+        CsvRow,
+        "server_name" | "total_covers" | "total_sales" | "week_start"
+      >;
   }
   return null;
 }
@@ -290,7 +396,9 @@ export async function parseStatsCsv(file: File): Promise<CsvRow[]> {
     throw new Error(result.errors[0]?.message || "CSV could not be parsed");
   }
 
-  const rows = (result.data || []).filter((r) => Object.values(r).some((v) => String(v ?? "").trim() !== ""));
+  const rows = (result.data || []).filter((r) =>
+    Object.values(r).some((v) => String(v ?? "").trim() !== ""),
+  );
   if (!rows.length) return [];
 
   const headers = Array.from(new Set(rows.flatMap((r) => Object.keys(r))));
@@ -313,14 +421,25 @@ export async function parseStatsCsv(file: File): Promise<CsvRow[]> {
     const serverName = String(raw[serverHeader] ?? "").trim();
     if (!serverName) return;
 
-    const weekStart = mondayISO(parseDateValue(dateHeader ? raw[dateHeader] : null) ?? parseDateValue(file.name) ?? new Date(defaultWeek));
+    const weekStart = mondayISO(
+      parseDateValue(dateHeader ? raw[dateHeader] : null) ??
+        parseDateValue(file.name) ??
+        new Date(defaultWeek),
+    );
     const key = makeKey(serverName, weekStart);
     const acc = grouped.get(key) ?? emptyAccumulator(serverName, weekStart);
 
     const directTotal = numberFromCsv(raw.total_sales ?? (salesHeader ? raw[salesHeader] : 0));
     const rowCategoryText = `${categoryHeader ? raw[categoryHeader] : ""} ${itemHeader ? raw[itemHeader] : ""}`;
     const bucket = categoryBucket(rowCategoryText);
-    const hasDirectCategoryColumns = ["wine_sales", "dessert_sales", "cocktail_sales", "sides_sales", "spirits_sales", "sparkling_sales"].some((h) => h in raw);
+    const hasDirectCategoryColumns = [
+      "wine_sales",
+      "dessert_sales",
+      "cocktail_sales",
+      "sides_sales",
+      "spirits_sales",
+      "sparkling_sales",
+    ].some((h) => h in raw);
 
     if (hasDirectCategoryColumns) {
       acc.total_sales += directTotal;
@@ -337,18 +456,30 @@ export async function parseStatsCsv(file: File): Promise<CsvRow[]> {
 
     const covers = numberFromCsv(raw.total_covers ?? (coversHeader ? raw[coversHeader] : 0));
     if (covers > 0) acc.coverCandidates.push(covers);
-    if (covers > 0 && (hasDirectCategoryColumns || (!categoryHeader && !itemHeader))) acc.sumCoverCandidates = true;
-    if (checkHeader && String(raw[checkHeader] ?? "").trim()) acc.checkIds.add(String(raw[checkHeader]).trim());
+    if (covers > 0 && (hasDirectCategoryColumns || (!categoryHeader && !itemHeader)))
+      acc.sumCoverCandidates = true;
+    if (checkHeader && String(raw[checkHeader] ?? "").trim())
+      acc.checkIds.add(String(raw[checkHeader]).trim());
 
     grouped.set(key, acc);
   });
 
   return Array.from(grouped.values())
     .map(({ coverCandidates, checkIds, sumCoverCandidates, ...row }) => {
-      const categoryTotal = row.wine_sales + row.dessert_sales + row.cocktail_sales + row.sides_sales + row.spirits_sales + row.sparkling_sales;
+      const categoryTotal =
+        row.wine_sales +
+        row.dessert_sales +
+        row.cocktail_sales +
+        row.sides_sales +
+        row.spirits_sales +
+        row.sparkling_sales;
       const total_sales = row.total_sales || categoryTotal;
       const coverTotal = coverCandidates.reduce((sum, value) => sum + value, 0);
-      const total_covers = Math.round(sumCoverCandidates ? coverTotal : (checkIds.size || Math.max(0, ...coverCandidates) || row.total_covers || 0));
+      const total_covers = Math.round(
+        sumCoverCandidates
+          ? coverTotal
+          : checkIds.size || Math.max(0, ...coverCandidates) || row.total_covers || 0,
+      );
       return { ...row, total_sales, total_covers };
     })
     .filter((row) => row.server_name && (row.total_sales > 0 || row.total_covers > 0));
