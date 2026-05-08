@@ -27,11 +27,12 @@ export function ServerLayout({ children }: { children: React.ReactNode }) {
       <nav className="fixed bottom-0 inset-x-0 z-30 bg-white border-t border-border">
         <div className="mx-auto max-w-xl grid grid-cols-5">
           {items.map((it) => {
-            const active = path === it.to;
+            const target = prefix(it.to);
+            const active = path === target;
             return (
-              <Link
+              <a
                 key={it.to}
-                to={it.to}
+                href={target}
                 className={cn(
                   "flex flex-col items-center justify-center py-2.5 text-[11px] gap-1",
                   active ? "text-brand-green font-semibold" : "text-muted-foreground"
@@ -39,7 +40,7 @@ export function ServerLayout({ children }: { children: React.ReactNode }) {
               >
                 <it.icon className="h-5 w-5" />
                 {it.label}
-              </Link>
+              </a>
             );
           })}
         </div>
