@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ManagerLayout } from "@/components/manager-layout";
 import { supabase } from "@/integrations/supabase/client";
 import { useRoleGate } from "@/lib/auth-gate";
-import { Users, PoundSterling, TrendingUp, Eye, Wine, Cake, Droplet, Target, Copy, Upload, Download, RefreshCw, MoreVertical } from "lucide-react";
+import { Users, PoundSterling, TrendingUp, Eye, Wine, Target, Copy, Upload, Download, RefreshCw, MoreVertical } from "lucide-react";
 import { downloadCsvTemplate, parseStatsCsv } from "@/lib/csv";
 import { getMondayOfWeek, toISODate, formatWeekRange, performanceColour, latestStatsWeek } from "@/lib/week";
 import { getManagerVenue } from "@/lib/manager-venue";
@@ -68,7 +68,6 @@ function ManagerDashboard() {
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const weekStart = useMemo(() => toISODate(getMondayOfWeek()), []);
-  const [uploadWeek, setUploadWeek] = useState<string>(toISODate(getMondayOfWeek()));
   const [displayWeekStart, setDisplayWeekStart] = useState<string>(weekStart);
 
   const load = async () => {
@@ -145,23 +144,26 @@ function ManagerDashboard() {
     try {
       const rows = await parseStatsCsv(file);
       if (!rows.length) { toast.error("No rows found in CSV"); return; }
+      const importWeek = rows[0]?.week_start || weekStart;
       const { data, error } = await supabase.rpc("process_csv_upload", {
-        _venue_id: venue.id, _week_start: uploadWeek, _csv_data: rows as unknown as never,
+        _venue_id: venue.id, _week_start: importWeek, _csv_data: rows as unknown as never,
       });
       if (error) throw error;
-      const result = data as { matched_count: number; created_count?: number; unmatched_names: string[] };
-      toast.success(`Imported ${result.matched_count} server${result.matched_count === 1 ? "" : "s"}`);
+      const result = data as { matched_count: number; created_count?: number; unmatched_names: string[]; weeks?: string[] };
+      const importedWeeks = result.weeks?.length ? result.weeks : Array.from(new Set(rows.map((row) => row.week_start || importWeek)));
+      toast.success(`Imported ${result.matched_count} server week${result.matched_count === 1 ? "" : "s"}`);
       if (result.created_count && result.created_count > 0) {
         toast.info(`Added ${result.created_count} new server${result.created_count === 1 ? "" : "s"} to your team: ${result.unmatched_names.join(", ")}`);
       }
       // Auto-generate weekly priorities via AI
       toast.info("Generating weekly priorities with AI…");
-      const { data: ai, error: aiErr } = await supabase.functions.invoke("ai-assist", {
-        body: { action: "generate_priorities", venueId: venue.id, payload: { weekStart: uploadWeek } },
-      });
-      if (aiErr) toast.error(`AI: ${aiErr.message}`);
-      else if (ai?.priorities?.length) toast.success(`Created ${ai.priorities.length} priorities`);
-      setDisplayWeekStart(uploadWeek);
+      await Promise.all(importedWeeks.map(async (week) => {
+        const { error: aiErr } = await supabase.functions.invoke("ai-assist", {
+          body: { action: "generate_priorities", venueId: venue.id, payload: { weekStart: week } },
+        });
+        if (aiErr) toast.error(`AI: ${aiErr.message}`);
+      }));
+      setDisplayWeekStart(importedWeeks[0] || importWeek);
       await load();
     } catch (err: any) {
       toast.error(err.message || "Upload failed");
