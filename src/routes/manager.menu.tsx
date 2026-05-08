@@ -292,15 +292,33 @@ function MenuIntel() {
               )
             : pairings;
           const CAT_META: Record<string, { emoji: string; label: string; tint: string; ink: string }> = {
-            wine:     { emoji: "🍷", label: "Wine",     tint: "color-mix(in oklab, var(--brand-orange) 14%, white)", ink: "var(--brand-orange)" },
-            cocktail: { emoji: "🍸", label: "Cocktail", tint: "color-mix(in oklab, var(--brand-green) 14%, white)",  ink: "var(--brand-green)" },
-            sake:     { emoji: "🍶", label: "Sake",     tint: "color-mix(in oklab, var(--brand-orange) 10%, white)", ink: "var(--brand-orange)" },
-            beer:     { emoji: "🍺", label: "Beer",     tint: "color-mix(in oklab, var(--brand-green) 10%, white)",  ink: "var(--brand-green)" },
-            spirit:   { emoji: "🥃", label: "Spirit",   tint: "color-mix(in oklab, var(--brand-orange) 10%, white)", ink: "var(--brand-orange)" },
-            dessert:  { emoji: "🍰", label: "Dessert",  tint: "color-mix(in oklab, var(--brand-green) 10%, white)",  ink: "var(--brand-green)" },
-            other:    { emoji: "✨", label: "Other",    tint: "var(--muted)",                                         ink: "var(--muted-foreground)" },
+            wine_bottle: { emoji: "🍷", label: "Wine (Bottle)",       tint: "color-mix(in oklab, var(--brand-orange) 16%, white)", ink: "var(--brand-orange)" },
+            wine_glass:  { emoji: "🥂", label: "Wine (by the Glass)", tint: "color-mix(in oklab, var(--brand-orange) 8%, white)",  ink: "var(--brand-orange)" },
+            cocktail:    { emoji: "🍸", label: "Cocktail",            tint: "color-mix(in oklab, var(--brand-green) 14%, white)",  ink: "var(--brand-green)" },
+            sake:        { emoji: "🍶", label: "Sake",                tint: "color-mix(in oklab, var(--brand-orange) 10%, white)", ink: "var(--brand-orange)" },
+            beer:        { emoji: "🍺", label: "Beer",                tint: "color-mix(in oklab, var(--brand-green) 10%, white)",  ink: "var(--brand-green)" },
+            spirit:      { emoji: "🥃", label: "Spirit",              tint: "color-mix(in oklab, var(--brand-orange) 10%, white)", ink: "var(--brand-orange)" },
+            dessert:     { emoji: "🍰", label: "Dessert",             tint: "color-mix(in oklab, var(--brand-green) 10%, white)",  ink: "var(--brand-green)" },
+            other:       { emoji: "✨", label: "Other",               tint: "var(--muted)",                                         ink: "var(--muted-foreground)" },
           };
-          const CAT_ORDER = ["wine", "cocktail", "sake", "beer", "spirit", "dessert", "other"];
+          const CAT_ORDER = ["wine_bottle", "wine_glass", "cocktail", "sake", "beer", "spirit", "dessert", "other"];
+          const STYLE_META: Record<string, { label: string; bg: string; fg: string }> = {
+            white:     { label: "White",     bg: "color-mix(in oklab, oklch(0.92 0.13 95) 70%, white)",  fg: "oklch(0.42 0.10 80)" },
+            red:       { label: "Red",       bg: "color-mix(in oklab, oklch(0.55 0.20 25) 28%, white)", fg: "oklch(0.40 0.18 25)" },
+            rose:      { label: "Rosé",      bg: "color-mix(in oklab, oklch(0.78 0.14 10) 35%, white)", fg: "oklch(0.45 0.16 10)" },
+            champagne: { label: "Champagne", bg: "color-mix(in oklab, oklch(0.85 0.13 90) 50%, white)", fg: "oklch(0.45 0.10 80)" },
+          };
+          const parseWine = (raw: string): { styleKey: string | null; name: string } => {
+            const m = raw.match(/^\s*\[([^\]]+)\]\s*(.*)$/);
+            if (!m) return { styleKey: null, name: raw };
+            const tag = m[1].toLowerCase();
+            let styleKey: string | null = null;
+            if (/champ|sparkl|prosec|cava|crémant|cremant/.test(tag)) styleKey = "champagne";
+            else if (/ros[eé]/.test(tag)) styleKey = "rose";
+            else if (/red/.test(tag)) styleKey = "red";
+            else if (/white|blanc/.test(tag)) styleKey = "white";
+            return { styleKey, name: m[2] || raw };
+          };
           const itemEmoji = (name: string) => {
             const n = name.toLowerCase();
             if (/(salmon|tuna|cod|sea bass|prawn|shrimp|oyster|scallop|fish|crab|lobster)/.test(n)) return "🐟";
@@ -344,7 +362,8 @@ function MenuIntel() {
                   {Array.from(groups.entries()).map(([item, rows]) => {
                     const byCat = new Map<string, Pairing[]>();
                     for (const r of rows) {
-                      const c = (r.category || "other").toLowerCase();
+                      let c = (r.category || "other").toLowerCase();
+                      if (c === "wine") c = "wine_bottle"; // legacy rows
                       if (!byCat.has(c)) byCat.set(c, []);
                       byCat.get(c)!.push(r);
                     }
@@ -365,6 +384,7 @@ function MenuIntel() {
                           {orderedCats.map((cat) => {
                             const meta = CAT_META[cat] || CAT_META.other;
                             const picks = byCat.get(cat)!.slice(0, 3);
+                            const isWine = cat === "wine_bottle" || cat === "wine_glass";
                             return (
                               <div key={cat} className="rounded-xl border border-border bg-white p-3">
                                 <div className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wide mb-2 px-2 py-1 rounded-md"
@@ -372,20 +392,33 @@ function MenuIntel() {
                                   <span className="text-base leading-none">{meta.emoji}</span> {meta.label}
                                 </div>
                                 <ul className="space-y-2">
-                                  {picks.map((p, i) => (
-                                    <li key={i} className="text-sm">
-                                      <div className="flex items-center justify-between gap-2">
-                                        <span className="font-semibold">{p.pair_with}</span>
-                                        {p.priority === "High" && (
-                                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded"
-                                            style={{ background: "color-mix(in oklab, var(--brand-orange) 18%, white)", color: "var(--brand-orange)" }}>
-                                            ⭐ Top
-                                          </span>
-                                        )}
-                                      </div>
-                                      {p.why && <div className="text-xs text-muted-foreground mt-0.5">{p.why}</div>}
-                                    </li>
-                                  ))}
+                                  {picks.map((p, i) => {
+                                    const wine = isWine ? parseWine(p.pair_with) : null;
+                                    const style = wine?.styleKey ? STYLE_META[wine.styleKey] : null;
+                                    const displayName = wine ? wine.name : p.pair_with;
+                                    return (
+                                      <li key={i} className="text-sm">
+                                        <div className="flex items-center justify-between gap-2 flex-wrap">
+                                          <div className="flex items-center gap-2 min-w-0">
+                                            {style && (
+                                              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0"
+                                                style={{ background: style.bg, color: style.fg }}>
+                                                {style.label}
+                                              </span>
+                                            )}
+                                            <span className="font-semibold">{displayName}</span>
+                                          </div>
+                                          {p.priority === "High" && (
+                                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded"
+                                              style={{ background: "color-mix(in oklab, var(--brand-orange) 18%, white)", color: "var(--brand-orange)" }}>
+                                              ⭐ Top
+                                            </span>
+                                          )}
+                                        </div>
+                                        {p.why && <div className="text-xs text-muted-foreground mt-0.5">{p.why}</div>}
+                                      </li>
+                                    );
+                                  })}
                                 </ul>
                               </div>
                             );
