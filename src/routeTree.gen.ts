@@ -21,6 +21,7 @@ import { Route as ManagerTeamRouteImport } from './routes/manager.team'
 import { Route as ManagerPrioritiesRouteImport } from './routes/manager.priorities'
 import { Route as ManagerMenuRouteImport } from './routes/manager.menu'
 import { Route as CheckoutSuccessRouteImport } from './routes/checkout.success'
+import { Route as DemoServerIndexRouteImport } from './routes/demo.server.index'
 import { Route as ManagerServerIdRouteImport } from './routes/manager.server.$id'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
 
@@ -84,6 +85,11 @@ const CheckoutSuccessRoute = CheckoutSuccessRouteImport.update({
   path: '/checkout/success',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DemoServerIndexRoute = DemoServerIndexRouteImport.update({
+  id: '/demo/server/',
+  path: '/demo/server/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ManagerServerIdRoute = ManagerServerIdRouteImport.update({
   id: '/manager/server/$id',
   path: '/manager/server/$id',
@@ -110,6 +116,7 @@ export interface FileRoutesByFullPath {
   '/manager/': typeof ManagerIndexRoute
   '/server/': typeof ServerIndexRoute
   '/manager/server/$id': typeof ManagerServerIdRoute
+  '/demo/server/': typeof DemoServerIndexRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRoutesByTo {
@@ -126,6 +133,7 @@ export interface FileRoutesByTo {
   '/manager': typeof ManagerIndexRoute
   '/server': typeof ServerIndexRoute
   '/manager/server/$id': typeof ManagerServerIdRoute
+  '/demo/server': typeof DemoServerIndexRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRoutesById {
@@ -143,6 +151,7 @@ export interface FileRoutesById {
   '/manager/': typeof ManagerIndexRoute
   '/server/': typeof ServerIndexRoute
   '/manager/server/$id': typeof ManagerServerIdRoute
+  '/demo/server/': typeof DemoServerIndexRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRouteTypes {
@@ -161,6 +170,7 @@ export interface FileRouteTypes {
     | '/manager/'
     | '/server/'
     | '/manager/server/$id'
+    | '/demo/server/'
     | '/api/public/payments/webhook'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -177,6 +187,7 @@ export interface FileRouteTypes {
     | '/manager'
     | '/server'
     | '/manager/server/$id'
+    | '/demo/server'
     | '/api/public/payments/webhook'
   id:
     | '__root__'
@@ -193,6 +204,7 @@ export interface FileRouteTypes {
     | '/manager/'
     | '/server/'
     | '/manager/server/$id'
+    | '/demo/server/'
     | '/api/public/payments/webhook'
   fileRoutesById: FileRoutesById
 }
@@ -210,6 +222,7 @@ export interface RootRouteChildren {
   ManagerIndexRoute: typeof ManagerIndexRoute
   ServerIndexRoute: typeof ServerIndexRoute
   ManagerServerIdRoute: typeof ManagerServerIdRoute
+  DemoServerIndexRoute: typeof DemoServerIndexRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
 }
 
@@ -299,6 +312,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CheckoutSuccessRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/demo/server/': {
+      id: '/demo/server/'
+      path: '/demo/server'
+      fullPath: '/demo/server/'
+      preLoaderRoute: typeof DemoServerIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/manager/server/$id': {
       id: '/manager/server/$id'
       path: '/manager/server/$id'
@@ -330,8 +350,19 @@ const rootRouteChildren: RootRouteChildren = {
   ManagerIndexRoute: ManagerIndexRoute,
   ServerIndexRoute: ServerIndexRoute,
   ManagerServerIdRoute: ManagerServerIdRoute,
+  DemoServerIndexRoute: DemoServerIndexRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
