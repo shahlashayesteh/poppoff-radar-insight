@@ -402,6 +402,7 @@ function MenuIntel() {
                                     const wine = isWine ? parseWine(p.pair_with) : null;
                                     const style = wine?.styleKey ? STYLE_META[wine.styleKey] : null;
                                     const displayName = wine ? wine.name : p.pair_with;
+                                    const hasPrice = /[£$€]\s*\d|\d+\s*(gbp|usd|eur)\b/i.test(displayName);
                                     return (
                                       <li key={i} className="text-sm">
                                         <div className="flex items-center justify-between gap-2 flex-wrap">
@@ -413,6 +414,12 @@ function MenuIntel() {
                                               </span>
                                             )}
                                             <span className="font-semibold">{displayName}</span>
+                                            {!hasPrice && (
+                                              <span className="text-[10px] font-medium px-1.5 py-0.5 rounded shrink-0"
+                                                style={{ background: "var(--muted)", color: "var(--muted-foreground)" }}>
+                                                price on menu
+                                              </span>
+                                            )}
                                           </div>
                                           {p.priority === "High" && (
                                             <span className="text-[10px] font-bold px-1.5 py-0.5 rounded"
