@@ -594,6 +594,8 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_venue_manager: { Args: { _venue_id: string }; Returns: boolean }
+      is_venue_member: { Args: { _venue_id: string }; Returns: boolean }
       join_venue_with_code: { Args: { _code: string }; Returns: string }
       process_csv_upload: {
         Args: { _csv_data: Json; _venue_id: string; _week_start: string }
