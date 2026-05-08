@@ -13,6 +13,8 @@ const items = [
 
 export function ServerLayout({ children }: { children: React.ReactNode }) {
   const path = useRouterState({ select: (s) => s.location.pathname });
+  const isDemo = path.startsWith("/demo");
+  const prefix = (to: string) => (isDemo ? `/demo${to}` : to);
   return (
     <div className="min-h-screen bg-white">
       <header className="sticky top-0 z-20 bg-white/90 backdrop-blur border-b border-border">
