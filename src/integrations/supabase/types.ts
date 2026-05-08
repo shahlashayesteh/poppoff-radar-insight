@@ -582,6 +582,7 @@ export type Database = {
         Args: { _business_name: string; _user_id: string }
         Returns: string
       }
+      claim_placeholder_data: { Args: never; Returns: Json }
       generate_unique_join_code: { Args: never; Returns: string }
       get_my_manager_venue: {
         Args: never
