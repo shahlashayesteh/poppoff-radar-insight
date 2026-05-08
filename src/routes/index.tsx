@@ -52,18 +52,21 @@ function Landing() {
       <section className="px-6 pt-14 pb-20">
         <div className="mx-auto max-w-7xl grid lg:grid-cols-2 gap-10 items-center">
           <div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-border bg-white px-3 py-1 text-xs font-semibold">
-              ✨ Built for modern restaurant teams.
+            <div className="inline-flex items-center gap-2 rounded-full border border-border bg-white px-3 py-1 text-xs font-semibold uppercase tracking-wider">
+              <span className="h-1.5 w-1.5 rounded-full" style={{ background: "var(--brand-green)" }} />
+              Restaurant performance platform
             </div>
-            <h1 className="mt-5 font-display font-extrabold tracking-tight text-6xl md:text-7xl leading-[0.95]">
-              Popp Off.<br />
-              <span style={{ color: "var(--brand-green)" }}>Every shift.</span><br />
-              Every win.
+            <h1 className="mt-5 font-display font-extrabold tracking-tight text-4xl sm:text-5xl md:text-6xl lg:text-7xl leading-[1.02]">
+              Give every server <span style={{ color: "var(--brand-green)" }}>visibility</span> into the numbers that drive <span style={{ color: "var(--brand-orange)" }}>revenue</span>.
             </h1>
-            <p className="mt-6 text-base md:text-lg text-foreground/75 max-w-md">
-              Your personal stats, streaks, and milestones — all in one app. PoppOff shows what's killing it.
-              We turn your numbers into momentum and more money in your pocket.
+            <p className="mt-6 text-base md:text-lg text-foreground/75 max-w-xl">
+              PoppOff turns POS data into scorecards, coaching insights, and clear targets that help restaurants improve upselling, average spend, and revenue per server.
             </p>
+            <div className="mt-6 inline-flex items-center gap-3 rounded-xl border-l-4 pl-4 py-1" style={{ borderColor: "var(--brand-orange)" }}>
+              <p className="font-display text-lg md:text-xl font-extrabold tracking-tight">
+                PoppOff <span style={{ color: "var(--brand-orange)" }}>every shift.</span> Every win.
+              </p>
+            </div>
             <div className="mt-8 flex flex-wrap gap-3">
               <Link to="/login" className="rounded-xl px-6 py-3 text-sm font-bold text-white inline-flex items-center gap-2" style={{ background: "var(--brand-orange)" }}>
                 See Demo
