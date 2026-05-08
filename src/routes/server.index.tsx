@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { ServerLayout } from "@/components/server-layout";
 import { supabase } from "@/integrations/supabase/client";
 import { useRoleGate } from "@/lib/auth-gate";
-import { claimServerCsvData } from "@/lib/server-data";
+import { claimServerCsvData, recordLogin, pctDelta } from "@/lib/server-data";
 import { Trophy, Award, Flame, ArrowRight } from "lucide-react";
 import { getMondayOfWeek, toISODate, formatWeekRange, performanceColour } from "@/lib/week";
 
@@ -50,6 +50,8 @@ function ServerDashboard() {
   const [streak, setStreak] = useState(0);
   const weekStart = toISODate(getMondayOfWeek());
 
+  const [prevStat, setPrevStat] = useState<Stat | null>(null);
+
   useEffect(() => {
     (async () => {
       const { data: u } = await supabase.auth.getUser();
@@ -58,16 +60,18 @@ function ServerDashboard() {
       const fn = prof?.full_name || "";
       setName(fn.split(" ")[0] || "there");
       await claimServerCsvData();
+      await recordLogin();
       const { data: vm } = await supabase.from("venue_members").select("venue_id").eq("user_id", u.user.id).limit(1);
       const venueId = vm?.[0]?.venue_id;
       if (!venueId) return;
       const { data: st } = await supabase.from("server_stats").select("*").eq("user_id", u.user.id).eq("venue_id", venueId).eq("week_start", weekStart).maybeSingle();
       setStat(st as Stat | null);
+      const { data: prev } = await supabase.from("server_stats").select("*").eq("user_id", u.user.id).eq("venue_id", venueId).lt("week_start", weekStart).order("week_start", { ascending: false }).limit(1).maybeSingle();
+      setPrevStat(prev as Stat | null);
       const { data: tg } = await supabase.from("server_targets").select("*").eq("user_id", u.user.id).eq("venue_id", venueId).maybeSingle();
       setTarget(tg as Targets | null);
       const { data: sk } = await supabase.from("server_streaks").select("current_streak").eq("user_id", u.user.id).eq("venue_id", venueId).maybeSingle();
       setStreak((sk as any)?.current_streak ?? 0);
-      // Track view
       await supabase.from("server_stat_views").insert({ user_id: u.user.id, venue_id: venueId, week_start: weekStart });
     })();
   }, [weekStart]);
@@ -75,9 +79,17 @@ function ServerDashboard() {
   const wine = Number(stat?.wine_conversion ?? 0);
   const cocktails = Number(stat?.cocktail_conversion ?? 0);
   const desserts = Number(stat?.dessert_conversion ?? 0);
-  const dailySales = Number(stat?.total_sales ?? 0);
-  const dailyTarget = Number(target?.daily_sales_target ?? 200);
-  const dailyPct = Math.min(100, dailyTarget > 0 ? (dailySales / dailyTarget) * 100 : 0);
+
+  const catKeys = ["wine_conversion", "dessert_conversion", "cocktail_conversion", "sides_conversion", "spirits_conversion", "sparkling_conversion"] as const;
+  const avgOf = (s: Stat | null) => {
+    if (!s) return 0;
+    const vals = catKeys.map((k) => Number((s as any)[k] ?? 0));
+    return vals.reduce((a, b) => a + b, 0) / vals.length;
+  };
+  const upsell = avgOf(stat);
+  const prevUpsell = avgOf(prevStat);
+  const delta = pctDelta(upsell, prevUpsell);
+  const upPct = Math.min(100, Math.max(0, upsell));
 
   return (
     <ServerLayout>
@@ -104,20 +116,29 @@ function ServerDashboard() {
         </div>
       </div>
 
-      {stat && target && (
+      {stat && (
         <div className="px-5 mt-4">
           <div className="rounded-3xl bg-white border border-border p-5">
             <div className="flex items-center justify-between">
               <div>
-                <div className="font-semibold text-sm">Sales this week</div>
-                <div className="mt-1 font-display"><span className="text-3xl font-extrabold">£{dailySales.toFixed(0)}</span> <span className="text-muted-foreground text-sm">/ £{dailyTarget}</span></div>
+                <div className="font-semibold text-sm">Upsell rate this week</div>
+                <div className="mt-1 font-display">
+                  <span className="text-3xl font-extrabold">{upsell.toFixed(0)}%</span>
+                  {delta !== null && (
+                    <span className="text-sm ml-2 font-semibold" style={{ color: delta >= 0 ? "var(--brand-green)" : "var(--opportunity)" }}>
+                      {delta >= 0 ? "↑" : "↓"} {Math.abs(delta).toFixed(0)}% vs last week
+                    </span>
+                  )}
+                </div>
               </div>
               <Award className="h-10 w-10" style={{ color: "oklch(0.55 0.18 270)" }} />
             </div>
             <div className="mt-3 h-2 rounded-full bg-muted overflow-hidden">
-              <div className="h-full rounded-full bg-brand-green" style={{ width: `${dailyPct}%` }} />
+              <div className="h-full rounded-full bg-brand-green" style={{ width: `${upPct}%` }} />
             </div>
-            <div className="mt-2 text-xs text-brand-green font-semibold">{Math.round(dailyPct)}% of your goal</div>
+            <div className="mt-2 text-xs font-semibold" style={{ color: delta !== null && delta < 0 ? "var(--opportunity)" : "var(--brand-green)" }}>
+              {delta === null ? "First week tracked" : delta >= 0 ? "Trending up — keep pushing" : "Down vs last week — focus this shift"}
+            </div>
           </div>
         </div>
       )}

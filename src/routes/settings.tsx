@@ -87,8 +87,9 @@ function SettingsPage() {
           </div>
           <div className="rounded-2xl bg-white border border-border p-6 space-y-3">
             <h2 className="font-display text-lg font-bold">Score thresholds</h2>
-            <div><Label className="text-xs text-muted-foreground">Green ≥ (%)</Label><Input type="number" value={green} onChange={(e) => setGreen(Number(e.target.value))} className="mt-1" /></div>
-            <div><Label className="text-xs text-muted-foreground">Amber ≥ (%)</Label><Input type="number" value={amber} onChange={(e) => setAmber(Number(e.target.value))} className="mt-1" /></div>
+            <p className="text-xs text-muted-foreground">AI-managed — targets are set automatically from venue average and each server's history.</p>
+            <div><Label className="text-xs text-muted-foreground">Green ≥ (%)</Label><Input type="number" value={green} disabled className="mt-1" /></div>
+            <div><Label className="text-xs text-muted-foreground">Amber ≥ (%)</Label><Input type="number" value={amber} disabled className="mt-1" /></div>
             <p className="text-xs text-muted-foreground">Below amber is treated as an opportunity (red).</p>
           </div>
         </div>

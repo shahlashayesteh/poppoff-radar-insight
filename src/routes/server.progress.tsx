@@ -19,6 +19,7 @@ function ServerProgress() {
   const [current, setCurrent] = useState(0);
   const [longest, setLongest] = useState(0);
   const [milestones, setMilestones] = useState<{ milestone_type: string; unlocked_at: string }[]>([]);
+  const [position, setPosition] = useState<{ pos: number; total: number } | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -33,6 +34,14 @@ function ServerProgress() {
       setLongest((sk as any)?.longest_streak ?? 0);
       const { data: ms } = await supabase.from("server_milestones").select("milestone_type, unlocked_at").eq("user_id", u.user.id).eq("venue_id", venueId).order("unlocked_at", { ascending: false });
       setMilestones((ms ?? []) as any);
+      const today = new Date();
+      const day = today.getDay();
+      const monday = new Date(today);
+      monday.setDate(today.getDate() + (day === 0 ? -6 : 1 - day));
+      const ws = monday.toISOString().slice(0, 10);
+      const { data: lb } = await (supabase.rpc as any)("get_leaderboard_position", { _venue_id: venueId, _week_start: ws });
+      const row = Array.isArray(lb) ? lb[0] : lb;
+      if (row) setPosition({ pos: row.my_position, total: row.total_servers });
     })();
   }, []);
 
@@ -59,6 +68,16 @@ function ServerProgress() {
             <div className="font-display text-xl font-extrabold">{longest} week{longest === 1 ? "" : "s"}</div>
           </div>
         </div>
+
+        {position && (
+          <div className="mt-4 rounded-2xl bg-white border border-border p-4 flex items-center gap-4">
+            <div className="h-14 w-14 rounded-full grid place-items-center bg-brand-green/15 font-display font-extrabold text-brand-green">#{position.pos}</div>
+            <div className="flex-1">
+              <div className="text-sm font-semibold">Your position this week</div>
+              <div className="font-display text-xl font-extrabold">#{position.pos} of {position.total}</div>
+            </div>
+          </div>
+        )}
 
         <h2 className="mt-6 font-display text-xl font-extrabold">Milestones</h2>
         {milestones.length === 0 ? (

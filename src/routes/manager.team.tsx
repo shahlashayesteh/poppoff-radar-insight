@@ -13,6 +13,7 @@ function TeamPage() {
   const [members, setMembers] = useState<Member[]>([]);
   const [stats, setStats] = useState<any[]>([]);
   const [targets, setTargets] = useState<any[]>([]);
+  const [loginCounts, setLoginCounts] = useState<Record<string, number>>({});
   const weekStart = toISODate(getMondayOfWeek());
 
   useEffect(() => {
@@ -30,6 +31,10 @@ function TeamPage() {
       setStats(st ?? []);
       const { data: tg } = await supabase.from("server_targets").select("*").eq("venue_id", v);
       setTargets(tg ?? []);
+      const { data: lg } = await supabase.from("server_logins").select("user_id").eq("venue_id", v);
+      const counts: Record<string, number> = {};
+      for (const r of (lg ?? [])) counts[r.user_id] = (counts[r.user_id] || 0) + 1;
+      setLoginCounts(counts);
     })();
   }, [weekStart]);
 
@@ -63,6 +68,7 @@ function TeamPage() {
                     <span className="text-xs text-muted-foreground">/ £{t?.spend_per_cover_target ?? "—"}</span>
                   </div>
                   <div className="mt-1 text-xs text-muted-foreground">{s ? `${s.total_covers} covers · £${Number(s.total_sales).toFixed(0)} sales` : "No stats yet"}</div>
+                  <div className="mt-1 text-xs text-muted-foreground">{loginCounts[m.id] || 0} login{(loginCounts[m.id] || 0) === 1 ? "" : "s"}</div>
                 </Link>
               );
             })}
