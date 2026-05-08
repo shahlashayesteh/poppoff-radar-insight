@@ -29,7 +29,7 @@ function TeamPage() {
         setMembers(profs ?? []);
       }
       const visibleWeek = await latestStatsWeek(
-        supabase.from("server_stats").select("week_start").eq("venue_id", v).order("week_start", { ascending: false }).limit(1),
+        supabase.from("server_stats").select("week_start, created_at").eq("venue_id", v).order("created_at", { ascending: false }).order("week_start", { ascending: false }).limit(1),
         weekStart,
       );
       setDisplayWeekStart(visibleWeek);
