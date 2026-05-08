@@ -61,7 +61,7 @@ export function ManagerLayout({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen flex bg-white">
       <aside className="hidden md:flex w-60 flex-col bg-white border-r border-border sticky top-0 h-screen">
         <div className="px-6 py-6">
-          <Link to="/manager"><Logo className="text-2xl" /></Link>
+          <a href={prefix("/manager")}><Logo className="text-2xl" /></a>
         </div>
         <nav className="flex-1 px-3 py-2 space-y-1">
           {items.map((it) => {
