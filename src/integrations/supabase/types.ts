@@ -38,6 +38,33 @@ export type Database = {
         }
         Relationships: []
       }
+      server_coaching: {
+        Row: {
+          generated_at: string
+          id: string
+          suggestions: Json
+          user_id: string
+          venue_id: string
+          week_start: string
+        }
+        Insert: {
+          generated_at?: string
+          id?: string
+          suggestions?: Json
+          user_id: string
+          venue_id: string
+          week_start: string
+        }
+        Update: {
+          generated_at?: string
+          id?: string
+          suggestions?: Json
+          user_id?: string
+          venue_id?: string
+          week_start?: string
+        }
+        Relationships: []
+      }
       server_focus_acks: {
         Row: {
           acknowledged_at: string
@@ -69,6 +96,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      server_logins: {
+        Row: {
+          id: string
+          logged_in_at: string
+          user_id: string
+          venue_id: string
+        }
+        Insert: {
+          id?: string
+          logged_in_at?: string
+          user_id: string
+          venue_id: string
+        }
+        Update: {
+          id?: string
+          logged_in_at?: string
+          user_id?: string
+          venue_id?: string
+        }
+        Relationships: []
       }
       server_milestones: {
         Row: {
@@ -584,6 +632,13 @@ export type Database = {
       }
       claim_placeholder_data: { Args: never; Returns: Json }
       generate_unique_join_code: { Args: never; Returns: string }
+      get_leaderboard_position: {
+        Args: { _venue_id: string; _week_start: string }
+        Returns: {
+          my_position: number
+          total_servers: number
+        }[]
+      }
       get_my_manager_venue: {
         Args: never
         Returns: {
@@ -615,6 +670,8 @@ export type Database = {
         Args: { _csv_data: Json; _venue_id: string; _week_start: string }
         Returns: Json
       }
+      recompute_ai_targets: { Args: { _venue_id: string }; Returns: undefined }
+      record_login: { Args: never; Returns: undefined }
       regenerate_venue_join_code: {
         Args: { _venue_id: string }
         Returns: string
