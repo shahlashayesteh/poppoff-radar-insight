@@ -1,62 +1,113 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { ManagerLayout } from "@/components/manager-layout";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
-export const Route = createFileRoute("/settings")({
-  component: SettingsPage,
-});
-
-const sections = [
-  { title: "Restaurant profile", items: [["Restaurant name", "The Demo Restaurant"], ["Cuisine", "Modern European"], ["Cover capacity", "120"]] },
-  { title: "POS system", items: [["Provider", "Lightspeed"], ["Sync frequency", "Weekly"], ["Last upload", "10 May 2026"]] },
-  { title: "Menu categories", items: [["Active categories", "11"], ["Premium mains", "On"], ["Bottled water", "On"]] },
-  { title: "Score thresholds", items: [["Green", "≥ 80%"], ["Amber", "55–79%"], ["Opportunity", "< 55%"]] },
-];
-
-const toggles = [
-  { label: "Servers see percentages only, not money values.", on: true },
-  { label: "Managers see estimated missed revenue and estimated uplift.", on: true },
-  { label: "Head office sees site-level data only, not individual server names.", on: true },
-  { label: "Send weekly focus push notification to servers.", on: true },
-  { label: "Allow assistant manager to edit weekly priorities.", on: false },
-];
+export const Route = createFileRoute("/settings")({ component: SettingsPage });
 
 function SettingsPage() {
+  const [venueId, setVenueId] = useState<string | null>(null);
+  const [venueName, setVenueName] = useState("");
+  const [cuisine, setCuisine] = useState("");
+  const [coverCapacity, setCoverCapacity] = useState<number | "">("");
+  const [green, setGreen] = useState(80);
+  const [amber, setAmber] = useState(55);
+  const [toggles, setToggles] = useState({
+    servers_see_percentages_only: true,
+    managers_see_estimated_uplift: true,
+    head_office_aggregated_only: true,
+    send_weekly_push_notifications: true,
+    allow_assistant_manager_priorities: false,
+    premium_mains_on: true,
+    bottled_water_on: true,
+  });
+
+  useEffect(() => {
+    (async () => {
+      const { data: u } = await supabase.auth.getUser();
+      if (!u.user) return;
+      const { data: vs } = await supabase.from("venues").select("id, name").eq("manager_id", u.user.id).limit(1);
+      const v = vs?.[0];
+      if (!v) return;
+      setVenueId(v.id); setVenueName(v.name);
+      const { data: vset } = await supabase.from("venue_settings").select("*").eq("venue_id", v.id).maybeSingle();
+      if (vset) {
+        setCuisine(vset.cuisine || "");
+        setCoverCapacity(vset.cover_capacity ?? "");
+        setGreen(Number(vset.green_threshold));
+        setAmber(Number(vset.amber_threshold));
+        setToggles({
+          servers_see_percentages_only: vset.servers_see_percentages_only,
+          managers_see_estimated_uplift: vset.managers_see_estimated_uplift,
+          head_office_aggregated_only: vset.head_office_aggregated_only,
+          send_weekly_push_notifications: vset.send_weekly_push_notifications,
+          allow_assistant_manager_priorities: vset.allow_assistant_manager_priorities,
+          premium_mains_on: vset.premium_mains_on,
+          bottled_water_on: vset.bottled_water_on,
+        });
+      }
+    })();
+  }, []);
+
+  const save = async () => {
+    if (!venueId) return;
+    await supabase.from("venues").update({ name: venueName }).eq("id", venueId);
+    const { error } = await supabase.from("venue_settings").upsert({
+      venue_id: venueId, cuisine: cuisine || null, cover_capacity: coverCapacity === "" ? null : Number(coverCapacity),
+      green_threshold: green, amber_threshold: amber, ...toggles,
+    }, { onConflict: "venue_id" });
+    if (error) { toast.error(error.message); return; }
+    toast.success("Settings saved");
+  };
+
+  const toggleLabels: [keyof typeof toggles, string][] = [
+    ["servers_see_percentages_only", "Servers see percentages only, not money values."],
+    ["managers_see_estimated_uplift", "Managers see estimated uplift values."],
+    ["head_office_aggregated_only", "Head office sees site-level data only."],
+    ["send_weekly_push_notifications", "Send weekly focus push notification to servers."],
+    ["allow_assistant_manager_priorities", "Allow assistant manager to edit weekly priorities."],
+    ["premium_mains_on", "Track premium mains category."],
+    ["bottled_water_on", "Track bottled water category."],
+  ];
+
   return (
     <ManagerLayout>
       <div className="px-8 py-8 max-w-5xl">
         <div className="text-xs uppercase tracking-widest text-muted-foreground">Settings</div>
-        <h1 className="font-display text-4xl font-semibold tracking-tight mt-2">Workspace settings</h1>
+        <h1 className="font-display text-4xl font-extrabold tracking-tight mt-2">Workspace settings</h1>
 
         <div className="mt-8 grid md:grid-cols-2 gap-4">
-          {sections.map((s) => (
-            <div key={s.title} className="rounded-2xl bg-white border border-border p-6">
-              <h2 className="font-display text-lg font-semibold">{s.title}</h2>
-              <div className="mt-4 space-y-3">
-                {s.items.map(([label, value]) => (
-                  <div key={label}>
-                    <Label className="text-xs text-muted-foreground">{label}</Label>
-                    <Input defaultValue={value} className="mt-1" />
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
+          <div className="rounded-2xl bg-white border border-border p-6 space-y-3">
+            <h2 className="font-display text-lg font-bold">Venue profile</h2>
+            <div><Label className="text-xs text-muted-foreground">Restaurant name</Label><Input value={venueName} onChange={(e) => setVenueName(e.target.value)} className="mt-1" /></div>
+            <div><Label className="text-xs text-muted-foreground">Cuisine</Label><Input value={cuisine} onChange={(e) => setCuisine(e.target.value)} className="mt-1" /></div>
+            <div><Label className="text-xs text-muted-foreground">Cover capacity</Label><Input type="number" value={coverCapacity} onChange={(e) => setCoverCapacity(e.target.value === "" ? "" : Number(e.target.value))} className="mt-1" /></div>
+          </div>
+          <div className="rounded-2xl bg-white border border-border p-6 space-y-3">
+            <h2 className="font-display text-lg font-bold">Score thresholds</h2>
+            <div><Label className="text-xs text-muted-foreground">Green ≥ (%)</Label><Input type="number" value={green} onChange={(e) => setGreen(Number(e.target.value))} className="mt-1" /></div>
+            <div><Label className="text-xs text-muted-foreground">Amber ≥ (%)</Label><Input type="number" value={amber} onChange={(e) => setAmber(Number(e.target.value))} className="mt-1" /></div>
+            <p className="text-xs text-muted-foreground">Below amber is treated as an opportunity (red).</p>
+          </div>
         </div>
 
         <div className="mt-6 rounded-2xl bg-white border border-border p-6">
-          <h2 className="font-display text-lg font-semibold">Visibility & permissions</h2>
+          <h2 className="font-display text-lg font-bold">Visibility & permissions</h2>
           <div className="mt-4 divide-y divide-border">
-            {toggles.map((t) => (
-              <div key={t.label} className="flex items-center justify-between py-3">
-                <span className="text-sm">{t.label}</span>
-                <Switch defaultChecked={t.on} />
+            {toggleLabels.map(([key, label]) => (
+              <div key={key} className="flex items-center justify-between py-3">
+                <span className="text-sm">{label}</span>
+                <Switch checked={toggles[key]} onCheckedChange={(v) => setToggles({ ...toggles, [key]: v })} />
               </div>
             ))}
           </div>
         </div>
+
+        <button onClick={save} className="mt-6 rounded-xl px-6 py-3 text-sm font-bold text-white" style={{ background: "var(--brand-green)" }}>Save settings</button>
       </div>
     </ManagerLayout>
   );
