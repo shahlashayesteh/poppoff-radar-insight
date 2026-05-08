@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { ManagerLayout } from "@/components/manager-layout";
 import { supabase } from "@/integrations/supabase/client";
+import { getManagerVenue } from "@/lib/manager-venue";
 import { Brain, Sparkles, Wand2, ChevronRight, Plus, Trash2, FileText, Upload } from "lucide-react";
 import { toast } from "sonner";
 
@@ -30,10 +31,8 @@ function MenuIntel() {
 
   useEffect(() => {
     (async () => {
-      const { data: u } = await supabase.auth.getUser();
-      if (!u.user) return;
-      const { data: vs } = await supabase.from("venues").select("id").eq("manager_id", u.user.id).limit(1);
-      const v = vs?.[0]?.id;
+      const venue = await getManagerVenue();
+      const v = venue?.id;
       if (!v) return;
       setVenueId(v);
       await loadMenus(v);
