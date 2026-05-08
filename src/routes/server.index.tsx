@@ -12,19 +12,18 @@ export const Route = createFileRoute("/server/")({ component: ServerDashboard })
 type Stat = any;
 type Targets = any;
 
-function Ring({ fillPct, color, displayValue, displayUnit }: { fillPct: number; color: string; displayValue: string | number; displayUnit?: string }) {
+function Ring({ fillPct, color, displayValue }: { fillPct: number; color: string; displayValue: string | number }) {
   const r = 42;
   const c = 2 * Math.PI * r;
   const offset = c - (Math.max(0, Math.min(100, fillPct)) / 100) * c;
   return (
-    <div className="relative h-24 w-24">
+    <div className="relative h-28 w-28">
       <svg viewBox="0 0 100 100" className="h-full w-full -rotate-90">
         <circle cx="50" cy="50" r={r} fill="none" stroke={`color-mix(in oklab, ${color} 18%, white)`} strokeWidth="9" />
         <circle cx="50" cy="50" r={r} fill="none" stroke={color} strokeWidth="9" strokeDasharray={c} strokeDashoffset={offset} strokeLinecap="round" />
       </svg>
-      <div className="absolute inset-0 grid place-items-center flex-col">
-        <span className="font-display text-xl font-bold leading-none" style={{ color }}>{displayValue}</span>
-        {displayUnit && <span className="text-[9px] uppercase tracking-wide text-muted-foreground mt-0.5">{displayUnit}</span>}
+      <div className="absolute inset-0 grid place-items-center">
+        <span className="font-display text-3xl font-bold leading-none text-foreground">{displayValue}</span>
       </div>
     </div>
   );
@@ -146,7 +145,7 @@ function ServerDashboard() {
                 return (
                   <div key={c.label} className="flex flex-col items-center">
                     <div className="text-xs text-muted-foreground mb-2">{c.label}</div>
-                    <Ring fillPct={fillPct} color={tone} displayValue={items} displayUnit="sold" />
+                    <Ring fillPct={fillPct} color={tone} displayValue={items} />
                     {d !== null ? (
                       <div className="mt-1 text-xs font-semibold" style={{ color: d >= 0 ? "var(--brand-green)" : "var(--opportunity)" }}>
                         {d >= 0 ? "↑" : "↓"} {d >= 0 ? "+" : "-"}{Math.abs(d).toFixed(0)}%
