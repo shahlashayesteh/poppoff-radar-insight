@@ -42,6 +42,7 @@ function Ring({ value, color, label }: { value: number; color: string; label: st
 }
 
 function ServerDashboard() {
+  useRoleGate("server");
   const [name, setName] = useState("");
   const [stat, setStat] = useState<Stat | null>(null);
   const [target, setTarget] = useState<Targets | null>(null);
