@@ -1,13 +1,40 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ManagerLayout } from "@/components/manager-layout";
-import { servers } from "@/lib/sample-data";
-import { Bell, ChevronDown, Calendar, Users, PoundSterling, TrendingUp, Eye, Wine, Cake, Droplet, Target, Flame, MoreVertical } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { Users, PoundSterling, TrendingUp, Eye, Wine, Cake, Droplet, Target, Copy, Upload, Download, RefreshCw, MoreVertical } from "lucide-react";
+import { downloadCsvTemplate, parseStatsCsv } from "@/lib/csv";
+import { getMondayOfWeek, toISODate, formatWeekRange, performanceColour } from "@/lib/week";
+import { toast } from "sonner";
 
-export const Route = createFileRoute("/manager/")({
-  component: ManagerDashboard,
-});
+export const Route = createFileRoute("/manager/")({ component: ManagerDashboard });
 
-const Stat = ({ icon: Icon, tone, label, value, sub, subTone }: any) => (
+type Venue = { id: string; name: string; join_code: string };
+type Member = { id: string; full_name: string | null };
+type Stat = {
+  user_id: string;
+  total_covers: number;
+  total_sales: number;
+  spend_per_cover: number | null;
+  wine_conversion: number | null;
+  dessert_conversion: number | null;
+  cocktail_conversion: number | null;
+  sides_conversion: number | null;
+  spirits_conversion: number | null;
+  sparkling_conversion: number | null;
+};
+type Target = {
+  user_id: string;
+  spend_per_cover_target: number;
+  wine_target: number;
+  dessert_target: number;
+  cocktail_target: number;
+  sides_target: number;
+  spirits_target: number;
+  sparkling_target: number;
+};
+
+const Stat = ({ icon: Icon, tone, label, value, sub }: any) => (
   <div className="rounded-2xl bg-white border border-border p-4">
     <div className="flex items-start gap-3">
       <div className="h-11 w-11 rounded-full grid place-items-center" style={{ background: `color-mix(in oklab, ${tone} 14%, white)` }}>
@@ -16,172 +43,231 @@ const Stat = ({ icon: Icon, tone, label, value, sub, subTone }: any) => (
       <div className="flex-1 min-w-0">
         <div className="text-xs text-muted-foreground">{label}</div>
         <div className="font-display text-2xl font-extrabold mt-0.5">{value}</div>
-        {sub && <div className="text-xs mt-1 font-medium" style={{ color: subTone ?? "var(--brand-green)" }}>{sub}</div>}
+        {sub && <div className="text-xs mt-1 text-muted-foreground">{sub}</div>}
       </div>
     </div>
   </div>
 );
 
-const dotColor = (s: "green"|"amber"|"red") =>
-  s === "green" ? "var(--brand-green)" : s === "amber" ? "var(--brand-orange)" : "var(--opportunity)";
-
-const Dot = ({ s }: { s: "green"|"amber"|"red" }) => (
-  <span className="inline-block h-3 w-3 rounded-full" style={{ background: dotColor(s) }} />
+const Dot = ({ s }: { s: "green" | "amber" | "red" }) => (
+  <span className="inline-block h-3 w-3 rounded-full" style={{
+    background: s === "green" ? "var(--brand-green)" : s === "amber" ? "var(--brand-orange)" : "var(--opportunity)"
+  }} />
 );
 
-const cats: Array<{ key: keyof typeof servers[0]; label: string }> = [
-  { key: "wine", label: "Wine" },
-  { key: "cocktails", label: "Cocktails" },
-  { key: "desserts", label: "Desserts" },
-  { key: "sides", label: "Sides" },
-  { key: "spc", label: "Spirits" },
-  { key: "water", label: "Sparkling" },
-] as any;
-
 function ManagerDashboard() {
+  const [venue, setVenue] = useState<Venue | null>(null);
+  const [members, setMembers] = useState<Member[]>([]);
+  const [stats, setStats] = useState<Stat[]>([]);
+  const [targets, setTargets] = useState<Target[]>([]);
+  const [views, setViews] = useState<Record<string, boolean>>({});
+  const [acks, setAcks] = useState<Record<string, boolean>>({});
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const weekStart = useMemo(() => toISODate(getMondayOfWeek()), []);
+
+  const load = async () => {
+    const { data: u } = await supabase.auth.getUser();
+    if (!u.user) return;
+    const { data: vs } = await supabase.from("venues").select("id, name, join_code").eq("manager_id", u.user.id).limit(1);
+    const v = vs?.[0];
+    if (!v) return;
+    setVenue(v);
+    const { data: vm } = await supabase.from("venue_members").select("user_id").eq("venue_id", v.id);
+    const ids = (vm ?? []).map((x) => x.user_id);
+    let mems: Member[] = [];
+    if (ids.length) {
+      const { data: profs } = await supabase.from("profiles").select("id, full_name").in("id", ids);
+      mems = profs ?? [];
+    }
+    setMembers(mems);
+    const { data: st } = await supabase.from("server_stats").select("*").eq("venue_id", v.id).eq("week_start", weekStart);
+    setStats((st ?? []) as Stat[]);
+    const { data: tg } = await supabase.from("server_targets").select("*").eq("venue_id", v.id);
+    setTargets((tg ?? []) as Target[]);
+    const { data: vw } = await supabase.from("server_stat_views").select("user_id").eq("venue_id", v.id).eq("week_start", weekStart);
+    setViews(Object.fromEntries((vw ?? []).map((r) => [r.user_id, true])));
+    const { data: ak } = await supabase.from("server_focus_acks").select("user_id").eq("venue_id", v.id).eq("week_start", weekStart);
+    setAcks(Object.fromEntries((ak ?? []).map((r) => [r.user_id, true])));
+  };
+
+  useEffect(() => { load(); }, [weekStart]);
+
+  const totals = useMemo(() => {
+    const covers = stats.reduce((a, s) => a + (s.total_covers || 0), 0);
+    const sales = stats.reduce((a, s) => a + Number(s.total_sales || 0), 0);
+    const spc = covers > 0 ? sales / covers : 0;
+    return { covers, sales, spc };
+  }, [stats]);
+
+  const targetByUser = useMemo(() => Object.fromEntries(targets.map((t) => [t.user_id, t])), [targets]);
+  const statByUser = useMemo(() => Object.fromEntries(stats.map((s) => [s.user_id, s])), [stats]);
+
+  const copyCode = async () => {
+    if (!venue) return;
+    await navigator.clipboard.writeText(venue.join_code);
+    toast.success("Join code copied");
+  };
+
+  const regenerate = async () => {
+    if (!venue) return;
+    const { data, error } = await supabase.rpc("regenerate_venue_join_code", { _venue_id: venue.id });
+    if (error) { toast.error(error.message); return; }
+    setVenue({ ...venue, join_code: String(data) });
+    toast.success("New join code generated");
+  };
+
+  const onFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !venue) return;
+    setUploading(true);
+    try {
+      const rows = await parseStatsCsv(file);
+      if (!rows.length) { toast.error("No rows found in CSV"); return; }
+      const { data, error } = await supabase.rpc("process_csv_upload", {
+        _venue_id: venue.id, _week_start: weekStart, _csv_data: rows as unknown as never,
+      });
+      if (error) throw error;
+      const result = data as { matched_count: number; unmatched_names: string[] };
+      toast.success(`Imported ${result.matched_count} server${result.matched_count === 1 ? "" : "s"}`);
+      if (result.unmatched_names?.length) {
+        toast.warning(`Unmatched: ${result.unmatched_names.join(", ")}`);
+      }
+      await load();
+    } catch (err: any) {
+      toast.error(err.message || "Upload failed");
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  };
+
+  const cats: Array<{ key: keyof Stat; tKey: keyof Target; label: string }> = [
+    { key: "wine_conversion", tKey: "wine_target", label: "Wine" },
+    { key: "cocktail_conversion", tKey: "cocktail_target", label: "Cocktails" },
+    { key: "dessert_conversion", tKey: "dessert_target", label: "Desserts" },
+    { key: "sides_conversion", tKey: "sides_target", label: "Sides" },
+    { key: "spirits_conversion", tKey: "spirits_target", label: "Spirits" },
+    { key: "sparkling_conversion", tKey: "sparkling_target", label: "Sparkling" },
+  ];
+
+  const viewedCount = members.filter((m) => views[m.id]).length;
+  const ackedCount = members.filter((m) => acks[m.id]).length;
+
   return (
     <ManagerLayout>
       <div className="px-8 py-7">
-        {/* Top row */}
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div>
             <div className="font-display text-2xl font-extrabold tracking-tight uppercase" style={{ color: "var(--brand-green)" }}>
               Manager Dashboard
             </div>
-            <div className="text-sm text-muted-foreground tracking-widest uppercase">Complete Visibility</div>
+            <div className="text-sm text-muted-foreground tracking-widest uppercase">{venue?.name || "Loading..."}</div>
           </div>
-          <div className="flex items-center gap-3">
-            <button className="inline-flex items-center gap-2 rounded-xl border border-border bg-white px-4 py-2 text-sm font-medium">
-              The Demo Restaurant <ChevronDown className="h-4 w-4" />
-            </button>
-            <button className="inline-flex items-center gap-2 rounded-xl border border-border bg-white px-4 py-2 text-sm font-medium">
-              <Calendar className="h-4 w-4" /> 4 May – 10 May
-            </button>
-            <button className="relative h-10 w-10 grid place-items-center rounded-full border border-border bg-white">
-              <Bell className="h-4 w-4" />
-              <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-brand-green" />
-            </button>
+          <div className="text-sm text-muted-foreground">{formatWeekRange(weekStart)}</div>
+        </div>
+
+        {/* Join code + CSV upload */}
+        <div className="mt-6 grid lg:grid-cols-2 gap-4">
+          <div className="rounded-2xl p-5 border-2" style={{ borderColor: "var(--brand-green)", background: "color-mix(in oklab, var(--brand-green) 6%, white)" }}>
+            <div className="text-xs uppercase tracking-widest text-brand-green font-bold">Team join code</div>
+            <div className="mt-2 flex items-center gap-3 flex-wrap">
+              <div className="font-display text-5xl font-extrabold tracking-widest text-brand-green">{venue?.join_code || "······"}</div>
+              <button onClick={copyCode} className="inline-flex items-center gap-2 rounded-xl border border-border bg-white px-3 py-2 text-sm font-semibold">
+                <Copy className="h-4 w-4" /> Copy
+              </button>
+              <button onClick={regenerate} className="inline-flex items-center gap-2 rounded-xl border border-border bg-white px-3 py-2 text-sm">
+                <RefreshCw className="h-4 w-4" /> New code
+              </button>
+            </div>
+            <p className="mt-3 text-sm text-foreground/75">Share this code with your team. Servers enter it at <span className="font-mono">/join</span> to link their account to your venue.</p>
+          </div>
+
+          <div className="rounded-2xl p-5 border border-border bg-white">
+            <div className="text-xs uppercase tracking-widest text-muted-foreground font-bold">Upload weekly stats</div>
+            <p className="mt-2 text-sm text-foreground/75">CSV with columns: server_name, total_covers, total_sales, wine_sales, dessert_sales, cocktail_sales, sides_sales, spirits_sales, sparkling_sales.</p>
+            <div className="mt-3 flex items-center gap-2 flex-wrap">
+              <input ref={fileRef} type="file" accept=".csv,text/csv" onChange={onFile} className="hidden" />
+              <button onClick={() => fileRef.current?.click()} disabled={uploading || !venue} className="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-bold text-white disabled:opacity-50" style={{ background: "var(--brand-orange)" }}>
+                <Upload className="h-4 w-4" /> {uploading ? "Uploading…" : "Upload CSV"}
+              </button>
+              <button onClick={downloadCsvTemplate} className="inline-flex items-center gap-2 rounded-xl border border-border px-4 py-2 text-sm font-semibold">
+                <Download className="h-4 w-4" /> Template
+              </button>
+            </div>
+            <div className="mt-3 text-xs text-muted-foreground">Week of {formatWeekRange(weekStart)}</div>
           </div>
         </div>
 
-        {/* KPI grid 4x2 */}
-        <div className="mt-8 grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <Stat icon={Users} tone="var(--brand-green)" label="Total Covers" value="812" sub="▲ +5% vs last week" />
-          <Stat icon={PoundSterling} tone="var(--brand-green)" label="Avg Spend per Cover" value="£58.40" sub="▲ +6.3% vs last week" />
-          <Stat icon={TrendingUp} tone="var(--brand-green)" label="Estimated Uplift" value="£1,420" sub="▲ +8% vs last week" />
-          <Stat icon={Eye} tone="var(--brand-green)" label="Server Viewed Stats" value="4 / 5" sub="80%" subTone="var(--muted-foreground)" />
-
-          <Stat icon={Wine} tone="oklch(0.55 0.18 290)" label="Wine Opportunity" value="£620" sub="▲ +11% vs last week" />
-          <Stat icon={Cake} tone="var(--opportunity)" label="Dessert Performance" value="+14%" sub="vs last week" />
-          <Stat icon={Droplet} tone="oklch(0.65 0.15 240)" label="Bottled Water Progress" value="+9%" sub="vs last week" />
-          <Stat icon={Target} tone="var(--opportunity)" label="Red Opportunities" value="7" sub="▼ this week" subTone="var(--opportunity)" />
+        {/* KPIs */}
+        <div className="mt-6 grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <Stat icon={Users} tone="var(--brand-green)" label="Total Covers" value={totals.covers.toLocaleString()} sub={`${members.length} server${members.length === 1 ? "" : "s"}`} />
+          <Stat icon={PoundSterling} tone="var(--brand-green)" label="Avg Spend per Cover" value={`£${totals.spc.toFixed(2)}`} sub={`Total £${totals.sales.toFixed(0)}`} />
+          <Stat icon={TrendingUp} tone="var(--brand-orange)" label="Servers reporting" value={`${stats.length} / ${members.length}`} />
+          <Stat icon={Eye} tone="var(--brand-green)" label="Viewed Stats" value={`${viewedCount} / ${members.length}`} sub={`${ackedCount} ack'd focus`} />
         </div>
 
-        {/* Team performance */}
+        {/* Team table */}
         <div className="mt-6 rounded-2xl bg-white border border-border">
-          <div className="px-5 py-4 border-b border-border flex items-center justify-between">
+          <div className="px-5 py-4 border-b border-border">
             <h2 className="font-display text-lg font-bold">Team Performance</h2>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="text-xs text-muted-foreground">
-                <tr>
-                  <th className="text-left px-5 py-3 font-medium">Server</th>
-                  {cats.map((c) => <th key={c.label} className="px-3 py-3 font-medium">{c.label}</th>)}
-                  <th className="text-left px-3 py-3 font-medium">Weekly Focus</th>
-                  <th className="px-3 py-3 font-medium">Stats Viewed</th>
-                  <th className="px-3 py-3 font-medium">Focus Ack.</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {servers.map((s) => (
-                  <tr key={s.id} className="border-t border-border">
-                    <td className="px-5 py-4 font-semibold">{s.name}</td>
-                    {cats.map((c) => (
-                      <td key={c.label} className="px-3 text-center"><Dot s={(s as any)[c.key]} /></td>
-                    ))}
-                    <td className="px-3 text-foreground/80">{s.weeklyFocus}</td>
-                    <td className={`px-3 text-center font-semibold ${s.viewed ? "text-brand-green" : "text-opportunity"}`}>{s.viewed ? "Yes" : "No"}</td>
-                    <td className={`px-3 text-center font-semibold ${s.acknowledged ? "text-brand-green" : "text-opportunity"}`}>{s.acknowledged ? "Yes" : "No"}</td>
-                    <td className="px-3">
-                      <Link to="/manager/server/$id" params={{ id: s.id }} className="text-muted-foreground hover:text-foreground">
-                        <MoreVertical className="h-4 w-4" />
-                      </Link>
-                    </td>
+          {members.length === 0 ? (
+            <div className="px-5 py-10 text-center text-sm text-muted-foreground">
+              Share your join code <span className="font-mono font-bold text-brand-green">{venue?.join_code}</span> so servers can join your team.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="text-xs text-muted-foreground">
+                  <tr>
+                    <th className="text-left px-5 py-3 font-medium">Server</th>
+                    <th className="px-3 py-3 font-medium">SPC</th>
+                    {cats.map((c) => <th key={c.label} className="px-3 py-3 font-medium">{c.label}</th>)}
+                    <th className="px-3 py-3 font-medium">Viewed</th>
+                    <th className="px-3 py-3 font-medium">Ack'd</th>
+                    <th></th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {members.map((m) => {
+                    const s = statByUser[m.id];
+                    const t = targetByUser[m.id];
+                    return (
+                      <tr key={m.id} className="border-t border-border">
+                        <td className="px-5 py-4 font-semibold">{m.full_name || "Unnamed"}</td>
+                        <td className="px-3 text-center text-foreground/80">{s?.spend_per_cover ? `£${Number(s.spend_per_cover).toFixed(0)}` : "—"}</td>
+                        {cats.map((c) => {
+                          const actual = s ? Number(s[c.key] ?? 0) : 0;
+                          const target = t ? Number(t[c.tKey]) : 0;
+                          if (!s) return <td key={c.label} className="px-3 text-center text-muted-foreground">—</td>;
+                          return <td key={c.label} className="px-3 text-center"><Dot s={performanceColour(actual, target)} /></td>;
+                        })}
+                        <td className={`px-3 text-center font-semibold ${views[m.id] ? "text-brand-green" : "text-muted-foreground"}`}>{views[m.id] ? "Yes" : "No"}</td>
+                        <td className={`px-3 text-center font-semibold ${acks[m.id] ? "text-brand-green" : "text-muted-foreground"}`}>{acks[m.id] ? "Yes" : "No"}</td>
+                        <td className="px-3">
+                          <Link to="/manager/server/$id" params={{ id: m.id }} className="text-muted-foreground hover:text-foreground">
+                            <MoreVertical className="h-4 w-4" />
+                          </Link>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
 
-        {/* Bottom cards */}
-        <div className="mt-6 grid lg:grid-cols-3 gap-4">
-          {/* Coaching priorities */}
-          <div className="rounded-2xl bg-white border border-border p-5">
-            <h3 className="font-display font-bold">This Week's Coaching Priorities</h3>
-            <div className="mt-4 grid grid-cols-2 gap-4 text-sm">
-              {[
-                { i: Wine, t: "Wine Attachment", d: "Drive wine by the glass growth in punchlines.", c: "oklch(0.55 0.18 290)" },
-                { i: Cake, t: "Dessert Recommendation", d: "Lead with dessert recommendation in punchlines.", c: "var(--opportunity)" },
-                { i: Flame, t: "Truffle Showcase", d: "Recommend truffle across key dishes.", c: "var(--brand-orange)" },
-                { i: Droplet, t: "Bottled Water", d: "Keep offering bottled water every shift.", c: "oklch(0.65 0.15 240)" },
-              ].map((p) => (
-                <div key={p.t} className="flex gap-3">
-                  <div className="h-9 w-9 rounded-full grid place-items-center shrink-0" style={{ background: `color-mix(in oklab, ${p.c} 14%, white)` }}>
-                    <p.i className="h-4 w-4" style={{ color: p.c }} />
-                  </div>
-                  <div>
-                    <div className="font-semibold">{p.t}</div>
-                    <div className="text-xs text-muted-foreground mt-0.5">{p.d}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div className="mt-4 rounded-xl text-xs px-3 py-2 flex items-center gap-2"
-              style={{ background: "color-mix(in oklab, var(--brand-green) 10%, white)", color: "var(--brand-green)" }}>
-              ✦ Focus these priorities in pre-shift huddles and 1:1s this week.
-            </div>
-          </div>
-
-          {/* Manager insight */}
-          <div className="rounded-2xl bg-white border border-border p-5">
-            <h3 className="font-display font-bold">Manager Insight</h3>
-            <p className="mt-3 text-sm text-foreground/80">
-              You're on track! Keep up the coaching consistency and focus on wine attachment to unlock more uplift.
-            </p>
-            <svg viewBox="0 0 200 60" className="mt-4 w-full h-20">
-              <path d="M0,55 C30,52 50,48 70,42 S110,30 130,22 S180,8 200,4" fill="none" stroke="var(--brand-green)" strokeWidth="3" strokeLinecap="round" />
-              <path d="M195,12 L200,4 L192,2" fill="none" stroke="var(--brand-green)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-            <div className="mt-2 text-sm"><span className="text-brand-green font-bold">+£1,420</span> <span className="text-muted-foreground">potential uplift this week</span></div>
-          </div>
-
-          {/* Focus ack */}
-          <div className="rounded-2xl bg-white border border-border p-5">
-            <h3 className="font-display font-bold">Focus Acknowledgement</h3>
-            <div className="mt-4 flex items-center gap-4">
-              <div className="relative h-24 w-24">
-                <svg viewBox="0 0 100 100" className="h-full w-full -rotate-90">
-                  <circle cx="50" cy="50" r="40" fill="none" stroke="color-mix(in oklab, var(--brand-green) 14%, white)" strokeWidth="10" />
-                  <circle cx="50" cy="50" r="40" fill="none" stroke="var(--brand-green)" strokeWidth="10"
-                    strokeDasharray={2 * Math.PI * 40} strokeDashoffset={2 * Math.PI * 40 * 0.2} strokeLinecap="round" />
-                </svg>
-                <div className="absolute inset-0 grid place-items-center font-display text-xl font-extrabold">80%</div>
-              </div>
-              <div className="text-sm">
-                <div className="text-muted-foreground">Team has acknowledged this week's focus</div>
-                <div className="mt-2 font-display text-xl font-extrabold text-brand-green">4/5 servers</div>
-                <div className="text-xs text-muted-foreground">acknowledged</div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-6 text-xs text-muted-foreground flex items-center justify-between">
-          <span>ⓘ All data is based on the selected date range. Metrics update nightly.</span>
-          <span><span className="font-bold" style={{ color: "var(--brand-orange)" }}>Popp</span><span className="font-bold" style={{ color: "var(--brand-green)" }}>Off</span>. Every shift. Every win.</span>
+        <div className="mt-6 grid lg:grid-cols-2 gap-4">
+          <Link to="/manager/priorities" className="rounded-2xl bg-white border border-border p-5 hover:border-brand-green transition">
+            <div className="flex items-center gap-3"><Target className="h-6 w-6 text-brand-green" /><h3 className="font-display font-bold">Set this week's priorities</h3></div>
+            <p className="mt-2 text-sm text-muted-foreground">Pick the menu items your team should push.</p>
+          </Link>
+          <Link to="/manager/menu" className="rounded-2xl bg-white border border-border p-5 hover:border-brand-green transition">
+            <div className="flex items-center gap-3"><Wine className="h-6 w-6 text-brand-orange" /><h3 className="font-display font-bold">Menu intelligence</h3></div>
+            <p className="mt-2 text-sm text-muted-foreground">Upload your menu and get AI coaching insights.</p>
+          </Link>
         </div>
       </div>
     </ManagerLayout>
