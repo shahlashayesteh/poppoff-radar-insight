@@ -65,11 +65,12 @@ export function ManagerLayout({ children }: { children: React.ReactNode }) {
         </div>
         <nav className="flex-1 px-3 py-2 space-y-1">
           {items.map((it) => {
-            const active = path === it.to;
+            const target = prefix(it.to);
+            const active = path === target;
             return (
-              <Link
+              <a
                 key={(("key" in it && it.key) || "") + it.to + it.label}
-                to={it.to}
+                href={target}
                 className={cn(
                   "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors",
                   active
@@ -79,7 +80,7 @@ export function ManagerLayout({ children }: { children: React.ReactNode }) {
               >
                 <it.icon className="h-4 w-4" />
                 {it.label}
-              </Link>
+              </a>
             );
           })}
         </nav>
