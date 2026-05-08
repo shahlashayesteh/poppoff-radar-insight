@@ -583,6 +583,14 @@ export type Database = {
         Returns: string
       }
       generate_unique_join_code: { Args: never; Returns: string }
+      get_my_manager_venue: {
+        Args: never
+        Returns: {
+          id: string
+          join_code: string
+          name: string
+        }[]
+      }
       has_active_subscription: {
         Args: { check_env?: string; user_uuid: string }
         Returns: boolean
