@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ManagerLayout } from "@/components/manager-layout";
 import { supabase } from "@/integrations/supabase/client";
+import { useRoleGate } from "@/lib/auth-gate";
 import { Users, PoundSterling, TrendingUp, Eye, Wine, Cake, Droplet, Target, Copy, Upload, Download, RefreshCw, MoreVertical } from "lucide-react";
 import { downloadCsvTemplate, parseStatsCsv } from "@/lib/csv";
 import { getMondayOfWeek, toISODate, formatWeekRange, performanceColour } from "@/lib/week";
