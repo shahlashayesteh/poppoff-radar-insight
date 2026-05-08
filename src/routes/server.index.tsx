@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useRoleGate } from "@/lib/auth-gate";
 import { claimServerCsvData, recordLogin, pctDelta, estimateItemsSold, fetchVenueAvgPrices, type CategoryKey } from "@/lib/server-data";
 import { Trophy, Flame, ArrowRight, TrendingDown } from "lucide-react";
-import { getMondayOfWeek, toISODate, formatWeekRange, performanceColour } from "@/lib/week";
+import { getMondayOfWeek, toISODate, formatWeekRange, performanceColour, latestStatsWeek } from "@/lib/week";
 
 export const Route = createFileRoute("/server/")({ component: ServerDashboard });
 
@@ -38,6 +38,7 @@ function ServerDashboard() {
   const [streak, setStreak] = useState(0);
   const [prices, setPrices] = useState<Record<string, number>>({});
   const weekStart = toISODate(getMondayOfWeek());
+  const [displayWeekStart, setDisplayWeekStart] = useState<string>(weekStart);
 
   useEffect(() => {
     (async () => {
@@ -51,16 +52,21 @@ function ServerDashboard() {
       const { data: vm } = await supabase.from("venue_members").select("venue_id").eq("user_id", u.user.id).limit(1);
       const venueId = vm?.[0]?.venue_id;
       if (!venueId) return;
-      const { data: st } = await supabase.from("server_stats").select("*").eq("user_id", u.user.id).eq("venue_id", venueId).eq("week_start", weekStart).maybeSingle();
+      const visibleWeek = await latestStatsWeek(
+        supabase.from("server_stats").select("week_start").eq("user_id", u.user.id).eq("venue_id", venueId).order("week_start", { ascending: false }).limit(1),
+        weekStart,
+      );
+      setDisplayWeekStart(visibleWeek);
+      const { data: st } = await supabase.from("server_stats").select("*").eq("user_id", u.user.id).eq("venue_id", venueId).eq("week_start", visibleWeek).maybeSingle();
       setStat(st);
-      const { data: prev } = await supabase.from("server_stats").select("*").eq("user_id", u.user.id).eq("venue_id", venueId).lt("week_start", weekStart).order("week_start", { ascending: false }).limit(1).maybeSingle();
+      const { data: prev } = await supabase.from("server_stats").select("*").eq("user_id", u.user.id).eq("venue_id", venueId).lt("week_start", visibleWeek).order("week_start", { ascending: false }).limit(1).maybeSingle();
       setPrevStat(prev);
       const { data: tg } = await supabase.from("server_targets").select("*").eq("user_id", u.user.id).eq("venue_id", venueId).maybeSingle();
       setTarget(tg);
       const { data: sk } = await supabase.from("server_streaks").select("current_streak").eq("user_id", u.user.id).eq("venue_id", venueId).maybeSingle();
       setStreak((sk as any)?.current_streak ?? 0);
       setPrices(await fetchVenueAvgPrices(venueId));
-      await supabase.from("server_stat_views").insert({ user_id: u.user.id, venue_id: venueId, week_start: weekStart });
+      await supabase.from("server_stat_views").insert({ user_id: u.user.id, venue_id: venueId, week_start: visibleWeek });
     })();
   }, [weekStart]);
 
@@ -126,7 +132,7 @@ function ServerDashboard() {
         <h1 className="mt-4 font-display text-[40px] leading-[1] font-extrabold tracking-tight">
           Stats just<br /><span style={{ color: "var(--brand-green)" }}>dropped</span> 🎉
         </h1>
-        <div className="mt-3 text-xs text-muted-foreground">{formatWeekRange(weekStart)}</div>
+        <div className="mt-3 text-xs text-muted-foreground">{formatWeekRange(displayWeekStart)}</div>
       </div>
 
       <div className="px-5 mt-5">
