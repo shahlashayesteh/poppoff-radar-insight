@@ -22,6 +22,7 @@ function MenuIntel() {
   const [loading, setLoading] = useState(false);
   const [pairings, setPairings] = useState<Pairing[]>([]);
   const [pairingLoading, setPairingLoading] = useState(false);
+  const [pairingSearch, setPairingSearch] = useState("");
   const menuFilesRef = useRef<HTMLInputElement>(null);
 
   const loadMenus = async (v: string) => {
