@@ -105,8 +105,22 @@ function ManagerDashboard() {
 
   const copyCode = async () => {
     if (!venue) return;
-    await navigator.clipboard.writeText(venue.join_code);
-    toast.success("Join code copied");
+    const code = venue.join_code;
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(code);
+      } else {
+        const ta = document.createElement("textarea");
+        ta.value = code; ta.style.position = "fixed"; ta.style.opacity = "0";
+        document.body.appendChild(ta); ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+      }
+      toast.success("Join code copied");
+    } catch {
+      // fallback: prompt user to copy manually
+      window.prompt("Copy this join code:", code);
+    }
   };
 
   const regenerate = async () => {
