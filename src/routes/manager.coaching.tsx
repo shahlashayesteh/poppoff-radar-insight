@@ -4,7 +4,7 @@ import { ManagerLayout } from "@/components/manager-layout";
 import { supabase } from "@/integrations/supabase/client";
 import { getManagerVenue } from "@/lib/manager-venue";
 import { Sparkles, Wand2 } from "lucide-react";
-import { getMondayOfWeek, toISODate, formatWeekRange } from "@/lib/week";
+import { getMondayOfWeek, toISODate, formatWeekRange, latestStatsWeek } from "@/lib/week";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/manager/coaching")({ component: Page });
@@ -14,7 +14,7 @@ function Page() {
   const [priorities, setPriorities] = useState<any[]>([]);
   const [insights, setInsights] = useState<string>("");
   const [loading, setLoading] = useState(false);
-  const weekStart = toISODate(getMondayOfWeek());
+  const [weekStart, setWeekStart] = useState(toISODate(getMondayOfWeek()));
 
   useEffect(() => {
     (async () => {
@@ -22,7 +22,12 @@ function Page() {
       const v = venue?.id;
       if (!v) return;
       setVenueId(v);
-      const { data: pr } = await supabase.from("weekly_priorities").select("*").eq("venue_id", v).eq("week_start", weekStart);
+      const visibleWeek = await latestStatsWeek(
+        supabase.from("server_stats").select("week_start, created_at").eq("venue_id", v).order("created_at", { ascending: false }).order("week_start", { ascending: false }).limit(1),
+        weekStart,
+      );
+      setWeekStart(visibleWeek);
+      const { data: pr } = await supabase.from("weekly_priorities").select("*").eq("venue_id", v).eq("week_start", visibleWeek);
       setPriorities(pr ?? []);
     })();
   }, [weekStart]);

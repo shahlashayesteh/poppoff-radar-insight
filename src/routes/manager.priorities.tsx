@@ -4,7 +4,7 @@ import { ManagerLayout } from "@/components/manager-layout";
 import { supabase } from "@/integrations/supabase/client";
 import { getManagerVenue } from "@/lib/manager-venue";
 import { Target, Plus, Trash2, CheckCircle2 } from "lucide-react";
-import { getMondayOfWeek, toISODate, formatWeekRange } from "@/lib/week";
+import { getMondayOfWeek, toISODate, formatWeekRange, latestStatsWeek } from "@/lib/week";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/manager/priorities")({ component: Priorities });
@@ -17,10 +17,10 @@ function Priorities() {
   const [name, setName] = useState("");
   const [category, setCategory] = useState("");
   const [flag, setFlag] = useState("push");
-  const weekStart = toISODate(getMondayOfWeek());
+  const [weekStart, setWeekStart] = useState(toISODate(getMondayOfWeek()));
 
-  const load = async (v: string) => {
-    const { data } = await supabase.from("weekly_priorities").select("*").eq("venue_id", v).eq("week_start", weekStart).order("created_at", { ascending: true });
+  const load = async (v: string, ws = weekStart) => {
+    const { data } = await supabase.from("weekly_priorities").select("*").eq("venue_id", v).eq("week_start", ws).order("created_at", { ascending: true });
     setItems((data ?? []) as Item[]);
   };
 
@@ -28,7 +28,15 @@ function Priorities() {
     (async () => {
       const venue = await getManagerVenue();
       const v = venue?.id;
-      if (v) { setVenueId(v); await load(v); }
+      if (v) {
+        setVenueId(v);
+        const visibleWeek = await latestStatsWeek(
+          supabase.from("server_stats").select("week_start, created_at").eq("venue_id", v).order("created_at", { ascending: false }).order("week_start", { ascending: false }).limit(1),
+          weekStart,
+        );
+        setWeekStart(visibleWeek);
+        await load(v, visibleWeek);
+      }
     })();
   }, []);
 

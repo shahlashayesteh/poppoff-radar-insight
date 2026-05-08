@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ManagerLayout } from "@/components/manager-layout";
 import { supabase } from "@/integrations/supabase/client";
 import { useRoleGate } from "@/lib/auth-gate";
-import { Users, PoundSterling, TrendingUp, Eye, Wine, Cake, Droplet, Target, Copy, Upload, Download, RefreshCw, MoreVertical } from "lucide-react";
+import { Users, PoundSterling, TrendingUp, Eye, Wine, Target, Copy, Upload, Download, RefreshCw, MoreVertical } from "lucide-react";
 import { downloadCsvTemplate, parseStatsCsv } from "@/lib/csv";
 import { getMondayOfWeek, toISODate, formatWeekRange, performanceColour, latestStatsWeek } from "@/lib/week";
 import { getManagerVenue } from "@/lib/manager-venue";
@@ -68,7 +68,6 @@ function ManagerDashboard() {
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const weekStart = useMemo(() => toISODate(getMondayOfWeek()), []);
-  const [uploadWeek, setUploadWeek] = useState<string>(toISODate(getMondayOfWeek()));
   const [displayWeekStart, setDisplayWeekStart] = useState<string>(weekStart);
 
   const load = async () => {
@@ -139,29 +138,44 @@ function ManagerDashboard() {
   };
 
   const onFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !venue) return;
+    const files = Array.from(e.target.files ?? []);
+    if (!files.length || !venue) return;
     setUploading(true);
     try {
-      const rows = await parseStatsCsv(file);
+      const parsed = await Promise.all(files.map(parseStatsCsv));
+      const rows = parsed.flat();
       if (!rows.length) { toast.error("No rows found in CSV"); return; }
-      const { data, error } = await supabase.rpc("process_csv_upload", {
-        _venue_id: venue.id, _week_start: uploadWeek, _csv_data: rows as unknown as never,
-      });
-      if (error) throw error;
-      const result = data as { matched_count: number; created_count?: number; unmatched_names: string[] };
-      toast.success(`Imported ${result.matched_count} server${result.matched_count === 1 ? "" : "s"}`);
-      if (result.created_count && result.created_count > 0) {
-        toast.info(`Added ${result.created_count} new server${result.created_count === 1 ? "" : "s"} to your team: ${result.unmatched_names.join(", ")}`);
+      const importWeek = rows[0]?.week_start || weekStart;
+      const batches = Array.from({ length: Math.ceil(rows.length / 250) }, (_, i) => rows.slice(i * 250, i * 250 + 250));
+      const importedWeeks = new Set<string>();
+      const createdNames = new Set<string>();
+      let importedCount = 0;
+
+      for (const batch of batches) {
+        const { data, error } = await supabase.rpc("process_csv_upload", {
+          _venue_id: venue.id, _week_start: batch[0]?.week_start || importWeek, _csv_data: batch as unknown as never,
+        });
+        if (error) throw error;
+        const result = data as { matched_count: number; created_count?: number; unmatched_names?: string[]; weeks?: string[] };
+        importedCount += result.matched_count || 0;
+        (result.weeks?.length ? result.weeks : batch.map((row) => row.week_start || importWeek)).forEach((week) => importedWeeks.add(week));
+        (result.unmatched_names ?? []).forEach((name) => createdNames.add(name));
+      }
+
+      const weeks = Array.from(importedWeeks);
+      toast.success(`Imported ${importedCount} server week${importedCount === 1 ? "" : "s"} from ${files.length} CSV${files.length === 1 ? "" : "s"}`);
+      if (createdNames.size > 0) {
+        toast.info(`Added ${createdNames.size} new server${createdNames.size === 1 ? "" : "s"} to your team: ${Array.from(createdNames).join(", ")}`);
       }
       // Auto-generate weekly priorities via AI
       toast.info("Generating weekly priorities with AI…");
-      const { data: ai, error: aiErr } = await supabase.functions.invoke("ai-assist", {
-        body: { action: "generate_priorities", venueId: venue.id, payload: { weekStart: uploadWeek } },
-      });
-      if (aiErr) toast.error(`AI: ${aiErr.message}`);
-      else if (ai?.priorities?.length) toast.success(`Created ${ai.priorities.length} priorities`);
-      setDisplayWeekStart(uploadWeek);
+      await Promise.all(weeks.map(async (week) => {
+        const { error: aiErr } = await supabase.functions.invoke("ai-assist", {
+          body: { action: "generate_priorities", venueId: venue.id, payload: { weekStart: week } },
+        });
+        if (aiErr) toast.error(`AI: ${aiErr.message}`);
+      }));
+      setDisplayWeekStart(weeks[0] || importWeek);
       await load();
     } catch (err: any) {
       toast.error(err.message || "Upload failed");
@@ -214,7 +228,7 @@ function ManagerDashboard() {
 
           <div className="rounded-2xl p-5 border border-border bg-white">
             <div className="text-xs uppercase tracking-widest text-muted-foreground font-bold">Upload weekly stats</div>
-            <p className="mt-2 text-sm text-foreground/75">CSV with columns: server_name, total_covers, total_sales, wine_sales, dessert_sales, cocktail_sales, sides_sales, spirits_sales, sparkling_sales.</p>
+            <p className="mt-2 text-sm text-foreground/75">Upload any restaurant stats CSV. Server names, dates, totals, covers, categories and item lines are detected automatically.</p>
             <div className="mt-3 flex items-center gap-2 flex-wrap">
               <label
                 className={`relative inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-bold text-white overflow-hidden ${uploading || !venue ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
@@ -224,6 +238,7 @@ function ManagerDashboard() {
                   ref={fileRef}
                   type="file"
                   accept=".csv,text/csv"
+                  multiple
                   onChange={onFile}
                   disabled={uploading || !venue}
                   aria-label="Upload weekly stats CSV"
@@ -235,19 +250,7 @@ function ManagerDashboard() {
                 <Download className="h-4 w-4" /> Template
               </button>
             </div>
-            <div className="mt-3 flex items-center gap-2 flex-wrap">
-              <label className="text-xs text-muted-foreground">Week starting (Mon)</label>
-              <input
-                type="date"
-                value={uploadWeek}
-                onChange={(e) => {
-                  const d = new Date(e.target.value + "T00:00:00");
-                  setUploadWeek(toISODate(getMondayOfWeek(d)));
-                }}
-                className="rounded-lg border border-border px-2 py-1 text-sm"
-              />
-            </div>
-            <div className="mt-1 text-xs text-muted-foreground">Importing into week of {formatWeekRange(uploadWeek)}</div>
+            <div className="mt-2 text-xs text-muted-foreground">If the file has dates, those weeks are used. If not, the filename date or current week is used.</div>
           </div>
         </div>
 

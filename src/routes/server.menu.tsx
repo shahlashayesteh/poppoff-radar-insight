@@ -4,7 +4,7 @@ import { ServerLayout } from "@/components/server-layout";
 import { supabase } from "@/integrations/supabase/client";
 import { claimServerCsvData } from "@/lib/server-data";
 import { Sparkles, CheckCircle2 } from "lucide-react";
-import { getMondayOfWeek, toISODate } from "@/lib/week";
+import { getMondayOfWeek, toISODate, latestStatsWeek } from "@/lib/week";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/server/menu")({ component: ServerMenu });
@@ -15,7 +15,7 @@ function ServerMenu() {
   const [items, setItems] = useState<Priority[]>([]);
   const [acked, setAcked] = useState(false);
   const [venueId, setVenueId] = useState<string | null>(null);
-  const weekStart = toISODate(getMondayOfWeek());
+  const [weekStart, setWeekStart] = useState(toISODate(getMondayOfWeek()));
 
   useEffect(() => {
     (async () => {
@@ -26,9 +26,14 @@ function ServerMenu() {
       const v = vm?.[0]?.venue_id;
       if (!v) return;
       setVenueId(v);
-      const { data: pr } = await supabase.from("weekly_priorities").select("*").eq("venue_id", v).eq("week_start", weekStart);
+      const visibleWeek = await latestStatsWeek(
+        supabase.from("server_stats").select("week_start, created_at").eq("user_id", u.user.id).eq("venue_id", v).order("created_at", { ascending: false }).order("week_start", { ascending: false }).limit(1),
+        weekStart,
+      );
+      setWeekStart(visibleWeek);
+      const { data: pr } = await supabase.from("weekly_priorities").select("*").eq("venue_id", v).eq("week_start", visibleWeek);
       setItems((pr ?? []) as Priority[]);
-      const { data: ack } = await supabase.from("server_focus_acks").select("id").eq("user_id", u.user.id).eq("venue_id", v).eq("week_start", weekStart).maybeSingle();
+      const { data: ack } = await supabase.from("server_focus_acks").select("id").eq("user_id", u.user.id).eq("venue_id", v).eq("week_start", visibleWeek).maybeSingle();
       setAcked(!!ack);
     })();
   }, [weekStart]);
