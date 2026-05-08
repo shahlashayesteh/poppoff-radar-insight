@@ -361,9 +361,15 @@ function MenuIntel() {
                 <div className="space-y-5">
                   {Array.from(groups.entries()).map(([item, rows]) => {
                     const byCat = new Map<string, Pairing[]>();
+                    const hasStyleTag = (s: string) => /^\s*\[(white|red|ros[eé]|champ|sparkl|prosec|cava|cr[eé]mant|blanc)/i.test(s);
+                    const looksLikeGlass = (s: string) => /\b(glass|125\s*ml|175\s*ml|by\s*the\s*glass)\b/i.test(s);
                     for (const r of rows) {
                       let c = (r.category || "other").toLowerCase();
                       if (c === "wine") c = "wine_bottle"; // legacy rows
+                      // Reclassify any legacy "other" row that is clearly a wine
+                      if (c === "other" && hasStyleTag(r.pair_with)) {
+                        c = looksLikeGlass(r.pair_with) ? "wine_glass" : "wine_bottle";
+                      }
                       if (!byCat.has(c)) byCat.set(c, []);
                       byCat.get(c)!.push(r);
                     }
