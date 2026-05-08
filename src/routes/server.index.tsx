@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { ServerLayout } from "@/components/server-layout";
 import { supabase } from "@/integrations/supabase/client";
 import { useRoleGate } from "@/lib/auth-gate";
-import { claimServerCsvData } from "@/lib/server-data";
+import { claimServerCsvData, recordLogin, pctDelta } from "@/lib/server-data";
 import { Trophy, Award, Flame, ArrowRight } from "lucide-react";
 import { getMondayOfWeek, toISODate, formatWeekRange, performanceColour } from "@/lib/week";
 
