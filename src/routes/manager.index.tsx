@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useRoleGate } from "@/lib/auth-gate";
 import { Users, PoundSterling, TrendingUp, Eye, Wine, Cake, Droplet, Target, Copy, Upload, Download, RefreshCw, MoreVertical } from "lucide-react";
 import { downloadCsvTemplate, parseStatsCsv } from "@/lib/csv";
-import { getMondayOfWeek, toISODate, formatWeekRange, performanceColour } from "@/lib/week";
+import { getMondayOfWeek, toISODate, formatWeekRange, performanceColour, latestStatsWeek } from "@/lib/week";
 import { getManagerVenue } from "@/lib/manager-venue";
 import { toast } from "sonner";
 
@@ -69,6 +69,7 @@ function ManagerDashboard() {
   const fileRef = useRef<HTMLInputElement>(null);
   const weekStart = useMemo(() => toISODate(getMondayOfWeek()), []);
   const [uploadWeek, setUploadWeek] = useState<string>(toISODate(getMondayOfWeek()));
+  const [displayWeekStart, setDisplayWeekStart] = useState<string>(weekStart);
 
   const load = async () => {
     const v = await getManagerVenue();
@@ -82,13 +83,18 @@ function ManagerDashboard() {
       mems = profs ?? [];
     }
     setMembers(mems);
-    const { data: st } = await supabase.from("server_stats").select("*").eq("venue_id", v.id).eq("week_start", weekStart);
+    const visibleWeek = await latestStatsWeek(
+      supabase.from("server_stats").select("week_start, created_at").eq("venue_id", v.id).order("created_at", { ascending: false }).order("week_start", { ascending: false }).limit(1),
+      weekStart,
+    );
+    setDisplayWeekStart(visibleWeek);
+    const { data: st } = await supabase.from("server_stats").select("*").eq("venue_id", v.id).eq("week_start", visibleWeek);
     setStats((st ?? []) as StatRow[]);
     const { data: tg } = await supabase.from("server_targets").select("*").eq("venue_id", v.id);
     setTargets((tg ?? []) as TargetRow[]);
-    const { data: vw } = await supabase.from("server_stat_views").select("user_id").eq("venue_id", v.id).eq("week_start", weekStart);
+    const { data: vw } = await supabase.from("server_stat_views").select("user_id").eq("venue_id", v.id).eq("week_start", visibleWeek);
     setViews(Object.fromEntries((vw ?? []).map((r) => [r.user_id, true])));
-    const { data: ak } = await supabase.from("server_focus_acks").select("user_id").eq("venue_id", v.id).eq("week_start", weekStart);
+    const { data: ak } = await supabase.from("server_focus_acks").select("user_id").eq("venue_id", v.id).eq("week_start", visibleWeek);
     setAcks(Object.fromEntries((ak ?? []).map((r) => [r.user_id, true])));
   };
 
@@ -155,6 +161,7 @@ function ManagerDashboard() {
       });
       if (aiErr) toast.error(`AI: ${aiErr.message}`);
       else if (ai?.priorities?.length) toast.success(`Created ${ai.priorities.length} priorities`);
+      setDisplayWeekStart(uploadWeek);
       await load();
     } catch (err: any) {
       toast.error(err.message || "Upload failed");
@@ -186,7 +193,7 @@ function ManagerDashboard() {
             </div>
             <div className="text-sm text-muted-foreground tracking-widest uppercase">{venue?.name || "Loading..."}</div>
           </div>
-          <div className="text-sm text-muted-foreground">{formatWeekRange(weekStart)}</div>
+          <div className="text-sm text-muted-foreground">{formatWeekRange(displayWeekStart)}</div>
         </div>
 
         {/* Join code + CSV upload */}
