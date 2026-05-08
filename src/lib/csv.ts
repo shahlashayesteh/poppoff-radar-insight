@@ -295,7 +295,7 @@ function parseCsvText(text: string) {
   const lines = text.split(/\r?\n/);
   const headerIndex = lines.findIndex(
     (line) =>
-      countMappedHeaders(line.split(",").map((part) => part.replace(/^['\"]|['\"]$/g, "").trim())) >
+      countMappedHeaders(line.split(",").map((part) => part.replace(/^['"]|['"]$/g, "").trim())) >
       0,
   );
   if (headerIndex > 0) {
