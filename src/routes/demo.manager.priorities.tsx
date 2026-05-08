@@ -30,7 +30,7 @@ function Priorities() {
     <ManagerLayout>
       <div className="px-8 py-7">
         <div className="text-sm flex items-center gap-2">
-          <Link to="/manager" className="text-brand-green font-medium">Manager Dashboard</Link>
+          <Link to="/demo/manager" className="text-brand-green font-medium">Manager Dashboard</Link>
           <ChevronRight className="h-3 w-3 text-muted-foreground" />
           <span className="text-foreground font-medium">Weekly Win Priorities</span>
         </div>

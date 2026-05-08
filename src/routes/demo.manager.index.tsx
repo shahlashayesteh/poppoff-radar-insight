@@ -105,7 +105,7 @@ function ManagerDashboard() {
                     <td className={`px-3 text-center font-semibold ${s.viewed ? "text-brand-green" : "text-opportunity"}`}>{s.viewed ? "Yes" : "No"}</td>
                     <td className={`px-3 text-center font-semibold ${s.acknowledged ? "text-brand-green" : "text-opportunity"}`}>{s.acknowledged ? "Yes" : "No"}</td>
                     <td className="px-3">
-                      <Link to="/manager/server/$id" params={{ id: s.id }} className="text-muted-foreground hover:text-foreground">
+                      <Link to="/demo/manager/server/$id" params={{ id: s.id }} className="text-muted-foreground hover:text-foreground">
                         <MoreVertical className="h-4 w-4" />
                       </Link>
                     </td>

@@ -1,4 +1,4 @@
-import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
+import { useRouterState, useNavigate } from "@tanstack/react-router";
 import {
   LayoutDashboard,
   Users,
@@ -32,6 +32,8 @@ const items: NavItem[] = [
 
 export function ManagerLayout({ children }: { children: React.ReactNode }) {
   const path = useRouterState({ select: (s) => s.location.pathname });
+  const isDemo = path.startsWith("/demo");
+  const prefix = (to: string) => (isDemo ? `/demo${to}` : to);
   const navigate = useNavigate();
   const [name, setName] = useState<string>("");
   const [initials, setInitials] = useState<string>("");
@@ -59,15 +61,16 @@ export function ManagerLayout({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen flex bg-white">
       <aside className="hidden md:flex w-60 flex-col bg-white border-r border-border sticky top-0 h-screen">
         <div className="px-6 py-6">
-          <Link to="/manager"><Logo className="text-2xl" /></Link>
+          <a href={prefix("/manager")}><Logo className="text-2xl" /></a>
         </div>
         <nav className="flex-1 px-3 py-2 space-y-1">
           {items.map((it) => {
-            const active = path === it.to;
+            const target = prefix(it.to);
+            const active = path === target;
             return (
-              <Link
+              <a
                 key={(("key" in it && it.key) || "") + it.to + it.label}
-                to={it.to}
+                href={target}
                 className={cn(
                   "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors",
                   active
@@ -77,7 +80,7 @@ export function ManagerLayout({ children }: { children: React.ReactNode }) {
               >
                 <it.icon className="h-4 w-4" />
                 {it.label}
-              </Link>
+              </a>
             );
           })}
         </nav>

@@ -151,7 +151,7 @@ function MenuIntel() {
           <div className="text-sm inline-flex items-center gap-2">
             <Lightbulb className="h-4 w-4 text-brand-orange" /> <span className="font-semibold">Tip:</span> Review your parsed items, adjust categories or pairings, and set weekly priorities to guide your team.
           </div>
-          <Link to="/manager/priorities" className="rounded-lg px-4 py-2 text-sm font-bold inline-flex items-center gap-2"
+          <Link to="/demo/manager/priorities" className="rounded-lg px-4 py-2 text-sm font-bold inline-flex items-center gap-2"
             style={{ background: "var(--brand-green)", color: "white" }}>
             Go to Weekly Priorities <ChevronRight className="h-4 w-4" />
           </Link>

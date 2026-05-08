@@ -84,7 +84,7 @@ function SmartRecs() {
           ))}
         </div>
 
-        <Link to="/server" className="mt-5 block w-full rounded-2xl py-4 text-center font-display text-lg font-bold bg-brand-orange text-white">
+        <Link to="/demo/server" className="mt-5 block w-full rounded-2xl py-4 text-center font-display text-lg font-bold bg-brand-orange text-white">
           Let's go! 🚀
         </Link>
       </div>

@@ -14,7 +14,7 @@ function ServerView() {
   return (
     <ManagerLayout>
       <div className="px-8 py-8">
-        <Link to="/manager" className="text-sm text-muted-foreground hover:text-ink">← Back to dashboard</Link>
+        <Link to="/demo/manager" className="text-sm text-muted-foreground hover:text-ink">← Back to dashboard</Link>
         <div className="mt-3 flex flex-wrap items-end justify-between gap-4">
           <div>
             <div className="text-xs uppercase tracking-widest text-muted-foreground">Server view</div>
