@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { ManagerLayout } from "@/components/manager-layout";
 import { supabase } from "@/integrations/supabase/client";
+import { getManagerVenue } from "@/lib/manager-venue";
 import { Sparkles, Wand2 } from "lucide-react";
 import { getMondayOfWeek, toISODate, formatWeekRange } from "@/lib/week";
 import { toast } from "sonner";
@@ -17,10 +18,8 @@ function Page() {
 
   useEffect(() => {
     (async () => {
-      const { data: u } = await supabase.auth.getUser();
-      if (!u.user) return;
-      const { data: vs } = await supabase.from("venues").select("id").eq("manager_id", u.user.id).limit(1);
-      const v = vs?.[0]?.id;
+      const venue = await getManagerVenue();
+      const v = venue?.id;
       if (!v) return;
       setVenueId(v);
       const { data: pr } = await supabase.from("weekly_priorities").select("*").eq("venue_id", v).eq("week_start", weekStart);
