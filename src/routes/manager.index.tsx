@@ -208,10 +208,21 @@ function ManagerDashboard() {
             <div className="text-xs uppercase tracking-widest text-muted-foreground font-bold">Upload weekly stats</div>
             <p className="mt-2 text-sm text-foreground/75">CSV with columns: server_name, total_covers, total_sales, wine_sales, dessert_sales, cocktail_sales, sides_sales, spirits_sales, sparkling_sales.</p>
             <div className="mt-3 flex items-center gap-2 flex-wrap">
-              <input ref={fileRef} type="file" accept=".csv,text/csv" onChange={onFile} className="hidden" />
-              <button onClick={() => fileRef.current?.click()} disabled={uploading || !venue} className="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-bold text-white disabled:opacity-50" style={{ background: "var(--brand-orange)" }}>
+              <label
+                className={`relative inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-bold text-white overflow-hidden ${uploading || !venue ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+                style={{ background: "var(--brand-orange)" }}
+              >
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept=".csv,text/csv"
+                  onChange={onFile}
+                  disabled={uploading || !venue}
+                  aria-label="Upload weekly stats CSV"
+                  className="absolute inset-0 h-full w-full cursor-pointer opacity-0 disabled:cursor-not-allowed"
+                />
                 <Upload className="h-4 w-4" /> {uploading ? "Uploading…" : "Upload CSV"}
-              </button>
+              </label>
               <button onClick={downloadCsvTemplate} className="inline-flex items-center gap-2 rounded-xl border border-border px-4 py-2 text-sm font-semibold">
                 <Download className="h-4 w-4" /> Template
               </button>

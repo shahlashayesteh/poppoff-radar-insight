@@ -1,8 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ManagerLayout } from "@/components/manager-layout";
 import { supabase } from "@/integrations/supabase/client";
-import { Brain, Sparkles, Wand2, ChevronRight, Plus, Trash2, FileText } from "lucide-react";
+import { Brain, Sparkles, Wand2, ChevronRight, Plus, Trash2, FileText, Upload } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/manager/menu")({ component: MenuIntel });
@@ -21,6 +21,7 @@ function MenuIntel() {
   const [loading, setLoading] = useState(false);
   const [pairings, setPairings] = useState<Pairing[]>([]);
   const [pairingLoading, setPairingLoading] = useState(false);
+  const menuFilesRef = useRef<HTMLInputElement>(null);
 
   const loadMenus = async (v: string) => {
     const { data } = await supabase.from("venue_menu").select("id, menu_text, parsed_items, uploaded_at").eq("venue_id", v).order("uploaded_at", { ascending: false }).limit(MAX_MENUS);
@@ -57,6 +58,36 @@ function MenuIntel() {
       toast.error(e.message || "AI parse failed");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const uploadMenuFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    if (!venueId || files.length === 0) return;
+    const slots = MAX_MENUS - menus.length;
+    if (slots <= 0) { toast.error(`You can store up to ${MAX_MENUS} menus. Delete one first.`); return; }
+    const selected = files.slice(0, slots);
+    if (files.length > slots) toast.warning(`Only ${slots} menu${slots === 1 ? "" : "s"} can be added right now.`);
+    setLoading(true);
+    try {
+      let added = 0;
+      for (const file of selected) {
+        const raw = await file.text();
+        const menuText = `# ${file.name.replace(/\.[^.]+$/, "") || "Uploaded menu"}\n\n${raw}`.slice(0, 20000);
+        if (menuText.trim().length < 8) continue;
+        const { error } = await supabase.functions.invoke("ai-assist", {
+          body: { action: "parse_menu", venueId, payload: { menu_text: menuText } },
+        });
+        if (error) throw error;
+        added += 1;
+      }
+      toast.success(`Uploaded ${added} menu${added === 1 ? "" : "s"}`);
+      await loadMenus(venueId);
+    } catch (e: any) {
+      toast.error(e.message || "Menu upload failed");
+    } finally {
+      setLoading(false);
+      if (menuFilesRef.current) menuFilesRef.current.value = "";
     }
   };
 
@@ -103,6 +134,23 @@ function MenuIntel() {
         <div className="mt-6 grid lg:grid-cols-12 gap-5">
           <div className="lg:col-span-5 rounded-2xl bg-white border border-border p-5">
             <h3 className="font-display font-bold mb-3">Add a menu</h3>
+            <label
+              className={`mb-3 relative flex min-h-24 cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border bg-muted/40 px-4 py-5 text-center ${loading || !venueId || menus.length >= MAX_MENUS ? "opacity-50 cursor-not-allowed" : ""}`}
+            >
+              <input
+                ref={menuFilesRef}
+                type="file"
+                multiple
+                accept=".txt,.csv,.md,.menu,text/plain,text/csv,text/markdown"
+                onChange={uploadMenuFiles}
+                disabled={loading || !venueId || menus.length >= MAX_MENUS}
+                aria-label="Upload menu files"
+                className="absolute inset-0 h-full w-full cursor-pointer opacity-0 disabled:cursor-not-allowed"
+              />
+              <Upload className="h-5 w-5 text-brand-green" />
+              <span className="text-sm font-bold">Upload menu files</span>
+              <span className="text-xs text-muted-foreground">Select up to {MAX_MENUS - menus.length} text, CSV, or markdown menus</span>
+            </label>
             <input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Label (e.g. Wine list, Spring menu)" className="w-full rounded-xl border border-border px-3 py-2 text-sm mb-2" />
             <textarea value={text} onChange={(e) => setText(e.target.value)} rows={12}
               className="w-full rounded-xl border border-border px-3 py-2 text-sm font-mono"
