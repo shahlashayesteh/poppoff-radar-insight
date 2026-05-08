@@ -9,10 +9,10 @@ import { toast } from "sonner";
 export const Route = createFileRoute("/manager/coaching")({ component: Page });
 
 function Page() {
+  const [venueId, setVenueId] = useState<string | null>(null);
   const [priorities, setPriorities] = useState<any[]>([]);
   const [insights, setInsights] = useState<string>("");
   const [loading, setLoading] = useState(false);
-  const [stats, setStats] = useState<any[]>([]);
   const weekStart = toISODate(getMondayOfWeek());
 
   useEffect(() => {
@@ -22,31 +22,21 @@ function Page() {
       const { data: vs } = await supabase.from("venues").select("id").eq("manager_id", u.user.id).limit(1);
       const v = vs?.[0]?.id;
       if (!v) return;
+      setVenueId(v);
       const { data: pr } = await supabase.from("weekly_priorities").select("*").eq("venue_id", v).eq("week_start", weekStart);
       setPriorities(pr ?? []);
-      const { data: st } = await supabase.from("server_stats").select("*").eq("venue_id", v).eq("week_start", weekStart);
-      setStats(st ?? []);
     })();
   }, [weekStart]);
 
   const generate = async () => {
+    if (!venueId) return;
     setLoading(true);
     try {
-      const summary = stats.map((s) => `cover_spend=£${Number(s.spend_per_cover ?? 0).toFixed(0)}, wine=${Number(s.wine_conversion ?? 0).toFixed(0)}%, dessert=${Number(s.dessert_conversion ?? 0).toFixed(0)}%, cocktail=${Number(s.cocktail_conversion ?? 0).toFixed(0)}%`).join("\n");
-      const prItems = priorities.map((p) => `${p.item_name} (${p.priority_flag})`).join(", ");
-      const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
-        body: JSON.stringify({
-          model: "google/gemini-2.5-flash",
-          messages: [
-            { role: "system", content: "You are a restaurant coaching expert. Give 3-5 short, actionable coaching talking points for a manager's pre-shift huddle. Use a warm, direct tone." },
-            { role: "user", content: `Week priorities: ${prItems || "none set"}.\nServer stats:\n${summary || "no stats yet"}` },
-          ],
-        }),
+      const { data, error } = await supabase.functions.invoke("ai-assist", {
+        body: { action: "coaching", venueId, payload: { weekStart } },
       });
-      const json = await res.json();
-      setInsights(json.choices?.[0]?.message?.content || "");
+      if (error) throw error;
+      setInsights(data?.text || "");
     } catch (e: any) {
       toast.error(e.message);
     } finally {

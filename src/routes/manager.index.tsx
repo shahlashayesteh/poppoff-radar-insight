@@ -105,8 +105,22 @@ function ManagerDashboard() {
 
   const copyCode = async () => {
     if (!venue) return;
-    await navigator.clipboard.writeText(venue.join_code);
-    toast.success("Join code copied");
+    const code = venue.join_code;
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(code);
+      } else {
+        const ta = document.createElement("textarea");
+        ta.value = code; ta.style.position = "fixed"; ta.style.opacity = "0";
+        document.body.appendChild(ta); ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+      }
+      toast.success("Join code copied");
+    } catch {
+      // fallback: prompt user to copy manually
+      window.prompt("Copy this join code:", code);
+    }
   };
 
   const regenerate = async () => {
@@ -133,6 +147,13 @@ function ManagerDashboard() {
       if (result.unmatched_names?.length) {
         toast.warning(`Unmatched: ${result.unmatched_names.join(", ")}`);
       }
+      // Auto-generate weekly priorities via AI
+      toast.info("Generating weekly priorities with AI…");
+      const { data: ai, error: aiErr } = await supabase.functions.invoke("ai-assist", {
+        body: { action: "generate_priorities", venueId: venue.id, payload: { weekStart } },
+      });
+      if (aiErr) toast.error(`AI: ${aiErr.message}`);
+      else if (ai?.priorities?.length) toast.success(`Created ${ai.priorities.length} priorities`);
       await load();
     } catch (err: any) {
       toast.error(err.message || "Upload failed");
