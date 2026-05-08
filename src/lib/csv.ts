@@ -331,7 +331,7 @@ export async function parseStatsCsv(file: File): Promise<CsvRow[]> {
       const categoryTotal = row.wine_sales + row.dessert_sales + row.cocktail_sales + row.sides_sales + row.spirits_sales + row.sparkling_sales;
       const total_sales = row.total_sales || categoryTotal;
       const coverTotal = coverCandidates.reduce((sum, value) => sum + value, 0);
-      const total_covers = sumCoverCandidates ? coverTotal : (checkIds.size || Math.max(0, ...coverCandidates) || row.total_covers || 0);
+      const total_covers = Math.round(sumCoverCandidates ? coverTotal : (checkIds.size || Math.max(0, ...coverCandidates) || row.total_covers || 0));
       return { ...row, total_sales, total_covers };
     })
     .filter((row) => row.server_name && (row.total_sales > 0 || row.total_covers > 0));
