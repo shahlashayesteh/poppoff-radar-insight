@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { ServerLayout } from "@/components/server-layout";
 import { supabase } from "@/integrations/supabase/client";
 import { claimServerCsvData, recordLogin, fetchVenueAvgPrices, estimateItemsSold, pctDelta, type CategoryKey } from "@/lib/server-data";
-import { getMondayOfWeek, toISODate, formatWeekRange, performanceColour } from "@/lib/week";
+import { getMondayOfWeek, toISODate, formatWeekRange, performanceColour, latestStatsWeek } from "@/lib/week";
 
 export const Route = createFileRoute("/server/stats")({ component: Page });
 
@@ -25,6 +25,7 @@ function Page() {
   const [target, setTarget] = useState<Target | null>(null);
   const [prices, setPrices] = useState<Record<string, number>>({});
   const weekStart = toISODate(getMondayOfWeek());
+  const [displayWeekStart, setDisplayWeekStart] = useState<string>(weekStart);
 
   useEffect(() => {
     (async () => {
@@ -35,9 +36,14 @@ function Page() {
       const { data: vm } = await supabase.from("venue_members").select("venue_id").eq("user_id", u.user.id).limit(1);
       const venueId = vm?.[0]?.venue_id;
       if (!venueId) return;
-      const { data: st } = await supabase.from("server_stats").select("*").eq("user_id", u.user.id).eq("venue_id", venueId).eq("week_start", weekStart).maybeSingle();
+      const visibleWeek = await latestStatsWeek(
+        supabase.from("server_stats").select("week_start").eq("user_id", u.user.id).eq("venue_id", venueId).order("week_start", { ascending: false }).limit(1),
+        weekStart,
+      );
+      setDisplayWeekStart(visibleWeek);
+      const { data: st } = await supabase.from("server_stats").select("*").eq("user_id", u.user.id).eq("venue_id", venueId).eq("week_start", visibleWeek).maybeSingle();
       setStat(st);
-      const { data: prev } = await supabase.from("server_stats").select("*").eq("user_id", u.user.id).eq("venue_id", venueId).lt("week_start", weekStart).order("week_start", { ascending: false }).limit(1).maybeSingle();
+      const { data: prev } = await supabase.from("server_stats").select("*").eq("user_id", u.user.id).eq("venue_id", venueId).lt("week_start", visibleWeek).order("week_start", { ascending: false }).limit(1).maybeSingle();
       setPrevStat(prev);
       const { data: tg } = await supabase.from("server_targets").select("*").eq("user_id", u.user.id).eq("venue_id", venueId).maybeSingle();
       setTarget(tg);
@@ -53,7 +59,7 @@ function Page() {
     <ServerLayout>
       <div className="px-5 pt-6">
         <h1 className="font-display text-3xl font-extrabold tracking-tight">Stats</h1>
-        <div className="mt-1 text-xs text-muted-foreground">{formatWeekRange(weekStart)}</div>
+        <div className="mt-1 text-xs text-muted-foreground">{formatWeekRange(displayWeekStart)}</div>
 
         {!stat ? (
           <p className="mt-6 text-sm text-muted-foreground">Your stats will appear here after your manager uploads this week's data.</p>
