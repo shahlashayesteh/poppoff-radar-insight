@@ -228,7 +228,19 @@ function ManagerDashboard() {
                 <Download className="h-4 w-4" /> Template
               </button>
             </div>
-            <div className="mt-3 text-xs text-muted-foreground">Week of {formatWeekRange(weekStart)}</div>
+            <div className="mt-3 flex items-center gap-2 flex-wrap">
+              <label className="text-xs text-muted-foreground">Week starting (Mon)</label>
+              <input
+                type="date"
+                value={uploadWeek}
+                onChange={(e) => {
+                  const d = new Date(e.target.value + "T00:00:00");
+                  setUploadWeek(toISODate(getMondayOfWeek(d)));
+                }}
+                className="rounded-lg border border-border px-2 py-1 text-sm"
+              />
+            </div>
+            <div className="mt-1 text-xs text-muted-foreground">Importing into week of {formatWeekRange(uploadWeek)}</div>
           </div>
         </div>
 
