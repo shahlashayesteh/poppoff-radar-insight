@@ -302,10 +302,17 @@ function Landing() {
         </div>
       </section>
 
-      <footer className="px-6 py-8 border-t border-border text-sm">
+      <footer className="px-6 py-10 border-t border-border text-sm bg-white">
         <div className="mx-auto max-w-7xl flex flex-wrap items-center justify-between gap-4">
-          <Logo />
-          <div className="text-muted-foreground">© 2026 PoppOff. Every shift. Every win.</div>
+          <div className="flex items-center gap-6">
+            <Logo />
+            <span className="text-muted-foreground">© 2026 PoppOff. All rights reserved.</span>
+          </div>
+          <nav className="flex items-center gap-6 text-muted-foreground">
+            <a href="mailto:hello@poppoffstats.com" className="hover:text-foreground">Contact</a>
+            <Link to="/privacy" className="hover:text-foreground">Privacy Policy</Link>
+            <Link to="/terms" className="hover:text-foreground">Terms of Service</Link>
+          </nav>
         </div>
       </footer>
     </div>
