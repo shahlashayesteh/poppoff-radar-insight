@@ -191,7 +191,7 @@ function MenuIntel() {
                 ref={menuFilesRef}
                 type="file"
                 multiple
-                accept=".txt,.csv,.md,.menu,text/plain,text/csv,text/markdown"
+                accept=".txt,.csv,.md,.menu,.pdf,.png,.jpg,.jpeg,.webp,.heic,text/plain,text/csv,text/markdown,application/pdf,image/*"
                 onChange={uploadMenuFiles}
                 disabled={loading || !venueId || menus.length >= MAX_MENUS}
                 aria-label="Upload menu files"
@@ -199,7 +199,7 @@ function MenuIntel() {
               />
               <Upload className="h-5 w-5 text-brand-green" />
               <span className="text-sm font-bold">Upload menu files</span>
-              <span className="text-xs text-muted-foreground">Select up to {MAX_MENUS - menus.length} text, CSV, or markdown menus</span>
+              <span className="text-xs text-muted-foreground">PDF, images (JPG/PNG), text, CSV or markdown — up to {MAX_MENUS - menus.length} more</span>
             </label>
             <input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Label (e.g. Wine list, Spring menu)" className="w-full rounded-xl border border-border px-3 py-2 text-sm mb-2" />
             <textarea value={text} onChange={(e) => setText(e.target.value)} rows={12}
