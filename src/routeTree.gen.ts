@@ -23,6 +23,7 @@ import { Route as ServerMenuRouteImport } from './routes/server.menu'
 import { Route as ManagerTeamRouteImport } from './routes/manager.team'
 import { Route as ManagerPrioritiesRouteImport } from './routes/manager.priorities'
 import { Route as ManagerMenuRouteImport } from './routes/manager.menu'
+import { Route as ManagerCoachingRouteImport } from './routes/manager.coaching'
 import { Route as CheckoutSuccessRouteImport } from './routes/checkout.success'
 import { Route as CheckoutRetryRouteImport } from './routes/checkout.retry'
 import { Route as DemoServerIndexRouteImport } from './routes/demo.server.index'
@@ -107,6 +108,11 @@ const ManagerMenuRoute = ManagerMenuRouteImport.update({
   path: '/manager/menu',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ManagerCoachingRoute = ManagerCoachingRouteImport.update({
+  id: '/manager/coaching',
+  path: '/manager/coaching',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CheckoutSuccessRoute = CheckoutSuccessRouteImport.update({
   id: '/checkout/success',
   path: '/checkout/success',
@@ -182,6 +188,7 @@ export interface FileRoutesByFullPath {
   '/signin': typeof SigninRoute
   '/checkout/retry': typeof CheckoutRetryRoute
   '/checkout/success': typeof CheckoutSuccessRoute
+  '/manager/coaching': typeof ManagerCoachingRoute
   '/manager/menu': typeof ManagerMenuRoute
   '/manager/priorities': typeof ManagerPrioritiesRoute
   '/manager/team': typeof ManagerTeamRoute
@@ -211,6 +218,7 @@ export interface FileRoutesByTo {
   '/signin': typeof SigninRoute
   '/checkout/retry': typeof CheckoutRetryRoute
   '/checkout/success': typeof CheckoutSuccessRoute
+  '/manager/coaching': typeof ManagerCoachingRoute
   '/manager/menu': typeof ManagerMenuRoute
   '/manager/priorities': typeof ManagerPrioritiesRoute
   '/manager/team': typeof ManagerTeamRoute
@@ -241,6 +249,7 @@ export interface FileRoutesById {
   '/signin': typeof SigninRoute
   '/checkout/retry': typeof CheckoutRetryRoute
   '/checkout/success': typeof CheckoutSuccessRoute
+  '/manager/coaching': typeof ManagerCoachingRoute
   '/manager/menu': typeof ManagerMenuRoute
   '/manager/priorities': typeof ManagerPrioritiesRoute
   '/manager/team': typeof ManagerTeamRoute
@@ -272,6 +281,7 @@ export interface FileRouteTypes {
     | '/signin'
     | '/checkout/retry'
     | '/checkout/success'
+    | '/manager/coaching'
     | '/manager/menu'
     | '/manager/priorities'
     | '/manager/team'
@@ -301,6 +311,7 @@ export interface FileRouteTypes {
     | '/signin'
     | '/checkout/retry'
     | '/checkout/success'
+    | '/manager/coaching'
     | '/manager/menu'
     | '/manager/priorities'
     | '/manager/team'
@@ -330,6 +341,7 @@ export interface FileRouteTypes {
     | '/signin'
     | '/checkout/retry'
     | '/checkout/success'
+    | '/manager/coaching'
     | '/manager/menu'
     | '/manager/priorities'
     | '/manager/team'
@@ -360,6 +372,7 @@ export interface RootRouteChildren {
   SigninRoute: typeof SigninRoute
   CheckoutRetryRoute: typeof CheckoutRetryRoute
   CheckoutSuccessRoute: typeof CheckoutSuccessRoute
+  ManagerCoachingRoute: typeof ManagerCoachingRoute
   ManagerMenuRoute: typeof ManagerMenuRoute
   ManagerPrioritiesRoute: typeof ManagerPrioritiesRoute
   ManagerTeamRoute: typeof ManagerTeamRoute
@@ -482,6 +495,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ManagerMenuRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/manager/coaching': {
+      id: '/manager/coaching'
+      path: '/manager/coaching'
+      fullPath: '/manager/coaching'
+      preLoaderRoute: typeof ManagerCoachingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/checkout/success': {
       id: '/checkout/success'
       path: '/checkout/success'
@@ -584,6 +604,7 @@ const rootRouteChildren: RootRouteChildren = {
   SigninRoute: SigninRoute,
   CheckoutRetryRoute: CheckoutRetryRoute,
   CheckoutSuccessRoute: CheckoutSuccessRoute,
+  ManagerCoachingRoute: ManagerCoachingRoute,
   ManagerMenuRoute: ManagerMenuRoute,
   ManagerPrioritiesRoute: ManagerPrioritiesRoute,
   ManagerTeamRoute: ManagerTeamRoute,
@@ -608,3 +629,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
