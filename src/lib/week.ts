@@ -42,3 +42,12 @@ export function performanceColour(actual: number, target: number): "green" | "am
   if (pct >= 55) return "amber";
   return "red";
 }
+
+export async function latestStatsWeek<T extends { week_start?: string | null }>(
+  query: PromiseLike<{ data: T[] | null; error: unknown }>,
+  fallback: string = toISODate(getMondayOfWeek()),
+): Promise<string> {
+  const { data, error } = await query;
+  if (error || !data?.length) return fallback;
+  return data[0]?.week_start || fallback;
+}
