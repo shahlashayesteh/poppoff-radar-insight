@@ -269,6 +269,13 @@ function mondayISO(date: Date) {
 }
 
 function inferWeekFromFileName(fileName: string) {
+  const name = fileName.toLowerCase();
+  const today = new Date();
+  if (/\b(last|previous)\s+week\b/.test(name)) {
+    today.setDate(today.getDate() - 7);
+    return mondayISO(today);
+  }
+  if (/\b(this|current)\s+week\b/.test(name)) return mondayISO(today);
   return mondayISO(parseDateValue(fileName) ?? new Date());
 }
 
