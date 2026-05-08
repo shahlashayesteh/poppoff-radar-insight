@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { ManagerLayout } from "@/components/manager-layout";
 import { supabase } from "@/integrations/supabase/client";
 import { getManagerVenue } from "@/lib/manager-venue";
-import { getMondayOfWeek, toISODate, formatWeekRange, performanceColour } from "@/lib/week";
+import { getMondayOfWeek, toISODate, formatWeekRange, performanceColour, latestStatsWeek } from "@/lib/week";
 
 export const Route = createFileRoute("/manager/team")({ component: TeamPage });
 
@@ -15,6 +15,7 @@ function TeamPage() {
   const [targets, setTargets] = useState<any[]>([]);
   const [loginCounts, setLoginCounts] = useState<Record<string, number>>({});
   const weekStart = toISODate(getMondayOfWeek());
+  const [displayWeekStart, setDisplayWeekStart] = useState<string>(weekStart);
 
   useEffect(() => {
     (async () => {
@@ -27,7 +28,12 @@ function TeamPage() {
         const { data: profs } = await supabase.from("profiles").select("id, full_name").in("id", ids);
         setMembers(profs ?? []);
       }
-      const { data: st } = await supabase.from("server_stats").select("*").eq("venue_id", v).eq("week_start", weekStart);
+      const visibleWeek = await latestStatsWeek(
+        supabase.from("server_stats").select("week_start").eq("venue_id", v).order("week_start", { ascending: false }).limit(1),
+        weekStart,
+      );
+      setDisplayWeekStart(visibleWeek);
+      const { data: st } = await supabase.from("server_stats").select("*").eq("venue_id", v).eq("week_start", visibleWeek);
       setStats(st ?? []);
       const { data: tg } = await supabase.from("server_targets").select("*").eq("venue_id", v);
       setTargets(tg ?? []);
@@ -46,7 +52,7 @@ function TeamPage() {
       <div className="px-8 py-8">
         <div className="text-xs uppercase tracking-widest text-muted-foreground">Team</div>
         <h1 className="font-display text-4xl font-extrabold tracking-tight mt-2">Your servers</h1>
-        <div className="mt-1 text-xs text-muted-foreground">{formatWeekRange(weekStart)}</div>
+        <div className="mt-1 text-xs text-muted-foreground">{formatWeekRange(displayWeekStart)}</div>
 
         {members.length === 0 ? (
           <div className="mt-8 rounded-2xl bg-white border border-border p-6 text-sm text-muted-foreground">
