@@ -147,6 +147,13 @@ function ManagerDashboard() {
       if (result.unmatched_names?.length) {
         toast.warning(`Unmatched: ${result.unmatched_names.join(", ")}`);
       }
+      // Auto-generate weekly priorities via AI
+      toast.info("Generating weekly priorities with AI…");
+      const { data: ai, error: aiErr } = await supabase.functions.invoke("ai-assist", {
+        body: { action: "generate_priorities", venueId: venue.id, payload: { weekStart } },
+      });
+      if (aiErr) toast.error(`AI: ${aiErr.message}`);
+      else if (ai?.priorities?.length) toast.success(`Created ${ai.priorities.length} priorities`);
       await load();
     } catch (err: any) {
       toast.error(err.message || "Upload failed");
