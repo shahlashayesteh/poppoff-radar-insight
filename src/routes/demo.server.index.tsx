@@ -115,7 +115,7 @@ function ServerDashboard() {
 
       {/* Streak preview */}
       <div className="px-5 mt-4">
-        <Link to="/server/progress" className="block rounded-3xl bg-white border border-border p-4 flex items-center gap-3 hover:border-brand-green transition">
+        <Link to="/demo/server/progress" className="block rounded-3xl bg-white border border-border p-4 flex items-center gap-3 hover:border-brand-green transition">
           <div className="h-10 w-10 rounded-full bg-brand-orange/15 grid place-items-center">
             <Flame className="h-5 w-5 text-brand-orange" />
           </div>
