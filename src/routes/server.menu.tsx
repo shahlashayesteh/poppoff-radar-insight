@@ -31,9 +31,9 @@ function ServerMenu() {
         weekStart,
       );
       setWeekStart(visibleWeek);
-      const { data: pr } = await supabase.from("weekly_priorities").select("*").eq("venue_id", v).eq("week_start", weekStart);
+      const { data: pr } = await supabase.from("weekly_priorities").select("*").eq("venue_id", v).eq("week_start", visibleWeek);
       setItems((pr ?? []) as Priority[]);
-      const { data: ack } = await supabase.from("server_focus_acks").select("id").eq("user_id", u.user.id).eq("venue_id", v).eq("week_start", weekStart).maybeSingle();
+      const { data: ack } = await supabase.from("server_focus_acks").select("id").eq("user_id", u.user.id).eq("venue_id", v).eq("week_start", visibleWeek).maybeSingle();
       setAcked(!!ack);
     })();
   }, [weekStart]);
