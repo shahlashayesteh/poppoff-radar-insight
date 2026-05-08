@@ -63,7 +63,7 @@ export function ManagerLayout({ children }: { children: React.ReactNode }) {
         </div>
         <nav className="flex-1 px-3 py-2 space-y-1">
           {items.map((it) => {
-            const active = it.exact ? path === it.to : path === it.to;
+            const active = path === it.to;
             return (
               <Link
                 key={(("key" in it && it.key) || "") + it.to + it.label}
