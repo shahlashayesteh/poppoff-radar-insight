@@ -250,9 +250,9 @@ function Landing() {
           <h2 className="font-display text-4xl md:text-5xl font-extrabold tracking-tight">Simple, transparent pricing</h2>
           <div className="mt-10 grid md:grid-cols-3 gap-5">
             {[
-              { name: "Starter", price: "£99", priceId: "poppoff_pro_monthly", note: "/ venue / month", featured: false, features: ["Personal server scorecards", "All coaching", "Menu intelligence", "Team dashboard", "Email support"], cta: "Start 30-Day Trial" },
-              { name: "Premium", price: "£199", priceId: "poppoff_enterprise_monthly", note: "/ venue / month", featured: true, badge: "Most Popular", features: ["Everything in Starter", "Weekly win priorities", "Advanced insights", "Priority support"], cta: "Start 30-Day Trial" },
-              { name: "Founder Rate", price: "£49", priceId: "poppoff_starter_monthly", note: "/ venue / month", featured: false, features: ["Locked in forever", "First venues only", "Everything in Starter"], cta: "Claim Founder Rate" },
+              { name: "Starter", price: "£99", priceId: "poppoff_starter_monthly", note: "/ month", featured: false, features: ["1 venue", "30-day free trial", "Personal server scorecards", "All coaching", "Menu intelligence"], cta: "Start Free Trial", action: "checkout" as const },
+              { name: "Pro", price: "£199", priceId: "poppoff_pro_monthly", note: "/ month", featured: true, badge: "Most Popular", features: ["Up to 3 venues", "Everything in Starter", "Weekly win priorities", "Advanced insights", "Priority support"], cta: "Get Started", action: "checkout" as const },
+              { name: "Enterprise", price: "Contact us", priceId: "", note: "4+ venues", featured: false, features: ["Unlimited venues", "Custom onboarding", "Dedicated success manager", "SLA & SSO available"], cta: "Let's Talk", action: "mailto" as const },
             ].map((p) => (
               <div key={p.name} className={`relative rounded-2xl border-2 p-6 ${p.featured ? "border-brand-orange" : "border-border bg-white"}`}>
                 {p.featured && (
@@ -263,17 +263,27 @@ function Landing() {
                 <ul className="mt-5 space-y-2 text-sm">
                   {p.features.map((f) => <li key={f} className="flex items-center gap-2"><Check className="h-4 w-4 text-brand-green" />{f}</li>)}
                 </ul>
-                <button
-                  onClick={() => openCheckout({ priceId: p.priceId })}
-                  disabled={loading}
-                  className={`mt-6 block w-full text-center rounded-xl py-3 text-sm font-bold disabled:opacity-60 ${p.featured ? "text-white" : "border-2 border-brand-orange text-brand-orange"}`}
-                  style={p.featured ? { background: "var(--brand-orange)" } : {}}
-                >
-                  {loading ? "Opening…" : p.cta}
-                </button>
+                {p.action === "mailto" ? (
+                  <a
+                    href="mailto:hello@poppoffstats.com"
+                    className={`mt-6 block w-full text-center rounded-xl py-3 text-sm font-bold border-2 border-brand-orange text-brand-orange`}
+                  >
+                    {p.cta}
+                  </a>
+                ) : (
+                  <button
+                    onClick={() => openCheckout({ priceId: p.priceId })}
+                    disabled={loading}
+                    className={`mt-6 block w-full text-center rounded-xl py-3 text-sm font-bold disabled:opacity-60 ${p.featured ? "text-white" : "border-2 border-brand-orange text-brand-orange"}`}
+                    style={p.featured ? { background: "var(--brand-orange)" } : {}}
+                  >
+                    {loading ? "Opening…" : p.cta}
+                  </button>
+                )}
               </div>
             ))}
           </div>
+          <p className="mt-6 text-xs text-muted-foreground">No credit card required on Starter trial. Cancel anytime.</p>
         </div>
       </section>
 
