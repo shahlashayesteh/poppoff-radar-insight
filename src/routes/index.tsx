@@ -53,7 +53,7 @@ function Landing() {
         <div className="mx-auto max-w-7xl grid lg:grid-cols-2 gap-10 items-center">
           <div>
             <h1 className="font-display font-extrabold tracking-tight text-4xl sm:text-5xl md:text-6xl lg:text-7xl leading-[1.02]">
-              PoppOff makes <span style={{ color: "var(--brand-green)" }}>server performance</span> <span style={{ color: "var(--brand-orange)" }}>visible</span>.
+              PoppOff makes <span style={{ color: "var(--foreground)" }}>server performance</span> <span style={{ color: "var(--brand-orange)" }}>visible</span>.
             </h1>
             <p className="mt-6 text-base md:text-lg text-foreground/75 max-w-xl">
               PoppOff turns POS data into server scorecards, coaching insights, and clear targets so every shift becomes more visible, more focused, and more profitable.
