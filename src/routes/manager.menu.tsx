@@ -10,7 +10,7 @@ export const Route = createFileRoute("/manager/menu")({ component: MenuIntel });
 
 type ParsedItem = { name: string; category?: string; price?: string; pairing?: string; priority?: string };
 type Menu = { id: string; menu_text: string; parsed_items: ParsedItem[] | null; uploaded_at: string };
-type Pairing = { item: string; pair_with: string; why: string; priority?: string };
+type Pairing = { item: string; pair_with: string; why: string; priority?: string; category?: string };
 
 const MAX_MENUS = 10;
 
