@@ -138,11 +138,12 @@ function ManagerDashboard() {
   };
 
   const onFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !venue) return;
+    const files = Array.from(e.target.files ?? []);
+    if (!files.length || !venue) return;
     setUploading(true);
     try {
-      const rows = await parseStatsCsv(file);
+      const parsed = await Promise.all(files.map(parseStatsCsv));
+      const rows = parsed.flat();
       if (!rows.length) { toast.error("No rows found in CSV"); return; }
       const importWeek = rows[0]?.week_start || weekStart;
       const { data, error } = await supabase.rpc("process_csv_upload", {
@@ -151,7 +152,7 @@ function ManagerDashboard() {
       if (error) throw error;
       const result = data as { matched_count: number; created_count?: number; unmatched_names: string[]; weeks?: string[] };
       const importedWeeks = result.weeks?.length ? result.weeks : Array.from(new Set(rows.map((row) => row.week_start || importWeek)));
-      toast.success(`Imported ${result.matched_count} server week${result.matched_count === 1 ? "" : "s"}`);
+      toast.success(`Imported ${result.matched_count} server week${result.matched_count === 1 ? "" : "s"} from ${files.length} CSV${files.length === 1 ? "" : "s"}`);
       if (result.created_count && result.created_count > 0) {
         toast.info(`Added ${result.created_count} new server${result.created_count === 1 ? "" : "s"} to your team: ${result.unmatched_names.join(", ")}`);
       }
@@ -226,6 +227,7 @@ function ManagerDashboard() {
                   ref={fileRef}
                   type="file"
                   accept=".csv,text/csv"
+                  multiple
                   onChange={onFile}
                   disabled={uploading || !venue}
                   aria-label="Upload weekly stats CSV"
