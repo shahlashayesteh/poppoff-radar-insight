@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { ManagerLayout } from "@/components/manager-layout";
 import { supabase } from "@/integrations/supabase/client";
+import { getManagerVenue } from "@/lib/manager-venue";
 import { getMondayOfWeek, toISODate, formatWeekRange, performanceColour } from "@/lib/week";
 
 export const Route = createFileRoute("/manager/team")({ component: TeamPage });
@@ -16,10 +17,8 @@ function TeamPage() {
 
   useEffect(() => {
     (async () => {
-      const { data: u } = await supabase.auth.getUser();
-      if (!u.user) return;
-      const { data: vs } = await supabase.from("venues").select("id").eq("manager_id", u.user.id).limit(1);
-      const v = vs?.[0]?.id;
+      const venue = await getManagerVenue();
+      const v = venue?.id;
       if (!v) return;
       const { data: vm } = await supabase.from("venue_members").select("user_id").eq("venue_id", v);
       const ids = (vm ?? []).map((x) => x.user_id);
