@@ -289,6 +289,30 @@ function ManagerDashboard() {
     }
   };
 
+  const deleteAllUploads = async () => {
+    if (!venue) return;
+    if (
+      !window.confirm(
+        "Delete ALL uploaded CSV stats for this venue? This removes every week of server stats, views, acks, coaching and priorities. This cannot be undone.",
+      )
+    )
+      return;
+    try {
+      const { data, error } = await supabase.rpc("delete_csv_uploads", {
+        _venue_id: venue.id,
+        _weeks: null as unknown as never,
+      });
+      if (error) throw error;
+      const result = data as { deleted_rows: number };
+      toast.success(`Deleted ${result?.deleted_rows ?? 0} stat rows`);
+      setUploadStatus("All uploaded CSV data deleted.");
+      await load();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Delete failed";
+      toast.error(message);
+    }
+  };
+
   const cats: Array<{ key: keyof StatRow; tKey: keyof TargetRow; label: string }> = [
     { key: "wine_conversion", tKey: "wine_target", label: "Wine" },
     { key: "cocktail_conversion", tKey: "cocktail_target", label: "Cocktails" },
