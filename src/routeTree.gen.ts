@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SignupRouteImport } from './routes/signup'
 import { Route as SigninRouteImport } from './routes/signin'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as LoginRouteImport } from './routes/login'
@@ -42,6 +43,11 @@ import { Route as DemoManagerMenuRouteImport } from './routes/demo.manager.menu'
 import { Route as DemoManagerServerIdRouteImport } from './routes/demo.manager.server.$id'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
 
+const SignupRoute = SignupRouteImport.update({
+  id: '/signup',
+  path: '/signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SigninRoute = SigninRouteImport.update({
   id: '/signin',
   path: '/signin',
@@ -78,9 +84,9 @@ const ManagerIndexRoute = ManagerIndexRouteImport.update({
   getParentRoute: () => rootRouteImport,
 } as any)
 const SignupManagerRoute = SignupManagerRouteImport.update({
-  id: '/signup/manager',
-  path: '/signup/manager',
-  getParentRoute: () => rootRouteImport,
+  id: '/manager',
+  path: '/manager',
+  getParentRoute: () => SignupRoute,
 } as any)
 const ServerWelcomeRoute = ServerWelcomeRouteImport.update({
   id: '/server/welcome',
@@ -210,6 +216,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/settings': typeof SettingsRoute
   '/signin': typeof SigninRoute
+  '/signup': typeof SignupRouteWithChildren
   '/checkout/retry': typeof CheckoutRetryRoute
   '/checkout/success': typeof CheckoutSuccessRoute
   '/manager/coaching': typeof ManagerCoachingRoute
@@ -244,6 +251,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/settings': typeof SettingsRoute
   '/signin': typeof SigninRoute
+  '/signup': typeof SignupRouteWithChildren
   '/checkout/retry': typeof CheckoutRetryRoute
   '/checkout/success': typeof CheckoutSuccessRoute
   '/manager/coaching': typeof ManagerCoachingRoute
@@ -279,6 +287,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/settings': typeof SettingsRoute
   '/signin': typeof SigninRoute
+  '/signup': typeof SignupRouteWithChildren
   '/checkout/retry': typeof CheckoutRetryRoute
   '/checkout/success': typeof CheckoutSuccessRoute
   '/manager/coaching': typeof ManagerCoachingRoute
@@ -315,6 +324,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/settings'
     | '/signin'
+    | '/signup'
     | '/checkout/retry'
     | '/checkout/success'
     | '/manager/coaching'
@@ -349,6 +359,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/settings'
     | '/signin'
+    | '/signup'
     | '/checkout/retry'
     | '/checkout/success'
     | '/manager/coaching'
@@ -383,6 +394,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/settings'
     | '/signin'
+    | '/signup'
     | '/checkout/retry'
     | '/checkout/success'
     | '/manager/coaching'
@@ -418,6 +430,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   SettingsRoute: typeof SettingsRoute
   SigninRoute: typeof SigninRoute
+  SignupRoute: typeof SignupRouteWithChildren
   CheckoutRetryRoute: typeof CheckoutRetryRoute
   CheckoutSuccessRoute: typeof CheckoutSuccessRoute
   ManagerCoachingRoute: typeof ManagerCoachingRoute
@@ -430,7 +443,6 @@ export interface RootRouteChildren {
   ServerProgressRoute: typeof ServerProgressRoute
   ServerStatsRoute: typeof ServerStatsRoute
   ServerWelcomeRoute: typeof ServerWelcomeRoute
-  SignupManagerRoute: typeof SignupManagerRoute
   ManagerIndexRoute: typeof ManagerIndexRoute
   ServerIndexRoute: typeof ServerIndexRoute
   DemoManagerMenuRoute: typeof DemoManagerMenuRoute
@@ -449,6 +461,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/signup': {
+      id: '/signup'
+      path: '/signup'
+      fullPath: '/signup'
+      preLoaderRoute: typeof SignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/signin': {
       id: '/signin'
       path: '/signin'
@@ -500,10 +519,10 @@ declare module '@tanstack/react-router' {
     }
     '/signup/manager': {
       id: '/signup/manager'
-      path: '/signup/manager'
+      path: '/manager'
       fullPath: '/signup/manager'
       preLoaderRoute: typeof SignupManagerRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof SignupRoute
     }
     '/server/welcome': {
       id: '/server/welcome'
@@ -676,12 +695,24 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface SignupRouteChildren {
+  SignupManagerRoute: typeof SignupManagerRoute
+}
+
+const SignupRouteChildren: SignupRouteChildren = {
+  SignupManagerRoute: SignupManagerRoute,
+}
+
+const SignupRouteWithChildren =
+  SignupRoute._addFileChildren(SignupRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   JoinRoute: JoinRoute,
   LoginRoute: LoginRoute,
   SettingsRoute: SettingsRoute,
   SigninRoute: SigninRoute,
+  SignupRoute: SignupRouteWithChildren,
   CheckoutRetryRoute: CheckoutRetryRoute,
   CheckoutSuccessRoute: CheckoutSuccessRoute,
   ManagerCoachingRoute: ManagerCoachingRoute,
@@ -694,7 +725,6 @@ const rootRouteChildren: RootRouteChildren = {
   ServerProgressRoute: ServerProgressRoute,
   ServerStatsRoute: ServerStatsRoute,
   ServerWelcomeRoute: ServerWelcomeRoute,
-  SignupManagerRoute: SignupManagerRoute,
   ManagerIndexRoute: ManagerIndexRoute,
   ServerIndexRoute: ServerIndexRoute,
   DemoManagerMenuRoute: DemoManagerMenuRoute,

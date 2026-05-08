@@ -40,8 +40,10 @@ function Landing() {
             <a href="#pricing" className="hover:text-brand-green">Pricing</a>
             <a href="#about" className="hover:text-brand-green">About</a>
           </nav>
-          <div className="flex items-center gap-3">
-            <Link to="/login" className="rounded-xl px-4 py-2 text-sm font-bold text-white" style={{ background: "var(--brand-orange)" }}>See Demo</Link>
+          <div className="flex items-center gap-2">
+            <Link to="/signin" className="rounded-xl px-3 py-2 text-sm font-semibold border border-border hover:border-foreground">Sign in</Link>
+            <Link to="/signup" className="rounded-xl px-3 py-2 text-sm font-bold text-white" style={{ background: "var(--brand-green)" }}>Sign up</Link>
+            <Link to="/login" className="rounded-xl px-3 py-2 text-sm font-bold text-white hidden sm:inline-flex" style={{ background: "var(--brand-orange)" }}>See Demo</Link>
           </div>
         </div>
       </header>
