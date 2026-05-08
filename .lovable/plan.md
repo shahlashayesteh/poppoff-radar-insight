@@ -1,54 +1,46 @@
+# Server home page rework
 
-## Goal
+Scope: `src/routes/server.index.tsx` only. No DB or layout changes.
 
-Match the server home page to the uploaded reference (and `/demo/server/`): show Top 3 category rings with red/amber/green colours based on AI targets, a per-category delta vs last week, and a "You smashed X this week!" insight card directly below — replacing the current "Upsell rate this week" card. Keep all surrounding layout/spacing identical. Confirm manager views correctly reflect server activity and stats.
+## 1. Top 3 rings show item counts, not percentages
 
-## Reference (uploaded image)
+- Fetch venue average prices via `fetchVenueAvgPrices(venueId)` (already in `@/lib/server-data`).
+- For each of Wine, Cocktails, Desserts, compute `estimateItemsSold(stat[<cat>_sales], <cat>, prices)`.
+- Update `Ring` to accept an optional `displayValue` (e.g. `78`) and `displayUnit` (e.g. `sold`) so the centre text shows `78` with a tiny `sold` label, while the arc still fills based on conversion% vs target (so ring length stays meaningful).
+- Keep the `↑ +12%` / `↓ -8%` delta line under each ring (already item-count based after this change — compare current items vs previous-week items).
 
-```text
-Your Top 3
-   Wine        Cocktails     Desserts
-  ( 78% )      ( 72% )       ( 64% )      <- ring colour = perf vs AI target
-  +12% vs LW   +8%  vs LW    +18% vs LW   <- green if up, red if down
+## 2. Red colour for low performance
 
-[ 🏆  You smashed desserts this week!     ✓ ]
-       +18% vs last week
-```
+- Already wired through `toneFor(actual, target)` → `performanceColour()`:
+  - ≥80% of target → green
+  - 55–79% → amber
+  - <55% → red (`var(--opportunity)`)
+- Confirm both the ring arc colour AND the centre number use this `tone`, so a low value renders in red.
+- Delta line keeps green for ↑ and red for ↓ (already correct).
 
-## Changes
+## 3. Replace "This week's coaching" card with "You smashed X" card
 
-### 1. `src/routes/server.index.tsx` — Top 3 rings (no layout change)
+- Remove the existing bottom Link-to-`/server/menu` "This week's coaching" card.
+- Replace it with a green-tinted insight card: **"You smashed {category} this week!"** + `+X% vs last week` + ✓ chip.
+- Category picked = the one with the highest **positive** week-over-week delta across all 6 categories (wine, cocktail, dessert, sides, spirits, sparkling). If no positive delta exists, hide this card.
+- This replaces the existing "insight" card logic that currently shows either smashed OR focus — split into two separate cards (see #4).
 
-- Replace the three hard-coded ring colours (`var(--brand-orange)`, `var(--brand-green)`, fixed yellow) with the result of `performanceColour(actual, target)` per category, mapped to:
-  - `green` → `var(--brand-green)`
-  - `amber` → `var(--brand-orange)`
-  - `red` → `var(--opportunity)` (already used elsewhere as the site's red token)
-- Under each ring add the per-category delta vs previous week (using the `prevStat` already loaded), styled `↑ +X%` in `var(--brand-green)` or `↓ -X%` in `var(--opportunity)`, plus `vs last week` muted line — exactly like the demo and the uploaded image.
-- Targets read from `server_targets` (already loaded as `target`); fall back to category `?? 0` when target is null so colour defaults to amber.
+## 4. New "You need to work on" card underneath
 
-### 2. `src/routes/server.index.tsx` — Replace "Upsell rate this week" card with "You smashed …" insight
+- Directly below the smashed card, add a red-tinted card: **"You need to work on {category} this week!"** + `-X% vs last week` styled in red (`var(--opportunity)`).
+- Category picked = the one with the **lowest** week-over-week delta (most negative), OR if all deltas are positive, the category furthest below its AI target (lowest `actual/target` ratio, must be amber/red).
+- Always shown when stats exist (so server always sees what to improve), styled with red border + red icon (e.g. `TrendingDown` from lucide-react).
 
-- Remove the entire "Upsell rate this week" card.
-- In its place (same spacing — `px-5 mt-4`) render the `You smashed <category> this week!` card from the demo, sized and styled identically (green-tinted border + background, trophy icon, ✓ chip).
-- Pick the category dynamically: the category among `wine / cocktail / dessert / sides / spirits / sparkling` with the highest positive `pctDelta(currentConversion, previousConversion)`. If no positive delta exists, show `Focus on <category>` with the worst delta in the `var(--opportunity)` style (still same card shape).
-- Show `+X% vs last week` (or `-X%` for the focus variant) under the headline.
+## Order of cards on the page (top to bottom)
 
-### 3. Manager parity check (no visual changes unless data is missing)
+1. Greeting + "Stats just dropped" header (unchanged)
+2. Top 3 rings card (now showing item counts, red when low)
+3. **You smashed {X} this week!** (green, only if any positive delta)
+4. **You need to work on {Y} this week!** (red, always shown when stats exist)
+5. Streak link (unchanged)
 
-- `src/routes/manager.team.tsx` — already shows SPC, covers, £ sales, login count per server. Keep as-is.
-- `src/routes/manager.server.$id.tsx` — already shows SPC, streak, stats viewed, focus ack'd, full category breakdown. Add total-logins line to the existing Engagement card (one extra `<div>` inside the same card, no layout shift) so manager sees: stats viewed, focus ack'd, total logins.
-- Verify `record_login` is fired on every server route load (`server.index.tsx`, `server.stats.tsx`, `server.progress.tsx` already call it via `recordLogin()`); add to `server.menu.tsx` if missing.
-- Verify `claim_placeholder_data` runs on each server load so Shahla-style sign-ups inherit pre-uploaded CSV rows. Already in `server.index.tsx` and `server.stats.tsx`. Confirm presence in `server.progress.tsx` and `server.menu.tsx`; add if missing.
+## Technical notes
 
-### 4. No other changes
-
-- No DB migrations.
-- No edge function changes.
-- No restyle of headers, fonts, paddings, or cards — only the swap described above.
-- Manager-side layout untouched aside from the one extra "Total logins" line in the existing Engagement card.
-
-## Files touched
-
-- `src/routes/server.index.tsx` (ring colour from AI target, per-ring deltas, replace upsell card with smashed/focus insight)
-- `src/routes/manager.server.$id.tsx` (add total logins to existing Engagement card)
-- `src/routes/server.menu.tsx`, `src/routes/server.progress.tsx` (only if `recordLogin` / `claimServerCsvData` not already wired)
+- Uses existing helpers: `pctDelta`, `estimateItemsSold`, `fetchVenueAvgPrices`, `performanceColour`, `toneFor`.
+- No new imports beyond `TrendingDown` from `lucide-react`.
+- No DB migration, no edge function, no manager-side changes.
