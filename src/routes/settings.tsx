@@ -5,6 +5,7 @@ import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
+import { getManagerVenue } from "@/lib/manager-venue";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/settings")({ component: SettingsPage });
@@ -28,10 +29,7 @@ function SettingsPage() {
 
   useEffect(() => {
     (async () => {
-      const { data: u } = await supabase.auth.getUser();
-      if (!u.user) return;
-      const { data: vs } = await supabase.from("venues").select("id, name").eq("manager_id", u.user.id).limit(1);
-      const v = vs?.[0];
+      const v = await getManagerVenue();
       if (!v) return;
       setVenueId(v.id); setVenueName(v.name);
       const { data: vset } = await supabase.from("venue_settings").select("*").eq("venue_id", v.id).maybeSingle();
