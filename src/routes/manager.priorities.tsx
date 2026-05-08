@@ -19,8 +19,8 @@ function Priorities() {
   const [flag, setFlag] = useState("push");
   const [weekStart, setWeekStart] = useState(toISODate(getMondayOfWeek()));
 
-  const load = async (v: string) => {
-    const { data } = await supabase.from("weekly_priorities").select("*").eq("venue_id", v).eq("week_start", weekStart).order("created_at", { ascending: true });
+  const load = async (v: string, ws = weekStart) => {
+    const { data } = await supabase.from("weekly_priorities").select("*").eq("venue_id", v).eq("week_start", ws).order("created_at", { ascending: true });
     setItems((data ?? []) as Item[]);
   };
 
