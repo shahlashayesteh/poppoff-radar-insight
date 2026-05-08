@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { ServerLayout } from "@/components/server-layout";
 import { supabase } from "@/integrations/supabase/client";
 import { useRoleGate } from "@/lib/auth-gate";
+import { claimServerCsvData } from "@/lib/server-data";
 import { Trophy, Award, Flame, ArrowRight } from "lucide-react";
 import { getMondayOfWeek, toISODate, formatWeekRange, performanceColour } from "@/lib/week";
 
@@ -56,7 +57,7 @@ function ServerDashboard() {
       const { data: prof } = await supabase.from("profiles").select("full_name").eq("id", u.user.id).maybeSingle();
       const fn = prof?.full_name || "";
       setName(fn.split(" ")[0] || "there");
-      await supabase.rpc("claim_placeholder_data" as never).then(() => {}, () => {});
+      await claimServerCsvData();
       const { data: vm } = await supabase.from("venue_members").select("venue_id").eq("user_id", u.user.id).limit(1);
       const venueId = vm?.[0]?.venue_id;
       if (!venueId) return;
