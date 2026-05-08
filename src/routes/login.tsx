@@ -7,10 +7,10 @@ export const Route = createFileRoute("/login")({
 });
 
 const roles = [
-  { label: "Server", to: "/server", icon: User, sub: "Sarah · Front of house", c: "var(--brand-green)" },
-  { label: "Manager", to: "/manager", icon: Shield, sub: "The Demo Restaurant", c: "var(--brand-orange)" },
-  { label: "Smart Recs (Server)", to: "/server/welcome", icon: Briefcase, sub: "Personalised picks", c: "oklch(0.5 0.18 290)" },
-  { label: "Streak (Server)", to: "/server/progress", icon: Building2, sub: "Milestones & rewards", c: "oklch(0.65 0.15 240)" },
+  { label: "Server", to: "/demo/server", icon: User, sub: "Front of house view", c: "var(--brand-green)" },
+  { label: "Manager", to: "/demo/manager", icon: Shield, sub: "Manager dashboard", c: "var(--brand-orange)" },
+  { label: "Smart Recs (Server)", to: "/demo/server/welcome", icon: Briefcase, sub: "Personalised picks", c: "oklch(0.5 0.18 290)" },
+  { label: "Streak (Server)", to: "/demo/server/progress", icon: Building2, sub: "Milestones & rewards", c: "oklch(0.65 0.15 240)" },
 ];
 
 function Login() {
