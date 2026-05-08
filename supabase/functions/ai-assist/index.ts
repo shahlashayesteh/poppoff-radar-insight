@@ -77,7 +77,7 @@ Deno.serve(async (req) => {
     if (action === "generate_pairings") {
       const { data: menus } = await admin.from("venue_menu").select("id, menu_text, parsed_items").eq("venue_id", venueId).order("uploaded_at", { ascending: false }).limit(10);
       const summary = (menus ?? []).map((m, i) => `--- Menu ${i + 1} ---\n${m.menu_text?.slice(0, 4000) || JSON.stringify(m.parsed_items)?.slice(0, 4000)}`).join("\n\n");
-      const sys = "You are a sommelier and food expert. Across these menus, suggest cross-menu pairings (e.g. dish from one menu + drink from another). Reply ONLY with JSON: {\"pairings\":[{\"item\":string,\"pair_with\":string,\"why\":string,\"priority\":\"High\"|\"Medium\"|\"Low\"}]}. Max 12 pairings.";
+      const sys = "You are an expert sommelier, mixologist and pastry chef. For EVERY food item across the menus (starters, mains, sides — not drinks/desserts as the 'item'), produce a COMPLETE set of pairings covering each relevant beverage/dessert category that exists on the menus: wine (specific bottle/varietal), cocktail, sake, beer/spirit if present, AND a dessert for palate cleansing. Use ACTUAL menu items by name where possible. Output one row per (food item, pairing) combination — so a single dish with 4 suggested pairings = 4 rows. Reply ONLY with JSON: {\"pairings\":[{\"item\":string,\"pair_with\":string,\"category\":\"wine\"|\"cocktail\"|\"sake\"|\"beer\"|\"spirit\"|\"dessert\"|\"other\",\"why\":string,\"priority\":\"High\"|\"Medium\"|\"Low\"}]}. Be exhaustive — up to 200 rows. Do not skip food items.";
       const out = await callAI([{ role: "system", content: sys }, { role: "user", content: summary }], true);
       let pairings: any[] = [];
       try { const o = JSON.parse(out); pairings = o.pairings ?? []; } catch {}
