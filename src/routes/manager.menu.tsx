@@ -134,6 +134,23 @@ function MenuIntel() {
         <div className="mt-6 grid lg:grid-cols-12 gap-5">
           <div className="lg:col-span-5 rounded-2xl bg-white border border-border p-5">
             <h3 className="font-display font-bold mb-3">Add a menu</h3>
+            <label
+              className={`mb-3 relative flex min-h-24 cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border bg-muted/40 px-4 py-5 text-center ${loading || !venueId || menus.length >= MAX_MENUS ? "opacity-50 cursor-not-allowed" : ""}`}
+            >
+              <input
+                ref={menuFilesRef}
+                type="file"
+                multiple
+                accept=".txt,.csv,.md,.menu,text/plain,text/csv,text/markdown"
+                onChange={uploadMenuFiles}
+                disabled={loading || !venueId || menus.length >= MAX_MENUS}
+                aria-label="Upload menu files"
+                className="absolute inset-0 h-full w-full cursor-pointer opacity-0 disabled:cursor-not-allowed"
+              />
+              <Upload className="h-5 w-5 text-brand-green" />
+              <span className="text-sm font-bold">Upload menu files</span>
+              <span className="text-xs text-muted-foreground">Select up to {MAX_MENUS - menus.length} text, CSV, or markdown menus</span>
+            </label>
             <input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Label (e.g. Wine list, Spring menu)" className="w-full rounded-xl border border-border px-3 py-2 text-sm mb-2" />
             <textarea value={text} onChange={(e) => setText(e.target.value)} rows={12}
               className="w-full rounded-xl border border-border px-3 py-2 text-sm font-mono"
