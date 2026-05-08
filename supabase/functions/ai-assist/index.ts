@@ -1,0 +1,127 @@
+// AI helper for menu parsing, pairings, priorities, and coaching.
+// Uses LOVABLE_API_KEY (server-side) to call Lovable AI Gateway.
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+
+const cors = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
+
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+const SUPABASE_ANON = Deno.env.get("SUPABASE_ANON_KEY")!;
+const SUPABASE_SERVICE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")!;
+
+async function callAI(messages: any[], json = false) {
+  const body: any = {
+    model: "google/gemini-2.5-flash",
+    messages,
+  };
+  if (json) body.response_format = { type: "json_object" };
+  const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${LOVABLE_API_KEY}` },
+    body: JSON.stringify(body),
+  });
+  if (!r.ok) {
+    const t = await r.text();
+    throw new Error(`AI ${r.status}: ${t}`);
+  }
+  const j = await r.json();
+  return j.choices?.[0]?.message?.content ?? "";
+}
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response(null, { headers: cors });
+  try {
+    const auth = req.headers.get("Authorization") ?? "";
+    const userClient = createClient(SUPABASE_URL, SUPABASE_ANON, {
+      global: { headers: { Authorization: auth } },
+    });
+    const { data: u } = await userClient.auth.getUser();
+    if (!u.user) return new Response(JSON.stringify({ error: "unauthorized" }), { status: 401, headers: { ...cors, "Content-Type": "application/json" } });
+
+    const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE);
+    const { action, venueId, payload } = await req.json();
+
+    // verify caller manages this venue
+    const { data: v } = await admin.from("venues").select("id, manager_id").eq("id", venueId).maybeSingle();
+    if (!v || v.manager_id !== u.user.id) {
+      return new Response(JSON.stringify({ error: "forbidden" }), { status: 403, headers: { ...cors, "Content-Type": "application/json" } });
+    }
+
+    if (action === "parse_menu") {
+      const text = String(payload?.menu_text ?? "").slice(0, 20000);
+      const sys = "Extract menu items from text. Reply ONLY with JSON: {\"items\":[{\"name\":string,\"category\":string,\"price\":string,\"pairing\":string,\"priority\":\"High Priority\"|\"Standard\"}]}. Pairing is a wine/cocktail/side that pairs well. Max 40 items.";
+      const out = await callAI([
+        { role: "system", content: sys },
+        { role: "user", content: text },
+      ], true);
+      let items: any[] = [];
+      try { const o = JSON.parse(out); items = o.items ?? o.menu ?? []; } catch {}
+      const ins = await admin.from("venue_menu").insert({ venue_id: venueId, menu_text: text, parsed_items: items }).select().single();
+      return Response.json({ ok: true, items, menu: ins.data }, { headers: cors });
+    }
+
+    if (action === "generate_pairings") {
+      const { data: menus } = await admin.from("venue_menu").select("id, menu_text, parsed_items").eq("venue_id", venueId).order("uploaded_at", { ascending: false }).limit(10);
+      const summary = (menus ?? []).map((m, i) => `--- Menu ${i + 1} ---\n${m.menu_text?.slice(0, 4000) || JSON.stringify(m.parsed_items)?.slice(0, 4000)}`).join("\n\n");
+      const sys = "You are a sommelier and food expert. Across these menus, suggest cross-menu pairings (e.g. dish from one menu + drink from another). Reply ONLY with JSON: {\"pairings\":[{\"item\":string,\"pair_with\":string,\"why\":string,\"priority\":\"High\"|\"Medium\"|\"Low\"}]}. Max 12 pairings.";
+      const out = await callAI([{ role: "system", content: sys }, { role: "user", content: summary }], true);
+      let pairings: any[] = [];
+      try { const o = JSON.parse(out); pairings = o.pairings ?? []; } catch {}
+      return Response.json({ ok: true, pairings }, { headers: cors });
+    }
+
+    if (action === "generate_priorities") {
+      const weekStart = payload?.weekStart;
+      const { data: stats } = await admin.from("server_stats").select("*").eq("venue_id", venueId).eq("week_start", weekStart);
+      const { data: targets } = await admin.from("server_targets").select("*").eq("venue_id", venueId);
+      const { data: menus } = await admin.from("venue_menu").select("parsed_items").eq("venue_id", venueId).order("uploaded_at", { ascending: false }).limit(10);
+      const menuItems = (menus ?? []).flatMap((m: any) => (m.parsed_items ?? [])).slice(0, 80).map((i: any) => `${i.name}${i.category ? " ("+i.category+")" : ""}`).join(", ");
+      const tgt = targets?.[0];
+      const cats = ["wine", "dessert", "cocktail", "sides", "spirits", "sparkling"];
+      const avgs: Record<string, number> = {};
+      for (const c of cats) {
+        const key = `${c}_conversion`;
+        const vals = (stats ?? []).map((s: any) => Number(s[key] ?? 0)).filter(Boolean);
+        avgs[c] = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : 0;
+      }
+      const gaps = cats.map((c) => `${c}: avg ${avgs[c].toFixed(0)}% vs target ${Number((tgt as any)?.[`${c}_target`] ?? 0)}%`).join(", ");
+      const sys = "You are a hospitality coach. Given the team's weak categories and the venue menu items, choose 3-5 specific menu items to PUSH this week. Reply ONLY with JSON: {\"priorities\":[{\"item_name\":string,\"category\":string,\"priority_flag\":\"push\"|\"seasonal\"|\"standard\",\"reason\":string}]}";
+      const usr = `Team performance gaps: ${gaps}.\nMenu items available: ${menuItems || "(none uploaded)"}\nReturn 3-5 priorities targeting the weakest categories using actual menu items where possible.`;
+      const out = await callAI([{ role: "system", content: sys }, { role: "user", content: usr }], true);
+      let priorities: any[] = [];
+      try { const o = JSON.parse(out); priorities = o.priorities ?? []; } catch {}
+      // delete old auto priorities for this week, then insert
+      await admin.from("weekly_priorities").delete().eq("venue_id", venueId).eq("week_start", weekStart);
+      if (priorities.length) {
+        await admin.from("weekly_priorities").insert(priorities.map((p) => ({
+          venue_id: venueId, week_start: weekStart,
+          item_name: String(p.item_name || "Untitled").slice(0, 120),
+          category: p.category ? String(p.category).slice(0, 60) : null,
+          priority_flag: ["push", "seasonal", "standard", "hold"].includes(p.priority_flag) ? p.priority_flag : "push",
+        })));
+      }
+      return Response.json({ ok: true, priorities }, { headers: cors });
+    }
+
+    if (action === "coaching") {
+      const weekStart = payload?.weekStart;
+      const { data: stats } = await admin.from("server_stats").select("*").eq("venue_id", venueId).eq("week_start", weekStart);
+      const { data: pr } = await admin.from("weekly_priorities").select("*").eq("venue_id", venueId).eq("week_start", weekStart);
+      const summary = (stats ?? []).map((s: any) => `SPC £${Number(s.spend_per_cover ?? 0).toFixed(0)}, wine ${Number(s.wine_conversion ?? 0).toFixed(0)}%, dessert ${Number(s.dessert_conversion ?? 0).toFixed(0)}%, cocktail ${Number(s.cocktail_conversion ?? 0).toFixed(0)}%`).join("\n");
+      const items = (pr ?? []).map((p: any) => `${p.item_name} (${p.priority_flag})`).join(", ") || "none";
+      const out = await callAI([
+        { role: "system", content: "You are a restaurant coaching expert. Give 4-6 short, punchy talking points (one line each) for a manager's pre-shift huddle. Warm, direct tone. No headings, no markdown — just plain numbered lines." },
+        { role: "user", content: `Priorities: ${items}\nServer stats:\n${summary || "no stats yet"}` },
+      ]);
+      return Response.json({ ok: true, text: out }, { headers: cors });
+    }
+
+    return new Response(JSON.stringify({ error: "unknown action" }), { status: 400, headers: { ...cors, "Content-Type": "application/json" } });
+  } catch (e) {
+    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : String(e) }), { status: 500, headers: { ...cors, "Content-Type": "application/json" } });
+  }
+});
