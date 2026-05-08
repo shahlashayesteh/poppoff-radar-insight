@@ -16,6 +16,7 @@ import {
   Download,
   RefreshCw,
   MoreVertical,
+  Trash2,
 } from "lucide-react";
 import { downloadCsvTemplate, parseStatsCsv } from "@/lib/csv";
 import {
