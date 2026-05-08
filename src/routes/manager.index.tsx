@@ -140,7 +140,7 @@ function ManagerDashboard() {
       const rows = await parseStatsCsv(file);
       if (!rows.length) { toast.error("No rows found in CSV"); return; }
       const { data, error } = await supabase.rpc("process_csv_upload", {
-        _venue_id: venue.id, _week_start: weekStart, _csv_data: rows as unknown as never,
+        _venue_id: venue.id, _week_start: uploadWeek, _csv_data: rows as unknown as never,
       });
       if (error) throw error;
       const result = data as { matched_count: number; created_count?: number; unmatched_names: string[] };
