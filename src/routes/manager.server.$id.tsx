@@ -36,7 +36,7 @@ function ServerView() {
       const { data: prof } = await supabase.from("profiles").select("full_name").eq("id", id).maybeSingle();
       setName(prof?.full_name || "Server");
       const visibleWeek = await latestStatsWeek(
-        supabase.from("server_stats").select("week_start").eq("user_id", id).eq("venue_id", v).order("week_start", { ascending: false }).limit(1),
+        supabase.from("server_stats").select("week_start, created_at").eq("user_id", id).eq("venue_id", v).order("created_at", { ascending: false }).order("week_start", { ascending: false }).limit(1),
         weekStart,
       );
       setDisplayWeekStart(visibleWeek);
