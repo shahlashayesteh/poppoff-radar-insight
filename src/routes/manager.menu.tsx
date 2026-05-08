@@ -384,6 +384,7 @@ function MenuIntel() {
                           {orderedCats.map((cat) => {
                             const meta = CAT_META[cat] || CAT_META.other;
                             const picks = byCat.get(cat)!.slice(0, 3);
+                            const isWine = cat === "wine_bottle" || cat === "wine_glass";
                             return (
                               <div key={cat} className="rounded-xl border border-border bg-white p-3">
                                 <div className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wide mb-2 px-2 py-1 rounded-md"
@@ -391,20 +392,33 @@ function MenuIntel() {
                                   <span className="text-base leading-none">{meta.emoji}</span> {meta.label}
                                 </div>
                                 <ul className="space-y-2">
-                                  {picks.map((p, i) => (
-                                    <li key={i} className="text-sm">
-                                      <div className="flex items-center justify-between gap-2">
-                                        <span className="font-semibold">{p.pair_with}</span>
-                                        {p.priority === "High" && (
-                                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded"
-                                            style={{ background: "color-mix(in oklab, var(--brand-orange) 18%, white)", color: "var(--brand-orange)" }}>
-                                            ⭐ Top
-                                          </span>
-                                        )}
-                                      </div>
-                                      {p.why && <div className="text-xs text-muted-foreground mt-0.5">{p.why}</div>}
-                                    </li>
-                                  ))}
+                                  {picks.map((p, i) => {
+                                    const wine = isWine ? parseWine(p.pair_with) : null;
+                                    const style = wine?.styleKey ? STYLE_META[wine.styleKey] : null;
+                                    const displayName = wine ? wine.name : p.pair_with;
+                                    return (
+                                      <li key={i} className="text-sm">
+                                        <div className="flex items-center justify-between gap-2 flex-wrap">
+                                          <div className="flex items-center gap-2 min-w-0">
+                                            {style && (
+                                              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0"
+                                                style={{ background: style.bg, color: style.fg }}>
+                                                {style.label}
+                                              </span>
+                                            )}
+                                            <span className="font-semibold">{displayName}</span>
+                                          </div>
+                                          {p.priority === "High" && (
+                                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded"
+                                              style={{ background: "color-mix(in oklab, var(--brand-orange) 18%, white)", color: "var(--brand-orange)" }}>
+                                              ⭐ Top
+                                            </span>
+                                          )}
+                                        </div>
+                                        {p.why && <div className="text-xs text-muted-foreground mt-0.5">{p.why}</div>}
+                                      </li>
+                                    );
+                                  })}
                                 </ul>
                               </div>
                             );
