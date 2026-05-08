@@ -201,6 +201,27 @@ function inferWeekFromFileName(fileName: string) {
   return mondayISO(parseDateValue(fileName) ?? new Date());
 }
 
+function countMappedHeaders(headers: string[]) {
+  return headers.filter((header) => {
+    const canonical = canonicalHeader(header);
+    return canonical !== header.trim() || CSV_HEADERS.includes(canonical as (typeof CSV_HEADERS)[number]) || ["date", "category", "item", "quantity", "check_id"].includes(canonical);
+  }).length;
+}
+
+function parseCsvText(text: string) {
+  const direct = Papa.parse<RawRow>(text, { header: true, transformHeader: canonicalHeader, skipEmptyLines: true });
+  const directHeaders = direct.meta.fields ?? [];
+  if (direct.errors.length === 0 && countMappedHeaders(directHeaders) > 0) return direct;
+
+  const lines = text.split(/\r?\n/);
+  const headerIndex = lines.findIndex((line) => countMappedHeaders(line.split(",").map((part) => part.replace(/^['\"]|['\"]$/g, "").trim())) > 0);
+  if (headerIndex > 0) {
+    return Papa.parse<RawRow>(lines.slice(headerIndex).join("\n"), { header: true, transformHeader: canonicalHeader, skipEmptyLines: true });
+  }
+
+  return direct;
+}
+
 function looksLikeName(value: unknown) {
   const text = String(value ?? "").trim();
   return /[a-z]/i.test(text) && text.length >= 2 && !parseDateValue(text) && numberFromCsv(text) === 0;
@@ -263,11 +284,7 @@ function makeKey(serverName: string, weekStart: string) {
 
 export async function parseStatsCsv(file: File): Promise<CsvRow[]> {
   const text = await file.text();
-  const result = Papa.parse<RawRow>(text, {
-    header: true,
-    transformHeader: canonicalHeader,
-    skipEmptyLines: true,
-  });
+  const result = parseCsvText(text);
 
   if (result.errors.length) {
     throw new Error(result.errors[0]?.message || "CSV could not be parsed");
