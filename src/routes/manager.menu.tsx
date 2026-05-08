@@ -158,17 +158,51 @@ function MenuIntel() {
     if (!venueId) return;
     if (menus.length === 0) { toast.error("Upload at least one menu first"); return; }
     setPairingLoading(true);
+    setPairingProgress({ done: 0, total: 0 });
     try {
-      const { data, error } = await supabase.functions.invoke("ai-assist", {
-        body: { action: "generate_pairings", venueId },
+      // 1. Get list of food items
+      const listRes = await supabase.functions.invoke("ai-assist", {
+        body: { action: "list_food_items", venueId },
       });
-      if (error) throw error;
-      setPairings(data?.pairings ?? []);
-      toast.success("Pairings ready");
+      if (listRes.error) throw listRes.error;
+      const foodItems: string[] = listRes.data?.items ?? [];
+      if (foodItems.length === 0) { toast.error("No food items found in your menus"); return; }
+
+      // 2. Clear old pairings, then chunk
+      await supabase.from("venue_pairings").delete().eq("venue_id", venueId);
+      setPairings([]);
+
+      const CHUNK = 6;
+      const chunks: string[][] = [];
+      for (let i = 0; i < foodItems.length; i += CHUNK) chunks.push(foodItems.slice(i, i + CHUNK));
+      setPairingProgress({ done: 0, total: foodItems.length });
+
+      let collected: Pairing[] = [];
+      let failures = 0;
+      for (const chunk of chunks) {
+        try {
+          const r = await supabase.functions.invoke("ai-assist", {
+            body: { action: "pair_chunk", venueId, payload: { items: chunk } },
+          });
+          if (r.error) throw r.error;
+          const got: Pairing[] = r.data?.pairings ?? [];
+          collected = collected.concat(got);
+          setPairings([...collected]);
+        } catch (err) {
+          failures += 1;
+          console.error("chunk failed", err);
+        }
+        setPairingProgress((p) => p ? { ...p, done: Math.min(p.total, p.done + chunk.length) } : p);
+      }
+
+      if (failures > 0) toast.warning(`${chunks.length - failures}/${chunks.length} batches succeeded`);
+      else toast.success(`Pairings ready · ${collected.length} suggestions`);
+      await loadPairings(venueId);
     } catch (e: any) {
       toast.error(e.message || "Pairing failed");
     } finally {
       setPairingLoading(false);
+      setPairingProgress(null);
     }
   };
 
