@@ -1,57 +1,54 @@
-## Scope
 
-Rework only the data shown and the targets/coaching/leaderboard logic per your spec. Keep every layout, card, color, font, spacing, and visual element exactly as-is. No restyling.
+## Goal
 
-## 1. Server views — swap data only (no layout changes)
+Match the server home page to the uploaded reference (and `/demo/server/`): show Top 3 category rings with red/amber/green colours based on AI targets, a per-category delta vs last week, and a "You smashed X this week!" insight card directly below — replacing the current "Upsell rate this week" card. Keep all surrounding layout/spacing identical. Confirm manager views correctly reflect server activity and stats.
 
-Files: `src/routes/server.index.tsx`, `src/routes/server.stats.tsx`, `src/routes/server.progress.tsx`
+## Reference (uploaded image)
 
-- Remove all £ values from server pages. Replace the existing text in place:
-  - "Sales this week £X / £Y" card → "Upsell rate this week" with current % and `↑/↓ X% vs last week` (red if down, green if up). Same card, same position.
-  - "Spend per cover £X" row on stats → "Items sold this week" count with delta vs last week. Same row, same styling.
-  - Each category row keeps its existing progress bar and ring; the right-hand label changes from `actual% / target%` to `<count> sold · ↑/↓X% vs last week`.
-- Ring colours: keep as-is, but driven by AI target (see §3) instead of manual.
+```text
+Your Top 3
+   Wine        Cocktails     Desserts
+  ( 78% )      ( 72% )       ( 64% )      <- ring colour = perf vs AI target
+  +12% vs LW   +8%  vs LW    +18% vs LW   <- green if up, red if down
 
-## 2. Manager views — additive only
+[ 🏆  You smashed desserts this week!     ✓ ]
+       +18% vs last week
+```
 
-Files: `src/routes/manager.server.$id.tsx`, `src/routes/manager.team.tsx`
+## Changes
 
-- Existing "Engagement" card stays. Add two lines inside it (no new cards): `Total logins` and `Last login`.
-- Team table: add one extra column `Logins` to the right of existing columns. No other visual change.
-- All £, covers, totals, server names — kept exactly as today.
+### 1. `src/routes/server.index.tsx` — Top 3 rings (no layout change)
 
-## 3. AI targets (backend only, no UI change)
+- Replace the three hard-coded ring colours (`var(--brand-orange)`, `var(--brand-green)`, fixed yellow) with the result of `performanceColour(actual, target)` per category, mapped to:
+  - `green` → `var(--brand-green)`
+  - `amber` → `var(--brand-orange)`
+  - `red` → `var(--opportunity)` (already used elsewhere as the site's red token)
+- Under each ring add the per-category delta vs previous week (using the `prevStat` already loaded), styled `↑ +X%` in `var(--brand-green)` or `↓ -X%` in `var(--opportunity)`, plus `vs last week` muted line — exactly like the demo and the uploaded image.
+- Targets read from `server_targets` (already loaded as `target`); fall back to category `?? 0` when target is null so colour defaults to amber.
 
-- New SQL function `recompute_ai_targets(_venue_id)`: target = max(personal 8-week avg × 1.10, venue avg). Runs at end of `process_csv_upload`.
-- Settings page target editor: leave the UI as-is but make inputs disabled with a small note "AI-managed" under the section heading. No layout change.
+### 2. `src/routes/server.index.tsx` — Replace "Upsell rate this week" card with "You smashed …" insight
 
-## 4. AI coaching (backend + reuse existing card)
+- Remove the entire "Upsell rate this week" card.
+- In its place (same spacing — `px-5 mt-4`) render the `You smashed <category> this week!` card from the demo, sized and styled identically (green-tinted border + background, trophy icon, ✓ chip).
+- Pick the category dynamically: the category among `wine / cocktail / dessert / sides / spirits / sparkling` with the highest positive `pctDelta(currentConversion, previousConversion)`. If no positive delta exists, show `Focus on <category>` with the worst delta in the `var(--opportunity)` style (still same card shape).
+- Show `+X% vs last week` (or `-X%` for the focus variant) under the headline.
 
-- New edge function `ai-coaching` (Lovable AI Gateway, `google/gemini-3-flash-preview`).
-- New table `server_coaching (user_id, venue_id, week_start, suggestions jsonb)`.
-- The existing "This week's coaching" card on `/server/menu` and the manager coaching page render the AI text into the cards that already exist. No new cards, no restyle.
+### 3. Manager parity check (no visual changes unless data is missing)
 
-## 5. Anonymous leaderboard (text-only swap)
+- `src/routes/manager.team.tsx` — already shows SPC, covers, £ sales, login count per server. Keep as-is.
+- `src/routes/manager.server.$id.tsx` — already shows SPC, streak, stats viewed, focus ack'd, full category breakdown. Add total-logins line to the existing Engagement card (one extra `<div>` inside the same card, no layout shift) so manager sees: stats viewed, focus ack'd, total logins.
+- Verify `record_login` is fired on every server route load (`server.index.tsx`, `server.stats.tsx`, `server.progress.tsx` already call it via `recordLogin()`); add to `server.menu.tsx` if missing.
+- Verify `claim_placeholder_data` runs on each server load so Shahla-style sign-ups inherit pre-uploaded CSV rows. Already in `server.index.tsx` and `server.stats.tsx`. Confirm presence in `server.progress.tsx` and `server.menu.tsx`; add if missing.
 
-File: `src/routes/server.progress.tsx` (or wherever leaderboard currently renders).
+### 4. No other changes
 
-- New RPC `get_leaderboard_position` returns `{ my_position, total }` only.
-- Replace any rendered names/avatars with `You're #3 of 12`. Same card container, same fonts.
+- No DB migrations.
+- No edge function changes.
+- No restyle of headers, fonts, paddings, or cards — only the swap described above.
+- Manager-side layout untouched aside from the one extra "Total logins" line in the existing Engagement card.
 
-## 6. Engagement tracking
+## Files touched
 
-- New table `server_logins` and RPC `record_login` called on server dashboard mount (no UI).
-- Manager engagement card reads from it.
-
-## What will NOT change
-
-- No layout, spacing, colour, font, card, or component restyle.
-- No new pages, no removed pages.
-- No nav changes.
-- Demo routes untouched.
-- Manager dashboard £ figures untouched.
-
-## Questions
-
-1. **Items sold count** — OK to derive as `category_sales ÷ avg_menu_price` (from parsed menu)? Or extend CSV to include per-category item counts?
-2. **Settings target editor** — disable inputs in place (preferred, zero layout change), or hide the section entirely?
+- `src/routes/server.index.tsx` (ring colour from AI target, per-ring deltas, replace upsell card with smashed/focus insight)
+- `src/routes/manager.server.$id.tsx` (add total logins to existing Engagement card)
+- `src/routes/server.menu.tsx`, `src/routes/server.progress.tsx` (only if `recordLogin` / `claimServerCsvData` not already wired)
