@@ -18,14 +18,18 @@ import { Route as ServerIndexRouteImport } from './routes/server.index'
 import { Route as ManagerIndexRouteImport } from './routes/manager.index'
 import { Route as SignupManagerRouteImport } from './routes/signup.manager'
 import { Route as ServerWelcomeRouteImport } from './routes/server.welcome'
+import { Route as ServerStatsRouteImport } from './routes/server.stats'
 import { Route as ServerProgressRouteImport } from './routes/server.progress'
+import { Route as ServerProfileRouteImport } from './routes/server.profile'
 import { Route as ServerMenuRouteImport } from './routes/server.menu'
 import { Route as ManagerTeamRouteImport } from './routes/manager.team'
+import { Route as ManagerReportsRouteImport } from './routes/manager.reports'
 import { Route as ManagerPrioritiesRouteImport } from './routes/manager.priorities'
 import { Route as ManagerMenuRouteImport } from './routes/manager.menu'
 import { Route as ManagerCoachingRouteImport } from './routes/manager.coaching'
 import { Route as CheckoutSuccessRouteImport } from './routes/checkout.success'
 import { Route as CheckoutRetryRouteImport } from './routes/checkout.retry'
+import { Route as ManagerServerIndexRouteImport } from './routes/manager.server.index'
 import { Route as DemoServerIndexRouteImport } from './routes/demo.server.index'
 import { Route as DemoManagerIndexRouteImport } from './routes/demo.manager.index'
 import { Route as ManagerServerIdRouteImport } from './routes/manager.server.$id'
@@ -83,9 +87,19 @@ const ServerWelcomeRoute = ServerWelcomeRouteImport.update({
   path: '/server/welcome',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ServerStatsRoute = ServerStatsRouteImport.update({
+  id: '/server/stats',
+  path: '/server/stats',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ServerProgressRoute = ServerProgressRouteImport.update({
   id: '/server/progress',
   path: '/server/progress',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ServerProfileRoute = ServerProfileRouteImport.update({
+  id: '/server/profile',
+  path: '/server/profile',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ServerMenuRoute = ServerMenuRouteImport.update({
@@ -96,6 +110,11 @@ const ServerMenuRoute = ServerMenuRouteImport.update({
 const ManagerTeamRoute = ManagerTeamRouteImport.update({
   id: '/manager/team',
   path: '/manager/team',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ManagerReportsRoute = ManagerReportsRouteImport.update({
+  id: '/manager/reports',
+  path: '/manager/reports',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ManagerPrioritiesRoute = ManagerPrioritiesRouteImport.update({
@@ -121,6 +140,11 @@ const CheckoutSuccessRoute = CheckoutSuccessRouteImport.update({
 const CheckoutRetryRoute = CheckoutRetryRouteImport.update({
   id: '/checkout/retry',
   path: '/checkout/retry',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ManagerServerIndexRoute = ManagerServerIndexRouteImport.update({
+  id: '/manager/server/',
+  path: '/manager/server/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DemoServerIndexRoute = DemoServerIndexRouteImport.update({
@@ -191,9 +215,12 @@ export interface FileRoutesByFullPath {
   '/manager/coaching': typeof ManagerCoachingRoute
   '/manager/menu': typeof ManagerMenuRoute
   '/manager/priorities': typeof ManagerPrioritiesRoute
+  '/manager/reports': typeof ManagerReportsRoute
   '/manager/team': typeof ManagerTeamRoute
   '/server/menu': typeof ServerMenuRoute
+  '/server/profile': typeof ServerProfileRoute
   '/server/progress': typeof ServerProgressRoute
+  '/server/stats': typeof ServerStatsRoute
   '/server/welcome': typeof ServerWelcomeRoute
   '/signup/manager': typeof SignupManagerRoute
   '/manager/': typeof ManagerIndexRoute
@@ -207,6 +234,7 @@ export interface FileRoutesByFullPath {
   '/manager/server/$id': typeof ManagerServerIdRoute
   '/demo/manager/': typeof DemoManagerIndexRoute
   '/demo/server/': typeof DemoServerIndexRoute
+  '/manager/server/': typeof ManagerServerIndexRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/demo/manager/server/$id': typeof DemoManagerServerIdRoute
 }
@@ -221,9 +249,12 @@ export interface FileRoutesByTo {
   '/manager/coaching': typeof ManagerCoachingRoute
   '/manager/menu': typeof ManagerMenuRoute
   '/manager/priorities': typeof ManagerPrioritiesRoute
+  '/manager/reports': typeof ManagerReportsRoute
   '/manager/team': typeof ManagerTeamRoute
   '/server/menu': typeof ServerMenuRoute
+  '/server/profile': typeof ServerProfileRoute
   '/server/progress': typeof ServerProgressRoute
+  '/server/stats': typeof ServerStatsRoute
   '/server/welcome': typeof ServerWelcomeRoute
   '/signup/manager': typeof SignupManagerRoute
   '/manager': typeof ManagerIndexRoute
@@ -237,6 +268,7 @@ export interface FileRoutesByTo {
   '/manager/server/$id': typeof ManagerServerIdRoute
   '/demo/manager': typeof DemoManagerIndexRoute
   '/demo/server': typeof DemoServerIndexRoute
+  '/manager/server': typeof ManagerServerIndexRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/demo/manager/server/$id': typeof DemoManagerServerIdRoute
 }
@@ -252,9 +284,12 @@ export interface FileRoutesById {
   '/manager/coaching': typeof ManagerCoachingRoute
   '/manager/menu': typeof ManagerMenuRoute
   '/manager/priorities': typeof ManagerPrioritiesRoute
+  '/manager/reports': typeof ManagerReportsRoute
   '/manager/team': typeof ManagerTeamRoute
   '/server/menu': typeof ServerMenuRoute
+  '/server/profile': typeof ServerProfileRoute
   '/server/progress': typeof ServerProgressRoute
+  '/server/stats': typeof ServerStatsRoute
   '/server/welcome': typeof ServerWelcomeRoute
   '/signup/manager': typeof SignupManagerRoute
   '/manager/': typeof ManagerIndexRoute
@@ -268,6 +303,7 @@ export interface FileRoutesById {
   '/manager/server/$id': typeof ManagerServerIdRoute
   '/demo/manager/': typeof DemoManagerIndexRoute
   '/demo/server/': typeof DemoServerIndexRoute
+  '/manager/server/': typeof ManagerServerIndexRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/demo/manager/server/$id': typeof DemoManagerServerIdRoute
 }
@@ -284,9 +320,12 @@ export interface FileRouteTypes {
     | '/manager/coaching'
     | '/manager/menu'
     | '/manager/priorities'
+    | '/manager/reports'
     | '/manager/team'
     | '/server/menu'
+    | '/server/profile'
     | '/server/progress'
+    | '/server/stats'
     | '/server/welcome'
     | '/signup/manager'
     | '/manager/'
@@ -300,6 +339,7 @@ export interface FileRouteTypes {
     | '/manager/server/$id'
     | '/demo/manager/'
     | '/demo/server/'
+    | '/manager/server/'
     | '/api/public/payments/webhook'
     | '/demo/manager/server/$id'
   fileRoutesByTo: FileRoutesByTo
@@ -314,9 +354,12 @@ export interface FileRouteTypes {
     | '/manager/coaching'
     | '/manager/menu'
     | '/manager/priorities'
+    | '/manager/reports'
     | '/manager/team'
     | '/server/menu'
+    | '/server/profile'
     | '/server/progress'
+    | '/server/stats'
     | '/server/welcome'
     | '/signup/manager'
     | '/manager'
@@ -330,6 +373,7 @@ export interface FileRouteTypes {
     | '/manager/server/$id'
     | '/demo/manager'
     | '/demo/server'
+    | '/manager/server'
     | '/api/public/payments/webhook'
     | '/demo/manager/server/$id'
   id:
@@ -344,9 +388,12 @@ export interface FileRouteTypes {
     | '/manager/coaching'
     | '/manager/menu'
     | '/manager/priorities'
+    | '/manager/reports'
     | '/manager/team'
     | '/server/menu'
+    | '/server/profile'
     | '/server/progress'
+    | '/server/stats'
     | '/server/welcome'
     | '/signup/manager'
     | '/manager/'
@@ -360,6 +407,7 @@ export interface FileRouteTypes {
     | '/manager/server/$id'
     | '/demo/manager/'
     | '/demo/server/'
+    | '/manager/server/'
     | '/api/public/payments/webhook'
     | '/demo/manager/server/$id'
   fileRoutesById: FileRoutesById
@@ -375,9 +423,12 @@ export interface RootRouteChildren {
   ManagerCoachingRoute: typeof ManagerCoachingRoute
   ManagerMenuRoute: typeof ManagerMenuRoute
   ManagerPrioritiesRoute: typeof ManagerPrioritiesRoute
+  ManagerReportsRoute: typeof ManagerReportsRoute
   ManagerTeamRoute: typeof ManagerTeamRoute
   ServerMenuRoute: typeof ServerMenuRoute
+  ServerProfileRoute: typeof ServerProfileRoute
   ServerProgressRoute: typeof ServerProgressRoute
+  ServerStatsRoute: typeof ServerStatsRoute
   ServerWelcomeRoute: typeof ServerWelcomeRoute
   SignupManagerRoute: typeof SignupManagerRoute
   ManagerIndexRoute: typeof ManagerIndexRoute
@@ -391,6 +442,7 @@ export interface RootRouteChildren {
   ManagerServerIdRoute: typeof ManagerServerIdRoute
   DemoManagerIndexRoute: typeof DemoManagerIndexRoute
   DemoServerIndexRoute: typeof DemoServerIndexRoute
+  ManagerServerIndexRoute: typeof ManagerServerIndexRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
   DemoManagerServerIdRoute: typeof DemoManagerServerIdRoute
 }
@@ -460,11 +512,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ServerWelcomeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/server/stats': {
+      id: '/server/stats'
+      path: '/server/stats'
+      fullPath: '/server/stats'
+      preLoaderRoute: typeof ServerStatsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/server/progress': {
       id: '/server/progress'
       path: '/server/progress'
       fullPath: '/server/progress'
       preLoaderRoute: typeof ServerProgressRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/server/profile': {
+      id: '/server/profile'
+      path: '/server/profile'
+      fullPath: '/server/profile'
+      preLoaderRoute: typeof ServerProfileRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/server/menu': {
@@ -479,6 +545,13 @@ declare module '@tanstack/react-router' {
       path: '/manager/team'
       fullPath: '/manager/team'
       preLoaderRoute: typeof ManagerTeamRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/manager/reports': {
+      id: '/manager/reports'
+      path: '/manager/reports'
+      fullPath: '/manager/reports'
+      preLoaderRoute: typeof ManagerReportsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/manager/priorities': {
@@ -514,6 +587,13 @@ declare module '@tanstack/react-router' {
       path: '/checkout/retry'
       fullPath: '/checkout/retry'
       preLoaderRoute: typeof CheckoutRetryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/manager/server/': {
+      id: '/manager/server/'
+      path: '/manager/server'
+      fullPath: '/manager/server/'
+      preLoaderRoute: typeof ManagerServerIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/demo/server/': {
@@ -607,9 +687,12 @@ const rootRouteChildren: RootRouteChildren = {
   ManagerCoachingRoute: ManagerCoachingRoute,
   ManagerMenuRoute: ManagerMenuRoute,
   ManagerPrioritiesRoute: ManagerPrioritiesRoute,
+  ManagerReportsRoute: ManagerReportsRoute,
   ManagerTeamRoute: ManagerTeamRoute,
   ServerMenuRoute: ServerMenuRoute,
+  ServerProfileRoute: ServerProfileRoute,
   ServerProgressRoute: ServerProgressRoute,
+  ServerStatsRoute: ServerStatsRoute,
   ServerWelcomeRoute: ServerWelcomeRoute,
   SignupManagerRoute: SignupManagerRoute,
   ManagerIndexRoute: ManagerIndexRoute,
@@ -623,6 +706,7 @@ const rootRouteChildren: RootRouteChildren = {
   ManagerServerIdRoute: ManagerServerIdRoute,
   DemoManagerIndexRoute: DemoManagerIndexRoute,
   DemoServerIndexRoute: DemoServerIndexRoute,
+  ManagerServerIndexRoute: ManagerServerIndexRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
   DemoManagerServerIdRoute: DemoManagerServerIdRoute,
 }
