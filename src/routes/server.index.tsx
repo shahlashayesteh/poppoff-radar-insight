@@ -4,7 +4,7 @@ import { ServerLayout } from "@/components/server-layout";
 import { supabase } from "@/integrations/supabase/client";
 import { useRoleGate } from "@/lib/auth-gate";
 import { claimServerCsvData, recordLogin, pctDelta } from "@/lib/server-data";
-import { Trophy, Award, Flame, ArrowRight } from "lucide-react";
+import { Trophy, Flame, ArrowRight } from "lucide-react";
 import { getMondayOfWeek, toISODate, formatWeekRange, performanceColour } from "@/lib/week";
 
 export const Route = createFileRoute("/server/")({ component: ServerDashboard });
@@ -76,20 +76,44 @@ function ServerDashboard() {
     })();
   }, [weekStart]);
 
-  const wine = Number(stat?.wine_conversion ?? 0);
-  const cocktails = Number(stat?.cocktail_conversion ?? 0);
-  const desserts = Number(stat?.dessert_conversion ?? 0);
-
-  const catKeys = ["wine_conversion", "dessert_conversion", "cocktail_conversion", "sides_conversion", "spirits_conversion", "sparkling_conversion"] as const;
-  const avgOf = (s: Stat | null) => {
-    if (!s) return 0;
-    const vals = catKeys.map((k) => Number((s as any)[k] ?? 0));
-    return vals.reduce((a, b) => a + b, 0) / vals.length;
+  const toneFor = (actual: number, target: number) => {
+    const colour = performanceColour(actual, target);
+    return colour === "green" ? "var(--brand-green)" : colour === "amber" ? "var(--brand-orange)" : "var(--opportunity)";
   };
-  const upsell = avgOf(stat);
-  const prevUpsell = avgOf(prevStat);
-  const delta = pctDelta(upsell, prevUpsell);
-  const upPct = Math.min(100, Math.max(0, upsell));
+
+  const top3 = [
+    { label: "Wine", key: "wine_conversion", t: "wine_target" },
+    { label: "Cocktails", key: "cocktail_conversion", t: "cocktail_target" },
+    { label: "Desserts", key: "dessert_conversion", t: "dessert_target" },
+  ] as const;
+
+  const allCats = [
+    { label: "wine", key: "wine_conversion" },
+    { label: "cocktails", key: "cocktail_conversion" },
+    { label: "desserts", key: "dessert_conversion" },
+    { label: "sides", key: "sides_conversion" },
+    { label: "spirits", key: "spirits_conversion" },
+    { label: "sparkling", key: "sparkling_conversion" },
+  ] as const;
+
+  // Pick best (or worst) category by week-over-week delta
+  let insight: { label: string; delta: number; positive: boolean } | null = null;
+  if (stat) {
+    const deltas = allCats.map((c) => {
+      const cur = Number((stat as any)[c.key] ?? 0);
+      const prev = Number((prevStat as any)?.[c.key] ?? 0);
+      const d = pctDelta(cur, prev);
+      return { label: c.label, d };
+    }).filter((x) => x.d !== null) as { label: string; d: number }[];
+    if (deltas.length) {
+      const best = deltas.reduce((a, b) => (b.d > a.d ? b : a));
+      if (best.d > 0) insight = { label: best.label, delta: best.d, positive: true };
+      else {
+        const worst = deltas.reduce((a, b) => (b.d < a.d ? b : a));
+        insight = { label: worst.label, delta: worst.d, positive: false };
+      }
+    }
+  }
 
   return (
     <ServerLayout>
@@ -106,9 +130,27 @@ function ServerDashboard() {
           <div className="font-semibold">Your Top 3</div>
           {stat ? (
             <div className="mt-4 grid grid-cols-3 gap-2">
-              <Ring value={wine} color="var(--brand-orange)" label="Wine" />
-              <Ring value={cocktails} color="var(--brand-green)" label="Cocktails" />
-              <Ring value={desserts} color="oklch(0.82 0.16 80)" label="Desserts" />
+              {top3.map((c) => {
+                const actual = Number((stat as any)[c.key] ?? 0);
+                const tgt = Number((target as any)?.[c.t] ?? 0);
+                const tone = toneFor(actual, tgt);
+                const prev = Number((prevStat as any)?.[c.key] ?? 0);
+                const d = pctDelta(actual, prev);
+                return (
+                  <div key={c.label} className="flex flex-col items-center">
+                    <div className="text-xs text-muted-foreground mb-2">{c.label}</div>
+                    <Ring value={actual} color={tone} label="" />
+                    {d !== null ? (
+                      <div className="mt-1 text-xs font-semibold" style={{ color: d >= 0 ? "var(--brand-green)" : "var(--opportunity)" }}>
+                        {d >= 0 ? "↑" : "↓"} {d >= 0 ? "+" : "-"}{Math.abs(d).toFixed(0)}%
+                      </div>
+                    ) : (
+                      <div className="mt-1 text-xs text-muted-foreground">—</div>
+                    )}
+                    <div className="text-[10px] text-muted-foreground">vs last week</div>
+                  </div>
+                );
+              })}
             </div>
           ) : (
             <p className="mt-3 text-sm text-muted-foreground">No stats for this week yet. Your manager will upload them after service.</p>
@@ -116,29 +158,26 @@ function ServerDashboard() {
         </div>
       </div>
 
-      {stat && (
+      {stat && insight && (
         <div className="px-5 mt-4">
-          <div className="rounded-3xl bg-white border border-border p-5">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="font-semibold text-sm">Upsell rate this week</div>
-                <div className="mt-1 font-display">
-                  <span className="text-3xl font-extrabold">{upsell.toFixed(0)}%</span>
-                  {delta !== null && (
-                    <span className="text-sm ml-2 font-semibold" style={{ color: delta >= 0 ? "var(--brand-green)" : "var(--opportunity)" }}>
-                      {delta >= 0 ? "↑" : "↓"} {Math.abs(delta).toFixed(0)}% vs last week
-                    </span>
-                  )}
-                </div>
+          <div className="rounded-3xl border-2 p-5 flex items-center gap-4"
+            style={{
+              borderColor: `color-mix(in oklab, ${insight.positive ? "var(--brand-green)" : "var(--opportunity)"} 40%, transparent)`,
+              background: `color-mix(in oklab, ${insight.positive ? "var(--brand-green)" : "var(--opportunity)"} 8%, white)`,
+            }}>
+            <Trophy className="h-12 w-12 shrink-0" style={{ color: insight.positive ? "var(--brand-green)" : "var(--opportunity)" }} />
+            <div className="flex-1">
+              <div className="font-display text-lg font-bold leading-tight">
+                {insight.positive ? <>You smashed <span style={{ color: "var(--brand-green)" }}>{insight.label}</span> this week!</> : <>Focus on <span style={{ color: "var(--opportunity)" }}>{insight.label}</span> this week</>}
               </div>
-              <Award className="h-10 w-10" style={{ color: "oklch(0.55 0.18 270)" }} />
+              <div className="mt-1 text-xs">
+                <span className="font-semibold" style={{ color: insight.positive ? "var(--brand-green)" : "var(--opportunity)" }}>
+                  {insight.delta >= 0 ? "+" : ""}{insight.delta.toFixed(0)}%
+                </span>{" "}
+                <span className="text-muted-foreground">vs last week</span>
+              </div>
             </div>
-            <div className="mt-3 h-2 rounded-full bg-muted overflow-hidden">
-              <div className="h-full rounded-full bg-brand-green" style={{ width: `${upPct}%` }} />
-            </div>
-            <div className="mt-2 text-xs font-semibold" style={{ color: delta !== null && delta < 0 ? "var(--opportunity)" : "var(--brand-green)" }}>
-              {delta === null ? "First week tracked" : delta >= 0 ? "Trending up — keep pushing" : "Down vs last week — focus this shift"}
-            </div>
+            <div className="h-9 w-9 rounded-full text-white grid place-items-center text-sm" style={{ background: insight.positive ? "var(--brand-green)" : "var(--opportunity)" }}>✓</div>
           </div>
         </div>
       )}
