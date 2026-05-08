@@ -207,7 +207,7 @@ function Landing() {
           style={{ background: "color-mix(in oklab, var(--brand-green) 10%, white)" }}>
           <div className="inline-flex items-center gap-2 text-sm">
             <ShieldCheck className="h-4 w-4 text-brand-green" />
-            <span className="font-semibold">Join 500+ servers already leveling up their shifts.</span>
+            <span className="font-semibold">Helping restaurants turn sales data into coaching, motivation, and revenue growth.</span>
           </div>
           <div className="inline-flex items-center gap-3">
             <span className="text-sm font-bold text-brand-green">Ready to see your team win?</span>
