@@ -1,51 +1,42 @@
-## Problem
+## Addition: "Wine by the Glass" pairings + wine style labels
 
-Clicking **Generate pairings** calls the `ai-assist` edge function, which asks Gemini Flash to produce, in one shot, pairings for every food item × 6 categories × up to 3 suggestions. That response is so large it doesn't finish in time and the edge function connection is dropped — surfacing as `non-2xx status code` in the UI.
+Small, isolated change to the pairing system. Nothing else touched.
 
-We do **not** need to revert. The pairing quality you asked for is fine; the call just needs to be split into smaller chunks so each one finishes well within the time limit.
+### 1. Edge function (`supabase/functions/ai-assist/index.ts`)
 
-## Fix: chunked pairing generation
+In the `pair_chunk` action prompt:
 
-### High-level
+- Split the existing `wine` category into two:
+  - `wine_bottle` — premium bottle pairings (existing behavior, 3 most expensive)
+  - `wine_glass` — by-the-glass pairings only (3 most expensive available by-the-glass options from the wine list)
+- For both wine categories, require each `pair_with` entry to start with a style tag in brackets so the UI can render it consistently:
+  - `[White]`, `[Red]`, `[Rosé]`, `[Champagne]` (also accept Sparkling/Prosecco mapped to Champagne for display)
+  - Example: `"[White] Sancerre 2022"`
+- Other categories (cocktail, sake, beer, spirit, dessert) unchanged.
+- Each wine category still capped at 3 suggestions, prioritising the most expensive.
 
-1. The edge function first asks the AI for the **list of food item names** only (fast, ~1–2s).
-2. The frontend then loops over those food items in **batches of 5–8** and calls a new `pair_chunk` action, which generates premium pairings for that small batch only.
-3. Results are merged in the UI as each chunk returns. A progress indicator ("Generating 12/40…") shows live progress.
-4. Pairings are cached in a new `venue_pairings` table so repeat opens are instant and don't re-bill the AI.
+### 2. Frontend (`src/routes/manager.menu.tsx`)
 
-### Technical changes
+- Extend `CAT_META` with two wine entries (replace the single `wine` entry):
+  - `wine_bottle` — 🍷 "Wine (Bottle)", brand-orange tint
+  - `wine_glass` — 🥂 "Wine (by the Glass)", brand-orange tint (lighter mix)
+- Render order per dish: Wine (Bottle) → Wine (by the Glass) → Cocktail → Sake → Beer → Spirit → Dessert.
+- Parse the leading `[Style]` tag from each wine `pair_with` and display it as a small coloured chip next to the wine name:
+  - White → soft yellow chip
+  - Red → deep red chip
+  - Rosé → pink chip
+  - Champagne → gold chip
+- Search continues to match across dish, category label, pair_with, and why — so "white" or "champagne" finds matching wines.
 
-**Edge function `ai-assist/index.ts`** — replace the single `generate_pairings` action with two:
-- `list_food_items` — returns `{ items: string[] }` from menu text only. Tiny prompt, tiny output.
-- `pair_chunk` — input `{ items: string[] }` (max 8). Same premium-pairing rules as today (3 most expensive per category when applicable, real menu names, emojis-friendly fields). Returns `{ pairings: [...] }` for just that batch.
+### 3. Data / migration
 
-**New table `venue_pairings`** (migration):
-- `venue_id uuid`, `item text`, `category text`, `pair_with text`, `why text`, `priority text`, `position int`, `generated_at timestamptz`
-- RLS: managers of the venue can read/write.
-- Unique on `(venue_id, item, category, pair_with)` so re-runs upsert cleanly.
+No schema change. `venue_pairings.category` already stores free text, so `wine_bottle` and `wine_glass` slot in alongside the existing values. Old `wine` rows from previous runs will simply continue to display under "Wine (Bottle)" if we map unknown `wine` → `wine_bottle` for backwards compatibility, or be replaced on the next "Generate pairings" run.
 
-**Frontend `manager.menu.tsx`**:
-- "Generate pairings" button now:
-  1. calls `list_food_items` once,
-  2. chunks the result into groups of 6,
-  3. fires `pair_chunk` requests sequentially (or 2 in parallel) with a progress bar,
-  4. upserts each chunk into `venue_pairings` and merges into local state immediately so the user sees pairings appear progressively,
-  5. stops gracefully if any chunk fails — already-generated pairings remain.
-- On page load, read existing rows from `venue_pairings` so prior results show instantly.
-- Existing search + grouped card UI is unchanged.
+### What stays exactly the same
 
-### What stays the same
+- Chunked generation, progress bar, caching, RLS, search box, brand colours, emojis on dishes, layout, every other category.
+- Upload flow, menu parsing, priorities, coaching — untouched.
 
-- Premium-pricing logic, 3-per-category cap, emoji styling, search, brand colours — all unchanged.
-- `parse_menu`, `generate_priorities`, `coaching`, `server_coaching` actions — unchanged.
+### Outcome
 
-### Why this works
-
-Each `pair_chunk` call handles ~6 dishes, so the AI returns in ~5–15 seconds — comfortably under the edge function limit. Total wall time for a 40-dish menu is ~1–2 minutes, but the user sees results streaming in instead of waiting on one giant call that times out.
-
-## Outcome
-
-- No revert needed.
-- "Generate pairings" reliably completes for menus of any realistic size.
-- Pairings persist between sessions.
-- Progress is visible to the manager while it runs.
+Each dish now shows up to 3 premium bottle wines AND up to 3 by-the-glass wines, every wine clearly tagged White / Red / Rosé / Champagne so servers can pour the right thing immediately.
