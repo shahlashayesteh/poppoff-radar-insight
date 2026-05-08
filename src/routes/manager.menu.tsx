@@ -362,7 +362,8 @@ function MenuIntel() {
                   {Array.from(groups.entries()).map(([item, rows]) => {
                     const byCat = new Map<string, Pairing[]>();
                     for (const r of rows) {
-                      const c = (r.category || "other").toLowerCase();
+                      let c = (r.category || "other").toLowerCase();
+                      if (c === "wine") c = "wine_bottle"; // legacy rows
                       if (!byCat.has(c)) byCat.set(c, []);
                       byCat.get(c)!.push(r);
                     }
