@@ -5,10 +5,10 @@ import { Logo } from "./logo";
 
 const items = [
   { to: "/server", label: "Home", icon: Home },
-  { to: "/server/progress", label: "Stats", icon: BarChart3 },
+  { to: "/server/stats", label: "Stats", icon: BarChart3 },
   { to: "/server/menu", label: "Coaching", icon: Target },
   { to: "/server/welcome", label: "Rewards", icon: Gift },
-  { to: "/settings", label: "Profile", icon: User },
+  { to: "/server/profile", label: "Profile", icon: User },
 ];
 
 export function ServerLayout({ children }: { children: React.ReactNode }) {
