@@ -1,116 +1,74 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { ManagerLayout } from "@/components/manager-layout";
-import { servers } from "@/lib/sample-data";
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid } from "recharts";
+import { supabase } from "@/integrations/supabase/client";
+import { getMondayOfWeek, toISODate, formatWeekRange, performanceColour } from "@/lib/week";
 
-export const Route = createFileRoute("/manager/team")({
-  component: TeamTrends,
-});
+export const Route = createFileRoute("/manager/team")({ component: TeamPage });
 
-const spcTrend = [
-  { week: "W1", spc: 52 },
-  { week: "W2", spc: 54 },
-  { week: "W3", spc: 56 },
-  { week: "W4", spc: 58.4 },
-];
+type Member = { id: string; full_name: string | null };
 
-const wineByServer = servers.map((s) => ({ name: s.name, score: s.wine === "green" ? 85 : s.wine === "amber" ? 60 : 40 }));
-const dessertByServer = servers.map((s) => ({ name: s.name, score: s.desserts === "green" ? 88 : s.desserts === "amber" ? 62 : 38 }));
-const waterByServer = servers.map((s) => ({ name: s.name, score: s.water === "green" ? 82 : s.water === "amber" ? 64 : 36 }));
-const engagementByServer = servers.map((s) => ({ name: s.name, score: s.viewed ? (s.acknowledged ? 100 : 70) : 20 }));
+function TeamPage() {
+  const [members, setMembers] = useState<Member[]>([]);
+  const [stats, setStats] = useState<any[]>([]);
+  const [targets, setTargets] = useState<any[]>([]);
+  const weekStart = toISODate(getMondayOfWeek());
 
-function ChartCard({ title, children }: any) {
-  return (
-    <div className="rounded-2xl bg-white border border-border p-5">
-      <div className="text-sm font-medium mb-3">{title}</div>
-      <div className="h-56">
-        <ResponsiveContainer width="100%" height="100%">{children}</ResponsiveContainer>
-      </div>
-    </div>
-  );
-}
+  useEffect(() => {
+    (async () => {
+      const { data: u } = await supabase.auth.getUser();
+      if (!u.user) return;
+      const { data: vs } = await supabase.from("venues").select("id").eq("manager_id", u.user.id).limit(1);
+      const v = vs?.[0]?.id;
+      if (!v) return;
+      const { data: vm } = await supabase.from("venue_members").select("user_id").eq("venue_id", v);
+      const ids = (vm ?? []).map((x) => x.user_id);
+      if (ids.length) {
+        const { data: profs } = await supabase.from("profiles").select("id, full_name").in("id", ids);
+        setMembers(profs ?? []);
+      }
+      const { data: st } = await supabase.from("server_stats").select("*").eq("venue_id", v).eq("week_start", weekStart);
+      setStats(st ?? []);
+      const { data: tg } = await supabase.from("server_targets").select("*").eq("venue_id", v);
+      setTargets(tg ?? []);
+    })();
+  }, [weekStart]);
 
-function TeamTrends() {
+  const sByUser = Object.fromEntries(stats.map((s) => [s.user_id, s]));
+  const tByUser = Object.fromEntries(targets.map((t) => [t.user_id, t]));
+
   return (
     <ManagerLayout>
       <div className="px-8 py-8">
-        <div className="text-xs uppercase tracking-widest text-muted-foreground">Team Trends</div>
-        <h1 className="font-display text-4xl font-semibold tracking-tight mt-2">How the team is moving.</h1>
+        <div className="text-xs uppercase tracking-widest text-muted-foreground">Team</div>
+        <h1 className="font-display text-4xl font-extrabold tracking-tight mt-2">Your servers</h1>
+        <div className="mt-1 text-xs text-muted-foreground">{formatWeekRange(weekStart)}</div>
 
-        <div className="mt-8 grid md:grid-cols-4 gap-4">
-          {[
-            { label: "Best improving", value: "Sarah", note: "+12% week on week" },
-            { label: "Most consistent", value: "Maria", note: "Green 6 weeks running" },
-            { label: "Most improved category", value: "Bottled Water", note: "+8%" },
-            { label: "Weakest this week", value: "Wine", note: "3 servers below target" },
-          ].map((c) => (
-            <div key={c.label} className="rounded-2xl bg-white border border-border p-5">
-              <div className="text-xs text-muted-foreground">{c.label}</div>
-              <div className="mt-2 font-display text-xl font-semibold">{c.value}</div>
-              <div className="text-xs text-muted-foreground mt-1">{c.note}</div>
-            </div>
-          ))}
-        </div>
-
-        <div className="mt-8 grid lg:grid-cols-2 gap-4">
-          <ChartCard title="Average spend per cover (£)">
-            <LineChart data={spcTrend}>
-              <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
-              <XAxis dataKey="week" stroke="var(--muted-foreground)" fontSize={12} />
-              <YAxis stroke="var(--muted-foreground)" fontSize={12} />
-              <Tooltip />
-              <Line type="monotone" dataKey="spc" stroke="var(--success)" strokeWidth={3} dot={{ r: 4 }} />
-            </LineChart>
-          </ChartCard>
-          <ChartCard title="Wine score by server">
-            <BarChart data={wineByServer}>
-              <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
-              <XAxis dataKey="name" stroke="var(--muted-foreground)" fontSize={12} />
-              <YAxis stroke="var(--muted-foreground)" fontSize={12} />
-              <Tooltip />
-              <Bar dataKey="score" fill="var(--ink)" radius={[8, 8, 0, 0]} />
-            </BarChart>
-          </ChartCard>
-          <ChartCard title="Dessert score by server">
-            <BarChart data={dessertByServer}>
-              <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
-              <XAxis dataKey="name" stroke="var(--muted-foreground)" fontSize={12} />
-              <YAxis stroke="var(--muted-foreground)" fontSize={12} />
-              <Tooltip />
-              <Bar dataKey="score" fill="var(--success)" radius={[8, 8, 0, 0]} />
-            </BarChart>
-          </ChartCard>
-          <ChartCard title="Bottled water score by server">
-            <BarChart data={waterByServer}>
-              <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
-              <XAxis dataKey="name" stroke="var(--muted-foreground)" fontSize={12} />
-              <YAxis stroke="var(--muted-foreground)" fontSize={12} />
-              <Tooltip />
-              <Bar dataKey="score" fill="var(--warning)" radius={[8, 8, 0, 0]} />
-            </BarChart>
-          </ChartCard>
-          <ChartCard title="Scorecard engagement by server">
-            <BarChart data={engagementByServer}>
-              <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
-              <XAxis dataKey="name" stroke="var(--muted-foreground)" fontSize={12} />
-              <YAxis stroke="var(--muted-foreground)" fontSize={12} />
-              <Tooltip />
-              <Bar dataKey="score" fill="var(--ink)" radius={[8, 8, 0, 0]} />
-            </BarChart>
-          </ChartCard>
-          <div className="rounded-2xl bg-ink text-white p-6">
-            <div className="text-xs uppercase tracking-widest text-white/60">Servers who have not viewed stats</div>
-            <div className="mt-4 space-y-2">
-              {servers.filter((s) => !s.viewed).map((s) => (
-                <div key={s.id} className="flex items-center justify-between rounded-xl bg-white/5 px-4 py-3">
-                  <span className="font-medium">{s.name}</span>
-                  <span className="text-xs text-white/60">Reminder needed</span>
-                </div>
-              ))}
-              {servers.every((s) => s.viewed) && <div className="text-sm text-white/60">Everyone has viewed this week.</div>}
-            </div>
+        {members.length === 0 ? (
+          <div className="mt-8 rounded-2xl bg-white border border-border p-6 text-sm text-muted-foreground">
+            No team members yet. Share your join code from the dashboard.
           </div>
-        </div>
+        ) : (
+          <div className="mt-8 grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {members.map((m) => {
+              const s = sByUser[m.id];
+              const t = tByUser[m.id];
+              const colour = s && t ? performanceColour(Number(s.spend_per_cover ?? 0), Number(t.spend_per_cover_target)) : "amber";
+              const tone = colour === "green" ? "var(--brand-green)" : colour === "amber" ? "var(--brand-orange)" : "var(--opportunity)";
+              return (
+                <Link key={m.id} to="/manager/server/$id" params={{ id: m.id }} className="rounded-2xl bg-white border border-border p-5 hover:border-brand-green transition">
+                  <div className="font-display text-lg font-bold">{m.full_name || "Unnamed"}</div>
+                  <div className="mt-3 flex items-center gap-2">
+                    <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: tone }} />
+                    <span className="text-sm">SPC £{s?.spend_per_cover ? Number(s.spend_per_cover).toFixed(0) : "—"}</span>
+                    <span className="text-xs text-muted-foreground">/ £{t?.spend_per_cover_target ?? "—"}</span>
+                  </div>
+                  <div className="mt-1 text-xs text-muted-foreground">{s ? `${s.total_covers} covers · £${Number(s.total_sales).toFixed(0)} sales` : "No stats yet"}</div>
+                </Link>
+              );
+            })}
+          </div>
+        )}
       </div>
     </ManagerLayout>
   );

@@ -1,108 +1,105 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { ManagerLayout } from "@/components/manager-layout";
-import { StatusBadge, StatusDot } from "@/components/status";
-import { servers, sarahCategories } from "@/lib/sample-data";
+import { supabase } from "@/integrations/supabase/client";
+import { getMondayOfWeek, toISODate, formatWeekRange, performanceColour } from "@/lib/week";
 
-export const Route = createFileRoute("/manager/server/$id")({
-  component: ServerView,
-});
+export const Route = createFileRoute("/manager/server/$id")({ component: ServerView });
+
+const cats = [
+  { key: "wine_conversion", t: "wine_target", label: "Wine" },
+  { key: "cocktail_conversion", t: "cocktail_target", label: "Cocktails" },
+  { key: "dessert_conversion", t: "dessert_target", label: "Desserts" },
+  { key: "sides_conversion", t: "sides_target", label: "Sides" },
+  { key: "spirits_conversion", t: "spirits_target", label: "Spirits" },
+  { key: "sparkling_conversion", t: "sparkling_target", label: "Sparkling" },
+];
 
 function ServerView() {
   const { id } = Route.useParams();
-  const server = servers.find((s) => s.id === id) ?? servers[0];
+  const [name, setName] = useState("");
+  const [stat, setStat] = useState<any>(null);
+  const [target, setTarget] = useState<any>(null);
+  const [streak, setStreak] = useState(0);
+  const [viewed, setViewed] = useState(false);
+  const [acked, setAcked] = useState(false);
+  const weekStart = toISODate(getMondayOfWeek());
+
+  useEffect(() => {
+    (async () => {
+      const { data: u } = await supabase.auth.getUser();
+      if (!u.user) return;
+      const { data: vs } = await supabase.from("venues").select("id").eq("manager_id", u.user.id).limit(1);
+      const v = vs?.[0]?.id;
+      if (!v) return;
+      const { data: prof } = await supabase.from("profiles").select("full_name").eq("id", id).maybeSingle();
+      setName(prof?.full_name || "Server");
+      const { data: st } = await supabase.from("server_stats").select("*").eq("user_id", id).eq("venue_id", v).eq("week_start", weekStart).maybeSingle();
+      setStat(st);
+      const { data: tg } = await supabase.from("server_targets").select("*").eq("user_id", id).eq("venue_id", v).maybeSingle();
+      setTarget(tg);
+      const { data: sk } = await supabase.from("server_streaks").select("current_streak").eq("user_id", id).eq("venue_id", v).maybeSingle();
+      setStreak((sk as any)?.current_streak ?? 0);
+      const { data: vw } = await supabase.from("server_stat_views").select("id").eq("user_id", id).eq("venue_id", v).eq("week_start", weekStart).maybeSingle();
+      setViewed(!!vw);
+      const { data: ak } = await supabase.from("server_focus_acks").select("id").eq("user_id", id).eq("venue_id", v).eq("week_start", weekStart).maybeSingle();
+      setAcked(!!ak);
+    })();
+  }, [id, weekStart]);
 
   return (
     <ManagerLayout>
       <div className="px-8 py-8">
-        <Link to="/manager" className="text-sm text-muted-foreground hover:text-ink">← Back to dashboard</Link>
-        <div className="mt-3 flex flex-wrap items-end justify-between gap-4">
+        <Link to="/manager" className="text-sm text-muted-foreground hover:text-foreground">← Back to dashboard</Link>
+        <div className="mt-3 flex items-end justify-between flex-wrap gap-4">
           <div>
-            <div className="text-xs uppercase tracking-widest text-muted-foreground">Server view</div>
-            <h1 className="font-display text-4xl font-semibold tracking-tight mt-2">{server.name}</h1>
-          </div>
-          <div className="flex items-center gap-3">
-            <StatusBadge status={server.overall}>Overall {server.overall}</StatusBadge>
+            <div className="text-xs uppercase tracking-widest text-muted-foreground">Server</div>
+            <h1 className="font-display text-4xl font-extrabold tracking-tight mt-1">{name}</h1>
+            <div className="text-xs text-muted-foreground mt-1">{formatWeekRange(weekStart)}</div>
           </div>
         </div>
 
-        {/* Summary cards */}
-        <div className="mt-8 grid md:grid-cols-4 gap-4">
-          {[
-            { label: "Strongest category", value: "Desserts" },
-            { label: "Biggest opportunity", value: "Wine" },
-            { label: "Stats viewed", value: "3 times this week" },
-            { label: "Estimated uplift", value: `£${server.uplift}`, accent: "success" },
-          ].map((c) => (
-            <div key={c.label} className="rounded-2xl bg-white border border-border p-5">
-              <div className="text-xs text-muted-foreground">{c.label}</div>
-              <div className="mt-2 font-display text-2xl font-semibold" style={{ color: (c as any).accent ? "var(--success)" : undefined }}>
-                {c.value}
-              </div>
-            </div>
-          ))}
+        <div className="mt-8 grid md:grid-cols-3 gap-4">
+          <div className="rounded-2xl bg-white border border-border p-5">
+            <div className="text-xs text-muted-foreground">Spend per cover</div>
+            <div className="font-display text-2xl font-extrabold mt-1">£{stat?.spend_per_cover ? Number(stat.spend_per_cover).toFixed(2) : "—"}</div>
+            <div className="text-xs text-muted-foreground mt-1">Target £{target?.spend_per_cover_target ?? "—"}</div>
+          </div>
+          <div className="rounded-2xl bg-white border border-border p-5">
+            <div className="text-xs text-muted-foreground">Streak</div>
+            <div className="font-display text-2xl font-extrabold mt-1">{streak} week{streak === 1 ? "" : "s"}</div>
+          </div>
+          <div className="rounded-2xl bg-white border border-border p-5">
+            <div className="text-xs text-muted-foreground">Engagement</div>
+            <div className="mt-2 text-sm">Stats viewed: <span className={`font-semibold ${viewed ? "text-brand-green" : "text-muted-foreground"}`}>{viewed ? "Yes" : "Not yet"}</span></div>
+            <div className="text-sm">Focus ack'd: <span className={`font-semibold ${acked ? "text-brand-green" : "text-muted-foreground"}`}>{acked ? "Yes" : "Not yet"}</span></div>
+          </div>
         </div>
 
-        <div className="mt-8 grid lg:grid-cols-3 gap-6">
-          {/* Category breakdown */}
-          <div className="lg:col-span-2 rounded-2xl bg-white border border-border p-6">
-            <h2 className="font-display text-lg font-semibold">Category breakdown</h2>
+        <div className="mt-6 rounded-2xl bg-white border border-border p-6">
+          <h2 className="font-display text-lg font-bold">Category breakdown</h2>
+          {!stat ? (
+            <p className="mt-3 text-sm text-muted-foreground">No stats this week. Upload via the manager dashboard.</p>
+          ) : (
             <div className="mt-4 space-y-3">
-              {sarahCategories.map((c) => (
-                <div key={c.key} className="flex items-center gap-4">
-                  <StatusDot status={c.status} />
-                  <div className="w-32 text-sm font-medium">{c.name}</div>
-                  <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
-                    <div
-                      className="h-full rounded-full"
-                      style={{
-                        width: `${c.score}%`,
-                        backgroundColor: c.status === "green" ? "var(--success)" : c.status === "amber" ? "var(--warning)" : "var(--opportunity)",
-                      }}
-                    />
+              {cats.map((c) => {
+                const actual = Number(stat[c.key] ?? 0);
+                const tgt = Number(target?.[c.t] ?? 0);
+                const colour = performanceColour(actual, tgt);
+                const tone = colour === "green" ? "var(--brand-green)" : colour === "amber" ? "var(--brand-orange)" : "var(--opportunity)";
+                return (
+                  <div key={c.label} className="flex items-center gap-4">
+                    <span className="inline-block h-3 w-3 rounded-full" style={{ background: tone }} />
+                    <div className="w-32 text-sm font-medium">{c.label}</div>
+                    <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
+                      <div className="h-full rounded-full" style={{ width: `${Math.min(100, actual)}%`, background: tone }} />
+                    </div>
+                    <div className="w-24 text-right text-xs text-muted-foreground">{actual.toFixed(0)}% / {tgt}%</div>
                   </div>
-                  <div className="w-10 text-right text-xs text-muted-foreground">{c.score}%</div>
-                </div>
-              ))}
+                );
+              })}
             </div>
-          </div>
-
-          {/* Engagement */}
-          <div className="rounded-2xl bg-ink text-white p-6">
-            <div className="text-xs uppercase tracking-widest text-white/60">Engagement</div>
-            <div className="mt-4 space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-white/70">Stats viewed</span>
-                <span className="font-medium">{server.viewed ? "Yes" : "Not yet"}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-white/70">Focus acknowledged</span>
-                <span className="font-medium">{server.acknowledged ? "Yes" : "Not yet"}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-white/70">Weekly focus</span>
-                <span className="font-medium">{server.weeklyFocus}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* AI talking points */}
-        <div className="mt-6 grid lg:grid-cols-2 gap-6">
-          <div className="rounded-2xl bg-white border border-border p-6">
-            <div className="text-xs uppercase tracking-widest text-muted-foreground">AI manager talking points</div>
-            <p className="mt-3 text-foreground">
-              {server.name} is strong on desserts but has a wine opportunity compared with similar dinner shifts. Coaching
-              should focus on one confident pairing recommendation, especially with salmon and steak tables.
-            </p>
-          </div>
-          <div className="rounded-2xl bg-white border border-border p-6">
-            <div className="text-xs uppercase tracking-widest text-muted-foreground">Menu-specific coaching</div>
-            <ul className="mt-3 space-y-2 text-sm">
-              <li className="flex gap-2"><span className="text-success">•</span> Recommend Sancerre with salmon.</li>
-              <li className="flex gap-2"><span className="text-success">•</span> Recommend Malbec with ribeye steak.</li>
-              <li className="flex gap-2"><span className="text-success">•</span> Offer Espresso Martini after Chocolate Fondant.</li>
-            </ul>
-          </div>
+          )}
         </div>
       </div>
     </ManagerLayout>
