@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Logo } from "@/components/logo";
-import { Star, Trophy, Award, Check, ShieldCheck, BarChart3, Users, BookOpen, Target } from "lucide-react";
+import { Trophy, Award, Check, ShieldCheck, BarChart3, Users, BookOpen, Target } from "lucide-react";
 import { usePaddleCheckout } from "@/hooks/usePaddleCheckout";
 import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
 
@@ -53,7 +53,7 @@ function Landing() {
         <div className="mx-auto max-w-7xl grid lg:grid-cols-2 gap-10 items-center">
           <div>
             <div className="inline-flex items-center gap-2 rounded-full border border-border bg-white px-3 py-1 text-xs font-semibold">
-              🔥 Loved by servers. Trusted by top restaurants.
+              ✨ Built for modern restaurant teams.
             </div>
             <h1 className="mt-5 font-display font-extrabold tracking-tight text-6xl md:text-7xl leading-[0.95]">
               Popp Off.<br />
@@ -72,17 +72,9 @@ function Landing() {
                 Start Your Pilot
               </Link>
             </div>
-            <div className="mt-6 flex items-center gap-3">
-              <div className="flex text-brand-orange">
-                {Array.from({ length: 5 }).map((_, i) => <Star key={i} className="h-5 w-5 fill-current" />)}
-              </div>
-              <span className="text-sm font-semibold">4.9 / 5 from 500+ servers</span>
-            </div>
-            <div className="mt-6 flex flex-wrap items-center gap-x-8 gap-y-2 text-xs text-muted-foreground tracking-wider uppercase">
-              <span className="font-bold">⚓ Garden Table</span>
-              <span className="font-bold">URBAN PLATE</span>
-              <span className="font-bold">NORTH & OAK</span>
-            </div>
+            <p className="mt-6 text-sm text-foreground/70 max-w-md">
+              Designed to help servers improve performance — turning sales data into coaching, motivation, and revenue growth.
+            </p>
           </div>
 
           {/* Phone mockups */}
@@ -215,7 +207,7 @@ function Landing() {
           style={{ background: "color-mix(in oklab, var(--brand-green) 10%, white)" }}>
           <div className="inline-flex items-center gap-2 text-sm">
             <ShieldCheck className="h-4 w-4 text-brand-green" />
-            <span className="font-semibold">Join 500+ servers already leveling up their shifts.</span>
+            <span className="font-semibold">Helping restaurants turn sales data into coaching, motivation, and revenue growth.</span>
           </div>
           <div className="inline-flex items-center gap-3">
             <span className="text-sm font-bold text-brand-green">Ready to see your team win?</span>
@@ -310,10 +302,17 @@ function Landing() {
         </div>
       </section>
 
-      <footer className="px-6 py-8 border-t border-border text-sm">
+      <footer className="px-6 py-10 border-t border-border text-sm bg-white">
         <div className="mx-auto max-w-7xl flex flex-wrap items-center justify-between gap-4">
-          <Logo />
-          <div className="text-muted-foreground">© 2026 PoppOff. Every shift. Every win.</div>
+          <div className="flex items-center gap-6">
+            <Logo />
+            <span className="text-muted-foreground">© 2026 PoppOff. All rights reserved.</span>
+          </div>
+          <nav className="flex items-center gap-6 text-muted-foreground">
+            <a href="mailto:hello@poppoffstats.com" className="hover:text-foreground">Contact</a>
+            <Link to="/privacy" className="hover:text-foreground">Privacy Policy</Link>
+            <Link to="/terms" className="hover:text-foreground">Terms of Service</Link>
+          </nav>
         </div>
       </footer>
     </div>
