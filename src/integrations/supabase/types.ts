@@ -38,6 +38,38 @@ export type Database = {
         }
         Relationships: []
       }
+      server_focus_acks: {
+        Row: {
+          acknowledged_at: string
+          id: string
+          user_id: string
+          venue_id: string
+          week_start: string
+        }
+        Insert: {
+          acknowledged_at?: string
+          id?: string
+          user_id: string
+          venue_id: string
+          week_start: string
+        }
+        Update: {
+          acknowledged_at?: string
+          id?: string
+          user_id?: string
+          venue_id?: string
+          week_start?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "server_focus_acks_venue_id_fkey"
+            columns: ["venue_id"]
+            isOneToOne: false
+            referencedRelation: "venues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       server_milestones: {
         Row: {
           id: string
@@ -70,6 +102,38 @@ export type Database = {
           },
         ]
       }
+      server_stat_views: {
+        Row: {
+          id: string
+          user_id: string
+          venue_id: string
+          viewed_at: string
+          week_start: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          venue_id: string
+          viewed_at?: string
+          week_start: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          venue_id?: string
+          viewed_at?: string
+          week_start?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "server_stat_views_venue_id_fkey"
+            columns: ["venue_id"]
+            isOneToOne: false
+            referencedRelation: "venues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       server_stats: {
         Row: {
           cocktail_conversion: number | null
@@ -78,7 +142,13 @@ export type Database = {
           dessert_conversion: number | null
           dessert_sales: number
           id: string
+          sides_conversion: number | null
+          sides_sales: number
+          sparkling_conversion: number | null
+          sparkling_sales: number
           spend_per_cover: number | null
+          spirits_conversion: number | null
+          spirits_sales: number
           total_covers: number
           total_sales: number
           user_id: string
@@ -94,7 +164,13 @@ export type Database = {
           dessert_conversion?: number | null
           dessert_sales?: number
           id?: string
+          sides_conversion?: number | null
+          sides_sales?: number
+          sparkling_conversion?: number | null
+          sparkling_sales?: number
           spend_per_cover?: number | null
+          spirits_conversion?: number | null
+          spirits_sales?: number
           total_covers?: number
           total_sales?: number
           user_id: string
@@ -110,7 +186,13 @@ export type Database = {
           dessert_conversion?: number | null
           dessert_sales?: number
           id?: string
+          sides_conversion?: number | null
+          sides_sales?: number
+          sparkling_conversion?: number | null
+          sparkling_sales?: number
           spend_per_cover?: number | null
+          spirits_conversion?: number | null
+          spirits_sales?: number
           total_covers?: number
           total_sales?: number
           user_id?: string
@@ -171,9 +253,13 @@ export type Database = {
         Row: {
           cocktail_target: number
           created_at: string
+          daily_sales_target: number
           dessert_target: number
           id: string
+          sides_target: number
+          sparkling_target: number
           spend_per_cover_target: number
+          spirits_target: number
           updated_at: string
           user_id: string
           venue_id: string
@@ -182,9 +268,13 @@ export type Database = {
         Insert: {
           cocktail_target?: number
           created_at?: string
+          daily_sales_target?: number
           dessert_target?: number
           id?: string
+          sides_target?: number
+          sparkling_target?: number
           spend_per_cover_target?: number
+          spirits_target?: number
           updated_at?: string
           user_id: string
           venue_id: string
@@ -193,9 +283,13 @@ export type Database = {
         Update: {
           cocktail_target?: number
           created_at?: string
+          daily_sales_target?: number
           dessert_target?: number
           id?: string
+          sides_target?: number
+          sparkling_target?: number
           spend_per_cover_target?: number
+          spirits_target?: number
           updated_at?: string
           user_id?: string
           venue_id?: string
@@ -313,18 +407,24 @@ export type Database = {
         Row: {
           id: string
           menu_text: string
+          parsed_items: Json | null
+          updated_at: string
           uploaded_at: string
           venue_id: string
         }
         Insert: {
           id?: string
           menu_text: string
+          parsed_items?: Json | null
+          updated_at?: string
           uploaded_at?: string
           venue_id: string
         }
         Update: {
           id?: string
           menu_text?: string
+          parsed_items?: Json | null
+          updated_at?: string
           uploaded_at?: string
           venue_id?: string
         }
@@ -333,6 +433,68 @@ export type Database = {
             foreignKeyName: "venue_menu_venue_id_fkey"
             columns: ["venue_id"]
             isOneToOne: false
+            referencedRelation: "venues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      venue_settings: {
+        Row: {
+          allow_assistant_manager_priorities: boolean
+          amber_threshold: number
+          bottled_water_on: boolean
+          cover_capacity: number | null
+          created_at: string
+          cuisine: string | null
+          green_threshold: number
+          head_office_aggregated_only: boolean
+          id: string
+          managers_see_estimated_uplift: boolean
+          premium_mains_on: boolean
+          send_weekly_push_notifications: boolean
+          servers_see_percentages_only: boolean
+          updated_at: string
+          venue_id: string
+        }
+        Insert: {
+          allow_assistant_manager_priorities?: boolean
+          amber_threshold?: number
+          bottled_water_on?: boolean
+          cover_capacity?: number | null
+          created_at?: string
+          cuisine?: string | null
+          green_threshold?: number
+          head_office_aggregated_only?: boolean
+          id?: string
+          managers_see_estimated_uplift?: boolean
+          premium_mains_on?: boolean
+          send_weekly_push_notifications?: boolean
+          servers_see_percentages_only?: boolean
+          updated_at?: string
+          venue_id: string
+        }
+        Update: {
+          allow_assistant_manager_priorities?: boolean
+          amber_threshold?: number
+          bottled_water_on?: boolean
+          cover_capacity?: number | null
+          created_at?: string
+          cuisine?: string | null
+          green_threshold?: number
+          head_office_aggregated_only?: boolean
+          id?: string
+          managers_see_estimated_uplift?: boolean
+          premium_mains_on?: boolean
+          send_weekly_push_notifications?: boolean
+          servers_see_percentages_only?: boolean
+          updated_at?: string
+          venue_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "venue_settings_venue_id_fkey"
+            columns: ["venue_id"]
+            isOneToOne: true
             referencedRelation: "venues"
             referencedColumns: ["id"]
           },
@@ -364,6 +526,44 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      weekly_priorities: {
+        Row: {
+          category: string | null
+          created_at: string
+          id: string
+          item_name: string
+          priority_flag: string
+          venue_id: string
+          week_start: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          id?: string
+          item_name: string
+          priority_flag?: string
+          venue_id: string
+          week_start: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          id?: string
+          item_name?: string
+          priority_flag?: string
+          venue_id?: string
+          week_start?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "weekly_priorities_venue_id_fkey"
+            columns: ["venue_id"]
+            isOneToOne: false
+            referencedRelation: "venues"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
