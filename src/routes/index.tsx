@@ -52,16 +52,17 @@ function Landing() {
       <section className="px-6 pt-14 pb-20">
         <div className="mx-auto max-w-7xl grid lg:grid-cols-2 gap-10 items-center">
           <div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-border bg-white px-3 py-1 text-xs font-semibold uppercase tracking-wider">
-              <span className="h-1.5 w-1.5 rounded-full" style={{ background: "var(--brand-green)" }} />
-              Restaurant performance platform
-            </div>
-            <h1 className="mt-5 font-display font-extrabold tracking-tight text-4xl sm:text-5xl md:text-6xl lg:text-7xl leading-[1.02]">
-              Give every server <span style={{ color: "var(--brand-green)" }}>visibility</span> into the numbers that drive <span style={{ color: "var(--brand-orange)" }}>revenue</span>.
+            <h1 className="font-display font-extrabold tracking-tight text-4xl sm:text-5xl md:text-6xl lg:text-7xl leading-[1.02]">
+              PoppOff makes <span style={{ color: "var(--brand-green)" }}>server performance</span> <span style={{ color: "var(--brand-orange)" }}>visible</span>.
             </h1>
             <p className="mt-6 text-base md:text-lg text-foreground/75 max-w-xl">
-              PoppOff turns POS data into scorecards, coaching insights, and clear targets that help restaurants improve upselling, average spend, and revenue per server.
+              PoppOff turns POS data into server scorecards, coaching insights, and clear targets so every shift becomes more visible, more focused, and more profitable.
             </p>
+            <div className="mt-6 font-display font-extrabold tracking-tight text-lg md:text-xl leading-snug">
+              <div style={{ color: "var(--brand-green)" }}>Visibility changes behaviour.</div>
+              <div style={{ color: "var(--brand-orange)" }}>Behaviour improves performance.</div>
+              <div style={{ color: "var(--brand-green)" }}>Performance increases revenue.</div>
+            </div>
             <div className="mt-6 inline-flex items-center gap-3 rounded-xl border-l-4 pl-4 py-1" style={{ borderColor: "var(--brand-orange)" }}>
               <p className="font-display text-lg md:text-xl font-extrabold tracking-tight">
                 PoppOff <span style={{ color: "var(--brand-orange)" }}>every shift.</span> Every win.
