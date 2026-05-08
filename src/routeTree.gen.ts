@@ -9,9 +9,11 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TermsRouteImport } from './routes/terms'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as SigninRouteImport } from './routes/signin'
 import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as JoinRouteImport } from './routes/join'
 import { Route as IndexRouteImport } from './routes/index'
@@ -43,6 +45,11 @@ import { Route as DemoManagerMenuRouteImport } from './routes/demo.manager.menu'
 import { Route as DemoManagerServerIdRouteImport } from './routes/demo.manager.server.$id'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
 
+const TermsRoute = TermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
   path: '/signup',
@@ -56,6 +63,11 @@ const SigninRoute = SigninRouteImport.update({
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -214,9 +226,11 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/join': typeof JoinRoute
   '/login': typeof LoginRoute
+  '/privacy': typeof PrivacyRoute
   '/settings': typeof SettingsRoute
   '/signin': typeof SigninRoute
   '/signup': typeof SignupRouteWithChildren
+  '/terms': typeof TermsRoute
   '/checkout/retry': typeof CheckoutRetryRoute
   '/checkout/success': typeof CheckoutSuccessRoute
   '/manager/coaching': typeof ManagerCoachingRoute
@@ -249,9 +263,11 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/join': typeof JoinRoute
   '/login': typeof LoginRoute
+  '/privacy': typeof PrivacyRoute
   '/settings': typeof SettingsRoute
   '/signin': typeof SigninRoute
   '/signup': typeof SignupRouteWithChildren
+  '/terms': typeof TermsRoute
   '/checkout/retry': typeof CheckoutRetryRoute
   '/checkout/success': typeof CheckoutSuccessRoute
   '/manager/coaching': typeof ManagerCoachingRoute
@@ -285,9 +301,11 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/join': typeof JoinRoute
   '/login': typeof LoginRoute
+  '/privacy': typeof PrivacyRoute
   '/settings': typeof SettingsRoute
   '/signin': typeof SigninRoute
   '/signup': typeof SignupRouteWithChildren
+  '/terms': typeof TermsRoute
   '/checkout/retry': typeof CheckoutRetryRoute
   '/checkout/success': typeof CheckoutSuccessRoute
   '/manager/coaching': typeof ManagerCoachingRoute
@@ -322,9 +340,11 @@ export interface FileRouteTypes {
     | '/'
     | '/join'
     | '/login'
+    | '/privacy'
     | '/settings'
     | '/signin'
     | '/signup'
+    | '/terms'
     | '/checkout/retry'
     | '/checkout/success'
     | '/manager/coaching'
@@ -357,9 +377,11 @@ export interface FileRouteTypes {
     | '/'
     | '/join'
     | '/login'
+    | '/privacy'
     | '/settings'
     | '/signin'
     | '/signup'
+    | '/terms'
     | '/checkout/retry'
     | '/checkout/success'
     | '/manager/coaching'
@@ -392,9 +414,11 @@ export interface FileRouteTypes {
     | '/'
     | '/join'
     | '/login'
+    | '/privacy'
     | '/settings'
     | '/signin'
     | '/signup'
+    | '/terms'
     | '/checkout/retry'
     | '/checkout/success'
     | '/manager/coaching'
@@ -428,9 +452,11 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   JoinRoute: typeof JoinRoute
   LoginRoute: typeof LoginRoute
+  PrivacyRoute: typeof PrivacyRoute
   SettingsRoute: typeof SettingsRoute
   SigninRoute: typeof SigninRoute
   SignupRoute: typeof SignupRouteWithChildren
+  TermsRoute: typeof TermsRoute
   CheckoutRetryRoute: typeof CheckoutRetryRoute
   CheckoutSuccessRoute: typeof CheckoutSuccessRoute
   ManagerCoachingRoute: typeof ManagerCoachingRoute
@@ -461,6 +487,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/signup': {
       id: '/signup'
       path: '/signup'
@@ -480,6 +513,13 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -710,9 +750,11 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   JoinRoute: JoinRoute,
   LoginRoute: LoginRoute,
+  PrivacyRoute: PrivacyRoute,
   SettingsRoute: SettingsRoute,
   SigninRoute: SigninRoute,
   SignupRoute: SignupRouteWithChildren,
+  TermsRoute: TermsRoute,
   CheckoutRetryRoute: CheckoutRetryRoute,
   CheckoutSuccessRoute: CheckoutSuccessRoute,
   ManagerCoachingRoute: ManagerCoachingRoute,
