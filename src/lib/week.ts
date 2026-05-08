@@ -26,10 +26,12 @@ export function isMonday(d: Date) {
 }
 
 export function formatWeekRange(weekStart: string): string {
-  const start = new Date(weekStart);
+  const [year, month, day] = weekStart.split("-").map(Number);
+  const start = new Date(year, (month || 1) - 1, day || 1);
   const end = new Date(start);
   end.setDate(end.getDate() + 6);
-  const fmt = (x: Date) => x.toLocaleDateString(undefined, { day: "numeric", month: "short" });
+  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const fmt = (x: Date) => `${months[x.getMonth()]} ${x.getDate()}`;
   return `${fmt(start)} – ${fmt(end)}`;
 }
 
