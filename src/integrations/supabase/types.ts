@@ -631,6 +631,7 @@ export type Database = {
         Returns: string
       }
       claim_placeholder_data: { Args: never; Returns: Json }
+      csv_number: { Args: { _key: string; _row: Json }; Returns: number }
       generate_unique_join_code: { Args: never; Returns: string }
       get_leaderboard_position: {
         Args: { _venue_id: string; _week_start: string }
