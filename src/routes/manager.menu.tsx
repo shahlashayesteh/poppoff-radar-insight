@@ -251,6 +251,30 @@ function MenuIntel() {
                 [p.item, p.pair_with, p.why, p.category].some((f) => (f || "").toLowerCase().includes(q)),
               )
             : pairings;
+          const CAT_META: Record<string, { emoji: string; label: string; tint: string; ink: string }> = {
+            wine:     { emoji: "🍷", label: "Wine",     tint: "color-mix(in oklab, var(--brand-orange) 14%, white)", ink: "var(--brand-orange)" },
+            cocktail: { emoji: "🍸", label: "Cocktail", tint: "color-mix(in oklab, var(--brand-green) 14%, white)",  ink: "var(--brand-green)" },
+            sake:     { emoji: "🍶", label: "Sake",     tint: "color-mix(in oklab, var(--brand-orange) 10%, white)", ink: "var(--brand-orange)" },
+            beer:     { emoji: "🍺", label: "Beer",     tint: "color-mix(in oklab, var(--brand-green) 10%, white)",  ink: "var(--brand-green)" },
+            spirit:   { emoji: "🥃", label: "Spirit",   tint: "color-mix(in oklab, var(--brand-orange) 10%, white)", ink: "var(--brand-orange)" },
+            dessert:  { emoji: "🍰", label: "Dessert",  tint: "color-mix(in oklab, var(--brand-green) 10%, white)",  ink: "var(--brand-green)" },
+            other:    { emoji: "✨", label: "Other",    tint: "var(--muted)",                                         ink: "var(--muted-foreground)" },
+          };
+          const CAT_ORDER = ["wine", "cocktail", "sake", "beer", "spirit", "dessert", "other"];
+          const itemEmoji = (name: string) => {
+            const n = name.toLowerCase();
+            if (/(salmon|tuna|cod|sea bass|prawn|shrimp|oyster|scallop|fish|crab|lobster)/.test(n)) return "🐟";
+            if (/(beef|steak|burger|ribeye|sirloin)/.test(n)) return "🥩";
+            if (/(chicken|poultry|duck)/.test(n)) return "🍗";
+            if (/(pork|bacon|ham)/.test(n)) return "🥓";
+            if (/(pasta|spaghetti|linguine|risotto)/.test(n)) return "🍝";
+            if (/(pizza)/.test(n)) return "🍕";
+            if (/(salad|greens|rocket)/.test(n)) return "🥗";
+            if (/(soup|broth|miso)/.test(n)) return "🍲";
+            if (/(burrata|cheese|mozzarella)/.test(n)) return "🧀";
+            if (/(dessert|cake|chocolate|tart|ice cream|sorbet)/.test(n)) return "🍰";
+            return "🍽️";
+          };
           const groups = new Map<string, Pairing[]>();
           for (const p of filtered) {
             const key = p.item || "Other";
@@ -260,44 +284,76 @@ function MenuIntel() {
           return (
             <div className="mt-6 rounded-2xl bg-white border border-border p-5">
               <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
-                <h3 className="font-display font-bold">AI pairings across your menus</h3>
+                <h3 className="font-display font-bold inline-flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-brand-orange" /> AI pairings across your menus
+                </h3>
                 <input
                   value={pairingSearch}
                   onChange={(e) => setPairingSearch(e.target.value)}
-                  placeholder="Search a food item, drink or dessert…"
+                  placeholder="🔍 Search a food item, drink or dessert…"
                   className="rounded-xl border border-border px-3 py-2 text-sm w-full sm:w-72"
                 />
               </div>
-              <div className="text-xs text-muted-foreground mb-3">
-                {filtered.length} pairing{filtered.length === 1 ? "" : "s"} across {groups.size} item{groups.size === 1 ? "" : "s"}
+              <div className="text-xs text-muted-foreground mb-4">
+                {filtered.length} pairing{filtered.length === 1 ? "" : "s"} across {groups.size} item{groups.size === 1 ? "" : "s"} — up to 3 premium picks per category.
               </div>
               {filtered.length === 0 ? (
                 <p className="text-sm text-muted-foreground">No pairings match "{pairingSearch}".</p>
               ) : (
                 <div className="space-y-5">
-                  {Array.from(groups.entries()).map(([item, rows]) => (
-                    <div key={item}>
-                      <div className="font-display font-bold text-base mb-2">{item}</div>
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                          <thead className="text-xs text-muted-foreground"><tr className="text-left"><th className="pb-2 w-24">Category</th><th>Pair with</th><th>Why</th><th className="w-20">Priority</th></tr></thead>
-                          <tbody>
-                            {rows.map((p, i) => (
-                              <tr key={i} className="border-t border-border">
-                                <td className="py-2 capitalize text-muted-foreground">{p.category || "—"}</td>
-                                <td className="py-2 font-semibold">{p.pair_with}</td>
-                                <td className="py-2 text-foreground/75">{p.why}</td>
-                                <td className="py-2"><span className="text-xs font-semibold px-2 py-1 rounded" style={{
-                                  background: p.priority === "High" ? "color-mix(in oklab, var(--brand-orange) 18%, white)" : "var(--muted)",
-                                  color: p.priority === "High" ? "var(--brand-orange)" : "var(--muted-foreground)",
-                                }}>{p.priority || "Medium"}</span></td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
+                  {Array.from(groups.entries()).map(([item, rows]) => {
+                    const byCat = new Map<string, Pairing[]>();
+                    for (const r of rows) {
+                      const c = (r.category || "other").toLowerCase();
+                      if (!byCat.has(c)) byCat.set(c, []);
+                      byCat.get(c)!.push(r);
+                    }
+                    const orderedCats = CAT_ORDER.filter((c) => byCat.has(c)).concat(
+                      Array.from(byCat.keys()).filter((c) => !CAT_ORDER.includes(c)),
+                    );
+                    return (
+                      <div key={item} className="rounded-2xl border border-border overflow-hidden"
+                        style={{ background: "color-mix(in oklab, var(--brand-orange) 4%, white)" }}>
+                        <div className="px-4 py-3 flex items-center gap-3 border-b border-border bg-white">
+                          <div className="h-10 w-10 rounded-xl grid place-items-center text-xl"
+                            style={{ background: "color-mix(in oklab, var(--brand-orange) 12%, white)" }}>
+                            {itemEmoji(item)}
+                          </div>
+                          <div className="font-display font-bold text-base">{item}</div>
+                        </div>
+                        <div className="p-4 grid sm:grid-cols-2 gap-3">
+                          {orderedCats.map((cat) => {
+                            const meta = CAT_META[cat] || CAT_META.other;
+                            const picks = byCat.get(cat)!.slice(0, 3);
+                            return (
+                              <div key={cat} className="rounded-xl border border-border bg-white p-3">
+                                <div className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wide mb-2 px-2 py-1 rounded-md"
+                                  style={{ background: meta.tint, color: meta.ink }}>
+                                  <span className="text-base leading-none">{meta.emoji}</span> {meta.label}
+                                </div>
+                                <ul className="space-y-2">
+                                  {picks.map((p, i) => (
+                                    <li key={i} className="text-sm">
+                                      <div className="flex items-center justify-between gap-2">
+                                        <span className="font-semibold">{p.pair_with}</span>
+                                        {p.priority === "High" && (
+                                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded"
+                                            style={{ background: "color-mix(in oklab, var(--brand-orange) 18%, white)", color: "var(--brand-orange)" }}>
+                                            ⭐ Top
+                                          </span>
+                                        )}
+                                      </div>
+                                      {p.why && <div className="text-xs text-muted-foreground mt-0.5">{p.why}</div>}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            );
+                          })}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
