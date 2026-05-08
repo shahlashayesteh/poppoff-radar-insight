@@ -230,34 +230,26 @@ function ManagerDashboard() {
         return;
       }
       const importWeek = rows[0]?.week_start || weekStart;
-      const batches = Array.from({ length: Math.ceil(rows.length / 250) }, (_, i) =>
-        rows.slice(i * 250, i * 250 + 250),
-      );
       const importedWeeks = new Set<string>();
       const createdNames = new Set<string>();
-      let importedCount = 0;
-
-      for (const [index, batch] of batches.entries()) {
-        setUploadStatus(`Importing batch ${index + 1} of ${batches.length}…`);
-        const { data, error } = await supabase.rpc("process_csv_upload", {
-          _venue_id: venue.id,
-          _week_start: batch[0]?.week_start || importWeek,
-          _csv_data: batch as unknown as never,
-        });
-        if (error) throw error;
-        const result = data as {
-          matched_count: number;
-          created_count?: number;
-          unmatched_names?: string[];
-          weeks?: string[];
-        };
-        importedCount += result.matched_count || 0;
-        (result.weeks?.length
-          ? result.weeks
-          : batch.map((row) => row.week_start || importWeek)
-        ).forEach((week) => importedWeeks.add(week));
-        (result.unmatched_names ?? []).forEach((name) => createdNames.add(name));
-      }
+      setUploadStatus(`Importing ${rows.length} extracted server row${rows.length === 1 ? "" : "s"}…`);
+      const { data, error } = await supabase.rpc("process_csv_upload", {
+        _venue_id: venue.id,
+        _week_start: importWeek,
+        _csv_data: rows as unknown as never,
+      });
+      if (error) throw error;
+      const result = data as {
+        matched_count: number;
+        created_count?: number;
+        unmatched_names?: string[];
+        weeks?: string[];
+      };
+      const importedCount = result.matched_count || 0;
+      (result.weeks?.length ? result.weeks : rows.map((row) => row.week_start || importWeek)).forEach(
+        (week) => importedWeeks.add(week),
+      );
+      (result.unmatched_names ?? []).forEach((name) => createdNames.add(name));
 
       const weeks = Array.from(importedWeeks);
       toast.success(
