@@ -53,14 +53,24 @@ Deno.serve(async (req) => {
 
     if (action === "parse_menu") {
       const text = String(payload?.menu_text ?? "").slice(0, 20000);
-      const sys = "Extract menu items from text. Reply ONLY with JSON: {\"items\":[{\"name\":string,\"category\":string,\"price\":string,\"pairing\":string,\"priority\":\"High Priority\"|\"Standard\"}]}. Pairing is a wine/cocktail/side that pairs well. Max 40 items.";
+      const images: string[] = Array.isArray(payload?.images) ? payload.images.slice(0, 8) : [];
+      const sys = "You are a menu parser. Extract every menu item from the provided text and/or images (OCR them). Reply ONLY with JSON: {\"items\":[{\"name\":string,\"category\":string,\"price\":string,\"pairing\":string,\"priority\":\"High Priority\"|\"Standard\"}]}. Pairing is a specific wine/cocktail/side that pairs well (e.g. 'Sancerre' with salmon). Max 80 items.";
+      const userContent: any[] = [];
+      if (text.trim()) userContent.push({ type: "text", text });
+      for (const url of images) {
+        if (typeof url === "string" && url.startsWith("data:image/")) {
+          userContent.push({ type: "image_url", image_url: { url } });
+        }
+      }
+      if (userContent.length === 0) userContent.push({ type: "text", text: "(empty)" });
       const out = await callAI([
         { role: "system", content: sys },
-        { role: "user", content: text },
+        { role: "user", content: userContent },
       ], true);
       let items: any[] = [];
       try { const o = JSON.parse(out); items = o.items ?? o.menu ?? []; } catch {}
-      const ins = await admin.from("venue_menu").insert({ venue_id: venueId, menu_text: text, parsed_items: items }).select().single();
+      const stored = text.trim() || `# Visual menu\n${items.map((i: any) => `${i.name}${i.price ? " " + i.price : ""}`).join("\n")}`;
+      const ins = await admin.from("venue_menu").insert({ venue_id: venueId, menu_text: stored.slice(0, 20000), parsed_items: items }).select().single();
       return Response.json({ ok: true, items, menu: ins.data }, { headers: cors });
     }
 
