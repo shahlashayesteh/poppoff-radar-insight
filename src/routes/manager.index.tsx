@@ -57,6 +57,7 @@ const Dot = ({ s }: { s: "green" | "amber" | "red" }) => (
 );
 
 function ManagerDashboard() {
+  useRoleGate("manager");
   const [venue, setVenue] = useState<Venue | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
   const [stats, setStats] = useState<StatRow[]>([]);
