@@ -42,6 +42,7 @@ import { Route as DemoServerMenuRouteImport } from './routes/demo.server.menu'
 import { Route as DemoManagerTeamRouteImport } from './routes/demo.manager.team'
 import { Route as DemoManagerPrioritiesRouteImport } from './routes/demo.manager.priorities'
 import { Route as DemoManagerMenuRouteImport } from './routes/demo.manager.menu'
+import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
 import { Route as DemoManagerServerIdRouteImport } from './routes/demo.manager.server.$id'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
 
@@ -210,6 +211,12 @@ const DemoManagerMenuRoute = DemoManagerMenuRouteImport.update({
   path: '/demo/manager/menu',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LovableEmailQueueProcessRoute =
+  LovableEmailQueueProcessRouteImport.update({
+    id: '/lovable/email/queue/process',
+    path: '/lovable/email/queue/process',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const DemoManagerServerIdRoute = DemoManagerServerIdRouteImport.update({
   id: '/demo/manager/server/$id',
   path: '/demo/manager/server/$id',
@@ -258,6 +265,7 @@ export interface FileRoutesByFullPath {
   '/manager/server/': typeof ManagerServerIndexRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/demo/manager/server/$id': typeof DemoManagerServerIdRoute
+  '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -295,6 +303,7 @@ export interface FileRoutesByTo {
   '/manager/server': typeof ManagerServerIndexRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/demo/manager/server/$id': typeof DemoManagerServerIdRoute
+  '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -333,6 +342,7 @@ export interface FileRoutesById {
   '/manager/server/': typeof ManagerServerIndexRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/demo/manager/server/$id': typeof DemoManagerServerIdRoute
+  '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -372,6 +382,7 @@ export interface FileRouteTypes {
     | '/manager/server/'
     | '/api/public/payments/webhook'
     | '/demo/manager/server/$id'
+    | '/lovable/email/queue/process'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -409,6 +420,7 @@ export interface FileRouteTypes {
     | '/manager/server'
     | '/api/public/payments/webhook'
     | '/demo/manager/server/$id'
+    | '/lovable/email/queue/process'
   id:
     | '__root__'
     | '/'
@@ -446,6 +458,7 @@ export interface FileRouteTypes {
     | '/manager/server/'
     | '/api/public/payments/webhook'
     | '/demo/manager/server/$id'
+    | '/lovable/email/queue/process'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -483,6 +496,7 @@ export interface RootRouteChildren {
   ManagerServerIndexRoute: typeof ManagerServerIndexRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
   DemoManagerServerIdRoute: typeof DemoManagerServerIdRoute
+  LovableEmailQueueProcessRoute: typeof LovableEmailQueueProcessRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -718,6 +732,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DemoManagerMenuRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/lovable/email/queue/process': {
+      id: '/lovable/email/queue/process'
+      path: '/lovable/email/queue/process'
+      fullPath: '/lovable/email/queue/process'
+      preLoaderRoute: typeof LovableEmailQueueProcessRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/demo/manager/server/$id': {
       id: '/demo/manager/server/$id'
       path: '/demo/manager/server/$id'
@@ -781,6 +802,7 @@ const rootRouteChildren: RootRouteChildren = {
   ManagerServerIndexRoute: ManagerServerIndexRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
   DemoManagerServerIdRoute: DemoManagerServerIdRoute,
+  LovableEmailQueueProcessRoute: LovableEmailQueueProcessRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
