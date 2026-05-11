@@ -4,9 +4,17 @@ import { ManagerLayout } from "@/components/manager-layout";
 import { supabase } from "@/integrations/supabase/client";
 import { getManagerVenue } from "@/lib/manager-venue";
 import { getMondayOfWeek, toISODate, formatWeekRange, performanceColour, latestStatsWeek } from "@/lib/week";
-import { fetchCategoriesForWeek, fetchCategoryStatsForUser, type VenueCategory, type CategoryStat } from "@/lib/categories";
 
 export const Route = createFileRoute("/manager/server/$id")({ component: ServerView });
+
+const cats = [
+  { key: "wine_conversion", t: "wine_target", label: "Wine" },
+  { key: "cocktail_conversion", t: "cocktail_target", label: "Cocktails" },
+  { key: "dessert_conversion", t: "dessert_target", label: "Desserts" },
+  { key: "sides_conversion", t: "sides_target", label: "Sides" },
+  { key: "spirits_conversion", t: "spirits_target", label: "Spirits" },
+  { key: "sparkling_conversion", t: "sparkling_target", label: "Sparkling" },
+];
 
 function ServerView() {
   const { id } = Route.useParams();
@@ -17,9 +25,6 @@ function ServerView() {
   const [viewed, setViewed] = useState(false);
   const [acked, setAcked] = useState(false);
   const [logins, setLogins] = useState(0);
-  const [categories, setCategories] = useState<VenueCategory[]>([]);
-  const [catStats, setCatStats] = useState<Record<string, CategoryStat>>({});
-  const [catTargets, setCatTargets] = useState<Record<string, number>>({});
   const weekStart = toISODate(getMondayOfWeek());
   const [displayWeekStart, setDisplayWeekStart] = useState<string>(weekStart);
 
@@ -47,17 +52,8 @@ function ServerView() {
       setAcked(!!ak);
       const { count: lc } = await supabase.from("server_logins").select("id", { count: "exact", head: true }).eq("user_id", id).eq("venue_id", v);
       setLogins(lc ?? 0);
-
-      const vcats = await fetchCategoriesForWeek(v, visibleWeek);
-      setCategories(vcats);
-      const cs = await fetchCategoryStatsForUser(v, id, visibleWeek);
-      setCatStats(Object.fromEntries(cs.map((r) => [r.category_key, r])));
-      const { data: ct } = await (supabase as any).from("server_category_targets").select("category_key, target").eq("venue_id", v).eq("user_id", id);
-      setCatTargets(Object.fromEntries((ct ?? []).map((r: any) => [r.category_key, Number(r.target) || 0])));
     })();
   }, [id, weekStart]);
-
-  const hasCatStats = Object.keys(catStats).length > 0;
 
   return (
     <ManagerLayout>
@@ -91,36 +87,23 @@ function ServerView() {
 
         <div className="mt-6 rounded-2xl bg-white border border-border p-6">
           <h2 className="font-display text-lg font-bold">Category breakdown</h2>
-          {!stat && !hasCatStats ? (
+          {!stat ? (
             <p className="mt-3 text-sm text-muted-foreground">No stats this week. Upload via the manager dashboard.</p>
           ) : (
             <div className="mt-4 space-y-3">
-              {categories.map((c) => {
-                const s = catStats[c.key];
-                const metric = s?.metric_type || c.metric_type || "sales";
-                const conv = Number(s?.conversion ?? 0);
-                const qty = Number(s?.quantity ?? 0);
-                const net = Number(s?.net_sales ?? s?.sales ?? 0);
-                const tgt = Number(catTargets[c.key] ?? 0);
-                const compareVal = metric === "quantity" ? qty : conv;
-                const colour = performanceColour(compareVal, tgt);
+              {cats.map((c) => {
+                const actual = Number(stat[c.key] ?? 0);
+                const tgt = Number(target?.[c.t] ?? 0);
+                const colour = performanceColour(actual, tgt);
                 const tone = colour === "green" ? "var(--brand-green)" : colour === "amber" ? "var(--brand-orange)" : "var(--opportunity)";
-                const barPct = metric === "quantity"
-                  ? (tgt > 0 ? Math.min(100, (qty / tgt) * 100) : Math.min(100, conv))
-                  : Math.min(100, conv);
-                const rightLabel = metric === "quantity"
-                  ? `${qty.toLocaleString()} sold / target ${tgt.toFixed(0)}`
-                  : metric === "percentage"
-                  ? `${conv.toFixed(0)}% / ${tgt.toFixed(0)}%`
-                  : `£${net.toFixed(0)} · ${conv.toFixed(0)}% / ${tgt.toFixed(0)}%`;
                 return (
-                  <div key={c.key} className="flex items-center gap-4">
+                  <div key={c.label} className="flex items-center gap-4">
                     <span className="inline-block h-3 w-3 rounded-full" style={{ background: tone }} />
                     <div className="w-32 text-sm font-medium">{c.label}</div>
                     <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
-                      <div className="h-full rounded-full" style={{ width: `${barPct}%`, background: tone }} />
+                      <div className="h-full rounded-full" style={{ width: `${Math.min(100, actual)}%`, background: tone }} />
                     </div>
-                    <div className="w-40 text-right text-xs text-muted-foreground">{rightLabel}</div>
+                    <div className="w-24 text-right text-xs text-muted-foreground">{actual.toFixed(0)}% / {tgt}%</div>
                   </div>
                 );
               })}
