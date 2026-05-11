@@ -106,8 +106,41 @@ function ServerView() {
             <div className="mt-2 text-sm">Stats viewed: <span className={`font-semibold ${viewed ? "text-brand-green" : "text-muted-foreground"}`}>{viewed ? "Yes" : "Not yet"}</span></div>
             <div className="text-sm">Focus ack'd: <span className={`font-semibold ${acked ? "text-brand-green" : "text-muted-foreground"}`}>{acked ? "Yes" : "Not yet"}</span></div>
             <div className="text-sm">Total logins: <span className="font-semibold">{logins}</span></div>
-          </div>
         </div>
+
+        {stat && (
+          <div className="mt-6 rounded-2xl bg-white border border-border p-6">
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <h2 className="font-display text-lg font-bold inline-flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-brand-orange" /> AI coaching for {name}
+              </h2>
+              <button
+                onClick={() => venueId && loadCoaching(venueId, displayWeekStart, true)}
+                disabled={coachLoading || !venueId}
+                className="rounded-xl px-3 py-1.5 text-xs font-bold text-white inline-flex items-center gap-2 disabled:opacity-50"
+                style={{ background: "var(--brand-green)" }}
+              >
+                <Wand2 className="h-3.5 w-3.5" /> {coachLoading ? "Generating…" : "Regenerate"}
+              </button>
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground">Based on this server's stats for {formatWeekRange(displayWeekStart)}.</p>
+            {coachLoading ? (
+              <p className="mt-4 text-sm text-muted-foreground">Reading their week and writing personal tips…</p>
+            ) : !coaching || coaching.length === 0 ? (
+              <p className="mt-4 text-sm text-muted-foreground">No tips yet — click Regenerate.</p>
+            ) : (
+              <ul className="mt-4 space-y-3">
+                {coaching.map((s, i) => (
+                  <li key={i} className="rounded-xl border border-border p-3 flex gap-3">
+                    <span className="inline-flex items-center justify-center text-[10px] font-bold uppercase tracking-wider rounded-full px-2 py-0.5 h-fit shrink-0" style={{ background: "color-mix(in oklab, var(--brand-green) 12%, white)", color: "var(--brand-green)" }}>{s.category}</span>
+                    <span className="text-sm text-foreground/90">{s.tip}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+      </div>
 
         <div className="mt-6 rounded-2xl bg-white border border-border p-6">
           <h2 className="font-display text-lg font-bold">Category breakdown</h2>
