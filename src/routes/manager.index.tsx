@@ -685,13 +685,13 @@ function ManagerDashboard() {
           />
           <Stat
             icon={TrendingUp}
-            tone="var(--brand-orange)"
+            tone={members.length ? performanceTone(stats.length, members.length) : "var(--brand-orange)"}
             label="Servers reporting"
             value={`${stats.length} / ${members.length}`}
           />
           <Stat
             icon={Eye}
-            tone="var(--brand-green)"
+            tone={members.length ? performanceTone(viewedCount, members.length) : "var(--brand-green)"}
             label="Viewed Stats"
             value={`${viewedCount} / ${members.length}`}
             sub={`${ackedCount} ack'd focus`}
