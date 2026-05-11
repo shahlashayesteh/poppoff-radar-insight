@@ -26,16 +26,21 @@ export function downloadCsvTemplate() {
   URL.revokeObjectURL(url);
 }
 
+export type CategoryAmount = { label: string; sales: number };
+
 export type CsvRow = {
   server_name: string;
   total_covers: number;
   total_sales: number;
+  // Legacy 6 — preserved for backwards compatibility
   wine_sales: number;
   dessert_sales: number;
   cocktail_sales: number;
   sides_sales: number;
   spirits_sales: number;
   sparkling_sales: number;
+  // Dynamic per-venue categories — keyed by slug
+  categories: Record<string, CategoryAmount>;
   week_start?: string;
 };
 
