@@ -91,12 +91,6 @@ function ServerDashboard() {
     return colour === "green" ? "var(--brand-green)" : colour === "amber" ? "var(--brand-orange)" : "var(--opportunity)";
   };
 
-  const top3 = [
-    { label: "Wine", conv: "wine_conversion", t: "wine_target", sales: "wine_sales", cat: "wine" as CategoryKey },
-    { label: "Cocktails", conv: "cocktail_conversion", t: "cocktail_target", sales: "cocktail_sales", cat: "cocktail" as CategoryKey },
-    { label: "Desserts", conv: "dessert_conversion", t: "dessert_target", sales: "dessert_sales", cat: "dessert" as CategoryKey },
-  ] as const;
-
   const allCats = [
     { label: "wine", conv: "wine_conversion", t: "wine_target", sales: "wine_sales", cat: "wine" as CategoryKey },
     { label: "cocktails", conv: "cocktail_conversion", t: "cocktail_target", sales: "cocktail_sales", cat: "cocktail" as CategoryKey },
@@ -141,6 +135,49 @@ function ServerDashboard() {
     }
   }
 
+  // Dynamically pick best / middle / needs-work from categories with usable data
+  type Top3Item = {
+    label: string;
+    role: "Crushing it" | "Solid" | "Focus here";
+    conv: string;
+    t: string;
+    sales: string;
+    cat: CategoryKey;
+  };
+  const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+  let top3: Top3Item[] = [];
+  if (stat && target) {
+    const usable = allCats
+      .map((c) => {
+        const actualConv = Number((stat as any)[c.conv] ?? 0);
+        const tgt = Number((target as any)?.[c.t] ?? 0);
+        const sales = Number((stat as any)[c.sales] ?? 0);
+        return { c, ratio: tgt > 0 ? actualConv / tgt : 0, tgt, sales };
+      })
+      .filter((r) => r.tgt > 0 && r.sales > 0)
+      .sort((a, b) => b.ratio - a.ratio);
+
+    const picks: { item: typeof allCats[number]; role: Top3Item["role"] }[] = [];
+    if (usable.length >= 3) {
+      picks.push({ item: usable[0].c, role: "Crushing it" });
+      picks.push({ item: usable[Math.floor(usable.length / 2)].c, role: "Solid" });
+      picks.push({ item: usable[usable.length - 1].c, role: "Focus here" });
+    } else if (usable.length === 2) {
+      picks.push({ item: usable[0].c, role: "Crushing it" });
+      picks.push({ item: usable[1].c, role: "Focus here" });
+    } else if (usable.length === 1) {
+      picks.push({ item: usable[0].c, role: "Solid" });
+    }
+    top3 = picks.map(({ item, role }) => ({
+      label: cap(item.label),
+      role,
+      conv: item.conv,
+      t: item.t,
+      sales: item.sales,
+      cat: item.cat,
+    }));
+  }
+
   return (
     <ServerLayout>
       <div className="px-5 pt-6">
@@ -155,31 +192,36 @@ function ServerDashboard() {
         <div className="rounded-3xl bg-white border border-border p-5">
           <div className="font-semibold">Your Top 3</div>
           {stat ? (
-            <div className="mt-4 grid grid-cols-3 gap-2">
-              {top3.map((c) => {
-                const actualConv = Number((stat as any)[c.conv] ?? 0);
-                const tgt = Number((target as any)?.[c.t] ?? 0);
-                const tone = toneFor(actualConv, tgt);
-                const fillPct = tgt > 0 ? (actualConv / tgt) * 100 : actualConv;
-                const items = estimateItemsSold(Number((stat as any)[c.sales] ?? 0), c.cat, prices);
-                const prevItems = prevStat ? estimateItemsSold(Number((prevStat as any)[c.sales] ?? 0), c.cat, prices) : 0;
-                const d = pctDelta(items, prevItems);
-                return (
-                  <div key={c.label} className="flex flex-col items-center">
-                    <div className="text-xs text-muted-foreground mb-2">{c.label}</div>
-                    <Ring fillPct={fillPct} color={tone} displayValue={items} />
-                    {d !== null ? (
-                      <div className="mt-1 text-xs font-semibold" style={{ color: d >= 0 ? "var(--brand-green)" : "var(--opportunity)" }}>
-                        {d >= 0 ? "↑" : "↓"} {d >= 0 ? "+" : "-"}{Math.abs(d).toFixed(0)}%
-                      </div>
-                    ) : (
-                      <div className="mt-1 text-xs text-muted-foreground">—</div>
-                    )}
-                    <div className="text-[10px] text-muted-foreground">vs last week</div>
-                  </div>
-                );
-              })}
-            </div>
+            top3.length > 0 ? (
+              <div className="mt-4 grid grid-cols-3 gap-2">
+                {top3.map((c) => {
+                  const actualConv = Number((stat as any)[c.conv] ?? 0);
+                  const tgt = Number((target as any)?.[c.t] ?? 0);
+                  const tone = toneFor(actualConv, tgt);
+                  const fillPct = tgt > 0 ? (actualConv / tgt) * 100 : actualConv;
+                  const items = estimateItemsSold(Number((stat as any)[c.sales] ?? 0), c.cat, prices);
+                  const prevItems = prevStat ? estimateItemsSold(Number((prevStat as any)[c.sales] ?? 0), c.cat, prices) : 0;
+                  const d = pctDelta(items, prevItems);
+                  return (
+                    <div key={c.label} className="flex flex-col items-center">
+                      <div className="text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: tone }}>{c.role}</div>
+                      <div className="text-xs text-muted-foreground mb-2">{c.label}</div>
+                      <Ring fillPct={fillPct} color={tone} displayValue={items} />
+                      {d !== null ? (
+                        <div className="mt-1 text-xs font-semibold" style={{ color: d >= 0 ? "var(--brand-green)" : "var(--opportunity)" }}>
+                          {d >= 0 ? "↑" : "↓"} {d >= 0 ? "+" : "-"}{Math.abs(d).toFixed(0)}%
+                        </div>
+                      ) : (
+                        <div className="mt-1 text-xs text-muted-foreground">—</div>
+                      )}
+                      <div className="text-[10px] text-muted-foreground">vs last week</div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="mt-3 text-sm text-muted-foreground">Not enough category data yet — once a few categories have sales and targets we'll highlight your best, average, and focus area.</p>
+            )
           ) : (
             <p className="mt-3 text-sm text-muted-foreground">No stats for this week yet. Your manager will upload them after service.</p>
           )}
