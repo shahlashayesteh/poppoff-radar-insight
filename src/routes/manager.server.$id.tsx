@@ -49,13 +49,13 @@ function ServerView() {
       setCoachLoading(false);
     }
   };
-  const [displayWeekStart, setDisplayWeekStart] = useState<string>(weekStart);
 
   useEffect(() => {
     (async () => {
       const venue = await getManagerVenue();
       const v = venue?.id;
       if (!v) return;
+      setVenueId(v);
       const { data: prof } = await supabase.from("profiles").select("full_name").eq("id", id).maybeSingle();
       setName(prof?.full_name || "Server");
       const visibleWeek = await latestStatsWeek(
@@ -75,6 +75,7 @@ function ServerView() {
       setAcked(!!ak);
       const { count: lc } = await supabase.from("server_logins").select("id", { count: "exact", head: true }).eq("user_id", id).eq("venue_id", v);
       setLogins(lc ?? 0);
+      if (st) loadCoaching(v, visibleWeek, false);
     })();
   }, [id, weekStart]);
 
