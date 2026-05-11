@@ -27,7 +27,28 @@ function ServerView() {
   const [viewed, setViewed] = useState(false);
   const [acked, setAcked] = useState(false);
   const [logins, setLogins] = useState(0);
+  const [venueId, setVenueId] = useState<string | null>(null);
+  const [coaching, setCoaching] = useState<{ category: string; tip: string }[] | null>(null);
+  const [coachLoading, setCoachLoading] = useState(false);
   const weekStart = toISODate(getMondayOfWeek());
+  const [displayWeekStart, setDisplayWeekStart] = useState<string>(weekStart);
+
+  const loadCoaching = async (vId: string, weekISO: string, force = false) => {
+    setCoachLoading(true);
+    setCoaching(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("ai-assist", {
+        body: { action: "server_coaching", venueId: vId, payload: { userId: id, weekStart: weekISO, force } },
+      });
+      if (error) throw error;
+      setCoaching(Array.isArray(data?.suggestions) ? data.suggestions : []);
+    } catch (e: any) {
+      toast.error(e.message || "Could not generate coaching");
+      setCoaching([]);
+    } finally {
+      setCoachLoading(false);
+    }
+  };
   const [displayWeekStart, setDisplayWeekStart] = useState<string>(weekStart);
 
   useEffect(() => {
