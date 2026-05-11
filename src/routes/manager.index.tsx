@@ -18,7 +18,7 @@ import {
   MoreVertical,
   Trash2,
 } from "lucide-react";
-import { downloadCsvTemplate, parseStatsCsv, type CsvRow } from "@/lib/csv";
+import { downloadCsvTemplate, ensureCategories, parseStatsCsv, type CsvRow } from "@/lib/csv";
 import {
   getMondayOfWeek,
   toISODate,
@@ -230,10 +230,11 @@ function ManagerDashboard() {
     const importedWeeks = new Set<string>();
     const createdNames = new Set<string>();
     setUploadStatus(`Preparing dashboard… importing ${rows.length} server row${rows.length === 1 ? "" : "s"}…`);
+    const normalizedRows = rows.map(ensureCategories);
     const { data, error } = await supabase.rpc("process_csv_upload", {
       _venue_id: venue.id,
       _week_start: importWeek,
-      _csv_data: rows as unknown as never,
+      _csv_data: normalizedRows as unknown as never,
     });
     if (error) throw error;
     const result = data as {

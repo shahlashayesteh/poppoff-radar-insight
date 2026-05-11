@@ -1,39 +1,61 @@
 ## Goal
 
-Drop the "mode" logic. Each ring's sub-label is decided purely by its own colour, so the wording always matches what the ring is showing.
+Make the whole stats pipeline flexible so each venue tracks whatever categories appear in *their* CSV/image (e.g. edamame, water, nibbles) — not just the six legacy ones (wine, cocktail, dessert, sides, spirits, sparkling). Manager dashboard, server home, server stats, and coaching should all render the venue's own categories.
 
-## Label mapping (per ring)
+## Current state (why this is broken today)
 
-- **Green** → "Crushing it"
-- **Amber** → "Could be better" (replaces "Solid")
-- **Red** → "Focus here"
+The **database is already dynamic** — good news:
+- `venue_categories` stores one row per category per venue (label + slug `key`)
+- `server_category_stats` stores per-server-per-week sales/conversion for any category key
+- `server_category_targets` stores per-server targets per category
+- `process_csv_upload` already reads `_row->'categories'` jsonb and writes those tables
 
-That's it — no all-green / all-red modes, no best/middle/worst slot wording. The three categories are still picked the same way (best, median, worst by ratio), but each ring labels itself from its own colour.
+The **client is hardcoded to the six legacy buckets**:
+- `src/lib/csv.ts` — `CATEGORY_KEYWORDS` only maps words it recognises into the six buckets; anything else (edamame, water, nibbles, bread basket…) is silently dropped. The output `CsvRow` only has the six `*_sales` fields.
+- `src/routes/manager.index.tsx` — preview table has fixed Wine/Cocktail/Dessert/Sides/Spirits/Sparkling columns; `confirmPreview` sends those rows directly to `process_csv_upload` with no `categories` field.
+- `src/routes/server.index.tsx` (Top 3) and `src/routes/server.stats.tsx` read the six legacy columns from `server_stats`, never `server_category_stats` / `venue_categories`.
 
-## Knock-on cleanup
+Net effect: even though the DB can store "edamame_sales", nothing in the UI ever puts it there or reads it back.
 
-- Remove the all-green green confirmation banner ("No weak spots this week — keep it up.") added in the previous pass.
-- Restore the orange "You need to work on X" card to its original unconditional render (it already auto-picks the weakest category, which still makes sense even when everything is green — and you can decide separately if you want to hide it on all-green weeks).
+## Plan
 
-Quick check before I build: on an **all-green week**, do you want the orange "You need to work on X" card to:
-1. **Still show** (it always flags the relatively weakest category, even if that category is green) — simplest, matches today's behaviour.
-2. **Hide** when every ring is green, since nothing genuinely needs work.
+### 1. Parser: keep all categories the file gives us
+File: `src/lib/csv.ts`
+- Extend `CsvRow` with `categories: Record<string, { label: string; sales: number; quantity?: number; metric_type?: "sales" | "quantity" }>`.
+- When the CSV has a `category`/`item` column, bucket each row under its **own** label (slugify for the key, keep original text as `label`). Stop forcing it into the 6 keyword buckets. The legacy six still get filled when keywords match, so old CSVs keep working.
+- When the CSV has wide columns (e.g. `wine_sales`, `edamame_sales`, `water_sales`), every numeric `*_sales`/`*_qty` column becomes a category entry. Unknown columns are no longer ignored.
+- `total_sales` still aggregates everything.
 
-I'll default to option 2 (hide it on all-green) unless you say otherwise — it lines up with your earlier intent that "if they are crushing it in all three categories" the messaging should stay celebratory.
+### 2. Manager preview: show the categories that were actually found
+File: `src/routes/manager.index.tsx`
+- Replace the hardcoded Wine/Cocktail/Dessert/Sides/Spirits/Sparkling columns with a dynamic set built from the union of `categories` keys across the preview rows.
+- Manager can rename a column header (updates the `label`), delete a column ("we don't track this"), or add a new one before importing.
+- `confirmPreview` passes the `categories` map straight through to `process_csv_upload`, which already handles it.
 
-## Out of scope
+### 3. Server home — Top 3 from the venue's own categories
+File: `src/routes/server.index.tsx`
+- Load `venue_categories` for the venue + this server's `server_category_stats` and `server_category_targets` for the visible week (and previous week for delta).
+- Drop the hardcoded `allCats` array; build it from the venue rows.
+- Best / Mid / Focus picking, "Crushing it / Could be better / Focus here" labels and the all-green gating logic stay exactly as they are — they just iterate over the dynamic list.
+- "You smashed X" and "You need to work on X" cards also read from the same dynamic list, so the label that shows up is the venue's real label (e.g. "Edamame", not "Sides").
 
-- No DB or threshold changes.
-- No changes to which 3 categories are picked or to ring colour/fill math.
-- No changes to the green "You smashed X" card logic.
+### 4. Server stats page — same dynamic list
+File: `src/routes/server.stats.tsx`
+- Replace the fixed wine/cocktail/dessert array with the dynamic categories the venue tracks. Each row shows `conversion` vs `target` for that key, using the venue's label.
 
-## Technical notes
+### 5. Coaching tips
+File: `supabase/functions/ai-assist/index.ts` (server_coaching action)
+- Pass the venue's actual category list + this server's per-category stats/targets to the model so tips talk about real categories (edamame, water…) instead of "try upselling wine".
+- No schema change.
 
-In `src/routes/server.index.tsx`:
+### Out of scope
+- No DB migrations. `venue_categories` / `server_category_stats` / `server_category_targets` already cover this.
+- The legacy six `*_sales` columns on `server_stats` stay (other code still uses them for SPC + the milestone trigger). They become a subset of the dynamic categories rather than the only ones.
+- No changes to the ring fill / colour thresholds.
 
-1. Narrow `RingRole` back to `"Crushing it" | "Could be better" | "Focus here"`.
-2. Remove the `mode` variable and the slot-based `roleFor` switch. Compute each pick's role from `performanceColour(actualConv, tgt)`:
-   - green → "Crushing it"
-   - amber → "Could be better"
-   - red → "Focus here"
-3. Remove the all-green banner block. Gate the orange "work on" card with `mode !== "all-green"` → replace with a simple "every picked ring is green" check (derived inline from the same colours array) if going with option 2; otherwise restore unconditional render.
+### Files touched
+- `src/lib/csv.ts`
+- `src/routes/manager.index.tsx`
+- `src/routes/server.index.tsx`
+- `src/routes/server.stats.tsx`
+- `supabase/functions/ai-assist/index.ts`

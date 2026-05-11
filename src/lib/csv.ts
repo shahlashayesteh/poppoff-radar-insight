@@ -26,6 +26,14 @@ export function downloadCsvTemplate() {
   URL.revokeObjectURL(url);
 }
 
+export type CategoryEntry = {
+  label: string;
+  sales: number;
+  quantity?: number;
+  metric_type?: "sales" | "quantity";
+};
+export type CategoryMap = Record<string, CategoryEntry>;
+
 export type CsvRow = {
   server_name: string;
   total_covers: number;
@@ -36,17 +44,80 @@ export type CsvRow = {
   sides_sales: number;
   spirits_sales: number;
   sparkling_sales: number;
+  /** Dynamic, per-venue categories (e.g. edamame, water). Always populated alongside legacy six. */
+  categories?: CategoryMap;
   week_start?: string;
 };
 
 type CanonicalField = keyof CsvRow | "date" | "category" | "item" | "quantity" | "check_id";
 type RawRow = Record<string, string>;
 
-type Accumulator = CsvRow & {
+type Accumulator = Omit<CsvRow, "categories"> & {
   coverCandidates: number[];
   checkIds: Set<string>;
   sumCoverCandidates: boolean;
+  categoriesAcc: CategoryMap;
 };
+
+const LEGACY_SALES_FIELDS = [
+  "wine_sales",
+  "dessert_sales",
+  "cocktail_sales",
+  "sides_sales",
+  "spirits_sales",
+  "sparkling_sales",
+] as const;
+
+const LEGACY_LABELS: Record<string, string> = {
+  wine_sales: "Wine",
+  dessert_sales: "Dessert",
+  cocktail_sales: "Cocktails",
+  sides_sales: "Sides",
+  spirits_sales: "Spirits",
+  sparkling_sales: "Sparkling",
+};
+
+const RESERVED_HEADERS = new Set([
+  "server_name",
+  "total_covers",
+  "total_sales",
+  "date",
+  "category",
+  "item",
+  "check_id",
+  "quantity",
+]);
+
+function slugifyCategory(text: string): string {
+  return text
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+}
+
+function humanizeStem(stem: string): string {
+  return stem
+    .replace(/[_-]+/g, " ")
+    .trim()
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function addCategorySales(acc: Accumulator, key: string, label: string, amount: number) {
+  if (!key || !amount) return;
+  const existing = acc.categoriesAcc[key] ?? { label, sales: 0, quantity: 0 };
+  existing.sales += amount;
+  if (label && (!existing.label || existing.label === key)) existing.label = label;
+  acc.categoriesAcc[key] = existing;
+}
+
+function addCategoryQty(acc: Accumulator, key: string, label: string, qty: number) {
+  if (!key || !qty) return;
+  const existing = acc.categoriesAcc[key] ?? { label, sales: 0, quantity: 0 };
+  existing.quantity = (existing.quantity || 0) + qty;
+  if (label && (!existing.label || existing.label === key)) existing.label = label;
+  acc.categoriesAcc[key] = existing;
+}
 
 const HEADER_ALIASES: Record<string, CanonicalField> = {
   servername: "server_name",
@@ -149,7 +220,7 @@ const HEADER_ALIASES: Record<string, CanonicalField> = {
 };
 
 const CATEGORY_KEYWORDS: Record<
-  Exclude<keyof CsvRow, "server_name" | "total_covers" | "total_sales" | "week_start">,
+  Exclude<keyof CsvRow, "server_name" | "total_covers" | "total_sales" | "week_start" | "categories">,
   string[]
 > = {
   sparkling_sales: ["sparkling", "champagne", "prosecco", "cava", "crémant", "cremant"],
@@ -359,16 +430,12 @@ function inferSalesHeader(headers: string[], rows: RawRow[]) {
   return numericHeaders[0]?.h;
 }
 
-function categoryBucket(
-  value: unknown,
-): keyof Omit<CsvRow, "server_name" | "total_covers" | "total_sales" | "week_start"> | null {
+type LegacyBucket = Exclude<keyof CsvRow, "server_name" | "total_covers" | "total_sales" | "week_start" | "categories">;
+
+function categoryBucket(value: unknown): LegacyBucket | null {
   const text = String(value ?? "").toLowerCase();
   for (const [bucket, terms] of Object.entries(CATEGORY_KEYWORDS)) {
-    if (terms.some((term) => text.includes(term)))
-      return bucket as keyof Omit<
-        CsvRow,
-        "server_name" | "total_covers" | "total_sales" | "week_start"
-      >;
+    if (terms.some((term) => text.includes(term))) return bucket as LegacyBucket;
   }
   return null;
 }
@@ -388,11 +455,37 @@ function emptyAccumulator(serverName: string, weekStart: string): Accumulator {
     coverCandidates: [],
     checkIds: new Set<string>(),
     sumCoverCandidates: false,
+    categoriesAcc: {},
   };
 }
 
 function makeKey(serverName: string, weekStart: string) {
   return `${serverName.trim().toLowerCase()}::${weekStart}`;
+}
+
+/**
+ * Ensure a CsvRow has a `categories` map populated. Used to normalize rows
+ * coming from OCR (image upload) or other paths that may only carry the
+ * legacy six `*_sales` columns. Idempotent — preserves existing entries.
+ */
+export function ensureCategories(row: CsvRow): CsvRow {
+  const existing = row.categories ? { ...row.categories } : {};
+  for (const field of LEGACY_SALES_FIELDS) {
+    const sales = Number((row as any)[field] || 0);
+    if (!sales) continue;
+    const stem = field.slice(0, -"_sales".length);
+    if (!existing[stem]) {
+      existing[stem] = {
+        label: LEGACY_LABELS[field] || humanizeStem(stem),
+        sales,
+        quantity: 0,
+        metric_type: "sales",
+      };
+    } else if (!existing[stem].sales) {
+      existing[stem] = { ...existing[stem], sales };
+    }
+  }
+  return { ...row, categories: existing };
 }
 
 export async function parseStatsCsv(file: File): Promise<CsvRow[]> {
@@ -439,26 +532,57 @@ export async function parseStatsCsv(file: File): Promise<CsvRow[]> {
     const directTotal = numberFromCsv(raw.total_sales ?? (salesHeader ? raw[salesHeader] : 0));
     const rowCategoryText = `${categoryHeader ? raw[categoryHeader] : ""} ${itemHeader ? raw[itemHeader] : ""}`;
     const bucket = categoryBucket(rowCategoryText);
-    const hasDirectCategoryColumns = [
-      "wine_sales",
-      "dessert_sales",
-      "cocktail_sales",
-      "sides_sales",
-      "spirits_sales",
-      "sparkling_sales",
-    ].some((h) => h in raw);
+    const hasDirectCategoryColumns = LEGACY_SALES_FIELDS.some((h) => h in raw);
 
     if (hasDirectCategoryColumns) {
       acc.total_sales += directTotal;
-      acc.wine_sales += numberFromCsv(raw.wine_sales);
-      acc.dessert_sales += numberFromCsv(raw.dessert_sales);
-      acc.cocktail_sales += numberFromCsv(raw.cocktail_sales);
-      acc.sides_sales += numberFromCsv(raw.sides_sales);
-      acc.spirits_sales += numberFromCsv(raw.spirits_sales);
-      acc.sparkling_sales += numberFromCsv(raw.sparkling_sales);
+      for (const field of LEGACY_SALES_FIELDS) {
+        const v = numberFromCsv(raw[field]);
+        if (!v) continue;
+        (acc as any)[field] += v;
+        const stem = field.slice(0, -"_sales".length);
+        addCategorySales(acc, stem, LEGACY_LABELS[field] || humanizeStem(stem), v);
+      }
+    } else if (categoryHeader || itemHeader) {
+      acc.total_sales += directTotal;
+      if (bucket) {
+        (acc as any)[bucket] += directTotal;
+      }
+      const catText = String(
+        (categoryHeader && raw[categoryHeader]) || (itemHeader && raw[itemHeader]) || "",
+      ).trim();
+      const upper = catText.toUpperCase();
+      const isSummary = ["TOTAL", "SUBTOTAL", "SUMMARY", "GRAND TOTAL"].some((t) =>
+        upper.includes(t),
+      );
+      if (catText && !isSummary) {
+        const slug = slugifyCategory(catText);
+        if (slug) {
+          addCategorySales(acc, slug, catText, directTotal);
+          const q = numberFromCsv(raw.quantity);
+          if (q) addCategoryQty(acc, slug, catText, q);
+        }
+      }
     } else {
       acc.total_sales += directTotal;
-      if (bucket) acc[bucket] += directTotal;
+    }
+
+    // Catch any other arbitrary `<name>_sales` / `<name>_qty` / `<name>_quantity` columns
+    // (e.g. edamame_sales, water_sales) and add them as dynamic categories.
+    for (const k of Object.keys(raw)) {
+      if (RESERVED_HEADERS.has(k)) continue;
+      if ((LEGACY_SALES_FIELDS as readonly string[]).includes(k)) continue;
+      const v = numberFromCsv(raw[k]);
+      if (!v) continue;
+      if (k.endsWith("_sales")) {
+        const stem = k.slice(0, -"_sales".length);
+        const slug = slugifyCategory(stem);
+        addCategorySales(acc, slug, humanizeStem(stem), v);
+      } else if (k.endsWith("_quantity") || k.endsWith("_qty")) {
+        const stem = k.replace(/_(quantity|qty)$/, "");
+        const slug = slugifyCategory(stem);
+        addCategoryQty(acc, slug, humanizeStem(stem), v);
+      }
     }
 
     const covers = numberFromCsv(raw.total_covers ?? (coversHeader ? raw[coversHeader] : 0));
@@ -472,7 +596,7 @@ export async function parseStatsCsv(file: File): Promise<CsvRow[]> {
   });
 
   return Array.from(grouped.values())
-    .map(({ coverCandidates, checkIds, sumCoverCandidates, ...row }) => {
+    .map(({ coverCandidates, checkIds, sumCoverCandidates, categoriesAcc, ...row }) => {
       const categoryTotal =
         row.wine_sales +
         row.dessert_sales +
@@ -480,14 +604,33 @@ export async function parseStatsCsv(file: File): Promise<CsvRow[]> {
         row.sides_sales +
         row.spirits_sales +
         row.sparkling_sales;
-      const total_sales = row.total_sales || categoryTotal;
+      const dynamicTotal = Object.values(categoriesAcc).reduce(
+        (sum, c) => sum + (c.sales || 0),
+        0,
+      );
+      const total_sales = row.total_sales || categoryTotal || dynamicTotal;
       const coverTotal = coverCandidates.reduce((sum, value) => sum + value, 0);
       const total_covers = Math.round(
         sumCoverCandidates
           ? coverTotal
           : checkIds.size || Math.max(0, ...coverCandidates) || row.total_covers || 0,
       );
-      return { ...row, total_sales, total_covers };
+
+      // Finalize categories: drop empty, set metric_type
+      const categories: CategoryMap = {};
+      for (const [k, v] of Object.entries(categoriesAcc)) {
+        const sales = v.sales || 0;
+        const quantity = v.quantity || 0;
+        if (!sales && !quantity) continue;
+        categories[k] = {
+          label: v.label || humanizeStem(k),
+          sales,
+          quantity,
+          metric_type: quantity > 0 && sales <= 0 ? "quantity" : "sales",
+        };
+      }
+
+      return { ...row, total_sales, total_covers, categories };
     })
     .filter((row) => row.server_name && (row.total_sales > 0 || row.total_covers > 0));
 }
