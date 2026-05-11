@@ -165,19 +165,25 @@ Deno.serve(async (req) => {
 
     if (action === "generate_priorities") {
       const weekStart = payload?.weekStart;
-      const { data: stats } = await admin.from("server_stats").select("*").eq("venue_id", venueId).eq("week_start", weekStart);
-      const { data: targets } = await admin.from("server_targets").select("*").eq("venue_id", venueId);
+      const { data: vcats } = await admin.from("venue_categories").select("key, label").eq("venue_id", venueId).order("sort_order");
+      const { data: catStats } = await admin.from("server_category_stats").select("category_key, conversion").eq("venue_id", venueId).eq("week_start", weekStart);
+      const { data: catTargets } = await admin.from("server_category_targets").select("category_key, target").eq("venue_id", venueId);
       const { data: menus } = await admin.from("venue_menu").select("parsed_items").eq("venue_id", venueId).order("uploaded_at", { ascending: false }).limit(10);
       const menuItems = (menus ?? []).flatMap((m: any) => (m.parsed_items ?? [])).slice(0, 80).map((i: any) => `${i.name}${i.category ? " ("+i.category+")" : ""}`).join(", ");
-      const tgt = targets?.[0];
-      const cats = ["wine", "dessert", "cocktail", "sides", "spirits", "sparkling"];
+      const fallback = [
+        { key: "wine", label: "Wine" }, { key: "cocktail", label: "Cocktails" },
+        { key: "dessert", label: "Desserts" }, { key: "sides", label: "Sides" },
+        { key: "spirits", label: "Spirits" }, { key: "sparkling", label: "Sparkling" },
+      ];
+      const cats = (vcats && vcats.length ? vcats : fallback) as { key: string; label: string }[];
       const avgs: Record<string, number> = {};
       for (const c of cats) {
-        const key = `${c}_conversion`;
-        const vals = (stats ?? []).map((s: any) => Number(s[key] ?? 0)).filter(Boolean);
-        avgs[c] = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : 0;
+        const vals = (catStats ?? []).filter((s: any) => s.category_key === c.key).map((s: any) => Number(s.conversion ?? 0)).filter(Boolean);
+        avgs[c.key] = vals.length ? vals.reduce((a: number, b: number) => a + b, 0) / vals.length : 0;
       }
-      const gaps = cats.map((c) => `${c}: avg ${avgs[c].toFixed(0)}% vs target ${Number((tgt as any)?.[`${c}_target`] ?? 0)}%`).join(", ");
+      const targetByKey: Record<string, number> = {};
+      for (const t of (catTargets ?? [])) targetByKey[(t as any).category_key] = Number((t as any).target) || 0;
+      const gaps = cats.map((c) => `${c.label}: avg ${avgs[c.key].toFixed(0)}% vs target ${(targetByKey[c.key] || 0).toFixed(0)}%`).join(", ");
       const sys = "You are a hospitality coach. Given the team's weak categories and the venue menu items, choose 3-5 specific menu items to PUSH this week. Reply ONLY with JSON: {\"priorities\":[{\"item_name\":string,\"category\":string,\"priority_flag\":\"push\"|\"seasonal\"|\"standard\",\"reason\":string}]}";
       const usr = `Team performance gaps: ${gaps}.\nMenu items available: ${menuItems || "(none uploaded)"}\nReturn 3-5 priorities targeting the weakest categories using actual menu items where possible.`;
       const out = await callAI([{ role: "system", content: sys }, { role: "user", content: usr }], true);
