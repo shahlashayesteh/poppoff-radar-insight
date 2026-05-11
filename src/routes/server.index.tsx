@@ -89,16 +89,31 @@ function ServerDashboard() {
     return colour === "green" ? "var(--brand-green)" : colour === "amber" ? "var(--brand-orange)" : "var(--opportunity)";
   };
 
-  const top3 = categories.slice(0, 3);
+  const primaryValue = (s: CategoryStat | undefined, c: VenueCategory): number => {
+    if (!s) return 0;
+    const m = s.metric_type || c.metric_type || "sales";
+    if (m === "quantity") return Number(s.quantity ?? 0);
+    if (m === "percentage") return Number(s.conversion ?? 0);
+    return Number(s.net_sales ?? s.sales ?? 0);
+  };
+
+  const sortedCats = [...categories].sort(
+    (a, b) => primaryValue(cur[b.key], b) - primaryValue(cur[a.key], a),
+  );
+  const top3 = sortedCats.slice(0, 3);
 
   const rows = categories.map((c) => {
-    const curSales = Number(cur[c.key]?.sales ?? 0);
-    const prevSales = Number(prev[c.key]?.sales ?? 0);
-    const delta = prevSales > 0 ? ((curSales - prevSales) / prevSales) * 100 : null;
-    const conv = Number(cur[c.key]?.conversion ?? 0);
+    const s = cur[c.key];
+    const ps = prev[c.key];
+    const metric = s?.metric_type || c.metric_type || "sales";
+    const curVal = primaryValue(s, c);
+    const prevVal = primaryValue(ps, c);
+    const delta = prevVal > 0 ? ((curVal - prevVal) / prevVal) * 100 : null;
+    const conv = Number(s?.conversion ?? 0);
     const tgt = Number(targets[c.key] ?? 0);
-    const ratio = tgt > 0 ? conv / tgt : 1;
-    return { label: c.label, key: c.key, delta, ratio, conv, tgt };
+    const compareVal = metric === "quantity" ? Number(s?.quantity ?? 0) : conv;
+    const ratio = tgt > 0 ? compareVal / tgt : 1;
+    return { label: c.label, key: c.key, delta, ratio, conv, tgt, metric };
   });
 
   let smashed: { label: string; delta: number } | null = null;
@@ -141,23 +156,40 @@ function ServerDashboard() {
           {hasStats ? (
             <div className="mt-4 grid grid-cols-3 gap-2">
               {top3.map((c) => {
-                const actualConv = Number(cur[c.key]?.conversion ?? 0);
+                const s = cur[c.key];
+                const ps = prev[c.key];
+                const metric = s?.metric_type || c.metric_type || "sales";
+                const actualConv = Number(s?.conversion ?? 0);
+                const qty = Number(s?.quantity ?? 0);
+                const net = Number(s?.net_sales ?? s?.sales ?? 0);
                 const tgt = Number(targets[c.key] ?? 0);
-                const tone = toneFor(actualConv, tgt);
-                const fillPct = tgt > 0 ? (actualConv / tgt) * 100 : actualConv;
-                const sales = Number(cur[c.key]?.sales ?? 0);
-                const prevSales = Number(prev[c.key]?.sales ?? 0);
-                const d = prevSales > 0 ? ((sales - prevSales) / prevSales) * 100 : null;
+                const primary = metric === "quantity" ? qty : metric === "percentage" ? actualConv : net;
+                const prevPrimary = metric === "quantity"
+                  ? Number(ps?.quantity ?? 0)
+                  : metric === "percentage"
+                  ? Number(ps?.conversion ?? 0)
+                  : Number(ps?.net_sales ?? ps?.sales ?? 0);
+                const compareVal = metric === "quantity" ? qty : actualConv;
+                const tone = toneFor(compareVal, tgt);
+                const fillPct = tgt > 0 ? (compareVal / tgt) * 100 : compareVal;
+                const d = prevPrimary > 0 ? ((primary - prevPrimary) / prevPrimary) * 100 : null;
+                const displayValue = metric === "quantity"
+                  ? `${qty.toLocaleString()}`
+                  : metric === "percentage"
+                  ? `${actualConv.toFixed(0)}%`
+                  : `£${net.toFixed(0)}`;
+                const unitLabel = metric === "quantity" ? "sold" : metric === "percentage" ? "conv." : "sales";
                 return (
                   <div key={c.key} className="flex flex-col items-center">
                     <div className="text-xs text-muted-foreground mb-2">{c.label}</div>
-                    <Ring fillPct={fillPct} color={tone} displayValue={`${actualConv.toFixed(0)}%`} />
+                    <Ring fillPct={fillPct} color={tone} displayValue={displayValue} />
+                    <div className="mt-1 text-[10px] text-muted-foreground">{unitLabel}</div>
                     {d !== null ? (
-                      <div className="mt-1 text-xs font-semibold" style={{ color: d >= 0 ? "var(--brand-green)" : "var(--opportunity)" }}>
+                      <div className="text-xs font-semibold" style={{ color: d >= 0 ? "var(--brand-green)" : "var(--opportunity)" }}>
                         {d >= 0 ? "↑" : "↓"} {d >= 0 ? "+" : "-"}{Math.abs(d).toFixed(0)}%
                       </div>
                     ) : (
-                      <div className="mt-1 text-xs text-muted-foreground">—</div>
+                      <div className="text-xs text-muted-foreground">—</div>
                     )}
                     <div className="text-[10px] text-muted-foreground">vs last week</div>
                   </div>
