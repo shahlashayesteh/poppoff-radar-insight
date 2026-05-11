@@ -18,7 +18,7 @@ import {
   MoreVertical,
   Trash2,
 } from "lucide-react";
-import { downloadCsvTemplate, parseStatsCsv } from "@/lib/csv";
+import { downloadCsvTemplate, parseStatsCsv, type CsvRow } from "@/lib/csv";
 import {
   getMondayOfWeek,
   toISODate,
