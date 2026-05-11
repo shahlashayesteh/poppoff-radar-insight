@@ -107,6 +107,10 @@ function ManagerDashboard() {
   const [uploading, setUploading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState<string>("");
   const fileRef = useRef<HTMLInputElement>(null);
+  const [previewRows, setPreviewRows] = useState<CsvRow[] | null>(null);
+  const [previewWeek, setPreviewWeek] = useState<string>("");
+  const [previewConfidence, setPreviewConfidence] = useState<number>(1);
+  const [previewNotes, setPreviewNotes] = useState<string>("");
   const weekStart = useMemo(() => toISODate(getMondayOfWeek()), []);
   const [displayWeekStart, setDisplayWeekStart] = useState<string>(weekStart);
 
