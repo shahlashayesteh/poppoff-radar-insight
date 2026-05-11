@@ -781,7 +781,9 @@ function ManagerDashboard() {
                 <tbody>
                   {members.map((m) => {
                     const s = statByUser[m.id];
-                    const t = targetByUser[m.id];
+                    const userCatStats = catStatsByUser[m.id] || {};
+                    const userCatTargets = catTargetsByUser[m.id] || {};
+                    const hasAnyCatRow = Object.keys(userCatStats).length > 0;
                     return (
                       <tr key={m.id} className="border-t border-border">
                         <td className="px-5 py-4 font-semibold">{m.full_name || "Unnamed"}</td>
@@ -789,16 +791,17 @@ function ManagerDashboard() {
                           {s?.spend_per_cover ? `£${Number(s.spend_per_cover).toFixed(0)}` : "—"}
                         </td>
                         {cats.map((c) => {
-                          const actual = s ? Number(s[c.key] ?? 0) : 0;
-                          const target = t ? Number(t[c.tKey]) : 0;
-                          if (!s)
+                          if (!hasAnyCatRow) {
                             return (
-                              <td key={c.label} className="px-3 text-center text-muted-foreground">
+                              <td key={c.key} className="px-3 text-center text-muted-foreground">
                                 —
                               </td>
                             );
+                          }
+                          const actual = Number(userCatStats[c.key]?.conversion ?? 0);
+                          const target = Number(userCatTargets[c.key] ?? 0);
                           return (
-                            <td key={c.label} className="px-3 text-center">
+                            <td key={c.key} className="px-3 text-center">
                               <Dot s={performanceColour(actual, target)} />
                             </td>
                           );
