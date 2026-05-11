@@ -384,6 +384,28 @@ function ManagerDashboard() {
     });
   };
 
+  const updatePreviewCategory = (idx: number, key: string, label: string, value: string) => {
+    setPreviewRows((prev) => {
+      if (!prev) return prev;
+      const next = [...prev];
+      const row = { ...next[idx] };
+      const cats = { ...(row.categories || {}) };
+      const sales = Number(value) || 0;
+      const existingLabel = cats[key]?.label || label;
+      cats[key] = { label: existingLabel, sales };
+      row.categories = cats;
+      // Mirror into legacy fields when applicable so backwards-compat code keeps working
+      const legacyMap: Record<string, keyof CsvRow> = {
+        wine: "wine_sales", dessert: "dessert_sales", cocktail: "cocktail_sales",
+        sides: "sides_sales", spirits: "spirits_sales", sparkling: "sparkling_sales",
+      };
+      const legacyField = legacyMap[key];
+      if (legacyField) (row as Record<string, unknown>)[legacyField] = sales;
+      next[idx] = row;
+      return next;
+    });
+  };
+
   const removePreviewRow = (idx: number) => {
     setPreviewRows((prev) => (prev ? prev.filter((_, i) => i !== idx) : prev));
   };
