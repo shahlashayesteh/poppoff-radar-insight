@@ -32,7 +32,7 @@ function Page() {
       );
       setDisplayWeekStart(visibleWeek);
 
-      const vcats = await fetchVenueCategories(venueId);
+      const vcats = await fetchCategoriesForWeek(venueId, visibleWeek);
       setCategories(vcats);
 
       const curRows = await fetchCategoryStatsForUser(venueId, u.user.id, visibleWeek);
