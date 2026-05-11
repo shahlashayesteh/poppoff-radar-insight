@@ -45,9 +45,15 @@ Deno.serve(async (req) => {
     const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE);
     const { action, venueId, payload } = await req.json();
 
-    // verify caller manages this venue
+    // verify caller manages this venue (or, for server_coaching, is the server themselves)
     const { data: v } = await admin.from("venues").select("id, manager_id").eq("id", venueId).maybeSingle();
-    if (!v || v.manager_id !== u.user.id) {
+    const isManager = !!v && v.manager_id === u.user.id;
+    let isSelfServer = false;
+    if (!isManager && action === "server_coaching" && payload?.userId === u.user.id) {
+      const { data: mem } = await admin.from("venue_members").select("user_id").eq("venue_id", venueId).eq("user_id", u.user.id).maybeSingle();
+      isSelfServer = !!mem;
+    }
+    if (!v || (!isManager && !isSelfServer)) {
       return new Response(JSON.stringify({ error: "forbidden" }), { status: 403, headers: { ...cors, "Content-Type": "application/json" } });
     }
 
@@ -183,14 +189,22 @@ Deno.serve(async (req) => {
     if (action === "server_coaching") {
       const weekStart = payload?.weekStart;
       const userId = payload?.userId;
+      const force = !!payload?.force;
       if (!userId || !weekStart) {
         return new Response(JSON.stringify({ error: "userId and weekStart required" }), { status: 400, headers: { ...cors, "Content-Type": "application/json" } });
       }
-      const { data: cached } = await admin.from("server_coaching").select("suggestions, generated_at").eq("user_id", userId).eq("venue_id", venueId).eq("week_start", weekStart).maybeSingle();
-      if (cached?.suggestions && Array.isArray(cached.suggestions) && (cached.suggestions as any[]).length > 0) {
-        return Response.json({ ok: true, suggestions: cached.suggestions, cached: true }, { headers: cors });
+      // Only managers may force regenerate
+      const effectiveForce = force && isManager;
+      if (!effectiveForce) {
+        const { data: cached } = await admin.from("server_coaching").select("suggestions, generated_at").eq("user_id", userId).eq("venue_id", venueId).eq("week_start", weekStart).maybeSingle();
+        if (cached?.suggestions && Array.isArray(cached.suggestions) && (cached.suggestions as any[]).length > 0) {
+          return Response.json({ ok: true, suggestions: cached.suggestions, cached: true }, { headers: cors });
+        }
       }
       const { data: cur } = await admin.from("server_stats").select("*").eq("venue_id", venueId).eq("user_id", userId).eq("week_start", weekStart).maybeSingle();
+      if (!cur) {
+        return Response.json({ ok: true, suggestions: [], cached: false, reason: "no_stats" }, { headers: cors });
+      }
       const { data: prev } = await admin.from("server_stats").select("*").eq("venue_id", venueId).eq("user_id", userId).lt("week_start", weekStart).order("week_start", { ascending: false }).limit(1).maybeSingle();
       const { data: tg } = await admin.from("server_targets").select("*").eq("venue_id", venueId).eq("user_id", userId).maybeSingle();
       const { data: menus } = await admin.from("venue_menu").select("parsed_items").eq("venue_id", venueId).order("uploaded_at", { ascending: false }).limit(3);
@@ -203,8 +217,10 @@ Deno.serve(async (req) => {
         const delta = p ? (a - p) : 0;
         return `${c}: ${a.toFixed(0)}% (target ${t.toFixed(0)}%, ${delta >= 0 ? "+" : ""}${delta.toFixed(0)}% vs last week)`;
       }).join("\n");
-      const sys = "You are a hospitality coach. Given a single server's weekly performance vs target and last week, plus the venue menu, return 3-4 short, specific, actionable coaching tips. Reply ONLY with JSON: {\"suggestions\":[{\"category\":\"wine\"|\"dessert\"|\"cocktail\"|\"sides\"|\"spirits\"|\"sparkling\"|\"general\",\"tip\":string}]}. Mention real menu items where helpful.";
-      const usr = `Performance:\n${lines}\nMenu items: ${menuItems.map((i: any) => i.name).filter(Boolean).slice(0, 40).join(", ") || "(none)"}`;
+      const spc = Number((cur as any)?.spend_per_cover ?? 0);
+      const spcTarget = Number((tg as any)?.spend_per_cover_target ?? 0);
+      const sys = "You are a hospitality coach producing PERSONAL coaching tips for ONE specific server based on THEIR own weekly stats. Reply ONLY with JSON: {\"suggestions\":[{\"category\":\"wine\"|\"dessert\"|\"cocktail\"|\"sides\"|\"spirits\"|\"sparkling\"|\"general\",\"tip\":string}]}. RULES: (1) Return 3-4 tips. (2) PRIORITISE the 1-2 categories where this server is FURTHEST BELOW their target — those tips are mandatory. (3) Optionally include 1 tip celebrating a category they are above target on. (4) EVERY tip MUST cite the server's specific number(s) for that category from the data provided — e.g. 'Your wine conversion is 42% vs target 60% (down 8% from last week) — try …'. Do NOT give generic advice that omits their numbers. (5) Tips MUST be actionable and reference a real menu item from the list when relevant. (6) Keep each tip to 1-2 short sentences.";
+      const usr = `This server's week:\nSpend per cover: £${spc.toFixed(2)} (target £${spcTarget.toFixed(2)})\n${lines}\nMenu items: ${menuItems.map((i: any) => i.name).filter(Boolean).slice(0, 40).join(", ") || "(none)"}`;
       const out = await callAI([{ role: "system", content: sys }, { role: "user", content: usr }], true);
       let suggestions: any[] = [];
       try { const o = JSON.parse(out); suggestions = o.suggestions ?? []; } catch {}

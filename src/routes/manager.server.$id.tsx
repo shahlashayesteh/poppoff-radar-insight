@@ -4,6 +4,8 @@ import { ManagerLayout } from "@/components/manager-layout";
 import { supabase } from "@/integrations/supabase/client";
 import { getManagerVenue } from "@/lib/manager-venue";
 import { getMondayOfWeek, toISODate, formatWeekRange, performanceColour, latestStatsWeek } from "@/lib/week";
+import { Sparkles, Wand2 } from "lucide-react";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/manager/server/$id")({ component: ServerView });
 
@@ -25,14 +27,35 @@ function ServerView() {
   const [viewed, setViewed] = useState(false);
   const [acked, setAcked] = useState(false);
   const [logins, setLogins] = useState(0);
+  const [venueId, setVenueId] = useState<string | null>(null);
+  const [coaching, setCoaching] = useState<{ category: string; tip: string }[] | null>(null);
+  const [coachLoading, setCoachLoading] = useState(false);
   const weekStart = toISODate(getMondayOfWeek());
   const [displayWeekStart, setDisplayWeekStart] = useState<string>(weekStart);
+
+  const loadCoaching = async (vId: string, weekISO: string, force = false) => {
+    setCoachLoading(true);
+    setCoaching(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("ai-assist", {
+        body: { action: "server_coaching", venueId: vId, payload: { userId: id, weekStart: weekISO, force } },
+      });
+      if (error) throw error;
+      setCoaching(Array.isArray(data?.suggestions) ? data.suggestions : []);
+    } catch (e: any) {
+      toast.error(e.message || "Could not generate coaching");
+      setCoaching([]);
+    } finally {
+      setCoachLoading(false);
+    }
+  };
 
   useEffect(() => {
     (async () => {
       const venue = await getManagerVenue();
       const v = venue?.id;
       if (!v) return;
+      setVenueId(v);
       const { data: prof } = await supabase.from("profiles").select("full_name").eq("id", id).maybeSingle();
       setName(prof?.full_name || "Server");
       const visibleWeek = await latestStatsWeek(
@@ -52,6 +75,7 @@ function ServerView() {
       setAcked(!!ak);
       const { count: lc } = await supabase.from("server_logins").select("id", { count: "exact", head: true }).eq("user_id", id).eq("venue_id", v);
       setLogins(lc ?? 0);
+      if (st) loadCoaching(v, visibleWeek, false);
     })();
   }, [id, weekStart]);
 
@@ -110,6 +134,39 @@ function ServerView() {
             </div>
           )}
         </div>
+
+        {stat && (
+          <div className="mt-6 rounded-2xl bg-white border border-border p-6">
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <h2 className="font-display text-lg font-bold inline-flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-brand-orange" /> AI coaching for {name}
+              </h2>
+              <button
+                onClick={() => venueId && loadCoaching(venueId, displayWeekStart, true)}
+                disabled={coachLoading || !venueId}
+                className="rounded-xl px-3 py-1.5 text-xs font-bold text-white inline-flex items-center gap-2 disabled:opacity-50"
+                style={{ background: "var(--brand-green)" }}
+              >
+                <Wand2 className="h-3.5 w-3.5" /> {coachLoading ? "Generating…" : "Regenerate"}
+              </button>
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground">Based on this server's stats for {formatWeekRange(displayWeekStart)}.</p>
+            {coachLoading ? (
+              <p className="mt-4 text-sm text-muted-foreground">Reading their week and writing personal tips…</p>
+            ) : !coaching || coaching.length === 0 ? (
+              <p className="mt-4 text-sm text-muted-foreground">No tips yet — click Regenerate.</p>
+            ) : (
+              <ul className="mt-4 space-y-3">
+                {coaching.map((s, i) => (
+                  <li key={i} className="rounded-xl border border-border p-3 flex gap-3">
+                    <span className="inline-flex items-center justify-center text-[10px] font-bold uppercase tracking-wider rounded-full px-2 py-0.5 h-fit shrink-0" style={{ background: "color-mix(in oklab, var(--brand-green) 12%, white)", color: "var(--brand-green)" }}>{s.category}</span>
+                    <span className="text-sm text-foreground/90">{s.tip}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
       </div>
     </ManagerLayout>
   );

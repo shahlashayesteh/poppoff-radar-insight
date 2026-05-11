@@ -4,7 +4,7 @@ import { ServerLayout } from "@/components/server-layout";
 import { supabase } from "@/integrations/supabase/client";
 import { useRoleGate } from "@/lib/auth-gate";
 import { claimServerCsvData, recordLogin, pctDelta, estimateItemsSold, fetchVenueAvgPrices, type CategoryKey } from "@/lib/server-data";
-import { Trophy, Flame, ArrowRight, TrendingDown } from "lucide-react";
+import { Trophy, Flame, ArrowRight, TrendingDown, Sparkles } from "lucide-react";
 import { getMondayOfWeek, toISODate, formatWeekRange, performanceColour, latestStatsWeek } from "@/lib/week";
 
 export const Route = createFileRoute("/server/")({ component: ServerDashboard });
@@ -37,6 +37,8 @@ function ServerDashboard() {
   const [target, setTarget] = useState<Targets | null>(null);
   const [streak, setStreak] = useState(0);
   const [prices, setPrices] = useState<Record<string, number>>({});
+  const [coaching, setCoaching] = useState<{ category: string; tip: string }[] | null>(null);
+  const [coachLoading, setCoachLoading] = useState(false);
   const weekStart = toISODate(getMondayOfWeek());
   const [displayWeekStart, setDisplayWeekStart] = useState<string>(weekStart);
 
@@ -67,6 +69,20 @@ function ServerDashboard() {
       setStreak((sk as any)?.current_streak ?? 0);
       setPrices(await fetchVenueAvgPrices(venueId));
       await supabase.from("server_stat_views").insert({ user_id: u.user.id, venue_id: venueId, week_start: visibleWeek });
+      if (st) {
+        setCoachLoading(true);
+        try {
+          const { data: cd, error: cErr } = await supabase.functions.invoke("ai-assist", {
+            body: { action: "server_coaching", venueId, payload: { userId: u.user.id, weekStart: visibleWeek } },
+          });
+          if (cErr) throw cErr;
+          setCoaching(Array.isArray(cd?.suggestions) ? cd.suggestions : []);
+        } catch {
+          setCoaching([]);
+        } finally {
+          setCoachLoading(false);
+        }
+      }
     })();
   }, [weekStart]);
 
@@ -213,6 +229,29 @@ function ServerDashboard() {
                 </div>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {stat && (coachLoading || (coaching && coaching.length > 0)) && (
+        <div className="px-5 mt-4">
+          <div className="rounded-3xl bg-white border border-border p-5">
+            <div className="inline-flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-brand-orange" />
+              <div className="font-semibold">Your coaching this week</div>
+            </div>
+            {coachLoading ? (
+              <p className="mt-3 text-sm text-muted-foreground">Writing tips from your week…</p>
+            ) : (
+              <ul className="mt-3 space-y-2">
+                {coaching!.map((s, i) => (
+                  <li key={i} className="rounded-2xl border border-border p-3 flex gap-3">
+                    <span className="inline-flex items-center justify-center text-[10px] font-bold uppercase tracking-wider rounded-full px-2 py-0.5 h-fit shrink-0" style={{ background: "color-mix(in oklab, var(--brand-green) 12%, white)", color: "var(--brand-green)" }}>{s.category}</span>
+                    <span className="text-sm text-foreground/90">{s.tip}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         </div>
       )}
