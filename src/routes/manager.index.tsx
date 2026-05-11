@@ -46,22 +46,6 @@ type StatRow = {
   total_covers: number;
   total_sales: number;
   spend_per_cover: number | null;
-  wine_conversion: number | null;
-  dessert_conversion: number | null;
-  cocktail_conversion: number | null;
-  sides_conversion: number | null;
-  spirits_conversion: number | null;
-  sparkling_conversion: number | null;
-};
-type TargetRow = {
-  user_id: string;
-  spend_per_cover_target: number;
-  wine_target: number;
-  dessert_target: number;
-  cocktail_target: number;
-  sides_target: number;
-  spirits_target: number;
-  sparkling_target: number;
 };
 
 type StatProps = {
@@ -109,7 +93,6 @@ function ManagerDashboard() {
   const [venue, setVenue] = useState<Venue | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
   const [stats, setStats] = useState<StatRow[]>([]);
-  const [targets, setTargets] = useState<TargetRow[]>([]);
   const [views, setViews] = useState<Record<string, boolean>>({});
   const [acks, setAcks] = useState<Record<string, boolean>>({});
   const [uploading, setUploading] = useState(false);
@@ -157,8 +140,6 @@ function ManagerDashboard() {
       .eq("venue_id", v.id)
       .eq("week_start", visibleWeek);
     setStats((st ?? []) as StatRow[]);
-    const { data: tg } = await supabase.from("server_targets").select("*").eq("venue_id", v.id);
-    setTargets((tg ?? []) as TargetRow[]);
     const { data: vw } = await supabase
       .from("server_stat_views")
       .select("user_id")
@@ -193,10 +174,6 @@ function ManagerDashboard() {
     return { covers, sales, spc };
   }, [stats]);
 
-  const targetByUser = useMemo(
-    () => Object.fromEntries(targets.map((t) => [t.user_id, t])),
-    [targets],
-  );
   const statByUser = useMemo(() => Object.fromEntries(stats.map((s) => [s.user_id, s])), [stats]);
 
   const copyCode = async () => {
