@@ -284,7 +284,20 @@ function ServerDashboard() {
         </div>
       )}
 
-      {stat && workOn && (
+      {stat && mode === "all-green" && (
+        <div className="px-5 mt-4">
+          <div className="rounded-3xl border-2 p-4 text-sm font-medium"
+            style={{
+              borderColor: `color-mix(in oklab, var(--brand-green) 40%, transparent)`,
+              background: `color-mix(in oklab, var(--brand-green) 8%, white)`,
+              color: "var(--brand-green)",
+            }}>
+            No weak spots this week — keep it up.
+          </div>
+        </div>
+      )}
+
+      {stat && mode !== "all-green" && workOn && (
         <div className="px-5 mt-4">
           <div className="rounded-3xl border-2 p-5 flex items-center gap-4"
             style={{
