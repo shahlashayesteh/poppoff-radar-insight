@@ -484,8 +484,9 @@ function ManagerDashboard() {
               Upload weekly stats
             </div>
             <p className="mt-2 text-sm text-foreground/75">
-              Upload any restaurant stats CSV. Server names, dates, totals, covers, categories and
-              item lines are detected automatically.
+              Upload a stats CSV or a photo/screenshot (PNG/JPEG) of a server-performance report. We
+              auto-detect names, totals, covers and categories. Images go through OCR and you can
+              review &amp; edit before importing.
             </p>
             <div className="mt-3 flex items-center gap-2 flex-wrap">
               <label
@@ -495,14 +496,14 @@ function ManagerDashboard() {
                 <input
                   ref={fileRef}
                   type="file"
-                  accept=".csv,text/csv"
+                  accept=".csv,text/csv,.png,.jpg,.jpeg,image/png,image/jpeg"
                   multiple
                   onChange={onFile}
                   disabled={uploading || !venue}
-                  aria-label="Upload weekly stats CSV"
+                  aria-label="Upload weekly stats CSV or image"
                   className="absolute inset-0 h-full w-full cursor-pointer opacity-0 disabled:cursor-not-allowed"
                 />
-                <Upload className="h-4 w-4" /> {uploading ? "Uploading…" : "Upload CSV"}
+                <Upload className="h-4 w-4" /> {uploading ? "Uploading…" : "Upload CSV or Image"}
               </label>
               <button
                 onClick={downloadCsvTemplate}
