@@ -46,22 +46,6 @@ type StatRow = {
   total_covers: number;
   total_sales: number;
   spend_per_cover: number | null;
-  wine_conversion: number | null;
-  dessert_conversion: number | null;
-  cocktail_conversion: number | null;
-  sides_conversion: number | null;
-  spirits_conversion: number | null;
-  sparkling_conversion: number | null;
-};
-type TargetRow = {
-  user_id: string;
-  spend_per_cover_target: number;
-  wine_target: number;
-  dessert_target: number;
-  cocktail_target: number;
-  sides_target: number;
-  spirits_target: number;
-  sparkling_target: number;
 };
 
 type StatProps = {
