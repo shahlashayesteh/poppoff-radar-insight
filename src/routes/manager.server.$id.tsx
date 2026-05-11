@@ -96,18 +96,31 @@ function ServerView() {
           ) : (
             <div className="mt-4 space-y-3">
               {categories.map((c) => {
-                const actual = Number(catStats[c.key]?.conversion ?? 0);
+                const s = catStats[c.key];
+                const metric = s?.metric_type || c.metric_type || "sales";
+                const conv = Number(s?.conversion ?? 0);
+                const qty = Number(s?.quantity ?? 0);
+                const net = Number(s?.net_sales ?? s?.sales ?? 0);
                 const tgt = Number(catTargets[c.key] ?? 0);
-                const colour = performanceColour(actual, tgt);
+                const compareVal = metric === "quantity" ? qty : conv;
+                const colour = performanceColour(compareVal, tgt);
                 const tone = colour === "green" ? "var(--brand-green)" : colour === "amber" ? "var(--brand-orange)" : "var(--opportunity)";
+                const barPct = metric === "quantity"
+                  ? (tgt > 0 ? Math.min(100, (qty / tgt) * 100) : Math.min(100, conv))
+                  : Math.min(100, conv);
+                const rightLabel = metric === "quantity"
+                  ? `${qty.toLocaleString()} sold / target ${tgt.toFixed(0)}`
+                  : metric === "percentage"
+                  ? `${conv.toFixed(0)}% / ${tgt.toFixed(0)}%`
+                  : `£${net.toFixed(0)} · ${conv.toFixed(0)}% / ${tgt.toFixed(0)}%`;
                 return (
                   <div key={c.key} className="flex items-center gap-4">
                     <span className="inline-block h-3 w-3 rounded-full" style={{ background: tone }} />
                     <div className="w-32 text-sm font-medium">{c.label}</div>
                     <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
-                      <div className="h-full rounded-full" style={{ width: `${Math.min(100, actual)}%`, background: tone }} />
+                      <div className="h-full rounded-full" style={{ width: `${barPct}%`, background: tone }} />
                     </div>
-                    <div className="w-24 text-right text-xs text-muted-foreground">{actual.toFixed(0)}% / {tgt.toFixed(0)}%</div>
+                    <div className="w-40 text-right text-xs text-muted-foreground">{rightLabel}</div>
                   </div>
                 );
               })}
