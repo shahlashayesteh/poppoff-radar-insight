@@ -174,10 +174,6 @@ function ManagerDashboard() {
     return { covers, sales, spc };
   }, [stats]);
 
-  const targetByUser = useMemo(
-    () => Object.fromEntries(targets.map((t) => [t.user_id, t])),
-    [targets],
-  );
   const statByUser = useMemo(() => Object.fromEntries(stats.map((s) => [s.user_id, s])), [stats]);
 
   const copyCode = async () => {
