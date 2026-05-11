@@ -37,6 +37,8 @@ function ServerDashboard() {
   const [target, setTarget] = useState<Targets | null>(null);
   const [streak, setStreak] = useState(0);
   const [prices, setPrices] = useState<Record<string, number>>({});
+  const [coaching, setCoaching] = useState<{ category: string; tip: string }[] | null>(null);
+  const [coachLoading, setCoachLoading] = useState(false);
   const weekStart = toISODate(getMondayOfWeek());
   const [displayWeekStart, setDisplayWeekStart] = useState<string>(weekStart);
 
