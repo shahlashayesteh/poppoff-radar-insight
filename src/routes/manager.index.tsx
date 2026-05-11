@@ -28,7 +28,7 @@ import {
 } from "@/lib/week";
 import { getManagerVenue } from "@/lib/manager-venue";
 import {
-  fetchVenueCategories,
+  fetchCategoriesForWeek,
   fetchCategoryStatsForVenueWeek,
   fetchCategoryTargets,
   indexCategoryStats,
