@@ -570,93 +570,94 @@ function ManagerDashboard() {
                 />
               </div>
             </div>
-            <div className="mt-4 overflow-x-auto">
-              <table className="w-full text-xs">
-                <thead className="text-muted-foreground">
-                  <tr>
-                    <th className="text-left px-2 py-2 font-medium">Server</th>
-                    <th className="px-2 py-2 font-medium">Covers</th>
-                    <th className="px-2 py-2 font-medium">Total Sales</th>
-                    <th className="px-2 py-2 font-medium">Avg Spend</th>
-                    <th className="px-2 py-2 font-medium">Wine</th>
-                    <th className="px-2 py-2 font-medium">Cocktail</th>
-                    <th className="px-2 py-2 font-medium">Dessert</th>
-                    <th className="px-2 py-2 font-medium">Sides</th>
-                    <th className="px-2 py-2 font-medium">Spirits</th>
-                    <th className="px-2 py-2 font-medium">Sparkling</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {previewRows.map((r, idx) => {
-                    const spc = r.total_covers > 0 ? r.total_sales / r.total_covers : 0;
-                    const cellCls = "rounded-md border border-border px-2 py-1 text-sm w-20";
-                    return (
-                      <tr key={idx} className="border-t border-border">
-                        <td className="px-2 py-2">
-                          <input
-                            type="text"
-                            value={r.server_name}
-                            onChange={(e) => updatePreviewRow(idx, "server_name", e.target.value)}
-                            className="rounded-md border border-border px-2 py-1 text-sm w-32"
-                          />
-                        </td>
-                        <td className="px-2 py-2">
-                          <input type="number" value={r.total_covers}
-                            onChange={(e) => updatePreviewRow(idx, "total_covers", e.target.value)}
-                            className={cellCls} />
-                        </td>
-                        <td className="px-2 py-2">
-                          <input type="number" value={r.total_sales}
-                            onChange={(e) => updatePreviewRow(idx, "total_sales", e.target.value)}
-                            className={cellCls} />
-                        </td>
-                        <td className="px-2 py-2 text-center text-muted-foreground">£{spc.toFixed(2)}</td>
-                        <td className="px-2 py-2">
-                          <input type="number" value={r.wine_sales}
-                            onChange={(e) => updatePreviewRow(idx, "wine_sales", e.target.value)}
-                            className={cellCls} />
-                        </td>
-                        <td className="px-2 py-2">
-                          <input type="number" value={r.cocktail_sales}
-                            onChange={(e) => updatePreviewRow(idx, "cocktail_sales", e.target.value)}
-                            className={cellCls} />
-                        </td>
-                        <td className="px-2 py-2">
-                          <input type="number" value={r.dessert_sales}
-                            onChange={(e) => updatePreviewRow(idx, "dessert_sales", e.target.value)}
-                            className={cellCls} />
-                        </td>
-                        <td className="px-2 py-2">
-                          <input type="number" value={r.sides_sales}
-                            onChange={(e) => updatePreviewRow(idx, "sides_sales", e.target.value)}
-                            className={cellCls} />
-                        </td>
-                        <td className="px-2 py-2">
-                          <input type="number" value={r.spirits_sales}
-                            onChange={(e) => updatePreviewRow(idx, "spirits_sales", e.target.value)}
-                            className={cellCls} />
-                        </td>
-                        <td className="px-2 py-2">
-                          <input type="number" value={r.sparkling_sales}
-                            onChange={(e) => updatePreviewRow(idx, "sparkling_sales", e.target.value)}
-                            className={cellCls} />
-                        </td>
-                        <td className="px-2 py-2">
-                          <button
-                            onClick={() => removePreviewRow(idx)}
-                            className="text-muted-foreground hover:text-destructive"
-                            aria-label="Remove row"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        </td>
+            {(() => {
+              // Build the union of all category keys present across preview rows,
+              // so the table adapts to whatever categories the venue actually has.
+              const catKeyMap = new Map<string, string>();
+              for (const row of previewRows) {
+                if (row.categories) {
+                  for (const [key, entry] of Object.entries(row.categories)) {
+                    if (!catKeyMap.has(key)) catKeyMap.set(key, entry.label || key);
+                  }
+                }
+              }
+              const catCols = Array.from(catKeyMap.entries()).map(([key, label]) => ({ key, label }));
+              return (
+                <div className="mt-4 overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead className="text-muted-foreground">
+                      <tr>
+                        <th className="text-left px-2 py-2 font-medium">Server</th>
+                        <th className="px-2 py-2 font-medium">Covers</th>
+                        <th className="px-2 py-2 font-medium">Total Sales</th>
+                        <th className="px-2 py-2 font-medium">Avg Spend</th>
+                        {catCols.map((c) => (
+                          <th key={c.key} className="px-2 py-2 font-medium capitalize">{c.label}</th>
+                        ))}
+                        <th></th>
                       </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                    </thead>
+                    <tbody>
+                      {previewRows.map((r, idx) => {
+                        const spc = r.total_covers > 0 ? r.total_sales / r.total_covers : 0;
+                        const cellCls = "rounded-md border border-border px-2 py-1 text-sm w-20";
+                        return (
+                          <tr key={idx} className="border-t border-border">
+                            <td className="px-2 py-2">
+                              <input
+                                type="text"
+                                value={r.server_name}
+                                onChange={(e) => updatePreviewRow(idx, "server_name", e.target.value)}
+                                className="rounded-md border border-border px-2 py-1 text-sm w-32"
+                              />
+                            </td>
+                            <td className="px-2 py-2">
+                              <input type="number" value={r.total_covers}
+                                onChange={(e) => updatePreviewRow(idx, "total_covers", e.target.value)}
+                                className={cellCls} />
+                            </td>
+                            <td className="px-2 py-2">
+                              <input type="number" value={r.total_sales}
+                                onChange={(e) => updatePreviewRow(idx, "total_sales", e.target.value)}
+                                className={cellCls} />
+                            </td>
+                            <td className="px-2 py-2 text-center text-muted-foreground">£{spc.toFixed(2)}</td>
+                            {catCols.map((c) => {
+                              const entry = r.categories?.[c.key];
+                              const val = Number(entry?.sales ?? 0);
+                              return (
+                                <td key={c.key} className="px-2 py-2">
+                                  <input
+                                    type="number"
+                                    value={val}
+                                    onChange={(e) => updatePreviewCategory(idx, c.key, e.target.value)}
+                                    className={cellCls}
+                                  />
+                                </td>
+                              );
+                            })}
+                            <td className="px-2 py-2">
+                              <button
+                                onClick={() => removePreviewRow(idx)}
+                                className="text-muted-foreground hover:text-destructive"
+                                aria-label="Remove row"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                  {catCols.length === 0 && (
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      No per-category breakdown was extracted — only totals will be imported.
+                    </p>
+                  )}
+                </div>
+              );
+            })()}
             <div className="mt-4 flex items-center gap-3 flex-wrap">
               <button
                 onClick={confirmPreview}
