@@ -4,7 +4,7 @@ import { ServerLayout } from "@/components/server-layout";
 import { supabase } from "@/integrations/supabase/client";
 import { claimServerCsvData, recordLogin } from "@/lib/server-data";
 import { getMondayOfWeek, toISODate, formatWeekRange, performanceColour, latestStatsWeek } from "@/lib/week";
-import { fetchVenueCategories, fetchCategoryStatsForUser, type VenueCategory, type CategoryStat } from "@/lib/categories";
+import { fetchCategoriesForWeek, fetchCategoryStatsForUser, type VenueCategory, type CategoryStat } from "@/lib/categories";
 
 export const Route = createFileRoute("/server/stats")({ component: Page });
 
