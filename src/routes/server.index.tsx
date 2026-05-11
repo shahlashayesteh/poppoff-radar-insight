@@ -242,13 +242,9 @@ function ServerDashboard() {
             top3.length > 0 ? (
               <div className="mt-4 grid grid-cols-3 gap-2">
                 {top3.map((c) => {
-                  const actualConv = Number((stat as any)[c.conv] ?? 0);
-                  const tgt = Number((target as any)?.[c.t] ?? 0);
-                  const tone = toneFor(actualConv, tgt);
-                  const fillPct = tgt > 0 ? (actualConv / tgt) * 100 : actualConv;
-                  const items = estimateItemsSold(Number((stat as any)[c.sales] ?? 0), c.cat, prices);
-                  const prevItems = prevStat ? estimateItemsSold(Number((prevStat as any)[c.sales] ?? 0), c.cat, prices) : 0;
-                  const d = pctDelta(items, prevItems);
+                  const tone = toneFor(c.conversion, c.target);
+                  const fillPct = c.target > 0 ? (c.conversion / c.target) * 100 : c.conversion;
+                  const d = pctDelta(c.items, c.prevItems);
                   return (
                     <div key={c.label} className="flex flex-col items-center">
                       <div className="text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: tone }}>{c.role}</div>
