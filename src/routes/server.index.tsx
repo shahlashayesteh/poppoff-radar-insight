@@ -57,7 +57,7 @@ function ServerDashboard() {
       );
       setDisplayWeekStart(visibleWeek);
 
-      const vcats = await fetchVenueCategories(venueId);
+      const vcats = await fetchCategoriesForWeek(venueId, visibleWeek);
       setCategories(vcats);
       const curRows = await fetchCategoryStatsForUser(venueId, u.user.id, visibleWeek);
       setCur(Object.fromEntries(curRows.map((r) => [r.category_key, r])));
