@@ -249,7 +249,7 @@ function ServerDashboard() {
                     <div key={c.label} className="flex flex-col items-center">
                       <div className="text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: tone }}>{c.role}</div>
                       <div className="text-xs text-muted-foreground mb-2">{c.label}</div>
-                      <Ring fillPct={fillPct} color={tone} displayValue={items} />
+                      <Ring fillPct={fillPct} color={tone} displayValue={c.items} />
                       {d !== null ? (
                         <div className="mt-1 text-xs font-semibold" style={{ color: d >= 0 ? "var(--brand-green)" : "var(--opportunity)" }}>
                           {d >= 0 ? "↑" : "↓"} {d >= 0 ? "+" : "-"}{Math.abs(d).toFixed(0)}%
