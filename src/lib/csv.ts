@@ -26,7 +26,13 @@ export function downloadCsvTemplate() {
   URL.revokeObjectURL(url);
 }
 
-export type CategoryAmount = { label: string; sales: number };
+export type CategoryAmount = {
+  label: string;
+  sales: number;
+  quantity?: number;
+  net_sales?: number;
+  metric_type?: "quantity" | "sales" | "percentage";
+};
 
 export type CsvRow = {
   server_name: string;
