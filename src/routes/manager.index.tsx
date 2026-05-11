@@ -366,6 +366,20 @@ function ManagerDashboard() {
     });
   };
 
+  const updatePreviewCategory = (idx: number, key: string, value: string) => {
+    setPreviewRows((prev) => {
+      if (!prev) return prev;
+      const next = [...prev];
+      const row = { ...next[idx] };
+      const cats = { ...(row.categories || {}) };
+      const existing = cats[key] || { label: key, sales: 0, quantity: 0, metric_type: "sales" as const };
+      cats[key] = { ...existing, sales: Number(value) || 0 };
+      row.categories = cats;
+      next[idx] = row;
+      return next;
+    });
+  };
+
   const removePreviewRow = (idx: number) => {
     setPreviewRows((prev) => (prev ? prev.filter((_, i) => i !== idx) : prev));
   };
