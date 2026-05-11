@@ -26,6 +26,14 @@ export function downloadCsvTemplate() {
   URL.revokeObjectURL(url);
 }
 
+export type CategoryEntry = {
+  label: string;
+  sales: number;
+  quantity?: number;
+  metric_type?: "sales" | "quantity";
+};
+export type CategoryMap = Record<string, CategoryEntry>;
+
 export type CsvRow = {
   server_name: string;
   total_covers: number;
@@ -36,17 +44,80 @@ export type CsvRow = {
   sides_sales: number;
   spirits_sales: number;
   sparkling_sales: number;
+  /** Dynamic, per-venue categories (e.g. edamame, water). Always populated alongside legacy six. */
+  categories?: CategoryMap;
   week_start?: string;
 };
 
 type CanonicalField = keyof CsvRow | "date" | "category" | "item" | "quantity" | "check_id";
 type RawRow = Record<string, string>;
 
-type Accumulator = CsvRow & {
+type Accumulator = Omit<CsvRow, "categories"> & {
   coverCandidates: number[];
   checkIds: Set<string>;
   sumCoverCandidates: boolean;
+  categoriesAcc: CategoryMap;
 };
+
+const LEGACY_SALES_FIELDS = [
+  "wine_sales",
+  "dessert_sales",
+  "cocktail_sales",
+  "sides_sales",
+  "spirits_sales",
+  "sparkling_sales",
+] as const;
+
+const LEGACY_LABELS: Record<string, string> = {
+  wine_sales: "Wine",
+  dessert_sales: "Dessert",
+  cocktail_sales: "Cocktails",
+  sides_sales: "Sides",
+  spirits_sales: "Spirits",
+  sparkling_sales: "Sparkling",
+};
+
+const RESERVED_HEADERS = new Set([
+  "server_name",
+  "total_covers",
+  "total_sales",
+  "date",
+  "category",
+  "item",
+  "check_id",
+  "quantity",
+]);
+
+function slugifyCategory(text: string): string {
+  return text
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+}
+
+function humanizeStem(stem: string): string {
+  return stem
+    .replace(/[_-]+/g, " ")
+    .trim()
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function addCategorySales(acc: Accumulator, key: string, label: string, amount: number) {
+  if (!key || !amount) return;
+  const existing = acc.categoriesAcc[key] ?? { label, sales: 0, quantity: 0 };
+  existing.sales += amount;
+  if (label && (!existing.label || existing.label === key)) existing.label = label;
+  acc.categoriesAcc[key] = existing;
+}
+
+function addCategoryQty(acc: Accumulator, key: string, label: string, qty: number) {
+  if (!key || !qty) return;
+  const existing = acc.categoriesAcc[key] ?? { label, sales: 0, quantity: 0 };
+  existing.quantity = (existing.quantity || 0) + qty;
+  if (label && (!existing.label || existing.label === key)) existing.label = label;
+  acc.categoriesAcc[key] = existing;
+}
 
 const HEADER_ALIASES: Record<string, CanonicalField> = {
   servername: "server_name",
