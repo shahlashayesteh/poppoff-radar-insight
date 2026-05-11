@@ -136,9 +136,13 @@ function ServerDashboard() {
   }
 
   // Dynamically pick best / middle / needs-work from categories with usable data
+  type RingRole =
+    | "Crushing it" | "Solid" | "Focus here"
+    | "On fire" | "Keep going"
+    | "Closest to target" | "Needs work" | "Biggest focus";
   type Top3Item = {
     label: string;
-    role: "Crushing it" | "Solid" | "Focus here";
+    role: RingRole;
     conv: string;
     t: string;
     sales: string;
@@ -146,35 +150,65 @@ function ServerDashboard() {
   };
   const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
   let top3: Top3Item[] = [];
+  let mode: "all-green" | "all-red" | "mixed" = "mixed";
   if (stat && target) {
     const usable = allCats
       .map((c) => {
         const actualConv = Number((stat as any)[c.conv] ?? 0);
         const tgt = Number((target as any)?.[c.t] ?? 0);
         const sales = Number((stat as any)[c.sales] ?? 0);
-        return { c, ratio: tgt > 0 ? actualConv / tgt : 0, tgt, sales };
+        return { c, ratio: tgt > 0 ? actualConv / tgt : 0, tgt, sales, actualConv };
       })
       .filter((r) => r.tgt > 0 && r.sales > 0)
       .sort((a, b) => b.ratio - a.ratio);
 
-    const picks: { item: typeof allCats[number]; role: Top3Item["role"] }[] = [];
+    type Pick = { item: typeof allCats[number]; actualConv: number; tgt: number; slot: "best" | "mid" | "worst" | "only" };
+    const picks: Pick[] = [];
     if (usable.length >= 3) {
-      picks.push({ item: usable[0].c, role: "Crushing it" });
-      picks.push({ item: usable[Math.floor(usable.length / 2)].c, role: "Solid" });
-      picks.push({ item: usable[usable.length - 1].c, role: "Focus here" });
+      picks.push({ item: usable[0].c, actualConv: usable[0].actualConv, tgt: usable[0].tgt, slot: "best" });
+      const midIdx = Math.floor(usable.length / 2);
+      picks.push({ item: usable[midIdx].c, actualConv: usable[midIdx].actualConv, tgt: usable[midIdx].tgt, slot: "mid" });
+      const last = usable.length - 1;
+      picks.push({ item: usable[last].c, actualConv: usable[last].actualConv, tgt: usable[last].tgt, slot: "worst" });
     } else if (usable.length === 2) {
-      picks.push({ item: usable[0].c, role: "Crushing it" });
-      picks.push({ item: usable[1].c, role: "Focus here" });
+      picks.push({ item: usable[0].c, actualConv: usable[0].actualConv, tgt: usable[0].tgt, slot: "best" });
+      picks.push({ item: usable[1].c, actualConv: usable[1].actualConv, tgt: usable[1].tgt, slot: "worst" });
     } else if (usable.length === 1) {
-      picks.push({ item: usable[0].c, role: "Solid" });
+      picks.push({ item: usable[0].c, actualConv: usable[0].actualConv, tgt: usable[0].tgt, slot: "only" });
     }
-    top3 = picks.map(({ item, role }) => ({
-      label: cap(item.label),
-      role,
-      conv: item.conv,
-      t: item.t,
-      sales: item.sales,
-      cat: item.cat,
+
+    if (picks.length === 3) {
+      const colours = picks.map((p) => performanceColour(p.actualConv, p.tgt));
+      if (colours.every((c) => c === "green")) mode = "all-green";
+      else if (colours.every((c) => c === "red")) mode = "all-red";
+    }
+
+    const roleFor = (slot: Pick["slot"]): RingRole => {
+      if (mode === "all-green") {
+        if (slot === "best") return "Crushing it";
+        if (slot === "mid") return "On fire";
+        if (slot === "worst") return "Keep going";
+        return "Crushing it";
+      }
+      if (mode === "all-red") {
+        if (slot === "best") return "Closest to target";
+        if (slot === "mid") return "Needs work";
+        if (slot === "worst") return "Biggest focus";
+        return "Needs work";
+      }
+      if (slot === "best") return "Crushing it";
+      if (slot === "mid") return "Solid";
+      if (slot === "worst") return "Focus here";
+      return "Solid";
+    };
+
+    top3 = picks.map((p) => ({
+      label: cap(p.item.label),
+      role: roleFor(p.slot),
+      conv: p.item.conv,
+      t: p.item.t,
+      sales: p.item.sales,
+      cat: p.item.cat,
     }));
   }
 
@@ -250,7 +284,20 @@ function ServerDashboard() {
         </div>
       )}
 
-      {stat && workOn && (
+      {stat && mode === "all-green" && (
+        <div className="px-5 mt-4">
+          <div className="rounded-3xl border-2 p-4 text-sm font-medium"
+            style={{
+              borderColor: `color-mix(in oklab, var(--brand-green) 40%, transparent)`,
+              background: `color-mix(in oklab, var(--brand-green) 8%, white)`,
+              color: "var(--brand-green)",
+            }}>
+            No weak spots this week — keep it up.
+          </div>
+        </div>
+      )}
+
+      {stat && mode !== "all-green" && workOn && (
         <div className="px-5 mt-4">
           <div className="rounded-3xl border-2 p-5 flex items-center gap-4"
             style={{
