@@ -125,6 +125,69 @@ export type Database = {
         }
         Relationships: []
       }
+      server_category_stats: {
+        Row: {
+          category_key: string
+          conversion: number | null
+          created_at: string
+          id: string
+          sales: number
+          user_id: string
+          venue_id: string
+          week_start: string
+        }
+        Insert: {
+          category_key: string
+          conversion?: number | null
+          created_at?: string
+          id?: string
+          sales?: number
+          user_id: string
+          venue_id: string
+          week_start: string
+        }
+        Update: {
+          category_key?: string
+          conversion?: number | null
+          created_at?: string
+          id?: string
+          sales?: number
+          user_id?: string
+          venue_id?: string
+          week_start?: string
+        }
+        Relationships: []
+      }
+      server_category_targets: {
+        Row: {
+          category_key: string
+          created_at: string
+          id: string
+          target: number
+          updated_at: string
+          user_id: string
+          venue_id: string
+        }
+        Insert: {
+          category_key: string
+          created_at?: string
+          id?: string
+          target?: number
+          updated_at?: string
+          user_id: string
+          venue_id: string
+        }
+        Update: {
+          category_key?: string
+          created_at?: string
+          id?: string
+          target?: number
+          updated_at?: string
+          user_id?: string
+          venue_id?: string
+        }
+        Relationships: []
+      }
       server_coaching: {
         Row: {
           generated_at: string
@@ -533,6 +596,44 @@ export type Database = {
         }
         Relationships: []
       }
+      venue_categories: {
+        Row: {
+          created_at: string
+          id: string
+          is_legacy: boolean
+          key: string
+          label: string
+          sort_order: number
+          venue_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_legacy?: boolean
+          key: string
+          label: string
+          sort_order?: number
+          venue_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_legacy?: boolean
+          key?: string
+          label?: string
+          sort_order?: number
+          venue_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "venue_categories_venue_id_fkey"
+            columns: ["venue_id"]
+            isOneToOne: false
+            referencedRelation: "venues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       venue_members: {
         Row: {
           id: string
@@ -853,6 +954,7 @@ export type Database = {
         Args: { _venue_id: string }
         Returns: string
       }
+      slugify_category: { Args: { _label: string }; Returns: string }
       update_streaks_and_milestones: {
         Args: { _user_id: string; _venue_id: string; _week_start: string }
         Returns: undefined
