@@ -69,6 +69,20 @@ function ServerDashboard() {
       setStreak((sk as any)?.current_streak ?? 0);
       setPrices(await fetchVenueAvgPrices(venueId));
       await supabase.from("server_stat_views").insert({ user_id: u.user.id, venue_id: venueId, week_start: visibleWeek });
+      if (st) {
+        setCoachLoading(true);
+        try {
+          const { data: cd, error: cErr } = await supabase.functions.invoke("ai-assist", {
+            body: { action: "server_coaching", venueId, payload: { userId: u.user.id, weekStart: visibleWeek } },
+          });
+          if (cErr) throw cErr;
+          setCoaching(Array.isArray(cd?.suggestions) ? cd.suggestions : []);
+        } catch {
+          setCoaching([]);
+        } finally {
+          setCoachLoading(false);
+        }
+      }
     })();
   }, [weekStart]);
 
