@@ -203,6 +203,7 @@ function ServerDashboard() {
                 const d = pctDelta(items, prevItems);
                 return (
                   <div key={c.label} className="flex flex-col items-center">
+                    <div className="text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: tone }}>{c.role}</div>
                     <div className="text-xs text-muted-foreground mb-2">{c.label}</div>
                     <Ring fillPct={fillPct} color={tone} displayValue={items} />
                     {d !== null ? (
