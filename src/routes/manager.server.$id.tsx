@@ -4,6 +4,8 @@ import { ManagerLayout } from "@/components/manager-layout";
 import { supabase } from "@/integrations/supabase/client";
 import { getManagerVenue } from "@/lib/manager-venue";
 import { getMondayOfWeek, toISODate, formatWeekRange, performanceColour, latestStatsWeek } from "@/lib/week";
+import { Sparkles, Wand2 } from "lucide-react";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/manager/server/$id")({ component: ServerView });
 
