@@ -456,14 +456,25 @@ function ManagerDashboard() {
     }
   };
 
-  const cats: Array<{ key: keyof StatRow; tKey: keyof TargetRow; label: string }> = [
-    { key: "wine_conversion", tKey: "wine_target", label: "Wine" },
-    { key: "cocktail_conversion", tKey: "cocktail_target", label: "Cocktails" },
-    { key: "dessert_conversion", tKey: "dessert_target", label: "Desserts" },
-    { key: "sides_conversion", tKey: "sides_target", label: "Sides" },
-    { key: "spirits_conversion", tKey: "spirits_target", label: "Spirits" },
-    { key: "sparkling_conversion", tKey: "sparkling_target", label: "Sparkling" },
-  ];
+  // Dynamic categories for the team performance table — falls back to legacy six
+  // automatically inside fetchVenueCategories if the venue hasn't tracked any yet.
+  const cats = useMemo(
+    () => venueCategories.map((c) => ({ key: c.key, label: c.label })),
+    [venueCategories],
+  );
+
+  // Union of category keys present in current preview rows + venue's tracked categories,
+  // so editors can add values for any column we already know about.
+  const previewCategoryColumns = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const c of venueCategories) map.set(c.key, c.label);
+    for (const r of previewRows ?? []) {
+      for (const [k, v] of Object.entries(r.categories || {})) {
+        if (!map.has(k)) map.set(k, v?.label || k);
+      }
+    }
+    return Array.from(map.entries()).map(([key, label]) => ({ key, label }));
+  }, [previewRows, venueCategories]);
 
   const viewedCount = members.filter((m) => views[m.id]).length;
   const ackedCount = members.filter((m) => acks[m.id]).length;
