@@ -168,33 +168,6 @@ function ServerView() {
           </div>
         )}
       </div>
-
-        <div className="mt-6 rounded-2xl bg-white border border-border p-6">
-          <h2 className="font-display text-lg font-bold">Category breakdown</h2>
-          {!stat ? (
-            <p className="mt-3 text-sm text-muted-foreground">No stats this week. Upload via the manager dashboard.</p>
-          ) : (
-            <div className="mt-4 space-y-3">
-              {cats.map((c) => {
-                const actual = Number(stat[c.key] ?? 0);
-                const tgt = Number(target?.[c.t] ?? 0);
-                const colour = performanceColour(actual, tgt);
-                const tone = colour === "green" ? "var(--brand-green)" : colour === "amber" ? "var(--brand-orange)" : "var(--opportunity)";
-                return (
-                  <div key={c.label} className="flex items-center gap-4">
-                    <span className="inline-block h-3 w-3 rounded-full" style={{ background: tone }} />
-                    <div className="w-32 text-sm font-medium">{c.label}</div>
-                    <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
-                      <div className="h-full rounded-full" style={{ width: `${Math.min(100, actual)}%`, background: tone }} />
-                    </div>
-                    <div className="w-24 text-right text-xs text-muted-foreground">{actual.toFixed(0)}% / {tgt}%</div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      </div>
     </ManagerLayout>
   );
 }
