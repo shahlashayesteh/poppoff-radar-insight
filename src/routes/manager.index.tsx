@@ -93,7 +93,6 @@ function ManagerDashboard() {
   const [venue, setVenue] = useState<Venue | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
   const [stats, setStats] = useState<StatRow[]>([]);
-  const [targets, setTargets] = useState<TargetRow[]>([]);
   const [views, setViews] = useState<Record<string, boolean>>({});
   const [acks, setAcks] = useState<Record<string, boolean>>({});
   const [uploading, setUploading] = useState(false);
