@@ -430,16 +430,12 @@ function inferSalesHeader(headers: string[], rows: RawRow[]) {
   return numericHeaders[0]?.h;
 }
 
-function categoryBucket(
-  value: unknown,
-): keyof Omit<CsvRow, "server_name" | "total_covers" | "total_sales" | "week_start"> | null {
+type LegacyBucket = Exclude<keyof CsvRow, "server_name" | "total_covers" | "total_sales" | "week_start" | "categories">;
+
+function categoryBucket(value: unknown): LegacyBucket | null {
   const text = String(value ?? "").toLowerCase();
   for (const [bucket, terms] of Object.entries(CATEGORY_KEYWORDS)) {
-    if (terms.some((term) => text.includes(term)))
-      return bucket as keyof Omit<
-        CsvRow,
-        "server_name" | "total_covers" | "total_sales" | "week_start"
-      >;
+    if (terms.some((term) => text.includes(term))) return bucket as LegacyBucket;
   }
   return null;
 }
