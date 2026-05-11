@@ -131,6 +131,9 @@ export type Database = {
           conversion: number | null
           created_at: string
           id: string
+          metric_type: string
+          net_sales: number
+          quantity: number
           sales: number
           user_id: string
           venue_id: string
@@ -141,6 +144,9 @@ export type Database = {
           conversion?: number | null
           created_at?: string
           id?: string
+          metric_type?: string
+          net_sales?: number
+          quantity?: number
           sales?: number
           user_id: string
           venue_id: string
@@ -151,6 +157,9 @@ export type Database = {
           conversion?: number | null
           created_at?: string
           id?: string
+          metric_type?: string
+          net_sales?: number
+          quantity?: number
           sales?: number
           user_id?: string
           venue_id?: string
@@ -163,6 +172,7 @@ export type Database = {
           category_key: string
           created_at: string
           id: string
+          metric_type: string
           target: number
           updated_at: string
           user_id: string
@@ -172,6 +182,7 @@ export type Database = {
           category_key: string
           created_at?: string
           id?: string
+          metric_type?: string
           target?: number
           updated_at?: string
           user_id: string
@@ -181,6 +192,7 @@ export type Database = {
           category_key?: string
           created_at?: string
           id?: string
+          metric_type?: string
           target?: number
           updated_at?: string
           user_id?: string
