@@ -18,7 +18,7 @@ import {
   MoreVertical,
   Trash2,
 } from "lucide-react";
-import { downloadCsvTemplate, parseStatsCsv } from "@/lib/csv";
+import { downloadCsvTemplate, parseStatsCsv, type CsvRow } from "@/lib/csv";
 import {
   getMondayOfWeek,
   toISODate,
@@ -107,6 +107,10 @@ function ManagerDashboard() {
   const [uploading, setUploading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState<string>("");
   const fileRef = useRef<HTMLInputElement>(null);
+  const [previewRows, setPreviewRows] = useState<CsvRow[] | null>(null);
+  const [previewWeek, setPreviewWeek] = useState<string>("");
+  const [previewConfidence, setPreviewConfidence] = useState<number>(1);
+  const [previewNotes, setPreviewNotes] = useState<string>("");
   const weekStart = useMemo(() => toISODate(getMondayOfWeek()), []);
   const [displayWeekStart, setDisplayWeekStart] = useState<string>(weekStart);
 
@@ -211,6 +215,66 @@ function ManagerDashboard() {
     toast.success("New join code generated");
   };
 
+  const fileToDataUrl = (file: File) =>
+    new Promise<string>((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(String(r.result || ""));
+      r.onerror = () => reject(r.error || new Error("read failed"));
+      r.readAsDataURL(file);
+    });
+
+  const importRows = async (rows: CsvRow[], fileCount: number, sourceLabel: string) => {
+    if (!venue) return;
+    const importWeek = rows[0]?.week_start || weekStart;
+    const importedWeeks = new Set<string>();
+    const createdNames = new Set<string>();
+    setUploadStatus(`Preparing dashboard… importing ${rows.length} server row${rows.length === 1 ? "" : "s"}…`);
+    const { data, error } = await supabase.rpc("process_csv_upload", {
+      _venue_id: venue.id,
+      _week_start: importWeek,
+      _csv_data: rows as unknown as never,
+    });
+    if (error) throw error;
+    const result = data as {
+      matched_count: number;
+      created_count?: number;
+      unmatched_names?: string[];
+      weeks?: string[];
+    };
+    const importedCount = result.matched_count || 0;
+    (result.weeks?.length ? result.weeks : rows.map((row) => row.week_start || importWeek)).forEach(
+      (week) => importedWeeks.add(week),
+    );
+    (result.unmatched_names ?? []).forEach((name) => createdNames.add(name));
+
+    const weeks = Array.from(importedWeeks);
+    toast.success(
+      `Imported ${importedCount} server week${importedCount === 1 ? "" : "s"} from ${fileCount} ${sourceLabel}${fileCount === 1 ? "" : "s"}`,
+    );
+    if (createdNames.size > 0) {
+      toast.info(
+        `Added ${createdNames.size} new server${createdNames.size === 1 ? "" : "s"} to your team: ${Array.from(createdNames).join(", ")}`,
+      );
+    }
+    setUploadStatus("Refreshing dashboards and generating priorities…");
+    toast.info("Generating weekly priorities with AI…");
+    await Promise.all(
+      weeks.map(async (week) => {
+        const { error: aiErr } = await supabase.functions.invoke("ai-assist", {
+          body: {
+            action: "generate_priorities",
+            venueId: venue.id,
+            payload: { weekStart: week },
+          },
+        });
+        if (aiErr) toast.error(`AI: ${aiErr.message}`);
+      }),
+    );
+    setDisplayWeekStart(weeks[0] || importWeek);
+    await load();
+    setUploadStatus(`Imported ${importedCount} server week${importedCount === 1 ? "" : "s"}.`);
+  };
+
   const onFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
     if (!files.length) return;
@@ -218,9 +282,51 @@ function ManagerDashboard() {
       toast.error("Your venue is still loading — try again in a moment");
       return;
     }
+    const isImage = (f: File) =>
+      f.type.startsWith("image/") || /\.(png|jpe?g)$/i.test(f.name);
+    const allImages = files.every(isImage);
+    const allCsv = files.every((f) => !isImage(f));
+    if (!allImages && !allCsv) {
+      toast.error("Please upload either CSV files OR image files, not both at once.");
+      if (fileRef.current) fileRef.current.value = "";
+      return;
+    }
+
     setUploading(true);
-    setUploadStatus(`Reading ${files.length} CSV${files.length === 1 ? "" : "s"}…`);
     try {
+      if (allImages) {
+        setUploadStatus(`Reading image${files.length === 1 ? "" : "s"}…`);
+        const dataUrls = await Promise.all(files.map(fileToDataUrl));
+        setUploadStatus("Extracting report data…");
+        const { data, error } = await supabase.functions.invoke("ai-assist", {
+          body: {
+            action: "parse_stats_image",
+            venueId: venue.id,
+            payload: { images: dataUrls },
+          },
+        });
+        if (error) throw error;
+        const result = data as {
+          rows: CsvRow[];
+          confidence: number;
+          week_start: string | null;
+          notes: string;
+        };
+        if (!result.rows?.length || result.confidence < 0.5) {
+          const msg = "We could not confidently extract this report. Please upload a clearer image or use CSV.";
+          setUploadStatus(msg);
+          toast.error(msg);
+          return;
+        }
+        setPreviewRows(result.rows);
+        setPreviewWeek(result.week_start || weekStart);
+        setPreviewConfidence(result.confidence);
+        setPreviewNotes(result.notes || "");
+        setUploadStatus(`Extracted ${result.rows.length} server row${result.rows.length === 1 ? "" : "s"} — review below.`);
+        return;
+      }
+
+      setUploadStatus(`Reading ${files.length} CSV${files.length === 1 ? "" : "s"}…`);
       const parsed = await Promise.all(files.map(parseStatsCsv));
       const rows = parsed.flat();
       if (!rows.length) {
@@ -230,55 +336,7 @@ function ManagerDashboard() {
         toast.error(message);
         return;
       }
-      const importWeek = rows[0]?.week_start || weekStart;
-      const importedWeeks = new Set<string>();
-      const createdNames = new Set<string>();
-      setUploadStatus(`Importing ${rows.length} extracted server row${rows.length === 1 ? "" : "s"}…`);
-      const { data, error } = await supabase.rpc("process_csv_upload", {
-        _venue_id: venue.id,
-        _week_start: importWeek,
-        _csv_data: rows as unknown as never,
-      });
-      if (error) throw error;
-      const result = data as {
-        matched_count: number;
-        created_count?: number;
-        unmatched_names?: string[];
-        weeks?: string[];
-      };
-      const importedCount = result.matched_count || 0;
-      (result.weeks?.length ? result.weeks : rows.map((row) => row.week_start || importWeek)).forEach(
-        (week) => importedWeeks.add(week),
-      );
-      (result.unmatched_names ?? []).forEach((name) => createdNames.add(name));
-
-      const weeks = Array.from(importedWeeks);
-      toast.success(
-        `Imported ${importedCount} server week${importedCount === 1 ? "" : "s"} from ${files.length} CSV${files.length === 1 ? "" : "s"}`,
-      );
-      if (createdNames.size > 0) {
-        toast.info(
-          `Added ${createdNames.size} new server${createdNames.size === 1 ? "" : "s"} to your team: ${Array.from(createdNames).join(", ")}`,
-        );
-      }
-      // Auto-generate weekly priorities via AI
-      setUploadStatus("Refreshing dashboards and generating priorities…");
-      toast.info("Generating weekly priorities with AI…");
-      await Promise.all(
-        weeks.map(async (week) => {
-          const { error: aiErr } = await supabase.functions.invoke("ai-assist", {
-            body: {
-              action: "generate_priorities",
-              venueId: venue.id,
-              payload: { weekStart: week },
-            },
-          });
-          if (aiErr) toast.error(`AI: ${aiErr.message}`);
-        }),
-      );
-      setDisplayWeekStart(weeks[0] || importWeek);
-      await load();
-      setUploadStatus(`Imported ${importedCount} server week${importedCount === 1 ? "" : "s"}.`);
+      await importRows(rows, files.length, "CSV");
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Upload failed";
       setUploadStatus(message);
@@ -286,6 +344,49 @@ function ManagerDashboard() {
     } finally {
       setUploading(false);
       if (fileRef.current) fileRef.current.value = "";
+    }
+  };
+
+  const updatePreviewRow = (idx: number, field: keyof CsvRow, value: string) => {
+    setPreviewRows((prev) => {
+      if (!prev) return prev;
+      const next = [...prev];
+      const row = { ...next[idx] };
+      if (field === "server_name") {
+        row.server_name = value;
+      } else if (field === "week_start") {
+        row.week_start = value;
+      } else {
+        (row as Record<string, unknown>)[field] = Number(value) || 0;
+      }
+      next[idx] = row;
+      return next;
+    });
+  };
+
+  const removePreviewRow = (idx: number) => {
+    setPreviewRows((prev) => (prev ? prev.filter((_, i) => i !== idx) : prev));
+  };
+
+  const confirmPreview = async () => {
+    if (!previewRows || !previewRows.length) return;
+    setUploading(true);
+    try {
+      const rows = previewRows
+        .map((r) => ({ ...r, week_start: r.week_start || previewWeek || weekStart }))
+        .filter((r) => r.server_name.trim() && (r.total_sales > 0 || r.total_covers > 0));
+      if (!rows.length) {
+        toast.error("No valid rows to import.");
+        return;
+      }
+      await importRows(rows, 1, "image");
+      setPreviewRows(null);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Import failed";
+      setUploadStatus(message);
+      toast.error(message);
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -383,8 +484,9 @@ function ManagerDashboard() {
               Upload weekly stats
             </div>
             <p className="mt-2 text-sm text-foreground/75">
-              Upload any restaurant stats CSV. Server names, dates, totals, covers, categories and
-              item lines are detected automatically.
+              Upload a stats CSV or a photo/screenshot (PNG/JPEG) of a server-performance report. We
+              auto-detect names, totals, covers and categories. Images go through OCR and you can
+              review &amp; edit before importing.
             </p>
             <div className="mt-3 flex items-center gap-2 flex-wrap">
               <label
@@ -394,14 +496,14 @@ function ManagerDashboard() {
                 <input
                   ref={fileRef}
                   type="file"
-                  accept=".csv,text/csv"
+                  accept=".csv,text/csv,.png,.jpg,.jpeg,image/png,image/jpeg"
                   multiple
                   onChange={onFile}
                   disabled={uploading || !venue}
-                  aria-label="Upload weekly stats CSV"
+                  aria-label="Upload weekly stats CSV or image"
                   className="absolute inset-0 h-full w-full cursor-pointer opacity-0 disabled:cursor-not-allowed"
                 />
-                <Upload className="h-4 w-4" /> {uploading ? "Uploading…" : "Upload CSV"}
+                <Upload className="h-4 w-4" /> {uploading ? "Uploading…" : "Upload CSV or Image"}
               </label>
               <button
                 onClick={downloadCsvTemplate}
@@ -426,6 +528,143 @@ function ManagerDashboard() {
             )}
           </div>
         </div>
+
+        {previewRows && (
+          <div className="mt-6 rounded-2xl border-2 border-brand-orange bg-white p-5">
+            <div className="flex items-start justify-between gap-3 flex-wrap">
+              <div>
+                <div className="text-xs uppercase tracking-widest font-bold" style={{ color: "var(--brand-orange)" }}>
+                  Extracted Data Preview
+                </div>
+                <h3 className="font-display text-lg font-bold mt-1">
+                  Review &amp; edit before importing
+                </h3>
+                <p className="text-xs text-muted-foreground mt-1">
+                  OCR confidence: {Math.round(previewConfidence * 100)}%
+                  {previewNotes ? ` — ${previewNotes}` : ""}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <label className="text-xs text-muted-foreground">Week starting</label>
+                <input
+                  type="date"
+                  value={previewWeek}
+                  onChange={(e) => setPreviewWeek(e.target.value)}
+                  className="rounded-lg border border-border px-2 py-1 text-sm"
+                />
+              </div>
+            </div>
+            <div className="mt-4 overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead className="text-muted-foreground">
+                  <tr>
+                    <th className="text-left px-2 py-2 font-medium">Server</th>
+                    <th className="px-2 py-2 font-medium">Covers</th>
+                    <th className="px-2 py-2 font-medium">Total Sales</th>
+                    <th className="px-2 py-2 font-medium">Avg Spend</th>
+                    <th className="px-2 py-2 font-medium">Wine</th>
+                    <th className="px-2 py-2 font-medium">Cocktail</th>
+                    <th className="px-2 py-2 font-medium">Dessert</th>
+                    <th className="px-2 py-2 font-medium">Sides</th>
+                    <th className="px-2 py-2 font-medium">Spirits</th>
+                    <th className="px-2 py-2 font-medium">Sparkling</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {previewRows.map((r, idx) => {
+                    const spc = r.total_covers > 0 ? r.total_sales / r.total_covers : 0;
+                    const cellCls = "rounded-md border border-border px-2 py-1 text-sm w-20";
+                    return (
+                      <tr key={idx} className="border-t border-border">
+                        <td className="px-2 py-2">
+                          <input
+                            type="text"
+                            value={r.server_name}
+                            onChange={(e) => updatePreviewRow(idx, "server_name", e.target.value)}
+                            className="rounded-md border border-border px-2 py-1 text-sm w-32"
+                          />
+                        </td>
+                        <td className="px-2 py-2">
+                          <input type="number" value={r.total_covers}
+                            onChange={(e) => updatePreviewRow(idx, "total_covers", e.target.value)}
+                            className={cellCls} />
+                        </td>
+                        <td className="px-2 py-2">
+                          <input type="number" value={r.total_sales}
+                            onChange={(e) => updatePreviewRow(idx, "total_sales", e.target.value)}
+                            className={cellCls} />
+                        </td>
+                        <td className="px-2 py-2 text-center text-muted-foreground">£{spc.toFixed(2)}</td>
+                        <td className="px-2 py-2">
+                          <input type="number" value={r.wine_sales}
+                            onChange={(e) => updatePreviewRow(idx, "wine_sales", e.target.value)}
+                            className={cellCls} />
+                        </td>
+                        <td className="px-2 py-2">
+                          <input type="number" value={r.cocktail_sales}
+                            onChange={(e) => updatePreviewRow(idx, "cocktail_sales", e.target.value)}
+                            className={cellCls} />
+                        </td>
+                        <td className="px-2 py-2">
+                          <input type="number" value={r.dessert_sales}
+                            onChange={(e) => updatePreviewRow(idx, "dessert_sales", e.target.value)}
+                            className={cellCls} />
+                        </td>
+                        <td className="px-2 py-2">
+                          <input type="number" value={r.sides_sales}
+                            onChange={(e) => updatePreviewRow(idx, "sides_sales", e.target.value)}
+                            className={cellCls} />
+                        </td>
+                        <td className="px-2 py-2">
+                          <input type="number" value={r.spirits_sales}
+                            onChange={(e) => updatePreviewRow(idx, "spirits_sales", e.target.value)}
+                            className={cellCls} />
+                        </td>
+                        <td className="px-2 py-2">
+                          <input type="number" value={r.sparkling_sales}
+                            onChange={(e) => updatePreviewRow(idx, "sparkling_sales", e.target.value)}
+                            className={cellCls} />
+                        </td>
+                        <td className="px-2 py-2">
+                          <button
+                            onClick={() => removePreviewRow(idx)}
+                            className="text-muted-foreground hover:text-destructive"
+                            aria-label="Remove row"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <div className="mt-4 flex items-center gap-3 flex-wrap">
+              <button
+                onClick={confirmPreview}
+                disabled={uploading || previewRows.length === 0}
+                className="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-bold text-white disabled:opacity-50"
+                style={{ background: "var(--brand-green)" }}
+              >
+                <Upload className="h-4 w-4" /> {uploading ? "Importing…" : "Confirm & Update Dashboard"}
+              </button>
+              <button
+                onClick={() => { setPreviewRows(null); setUploadStatus(""); }}
+                disabled={uploading}
+                className="inline-flex items-center gap-2 rounded-xl border border-border px-4 py-2 text-sm font-semibold disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              {previewConfidence < 0.7 && (
+                <span className="text-xs text-destructive font-semibold">
+                  Low OCR confidence — double-check every value before importing.
+                </span>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* KPIs */}
         <div className="mt-6 grid grid-cols-2 lg:grid-cols-4 gap-4">
