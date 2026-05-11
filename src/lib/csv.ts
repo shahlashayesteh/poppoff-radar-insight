@@ -153,10 +153,15 @@ const HEADER_ALIASES: Record<string, CanonicalField> = {
   billid: "check_id",
 };
 
-const CATEGORY_KEYWORDS: Record<
-  Exclude<keyof CsvRow, "server_name" | "total_covers" | "total_sales" | "week_start">,
-  string[]
-> = {
+type LegacyCategorySales =
+  | "wine_sales"
+  | "dessert_sales"
+  | "cocktail_sales"
+  | "sides_sales"
+  | "spirits_sales"
+  | "sparkling_sales";
+
+const CATEGORY_KEYWORDS: Record<LegacyCategorySales, string[]> = {
   sparkling_sales: ["sparkling", "champagne", "prosecco", "cava", "crémant", "cremant"],
   wine_sales: [
     "wine",
