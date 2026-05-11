@@ -215,6 +215,66 @@ function ManagerDashboard() {
     toast.success("New join code generated");
   };
 
+  const fileToDataUrl = (file: File) =>
+    new Promise<string>((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(String(r.result || ""));
+      r.onerror = () => reject(r.error || new Error("read failed"));
+      r.readAsDataURL(file);
+    });
+
+  const importRows = async (rows: CsvRow[], fileCount: number, sourceLabel: string) => {
+    if (!venue) return;
+    const importWeek = rows[0]?.week_start || weekStart;
+    const importedWeeks = new Set<string>();
+    const createdNames = new Set<string>();
+    setUploadStatus(`Preparing dashboard… importing ${rows.length} server row${rows.length === 1 ? "" : "s"}…`);
+    const { data, error } = await supabase.rpc("process_csv_upload", {
+      _venue_id: venue.id,
+      _week_start: importWeek,
+      _csv_data: rows as unknown as never,
+    });
+    if (error) throw error;
+    const result = data as {
+      matched_count: number;
+      created_count?: number;
+      unmatched_names?: string[];
+      weeks?: string[];
+    };
+    const importedCount = result.matched_count || 0;
+    (result.weeks?.length ? result.weeks : rows.map((row) => row.week_start || importWeek)).forEach(
+      (week) => importedWeeks.add(week),
+    );
+    (result.unmatched_names ?? []).forEach((name) => createdNames.add(name));
+
+    const weeks = Array.from(importedWeeks);
+    toast.success(
+      `Imported ${importedCount} server week${importedCount === 1 ? "" : "s"} from ${fileCount} ${sourceLabel}${fileCount === 1 ? "" : "s"}`,
+    );
+    if (createdNames.size > 0) {
+      toast.info(
+        `Added ${createdNames.size} new server${createdNames.size === 1 ? "" : "s"} to your team: ${Array.from(createdNames).join(", ")}`,
+      );
+    }
+    setUploadStatus("Refreshing dashboards and generating priorities…");
+    toast.info("Generating weekly priorities with AI…");
+    await Promise.all(
+      weeks.map(async (week) => {
+        const { error: aiErr } = await supabase.functions.invoke("ai-assist", {
+          body: {
+            action: "generate_priorities",
+            venueId: venue.id,
+            payload: { weekStart: week },
+          },
+        });
+        if (aiErr) toast.error(`AI: ${aiErr.message}`);
+      }),
+    );
+    setDisplayWeekStart(weeks[0] || importWeek);
+    await load();
+    setUploadStatus(`Imported ${importedCount} server week${importedCount === 1 ? "" : "s"}.`);
+  };
+
   const onFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
     if (!files.length) return;
@@ -222,9 +282,51 @@ function ManagerDashboard() {
       toast.error("Your venue is still loading — try again in a moment");
       return;
     }
+    const isImage = (f: File) =>
+      f.type.startsWith("image/") || /\.(png|jpe?g)$/i.test(f.name);
+    const allImages = files.every(isImage);
+    const allCsv = files.every((f) => !isImage(f));
+    if (!allImages && !allCsv) {
+      toast.error("Please upload either CSV files OR image files, not both at once.");
+      if (fileRef.current) fileRef.current.value = "";
+      return;
+    }
+
     setUploading(true);
-    setUploadStatus(`Reading ${files.length} CSV${files.length === 1 ? "" : "s"}…`);
     try {
+      if (allImages) {
+        setUploadStatus(`Reading image${files.length === 1 ? "" : "s"}…`);
+        const dataUrls = await Promise.all(files.map(fileToDataUrl));
+        setUploadStatus("Extracting report data…");
+        const { data, error } = await supabase.functions.invoke("ai-assist", {
+          body: {
+            action: "parse_stats_image",
+            venueId: venue.id,
+            payload: { images: dataUrls },
+          },
+        });
+        if (error) throw error;
+        const result = data as {
+          rows: CsvRow[];
+          confidence: number;
+          week_start: string | null;
+          notes: string;
+        };
+        if (!result.rows?.length || result.confidence < 0.5) {
+          const msg = "We could not confidently extract this report. Please upload a clearer image or use CSV.";
+          setUploadStatus(msg);
+          toast.error(msg);
+          return;
+        }
+        setPreviewRows(result.rows);
+        setPreviewWeek(result.week_start || weekStart);
+        setPreviewConfidence(result.confidence);
+        setPreviewNotes(result.notes || "");
+        setUploadStatus(`Extracted ${result.rows.length} server row${result.rows.length === 1 ? "" : "s"} — review below.`);
+        return;
+      }
+
+      setUploadStatus(`Reading ${files.length} CSV${files.length === 1 ? "" : "s"}…`);
       const parsed = await Promise.all(files.map(parseStatsCsv));
       const rows = parsed.flat();
       if (!rows.length) {
@@ -234,55 +336,7 @@ function ManagerDashboard() {
         toast.error(message);
         return;
       }
-      const importWeek = rows[0]?.week_start || weekStart;
-      const importedWeeks = new Set<string>();
-      const createdNames = new Set<string>();
-      setUploadStatus(`Importing ${rows.length} extracted server row${rows.length === 1 ? "" : "s"}…`);
-      const { data, error } = await supabase.rpc("process_csv_upload", {
-        _venue_id: venue.id,
-        _week_start: importWeek,
-        _csv_data: rows as unknown as never,
-      });
-      if (error) throw error;
-      const result = data as {
-        matched_count: number;
-        created_count?: number;
-        unmatched_names?: string[];
-        weeks?: string[];
-      };
-      const importedCount = result.matched_count || 0;
-      (result.weeks?.length ? result.weeks : rows.map((row) => row.week_start || importWeek)).forEach(
-        (week) => importedWeeks.add(week),
-      );
-      (result.unmatched_names ?? []).forEach((name) => createdNames.add(name));
-
-      const weeks = Array.from(importedWeeks);
-      toast.success(
-        `Imported ${importedCount} server week${importedCount === 1 ? "" : "s"} from ${files.length} CSV${files.length === 1 ? "" : "s"}`,
-      );
-      if (createdNames.size > 0) {
-        toast.info(
-          `Added ${createdNames.size} new server${createdNames.size === 1 ? "" : "s"} to your team: ${Array.from(createdNames).join(", ")}`,
-        );
-      }
-      // Auto-generate weekly priorities via AI
-      setUploadStatus("Refreshing dashboards and generating priorities…");
-      toast.info("Generating weekly priorities with AI…");
-      await Promise.all(
-        weeks.map(async (week) => {
-          const { error: aiErr } = await supabase.functions.invoke("ai-assist", {
-            body: {
-              action: "generate_priorities",
-              venueId: venue.id,
-              payload: { weekStart: week },
-            },
-          });
-          if (aiErr) toast.error(`AI: ${aiErr.message}`);
-        }),
-      );
-      setDisplayWeekStart(weeks[0] || importWeek);
-      await load();
-      setUploadStatus(`Imported ${importedCount} server week${importedCount === 1 ? "" : "s"}.`);
+      await importRows(rows, files.length, "CSV");
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Upload failed";
       setUploadStatus(message);
@@ -290,6 +344,49 @@ function ManagerDashboard() {
     } finally {
       setUploading(false);
       if (fileRef.current) fileRef.current.value = "";
+    }
+  };
+
+  const updatePreviewRow = (idx: number, field: keyof CsvRow, value: string) => {
+    setPreviewRows((prev) => {
+      if (!prev) return prev;
+      const next = [...prev];
+      const row = { ...next[idx] };
+      if (field === "server_name") {
+        row.server_name = value;
+      } else if (field === "week_start") {
+        row.week_start = value;
+      } else {
+        (row as Record<string, unknown>)[field] = Number(value) || 0;
+      }
+      next[idx] = row;
+      return next;
+    });
+  };
+
+  const removePreviewRow = (idx: number) => {
+    setPreviewRows((prev) => (prev ? prev.filter((_, i) => i !== idx) : prev));
+  };
+
+  const confirmPreview = async () => {
+    if (!previewRows || !previewRows.length) return;
+    setUploading(true);
+    try {
+      const rows = previewRows
+        .map((r) => ({ ...r, week_start: r.week_start || previewWeek || weekStart }))
+        .filter((r) => r.server_name.trim() && (r.total_sales > 0 || r.total_covers > 0));
+      if (!rows.length) {
+        toast.error("No valid rows to import.");
+        return;
+      }
+      await importRows(rows, 1, "image");
+      setPreviewRows(null);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Import failed";
+      setUploadStatus(message);
+      toast.error(message);
+    } finally {
+      setUploading(false);
     }
   };
 
