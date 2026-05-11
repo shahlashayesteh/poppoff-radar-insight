@@ -49,3 +49,80 @@ export function pctDelta(current: number, previous: number): number | null {
   if (!previous || previous === 0) return null;
   return ((current - previous) / previous) * 100;
 }
+
+export type ServerCatRow = {
+  key: string;
+  label: string;
+  conversion: number;
+  target: number;
+  items: number;
+  prevItems: number;
+  sales: number;
+  prevSales: number;
+};
+
+/**
+ * Load this server's per-category rows for a given week, driven entirely by
+ * the venue's tracked categories (venue_categories). Returns [] when the
+ * venue has no dynamic categories — callers should then fall back to the
+ * legacy six columns on server_stats.
+ */
+export async function loadServerCategoryRows(
+  venueId: string,
+  userId: string,
+  weekStart: string,
+  prevWeekStart: string | null,
+): Promise<ServerCatRow[]> {
+  const [vcRes, curRes, prevRes, tgtRes] = await Promise.all([
+    supabase
+      .from("venue_categories")
+      .select("key,label,sort_order")
+      .eq("venue_id", venueId)
+      .order("sort_order"),
+    supabase
+      .from("server_category_stats")
+      .select("category_key,conversion,sales,net_sales,quantity,metric_type")
+      .eq("venue_id", venueId)
+      .eq("user_id", userId)
+      .eq("week_start", weekStart),
+    prevWeekStart
+      ? supabase
+          .from("server_category_stats")
+          .select("category_key,conversion,sales,net_sales,quantity,metric_type")
+          .eq("venue_id", venueId)
+          .eq("user_id", userId)
+          .eq("week_start", prevWeekStart)
+      : Promise.resolve({ data: [] as any[] } as any),
+    supabase
+      .from("server_category_targets")
+      .select("category_key,target")
+      .eq("venue_id", venueId)
+      .eq("user_id", userId),
+  ]);
+  const vc = (vcRes.data ?? []) as { key: string; label: string }[];
+  if (!vc.length) return [];
+  const prices = await fetchVenueAvgPrices(venueId);
+  const curMap = Object.fromEntries(((curRes.data ?? []) as any[]).map((s) => [s.category_key, s]));
+  const prevMap = Object.fromEntries((((prevRes as any).data ?? []) as any[]).map((s) => [s.category_key, s]));
+  const tgtMap = Object.fromEntries(((tgtRes.data ?? []) as any[]).map((t) => [t.category_key, Number(t.target) || 0]));
+  const itemsFor = (s: any, key: string): number => {
+    if (!s) return 0;
+    if (String(s.metric_type) === "quantity") return Math.round(Number(s.quantity) || 0);
+    const sales = Number(s.net_sales ?? s.sales ?? 0);
+    return estimateItemsSold(sales, key as CategoryKey, prices);
+  };
+  return vc.map((c) => {
+    const cur = curMap[c.key];
+    const prev = prevMap[c.key];
+    return {
+      key: c.key,
+      label: c.label,
+      conversion: Number(cur?.conversion ?? 0),
+      target: Number(tgtMap[c.key] ?? 0),
+      sales: Number(cur?.net_sales ?? cur?.sales ?? 0),
+      prevSales: Number(prev?.net_sales ?? prev?.sales ?? 0),
+      items: itemsFor(cur, c.key),
+      prevItems: itemsFor(prev, c.key),
+    };
+  });
+}
