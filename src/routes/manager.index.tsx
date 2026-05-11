@@ -140,8 +140,6 @@ function ManagerDashboard() {
       .eq("venue_id", v.id)
       .eq("week_start", visibleWeek);
     setStats((st ?? []) as StatRow[]);
-    const { data: tg } = await supabase.from("server_targets").select("*").eq("venue_id", v.id);
-    setTargets((tg ?? []) as TargetRow[]);
     const { data: vw } = await supabase
       .from("server_stat_views")
       .select("user_id")
