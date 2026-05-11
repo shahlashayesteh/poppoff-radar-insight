@@ -119,6 +119,9 @@ function ManagerDashboard() {
   const [previewWeek, setPreviewWeek] = useState<string>("");
   const [previewConfidence, setPreviewConfidence] = useState<number>(1);
   const [previewNotes, setPreviewNotes] = useState<string>("");
+  const [venueCategories, setVenueCategories] = useState<VenueCategory[]>([]);
+  const [catStatsByUser, setCatStatsByUser] = useState<Record<string, Record<string, { sales: number; conversion: number }>>>({});
+  const [catTargetsByUser, setCatTargetsByUser] = useState<Record<string, Record<string, number>>>({});
   const weekStart = useMemo(() => toISODate(getMondayOfWeek()), []);
   const [displayWeekStart, setDisplayWeekStart] = useState<string>(weekStart);
 
