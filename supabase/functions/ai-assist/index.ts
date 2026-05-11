@@ -57,8 +57,8 @@ Deno.serve(async (req) => {
       if (!validImages.length) {
         return new Response(JSON.stringify({ error: "no images provided" }), { status: 400, headers: { ...cors, "Content-Type": "application/json" } });
       }
-      const sys = "You are an OCR and data-extraction assistant for restaurant server-performance reports. Read every image carefully and extract one row per individual server/staff member. Reply ONLY with JSON: {\"rows\":[{\"server_name\":string,\"total_covers\":number,\"total_sales\":number,\"wine_sales\":number,\"dessert_sales\":number,\"cocktail_sales\":number,\"sides_sales\":number,\"spirits_sales\":number,\"sparkling_sales\":number}],\"week_start\":string|null,\"confidence\":number,\"notes\":string}. RULES: (1) confidence is 0-1 (your certainty the data is correct and complete). Use <0.5 if image is blurry/cropped or critical fields are missing. (2) Numbers MUST be plain numbers — strip currency symbols, commas, %. (3) If a category is not shown for a server, use 0. (4) week_start: an ISO Monday date (YYYY-MM-DD) if a date or week is visible, else null. (5) Skip TOTAL/SUMMARY rows — only individual servers. (6) notes: brief description of issues if confidence<0.7.";
-      const userContent: any[] = [{ type: "text", text: "Extract server sales rows from these report images." }];
+      const sys = "You are an OCR and data-extraction assistant for restaurant server-performance reports. Read every image carefully and extract one row per individual server/staff member. Reply ONLY with JSON: {\"rows\":[{\"server_name\":string,\"total_covers\":number,\"total_sales\":number,\"categories\":{<slug>:{\"label\":string,\"sales\":number}}}],\"week_start\":string|null,\"confidence\":number,\"notes\":string}. RULES: (1) confidence is 0-1. Use <0.5 if image is blurry/cropped or fields are missing. (2) Numbers MUST be plain numbers — strip currency symbols, commas, %. (3) `categories` MUST contain EVERY sales category column visible in the report (wine, cocktails, desserts, sides, spirits, sparkling, beer, coffee, starters, mains, pasta, pizza, specials, anything else). Key = lowercase snake_case slug of the column header. Label = the original column header text. If a value is blank, use 0 or omit. (4) Skip TOTAL/SUMMARY rows — only individual servers. (5) week_start: ISO Monday date (YYYY-MM-DD) if visible, else null. (6) notes: short description of issues if confidence<0.7.";
+      const userContent: any[] = [{ type: "text", text: "Extract every server's sales row and every sales category column you can see in these report images." }];
       for (const url of validImages) userContent.push({ type: "image_url", image_url: { url } });
       const out = await callAI([
         { role: "system", content: sys },
@@ -66,17 +66,33 @@ Deno.serve(async (req) => {
       ], true);
       let parsed: any = { rows: [], confidence: 0, notes: "" };
       try { parsed = JSON.parse(out); } catch {}
-      const rows = (Array.isArray(parsed.rows) ? parsed.rows : []).map((r: any) => ({
-        server_name: String(r.server_name || "").trim(),
-        total_covers: Number(r.total_covers) || 0,
-        total_sales: Number(r.total_sales) || 0,
-        wine_sales: Number(r.wine_sales) || 0,
-        dessert_sales: Number(r.dessert_sales) || 0,
-        cocktail_sales: Number(r.cocktail_sales) || 0,
-        sides_sales: Number(r.sides_sales) || 0,
-        spirits_sales: Number(r.spirits_sales) || 0,
-        sparkling_sales: Number(r.sparkling_sales) || 0,
-      })).filter((r: any) => r.server_name && (r.total_sales > 0 || r.total_covers > 0));
+      const rows = (Array.isArray(parsed.rows) ? parsed.rows : []).map((r: any) => {
+        const cats = (r.categories && typeof r.categories === "object") ? r.categories : {};
+        const normCats: Record<string, { label: string; sales: number }> = {};
+        for (const [k, v] of Object.entries(cats)) {
+          const key = String(k).toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+          if (!key) continue;
+          const vv = v as any;
+          normCats[key] = {
+            label: String(vv?.label || k),
+            sales: Number(vv?.sales) || 0,
+          };
+        }
+        // Legacy compat: surface the six legacy keys as top-level fields too
+        const legacy = (k: string) => Number(normCats[k]?.sales) || Number((r as any)[`${k}_sales`]) || 0;
+        return {
+          server_name: String(r.server_name || "").trim(),
+          total_covers: Number(r.total_covers) || 0,
+          total_sales: Number(r.total_sales) || 0,
+          wine_sales: legacy("wine"),
+          dessert_sales: legacy("dessert") || legacy("desserts"),
+          cocktail_sales: legacy("cocktail") || legacy("cocktails"),
+          sides_sales: legacy("sides") || legacy("side"),
+          spirits_sales: legacy("spirits") || legacy("spirit"),
+          sparkling_sales: legacy("sparkling") || legacy("champagne") || legacy("prosecco"),
+          categories: normCats,
+        };
+      }).filter((r: any) => r.server_name && (r.total_sales > 0 || r.total_covers > 0 || Object.keys(r.categories).length > 0));
       const confidence = Math.max(0, Math.min(1, Number(parsed.confidence) || 0));
       return Response.json({
         ok: true,
