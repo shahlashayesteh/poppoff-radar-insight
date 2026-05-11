@@ -320,7 +320,7 @@ function ManagerDashboard() {
           toast.error(msg);
           return;
         }
-        setPreviewRows(result.rows);
+        setPreviewRows(result.rows.map(ensureCategories));
         setPreviewWeek(result.week_start || weekStart);
         setPreviewConfidence(result.confidence);
         setPreviewNotes(result.notes || "");
