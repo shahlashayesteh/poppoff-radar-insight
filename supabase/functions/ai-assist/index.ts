@@ -57,8 +57,8 @@ Deno.serve(async (req) => {
       if (!validImages.length) {
         return new Response(JSON.stringify({ error: "no images provided" }), { status: 400, headers: { ...cors, "Content-Type": "application/json" } });
       }
-      const sys = "You are an OCR and data-extraction assistant for restaurant server-performance reports. Read every image carefully and extract one row per individual server/staff member. Reply ONLY with JSON: {\"rows\":[{\"server_name\":string,\"total_covers\":number,\"total_sales\":number,\"categories\":{<slug>:{\"label\":string,\"sales\":number}}}],\"week_start\":string|null,\"confidence\":number,\"notes\":string}. RULES: (1) confidence is 0-1. Use <0.5 if image is blurry/cropped or fields are missing. (2) Numbers MUST be plain numbers — strip currency symbols, commas, %. (3) `categories` MUST contain EVERY sales category column visible in the report (wine, cocktails, desserts, sides, spirits, sparkling, beer, coffee, starters, mains, pasta, pizza, specials, anything else). Key = lowercase snake_case slug of the column header. Label = the original column header text. If a value is blank, use 0 or omit. (4) Skip TOTAL/SUMMARY rows — only individual servers. (5) week_start: ISO Monday date (YYYY-MM-DD) if visible, else null. (6) notes: short description of issues if confidence<0.7.";
-      const userContent: any[] = [{ type: "text", text: "Extract every server's sales row and every sales category column you can see in these report images." }];
+      const sys = "You are an OCR and data-extraction assistant for restaurant server-performance reports. Read every image carefully and extract one row per individual server/staff member. Reply ONLY with JSON: {\"rows\":[{\"server_name\":string,\"total_covers\":number,\"total_sales\":number,\"categories\":{<slug>:{\"label\":string,\"quantity\":number,\"net_sales\":number,\"sales\":number,\"metric_type\":\"quantity\"|\"sales\"|\"percentage\"}}}],\"week_start\":string|null,\"confidence\":number,\"notes\":string}.\nRULES:\n(1) confidence 0-1. Use <0.5 if image is blurry/cropped or fields are missing.\n(2) Numbers MUST be plain numbers — strip currency symbols, commas, %.\n(3) `categories` MUST contain EVERY sales category, product or menu-item line visible in the report. Use the EXACT names from the report. DO NOT invent or merge into generic buckets like 'wine' or 'cocktail' unless the report literally labels them so. For an item-based report (Product Name + Quantity + Net) every product is its own category. Key = lowercase snake_case slug of the label. Label = the original text as printed.\n(4) For each category, capture BOTH the quantity sold AND the net revenue when both columns are present in the report:\n    - If columns include Quantity AND Net (or £/$ amount): set quantity=<units sold>, net_sales=<revenue>, metric_type='quantity'.\n    - If only revenue is shown: set net_sales=<revenue>, quantity=0, metric_type='sales'.\n    - If only a percentage is shown: set net_sales=<percent>, metric_type='percentage'.\n  Always also set `sales` = net_sales (legacy compatibility field).\n(5) `total_sales` is the server's overall sales figure if shown in the report; otherwise sum of category net_sales. Never copy a single product's net into total_sales.\n(6) Skip TOTAL / SUMMARY / grand-total rows — only individual servers.\n(7) week_start: ISO Monday date (YYYY-MM-DD) if visible, else null.\n(8) notes: short description of issues if confidence<0.7.";
+      const userContent: any[] = [{ type: "text", text: "Extract every server's row. For each row, extract every product/category line with its quantity sold and net revenue when both are present. Use the exact product names from the report — do not collapse into wine/cocktail/dessert buckets unless the report labels them so." }];
       for (const url of validImages) userContent.push({ type: "image_url", image_url: { url } });
       const out = await callAI([
         { role: "system", content: sys },
@@ -68,18 +68,26 @@ Deno.serve(async (req) => {
       try { parsed = JSON.parse(out); } catch {}
       const rows = (Array.isArray(parsed.rows) ? parsed.rows : []).map((r: any) => {
         const cats = (r.categories && typeof r.categories === "object") ? r.categories : {};
-        const normCats: Record<string, { label: string; sales: number }> = {};
+        const normCats: Record<string, { label: string; sales: number; quantity: number; net_sales: number; metric_type: string }> = {};
         for (const [k, v] of Object.entries(cats)) {
           const key = String(k).toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
           if (!key) continue;
           const vv = v as any;
+          const qty = Number(vv?.quantity) || 0;
+          const net = Number(vv?.net_sales ?? vv?.sales) || 0;
+          let metric = String(vv?.metric_type || "").toLowerCase();
+          if (!["quantity","sales","percentage"].includes(metric)) {
+            metric = qty > 0 ? "quantity" : "sales";
+          }
           normCats[key] = {
             label: String(vv?.label || k),
-            sales: Number(vv?.sales) || 0,
+            sales: net,
+            net_sales: net,
+            quantity: qty,
+            metric_type: metric,
           };
         }
-        // Legacy compat: surface the six legacy keys as top-level fields too
-        const legacy = (k: string) => Number(normCats[k]?.sales) || Number((r as any)[`${k}_sales`]) || 0;
+        const legacy = (k: string) => Number(normCats[k]?.net_sales) || Number((r as any)[`${k}_sales`]) || 0;
         return {
           server_name: String(r.server_name || "").trim(),
           total_covers: Number(r.total_covers) || 0,

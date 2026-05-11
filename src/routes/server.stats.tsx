@@ -4,7 +4,7 @@ import { ServerLayout } from "@/components/server-layout";
 import { supabase } from "@/integrations/supabase/client";
 import { claimServerCsvData, recordLogin } from "@/lib/server-data";
 import { getMondayOfWeek, toISODate, formatWeekRange, performanceColour, latestStatsWeek } from "@/lib/week";
-import { fetchVenueCategories, fetchCategoryStatsForUser, type VenueCategory, type CategoryStat } from "@/lib/categories";
+import { fetchCategoriesForWeek, fetchCategoryStatsForUser, type VenueCategory, type CategoryStat } from "@/lib/categories";
 
 export const Route = createFileRoute("/server/stats")({ component: Page });
 
@@ -32,7 +32,7 @@ function Page() {
       );
       setDisplayWeekStart(visibleWeek);
 
-      const vcats = await fetchVenueCategories(venueId);
+      const vcats = await fetchCategoriesForWeek(venueId, visibleWeek);
       setCategories(vcats);
 
       const curRows = await fetchCategoryStatsForUser(venueId, u.user.id, visibleWeek);
@@ -83,19 +83,29 @@ function Page() {
               </div>
             </div>
             {categories.map((c) => {
-              const actual = Number(cur[c.key]?.conversion ?? 0);
+              const stat = cur[c.key];
+              const metric = stat?.metric_type || c.metric_type || "sales";
+              const actual = Number(stat?.conversion ?? 0);
               const tgt = Number(targets[c.key] ?? 0);
               const colour = performanceColour(actual, tgt);
               const tone = colour === "green" ? "var(--brand-green)" : colour === "amber" ? "var(--brand-orange)" : "var(--opportunity)";
-              const sales = Number(cur[c.key]?.sales ?? 0);
-              const prevSales = Number(prev[c.key]?.sales ?? 0);
-              const d = prevSales > 0 ? ((sales - prevSales) / prevSales) * 100 : null;
+              const qty = Number(stat?.quantity ?? 0);
+              const net = Number(stat?.net_sales ?? stat?.sales ?? 0);
+              const prevStat = prev[c.key];
+              const prevQty = Number(prevStat?.quantity ?? 0);
+              const prevNet = Number(prevStat?.net_sales ?? prevStat?.sales ?? 0);
+              const primary = metric === "quantity" ? qty : net;
+              const prevPrimary = metric === "quantity" ? prevQty : prevNet;
+              const d = prevPrimary > 0 ? ((primary - prevPrimary) / prevPrimary) * 100 : null;
+              const valueLabel = metric === "quantity"
+                ? `${qty.toLocaleString()} sold`
+                : metric === "percentage" ? `${actual.toFixed(0)}%` : `£${net.toFixed(0)}`;
               return (
                 <div key={c.key} className="rounded-2xl bg-white border border-border p-4">
                   <div className="flex items-center justify-between">
                     <div className="font-semibold">{c.label}</div>
                     <div className="text-sm font-bold" style={{ color: tone }}>
-                      £{sales.toFixed(0)}
+                      {valueLabel}
                       {d !== null && (
                         <span className="ml-2 text-xs" style={{ color: d >= 0 ? "var(--brand-green)" : "var(--opportunity)" }}>
                           {d >= 0 ? "↑" : "↓"} {Math.abs(d).toFixed(0)}%
@@ -106,7 +116,9 @@ function Page() {
                   <div className="mt-2 h-2 rounded-full bg-muted overflow-hidden">
                     <div className="h-full" style={{ width: `${Math.min(100, actual)}%`, background: tone }} />
                   </div>
-                  <div className="mt-1 text-xs text-muted-foreground">{actual.toFixed(0)}% conversion / target {tgt.toFixed(0)}%</div>
+                  <div className="mt-1 text-xs text-muted-foreground">
+                    {metric === "quantity" ? `${actual.toFixed(1)} per cover` : `${actual.toFixed(0)}% conversion`} / target {tgt.toFixed(0)}{metric === "quantity" ? "" : "%"}
+                  </div>
                 </div>
               );
             })}

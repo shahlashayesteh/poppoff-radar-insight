@@ -28,7 +28,7 @@ import {
 } from "@/lib/week";
 import { getManagerVenue } from "@/lib/manager-venue";
 import {
-  fetchVenueCategories,
+  fetchCategoriesForWeek,
   fetchCategoryStatsForVenueWeek,
   fetchCategoryTargets,
   indexCategoryStats,
@@ -153,7 +153,7 @@ function ManagerDashboard() {
       .eq("week_start", visibleWeek);
     setAcks(Object.fromEntries((ak ?? []).map((r) => [r.user_id, true])));
 
-    const vcats = await fetchVenueCategories(v.id);
+    const vcats = await fetchCategoriesForWeek(v.id, visibleWeek);
     setVenueCategories(vcats);
     const cs = await fetchCategoryStatsForVenueWeek(v.id, visibleWeek);
     setCatStatsByUser(

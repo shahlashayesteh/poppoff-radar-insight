@@ -4,7 +4,7 @@ import { ManagerLayout } from "@/components/manager-layout";
 import { supabase } from "@/integrations/supabase/client";
 import { getManagerVenue } from "@/lib/manager-venue";
 import { getMondayOfWeek, toISODate, formatWeekRange, performanceColour, latestStatsWeek } from "@/lib/week";
-import { fetchVenueCategories, fetchCategoryStatsForUser, type VenueCategory, type CategoryStat } from "@/lib/categories";
+import { fetchCategoriesForWeek, fetchCategoryStatsForUser, type VenueCategory, type CategoryStat } from "@/lib/categories";
 
 export const Route = createFileRoute("/manager/server/$id")({ component: ServerView });
 
@@ -48,7 +48,7 @@ function ServerView() {
       const { count: lc } = await supabase.from("server_logins").select("id", { count: "exact", head: true }).eq("user_id", id).eq("venue_id", v);
       setLogins(lc ?? 0);
 
-      const vcats = await fetchVenueCategories(v);
+      const vcats = await fetchCategoriesForWeek(v, visibleWeek);
       setCategories(vcats);
       const cs = await fetchCategoryStatsForUser(v, id, visibleWeek);
       setCatStats(Object.fromEntries(cs.map((r) => [r.category_key, r])));
