@@ -26,27 +26,16 @@ export function downloadCsvTemplate() {
   URL.revokeObjectURL(url);
 }
 
-export type CategoryAmount = {
-  label: string;
-  sales: number;
-  quantity?: number;
-  net_sales?: number;
-  metric_type?: "quantity" | "sales" | "percentage";
-};
-
 export type CsvRow = {
   server_name: string;
   total_covers: number;
   total_sales: number;
-  // Legacy 6 — preserved for backwards compatibility
   wine_sales: number;
   dessert_sales: number;
   cocktail_sales: number;
   sides_sales: number;
   spirits_sales: number;
   sparkling_sales: number;
-  // Dynamic per-venue categories — keyed by slug
-  categories: Record<string, CategoryAmount>;
   week_start?: string;
 };
 
@@ -159,15 +148,10 @@ const HEADER_ALIASES: Record<string, CanonicalField> = {
   billid: "check_id",
 };
 
-type LegacyCategorySales =
-  | "wine_sales"
-  | "dessert_sales"
-  | "cocktail_sales"
-  | "sides_sales"
-  | "spirits_sales"
-  | "sparkling_sales";
-
-const CATEGORY_KEYWORDS: Record<LegacyCategorySales, string[]> = {
+const CATEGORY_KEYWORDS: Record<
+  Exclude<keyof CsvRow, "server_name" | "total_covers" | "total_sales" | "week_start">,
+  string[]
+> = {
   sparkling_sales: ["sparkling", "champagne", "prosecco", "cava", "crémant", "cremant"],
   wine_sales: [
     "wine",
@@ -375,10 +359,16 @@ function inferSalesHeader(headers: string[], rows: RawRow[]) {
   return numericHeaders[0]?.h;
 }
 
-function categoryBucket(value: unknown): LegacyCategorySales | null {
+function categoryBucket(
+  value: unknown,
+): keyof Omit<CsvRow, "server_name" | "total_covers" | "total_sales" | "week_start"> | null {
   const text = String(value ?? "").toLowerCase();
   for (const [bucket, terms] of Object.entries(CATEGORY_KEYWORDS)) {
-    if (terms.some((term) => text.includes(term))) return bucket as LegacyCategorySales;
+    if (terms.some((term) => text.includes(term)))
+      return bucket as keyof Omit<
+        CsvRow,
+        "server_name" | "total_covers" | "total_sales" | "week_start"
+      >;
   }
   return null;
 }
@@ -395,7 +385,6 @@ function emptyAccumulator(serverName: string, weekStart: string): Accumulator {
     sides_sales: 0,
     spirits_sales: 0,
     sparkling_sales: 0,
-    categories: {},
     coverCandidates: [],
     checkIds: new Set<string>(),
     sumCoverCandidates: false,
@@ -431,42 +420,6 @@ export async function parseStatsCsv(file: File): Promise<CsvRow[]> {
 
   if (!serverHeader) {
     throw new Error("I couldn't find a server/staff name column in this CSV");
-  }
-
-  // Identify columns that are dynamic categories (numeric, not already mapped).
-  const KNOWN_CANONICAL = new Set<string>([
-    "server_name",
-    "total_covers",
-    "total_sales",
-    "wine_sales",
-    "dessert_sales",
-    "cocktail_sales",
-    "sides_sales",
-    "spirits_sales",
-    "sparkling_sales",
-    "date",
-    "category",
-    "item",
-    "quantity",
-    "check_id",
-  ]);
-  const dynamicCategoryHeaders: { header: string; key: string; label: string }[] = [];
-  for (const h of headers) {
-    const canon = canonicalHeader(h);
-    if (KNOWN_CANONICAL.has(canon)) continue;
-    if (h === serverHeader || h === salesHeader) continue;
-    // Skip if no numeric data
-    const numericCount = rows
-      .slice(0, 30)
-      .filter((r) => Math.abs(numberFromCsv(r[h])) > 0).length;
-    if (numericCount === 0) continue;
-    const label = h.replace(/_/g, " ").replace(/\bsales\b/i, "").trim() || h.trim();
-    const key = label
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "_")
-      .replace(/^_+|_+$/g, "");
-    if (!key) continue;
-    dynamicCategoryHeaders.push({ header: h, key, label: label.replace(/\b\w/g, (m) => m.toUpperCase()) });
   }
 
   const grouped = new Map<string, Accumulator>();
@@ -506,42 +459,6 @@ export async function parseStatsCsv(file: File): Promise<CsvRow[]> {
     } else {
       acc.total_sales += directTotal;
       if (bucket) acc[bucket] += directTotal;
-      // Long-form: capture unknown categories or item-level rows dynamically.
-      // If `item` and `quantity` columns exist, treat each item as its own
-      // category with metric_type='quantity'. Otherwise fall back to category text.
-      const itemText = itemHeader ? String(raw[itemHeader] ?? "").trim() : "";
-      const catText = categoryHeader ? String(raw[categoryHeader] ?? "").trim() : "";
-      const labelText = itemText || (!bucket ? catText : "");
-      const qtyVal = numberFromCsv(raw.quantity);
-      if (labelText && (directTotal !== 0 || qtyVal !== 0)) {
-        const dynKey = labelText
-          .toLowerCase()
-          .replace(/[^a-z0-9]+/g, "_")
-          .replace(/^_+|_+$/g, "");
-        if (dynKey) {
-          const existing = acc.categories[dynKey];
-          const newQty = (existing?.quantity || 0) + qtyVal;
-          const newNet = (existing?.net_sales || existing?.sales || 0) + directTotal;
-          acc.categories[dynKey] = {
-            label: existing?.label || labelText,
-            sales: newNet,
-            net_sales: newNet,
-            quantity: newQty,
-            metric_type: qtyVal > 0 ? "quantity" : (existing?.metric_type || "sales"),
-          };
-        }
-      }
-    }
-
-    // Wide-form: dynamic per-row category columns
-    for (const d of dynamicCategoryHeaders) {
-      const val = numberFromCsv(raw[d.header]);
-      if (!val) continue;
-      const existing = acc.categories[d.key];
-      acc.categories[d.key] = {
-        label: existing?.label || d.label,
-        sales: (existing?.sales || 0) + val,
-      };
     }
 
     const covers = numberFromCsv(raw.total_covers ?? (coversHeader ? raw[coversHeader] : 0));
@@ -562,8 +479,7 @@ export async function parseStatsCsv(file: File): Promise<CsvRow[]> {
         row.cocktail_sales +
         row.sides_sales +
         row.spirits_sales +
-        row.sparkling_sales +
-        Object.values(row.categories).reduce((s, c) => s + (c.sales || 0), 0);
+        row.sparkling_sales;
       const total_sales = row.total_sales || categoryTotal;
       const coverTotal = coverCandidates.reduce((sum, value) => sum + value, 0);
       const total_covers = Math.round(
@@ -573,9 +489,5 @@ export async function parseStatsCsv(file: File): Promise<CsvRow[]> {
       );
       return { ...row, total_sales, total_covers };
     })
-    .filter(
-      (row) =>
-        row.server_name &&
-        (row.total_sales > 0 || row.total_covers > 0 || Object.keys(row.categories).length > 0),
-    );
+    .filter((row) => row.server_name && (row.total_sales > 0 || row.total_covers > 0));
 }
