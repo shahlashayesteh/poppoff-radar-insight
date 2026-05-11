@@ -43,6 +43,14 @@ export function performanceColour(actual: number, target: number): "green" | "am
   return "red";
 }
 
+export function toneFromColour(c: "green" | "amber" | "red"): string {
+  return c === "green" ? "var(--brand-green)" : c === "amber" ? "var(--brand-orange)" : "var(--opportunity)";
+}
+
+export function performanceTone(actual: number, target: number): string {
+  return toneFromColour(performanceColour(actual, target));
+}
+
 export async function latestStatsWeek<T extends { week_start?: string | null }>(
   query: PromiseLike<{ data: T[] | null; error: unknown }>,
   fallback: string = toISODate(getMondayOfWeek()),
