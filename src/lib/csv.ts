@@ -506,21 +506,29 @@ export async function parseStatsCsv(file: File): Promise<CsvRow[]> {
     } else {
       acc.total_sales += directTotal;
       if (bucket) acc[bucket] += directTotal;
-      // Long-form: also capture unknown categories dynamically
-      if (!bucket && categoryHeader) {
-        const text = String(raw[categoryHeader] ?? "").trim();
-        if (text && directTotal !== 0) {
-          const dynKey = text
-            .toLowerCase()
-            .replace(/[^a-z0-9]+/g, "_")
-            .replace(/^_+|_+$/g, "");
-          if (dynKey) {
-            const existing = acc.categories[dynKey];
-            acc.categories[dynKey] = {
-              label: existing?.label || text,
-              sales: (existing?.sales || 0) + directTotal,
-            };
-          }
+      // Long-form: capture unknown categories or item-level rows dynamically.
+      // If `item` and `quantity` columns exist, treat each item as its own
+      // category with metric_type='quantity'. Otherwise fall back to category text.
+      const itemText = itemHeader ? String(raw[itemHeader] ?? "").trim() : "";
+      const catText = categoryHeader ? String(raw[categoryHeader] ?? "").trim() : "";
+      const labelText = itemText || (!bucket ? catText : "");
+      const qtyVal = numberFromCsv(raw.quantity);
+      if (labelText && (directTotal !== 0 || qtyVal !== 0)) {
+        const dynKey = labelText
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "_")
+          .replace(/^_+|_+$/g, "");
+        if (dynKey) {
+          const existing = acc.categories[dynKey];
+          const newQty = (existing?.quantity || 0) + qtyVal;
+          const newNet = (existing?.net_sales || existing?.sales || 0) + directTotal;
+          acc.categories[dynKey] = {
+            label: existing?.label || labelText,
+            sales: newNet,
+            net_sales: newNet,
+            quantity: newQty,
+            metric_type: qtyVal > 0 ? "quantity" : (existing?.metric_type || "sales"),
+          };
         }
       }
     }
