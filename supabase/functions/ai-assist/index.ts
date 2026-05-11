@@ -47,7 +47,6 @@ Deno.serve(async (req) => {
 
     // verify caller manages this venue (or, for server_coaching, is the server themselves)
     const { data: v } = await admin.from("venues").select("id, manager_id").eq("id", venueId).maybeSingle();
-    const { action, venueId, payload } = await req.json();
     const isManager = !!v && v.manager_id === u.user.id;
     let isSelfServer = false;
     if (!isManager && action === "server_coaching" && payload?.userId === u.user.id) {
