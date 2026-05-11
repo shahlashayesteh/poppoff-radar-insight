@@ -27,6 +27,14 @@ import {
   latestStatsWeek,
 } from "@/lib/week";
 import { getManagerVenue } from "@/lib/manager-venue";
+import {
+  fetchVenueCategories,
+  fetchCategoryStatsForVenueWeek,
+  fetchCategoryTargets,
+  indexCategoryStats,
+  indexCategoryTargets,
+  type VenueCategory,
+} from "@/lib/categories";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/manager/")({ component: ManagerDashboard });
