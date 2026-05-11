@@ -615,12 +615,9 @@ function ManagerDashboard() {
                     <th className="px-2 py-2 font-medium">Covers</th>
                     <th className="px-2 py-2 font-medium">Total Sales</th>
                     <th className="px-2 py-2 font-medium">Avg Spend</th>
-                    <th className="px-2 py-2 font-medium">Wine</th>
-                    <th className="px-2 py-2 font-medium">Cocktail</th>
-                    <th className="px-2 py-2 font-medium">Dessert</th>
-                    <th className="px-2 py-2 font-medium">Sides</th>
-                    <th className="px-2 py-2 font-medium">Spirits</th>
-                    <th className="px-2 py-2 font-medium">Sparkling</th>
+                    {previewCategoryColumns.map((c) => (
+                      <th key={c.key} className="px-2 py-2 font-medium">{c.label}</th>
+                    ))}
                     <th></th>
                   </tr>
                 </thead>
@@ -649,36 +646,19 @@ function ManagerDashboard() {
                             className={cellCls} />
                         </td>
                         <td className="px-2 py-2 text-center text-muted-foreground">£{spc.toFixed(2)}</td>
-                        <td className="px-2 py-2">
-                          <input type="number" value={r.wine_sales}
-                            onChange={(e) => updatePreviewRow(idx, "wine_sales", e.target.value)}
-                            className={cellCls} />
-                        </td>
-                        <td className="px-2 py-2">
-                          <input type="number" value={r.cocktail_sales}
-                            onChange={(e) => updatePreviewRow(idx, "cocktail_sales", e.target.value)}
-                            className={cellCls} />
-                        </td>
-                        <td className="px-2 py-2">
-                          <input type="number" value={r.dessert_sales}
-                            onChange={(e) => updatePreviewRow(idx, "dessert_sales", e.target.value)}
-                            className={cellCls} />
-                        </td>
-                        <td className="px-2 py-2">
-                          <input type="number" value={r.sides_sales}
-                            onChange={(e) => updatePreviewRow(idx, "sides_sales", e.target.value)}
-                            className={cellCls} />
-                        </td>
-                        <td className="px-2 py-2">
-                          <input type="number" value={r.spirits_sales}
-                            onChange={(e) => updatePreviewRow(idx, "spirits_sales", e.target.value)}
-                            className={cellCls} />
-                        </td>
-                        <td className="px-2 py-2">
-                          <input type="number" value={r.sparkling_sales}
-                            onChange={(e) => updatePreviewRow(idx, "sparkling_sales", e.target.value)}
-                            className={cellCls} />
-                        </td>
+                        {previewCategoryColumns.map((c) => {
+                          const sales = Number(r.categories?.[c.key]?.sales ?? 0);
+                          return (
+                            <td key={c.key} className="px-2 py-2">
+                              <input
+                                type="number"
+                                value={sales}
+                                onChange={(e) => updatePreviewCategory(idx, c.key, c.label, e.target.value)}
+                                className={cellCls}
+                              />
+                            </td>
+                          );
+                        })}
                         <td className="px-2 py-2">
                           <button
                             onClick={() => removePreviewRow(idx)}
