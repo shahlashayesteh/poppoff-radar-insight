@@ -135,6 +135,49 @@ function ServerDashboard() {
     }
   }
 
+  // Dynamically pick best / middle / needs-work from categories with usable data
+  type Top3Item = {
+    label: string;
+    role: "Crushing it" | "Solid" | "Focus here";
+    conv: string;
+    t: string;
+    sales: string;
+    cat: CategoryKey;
+  };
+  const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+  let top3: Top3Item[] = [];
+  if (stat && target) {
+    const usable = allCats
+      .map((c) => {
+        const actualConv = Number((stat as any)[c.conv] ?? 0);
+        const tgt = Number((target as any)?.[c.t] ?? 0);
+        const sales = Number((stat as any)[c.sales] ?? 0);
+        return { c, ratio: tgt > 0 ? actualConv / tgt : 0, tgt, sales };
+      })
+      .filter((r) => r.tgt > 0 && r.sales > 0)
+      .sort((a, b) => b.ratio - a.ratio);
+
+    const picks: { item: typeof allCats[number]; role: Top3Item["role"] }[] = [];
+    if (usable.length >= 3) {
+      picks.push({ item: usable[0].c, role: "Crushing it" });
+      picks.push({ item: usable[Math.floor(usable.length / 2)].c, role: "Solid" });
+      picks.push({ item: usable[usable.length - 1].c, role: "Focus here" });
+    } else if (usable.length === 2) {
+      picks.push({ item: usable[0].c, role: "Crushing it" });
+      picks.push({ item: usable[1].c, role: "Focus here" });
+    } else if (usable.length === 1) {
+      picks.push({ item: usable[0].c, role: "Solid" });
+    }
+    top3 = picks.map(({ item, role }) => ({
+      label: cap(item.label),
+      role,
+      conv: item.conv,
+      t: item.t,
+      sales: item.sales,
+      cat: item.cat,
+    }));
+  }
+
   return (
     <ServerLayout>
       <div className="px-5 pt-6">
