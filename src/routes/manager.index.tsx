@@ -27,6 +27,14 @@ import {
   latestStatsWeek,
 } from "@/lib/week";
 import { getManagerVenue } from "@/lib/manager-venue";
+import {
+  fetchCategoriesForWeek,
+  fetchCategoryStatsForVenueWeek,
+  fetchCategoryTargets,
+  indexCategoryStats,
+  indexCategoryTargets,
+  type VenueCategory,
+} from "@/lib/categories";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/manager/")({ component: ManagerDashboard });
@@ -38,22 +46,6 @@ type StatRow = {
   total_covers: number;
   total_sales: number;
   spend_per_cover: number | null;
-  wine_conversion: number | null;
-  dessert_conversion: number | null;
-  cocktail_conversion: number | null;
-  sides_conversion: number | null;
-  spirits_conversion: number | null;
-  sparkling_conversion: number | null;
-};
-type TargetRow = {
-  user_id: string;
-  spend_per_cover_target: number;
-  wine_target: number;
-  dessert_target: number;
-  cocktail_target: number;
-  sides_target: number;
-  spirits_target: number;
-  sparkling_target: number;
 };
 
 type StatProps = {
@@ -101,7 +93,6 @@ function ManagerDashboard() {
   const [venue, setVenue] = useState<Venue | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
   const [stats, setStats] = useState<StatRow[]>([]);
-  const [targets, setTargets] = useState<TargetRow[]>([]);
   const [views, setViews] = useState<Record<string, boolean>>({});
   const [acks, setAcks] = useState<Record<string, boolean>>({});
   const [uploading, setUploading] = useState(false);
@@ -111,6 +102,9 @@ function ManagerDashboard() {
   const [previewWeek, setPreviewWeek] = useState<string>("");
   const [previewConfidence, setPreviewConfidence] = useState<number>(1);
   const [previewNotes, setPreviewNotes] = useState<string>("");
+  const [venueCategories, setVenueCategories] = useState<VenueCategory[]>([]);
+  const [catStatsByUser, setCatStatsByUser] = useState<Record<string, Record<string, { sales: number; conversion: number }>>>({});
+  const [catTargetsByUser, setCatTargetsByUser] = useState<Record<string, Record<string, number>>>({});
   const weekStart = useMemo(() => toISODate(getMondayOfWeek()), []);
   const [displayWeekStart, setDisplayWeekStart] = useState<string>(weekStart);
 
@@ -146,8 +140,6 @@ function ManagerDashboard() {
       .eq("venue_id", v.id)
       .eq("week_start", visibleWeek);
     setStats((st ?? []) as StatRow[]);
-    const { data: tg } = await supabase.from("server_targets").select("*").eq("venue_id", v.id);
-    setTargets((tg ?? []) as TargetRow[]);
     const { data: vw } = await supabase
       .from("server_stat_views")
       .select("user_id")
@@ -160,6 +152,15 @@ function ManagerDashboard() {
       .eq("venue_id", v.id)
       .eq("week_start", visibleWeek);
     setAcks(Object.fromEntries((ak ?? []).map((r) => [r.user_id, true])));
+
+    const vcats = await fetchCategoriesForWeek(v.id, visibleWeek);
+    setVenueCategories(vcats);
+    const cs = await fetchCategoryStatsForVenueWeek(v.id, visibleWeek);
+    setCatStatsByUser(
+      indexCategoryStats(cs) as unknown as Record<string, Record<string, { sales: number; conversion: number }>>,
+    );
+    const ct = await fetchCategoryTargets(v.id);
+    setCatTargetsByUser(indexCategoryTargets(ct));
   };
 
   useEffect(() => {
@@ -173,10 +174,6 @@ function ManagerDashboard() {
     return { covers, sales, spc };
   }, [stats]);
 
-  const targetByUser = useMemo(
-    () => Object.fromEntries(targets.map((t) => [t.user_id, t])),
-    [targets],
-  );
   const statByUser = useMemo(() => Object.fromEntries(stats.map((s) => [s.user_id, s])), [stats]);
 
   const copyCode = async () => {
@@ -364,6 +361,28 @@ function ManagerDashboard() {
     });
   };
 
+  const updatePreviewCategory = (idx: number, key: string, label: string, value: string) => {
+    setPreviewRows((prev) => {
+      if (!prev) return prev;
+      const next = [...prev];
+      const row = { ...next[idx] };
+      const cats = { ...(row.categories || {}) };
+      const sales = Number(value) || 0;
+      const existingLabel = cats[key]?.label || label;
+      cats[key] = { label: existingLabel, sales };
+      row.categories = cats;
+      // Mirror into legacy fields when applicable so backwards-compat code keeps working
+      const legacyMap: Record<string, keyof CsvRow> = {
+        wine: "wine_sales", dessert: "dessert_sales", cocktail: "cocktail_sales",
+        sides: "sides_sales", spirits: "spirits_sales", sparkling: "sparkling_sales",
+      };
+      const legacyField = legacyMap[key];
+      if (legacyField) (row as Record<string, unknown>)[legacyField] = sales;
+      next[idx] = row;
+      return next;
+    });
+  };
+
   const removePreviewRow = (idx: number) => {
     setPreviewRows((prev) => (prev ? prev.filter((_, i) => i !== idx) : prev));
   };
@@ -414,14 +433,25 @@ function ManagerDashboard() {
     }
   };
 
-  const cats: Array<{ key: keyof StatRow; tKey: keyof TargetRow; label: string }> = [
-    { key: "wine_conversion", tKey: "wine_target", label: "Wine" },
-    { key: "cocktail_conversion", tKey: "cocktail_target", label: "Cocktails" },
-    { key: "dessert_conversion", tKey: "dessert_target", label: "Desserts" },
-    { key: "sides_conversion", tKey: "sides_target", label: "Sides" },
-    { key: "spirits_conversion", tKey: "spirits_target", label: "Spirits" },
-    { key: "sparkling_conversion", tKey: "sparkling_target", label: "Sparkling" },
-  ];
+  // Dynamic categories for the team performance table — falls back to legacy six
+  // automatically inside fetchVenueCategories if the venue hasn't tracked any yet.
+  const cats = useMemo(
+    () => venueCategories.map((c) => ({ key: c.key, label: c.label })),
+    [venueCategories],
+  );
+
+  // Union of category keys present in current preview rows + venue's tracked categories,
+  // so editors can add values for any column we already know about.
+  const previewCategoryColumns = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const c of venueCategories) map.set(c.key, c.label);
+    for (const r of previewRows ?? []) {
+      for (const [k, v] of Object.entries(r.categories || {})) {
+        if (!map.has(k)) map.set(k, v?.label || k);
+      }
+    }
+    return Array.from(map.entries()).map(([key, label]) => ({ key, label }));
+  }, [previewRows, venueCategories]);
 
   const viewedCount = members.filter((m) => views[m.id]).length;
   const ackedCount = members.filter((m) => acks[m.id]).length;
@@ -562,12 +592,9 @@ function ManagerDashboard() {
                     <th className="px-2 py-2 font-medium">Covers</th>
                     <th className="px-2 py-2 font-medium">Total Sales</th>
                     <th className="px-2 py-2 font-medium">Avg Spend</th>
-                    <th className="px-2 py-2 font-medium">Wine</th>
-                    <th className="px-2 py-2 font-medium">Cocktail</th>
-                    <th className="px-2 py-2 font-medium">Dessert</th>
-                    <th className="px-2 py-2 font-medium">Sides</th>
-                    <th className="px-2 py-2 font-medium">Spirits</th>
-                    <th className="px-2 py-2 font-medium">Sparkling</th>
+                    {previewCategoryColumns.map((c) => (
+                      <th key={c.key} className="px-2 py-2 font-medium">{c.label}</th>
+                    ))}
                     <th></th>
                   </tr>
                 </thead>
@@ -596,36 +623,19 @@ function ManagerDashboard() {
                             className={cellCls} />
                         </td>
                         <td className="px-2 py-2 text-center text-muted-foreground">£{spc.toFixed(2)}</td>
-                        <td className="px-2 py-2">
-                          <input type="number" value={r.wine_sales}
-                            onChange={(e) => updatePreviewRow(idx, "wine_sales", e.target.value)}
-                            className={cellCls} />
-                        </td>
-                        <td className="px-2 py-2">
-                          <input type="number" value={r.cocktail_sales}
-                            onChange={(e) => updatePreviewRow(idx, "cocktail_sales", e.target.value)}
-                            className={cellCls} />
-                        </td>
-                        <td className="px-2 py-2">
-                          <input type="number" value={r.dessert_sales}
-                            onChange={(e) => updatePreviewRow(idx, "dessert_sales", e.target.value)}
-                            className={cellCls} />
-                        </td>
-                        <td className="px-2 py-2">
-                          <input type="number" value={r.sides_sales}
-                            onChange={(e) => updatePreviewRow(idx, "sides_sales", e.target.value)}
-                            className={cellCls} />
-                        </td>
-                        <td className="px-2 py-2">
-                          <input type="number" value={r.spirits_sales}
-                            onChange={(e) => updatePreviewRow(idx, "spirits_sales", e.target.value)}
-                            className={cellCls} />
-                        </td>
-                        <td className="px-2 py-2">
-                          <input type="number" value={r.sparkling_sales}
-                            onChange={(e) => updatePreviewRow(idx, "sparkling_sales", e.target.value)}
-                            className={cellCls} />
-                        </td>
+                        {previewCategoryColumns.map((c) => {
+                          const sales = Number(r.categories?.[c.key]?.sales ?? 0);
+                          return (
+                            <td key={c.key} className="px-2 py-2">
+                              <input
+                                type="number"
+                                value={sales}
+                                onChange={(e) => updatePreviewCategory(idx, c.key, c.label, e.target.value)}
+                                className={cellCls}
+                              />
+                            </td>
+                          );
+                        })}
                         <td className="px-2 py-2">
                           <button
                             onClick={() => removePreviewRow(idx)}
@@ -728,7 +738,9 @@ function ManagerDashboard() {
                 <tbody>
                   {members.map((m) => {
                     const s = statByUser[m.id];
-                    const t = targetByUser[m.id];
+                    const userCatStats = catStatsByUser[m.id] || {};
+                    const userCatTargets = catTargetsByUser[m.id] || {};
+                    const hasAnyCatRow = Object.keys(userCatStats).length > 0;
                     return (
                       <tr key={m.id} className="border-t border-border">
                         <td className="px-5 py-4 font-semibold">{m.full_name || "Unnamed"}</td>
@@ -736,16 +748,17 @@ function ManagerDashboard() {
                           {s?.spend_per_cover ? `£${Number(s.spend_per_cover).toFixed(0)}` : "—"}
                         </td>
                         {cats.map((c) => {
-                          const actual = s ? Number(s[c.key] ?? 0) : 0;
-                          const target = t ? Number(t[c.tKey]) : 0;
-                          if (!s)
+                          if (!hasAnyCatRow) {
                             return (
-                              <td key={c.label} className="px-3 text-center text-muted-foreground">
+                              <td key={c.key} className="px-3 text-center text-muted-foreground">
                                 —
                               </td>
                             );
+                          }
+                          const actual = Number(userCatStats[c.key]?.conversion ?? 0);
+                          const target = Number(userCatTargets[c.key] ?? 0);
                           return (
-                            <td key={c.label} className="px-3 text-center">
+                            <td key={c.key} className="px-3 text-center">
                               <Dot s={performanceColour(actual, target)} />
                             </td>
                           );

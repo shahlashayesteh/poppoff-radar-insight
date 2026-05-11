@@ -2,28 +2,18 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { ServerLayout } from "@/components/server-layout";
 import { supabase } from "@/integrations/supabase/client";
-import { claimServerCsvData, recordLogin, fetchVenueAvgPrices, estimateItemsSold, pctDelta, type CategoryKey } from "@/lib/server-data";
+import { claimServerCsvData, recordLogin } from "@/lib/server-data";
 import { getMondayOfWeek, toISODate, formatWeekRange, performanceColour, latestStatsWeek } from "@/lib/week";
+import { fetchCategoriesForWeek, fetchCategoryStatsForUser, type VenueCategory, type CategoryStat } from "@/lib/categories";
 
 export const Route = createFileRoute("/server/stats")({ component: Page });
 
-type Stat = any;
-type Target = any;
-
-const cats: { key: string; t: string; sales: string; cat: CategoryKey; label: string }[] = [
-  { key: "wine_conversion", t: "wine_target", sales: "wine_sales", cat: "wine", label: "Wine" },
-  { key: "cocktail_conversion", t: "cocktail_target", sales: "cocktail_sales", cat: "cocktail", label: "Cocktails" },
-  { key: "dessert_conversion", t: "dessert_target", sales: "dessert_sales", cat: "dessert", label: "Desserts" },
-  { key: "sides_conversion", t: "sides_target", sales: "sides_sales", cat: "sides", label: "Sides" },
-  { key: "spirits_conversion", t: "spirits_target", sales: "spirits_sales", cat: "spirits", label: "Spirits" },
-  { key: "sparkling_conversion", t: "sparkling_target", sales: "sparkling_sales", cat: "sparkling", label: "Sparkling" },
-];
-
 function Page() {
-  const [stat, setStat] = useState<Stat | null>(null);
-  const [prevStat, setPrevStat] = useState<Stat | null>(null);
-  const [target, setTarget] = useState<Target | null>(null);
-  const [prices, setPrices] = useState<Record<string, number>>({});
+  const [categories, setCategories] = useState<VenueCategory[]>([]);
+  const [cur, setCur] = useState<Record<string, CategoryStat>>({});
+  const [prev, setPrev] = useState<Record<string, CategoryStat>>({});
+  const [targets, setTargets] = useState<Record<string, number>>({});
+  const [hasStats, setHasStats] = useState(false);
   const weekStart = toISODate(getMondayOfWeek());
   const [displayWeekStart, setDisplayWeekStart] = useState<string>(weekStart);
 
@@ -41,19 +31,34 @@ function Page() {
         weekStart,
       );
       setDisplayWeekStart(visibleWeek);
-      const { data: st } = await supabase.from("server_stats").select("*").eq("user_id", u.user.id).eq("venue_id", venueId).eq("week_start", visibleWeek).maybeSingle();
-      setStat(st);
-      const { data: prev } = await supabase.from("server_stats").select("*").eq("user_id", u.user.id).eq("venue_id", venueId).lt("week_start", visibleWeek).order("week_start", { ascending: false }).limit(1).maybeSingle();
-      setPrevStat(prev);
-      const { data: tg } = await supabase.from("server_targets").select("*").eq("user_id", u.user.id).eq("venue_id", venueId).maybeSingle();
-      setTarget(tg);
-      setPrices(await fetchVenueAvgPrices(venueId));
+
+      const vcats = await fetchCategoriesForWeek(venueId, visibleWeek);
+      setCategories(vcats);
+
+      const curRows = await fetchCategoryStatsForUser(venueId, u.user.id, visibleWeek);
+      setCur(Object.fromEntries(curRows.map((r) => [r.category_key, r])));
+      setHasStats(curRows.length > 0);
+
+      const { data: prevWeekRow } = await (supabase as any)
+        .from("server_category_stats")
+        .select("week_start")
+        .eq("user_id", u.user.id).eq("venue_id", venueId)
+        .lt("week_start", visibleWeek)
+        .order("week_start", { ascending: false }).limit(1).maybeSingle();
+      const prevWeek = (prevWeekRow as any)?.week_start;
+      if (prevWeek) {
+        const prevRows = await fetchCategoryStatsForUser(venueId, u.user.id, prevWeek);
+        setPrev(Object.fromEntries(prevRows.map((r) => [r.category_key, r])));
+      }
+
+      const { data: ct } = await (supabase as any).from("server_category_targets").select("category_key, target").eq("venue_id", venueId).eq("user_id", u.user.id);
+      setTargets(Object.fromEntries((ct ?? []).map((r: any) => [r.category_key, Number(r.target) || 0])));
     })();
   }, [weekStart]);
 
-  const totalItemsCurrent = stat ? cats.reduce((sum, c) => sum + estimateItemsSold(Number(stat[c.sales] ?? 0), c.cat, prices), 0) : 0;
-  const totalItemsPrev = prevStat ? cats.reduce((sum, c) => sum + estimateItemsSold(Number(prevStat[c.sales] ?? 0), c.cat, prices), 0) : 0;
-  const totalDelta = pctDelta(totalItemsCurrent, totalItemsPrev);
+  const totalSalesCurrent = Object.values(cur).reduce((s, r) => s + Number(r.sales || 0), 0);
+  const totalSalesPrev = Object.values(prev).reduce((s, r) => s + Number(r.sales || 0), 0);
+  const totalDelta = totalSalesPrev > 0 ? ((totalSalesCurrent - totalSalesPrev) / totalSalesPrev) * 100 : null;
 
   return (
     <ServerLayout>
@@ -61,14 +66,14 @@ function Page() {
         <h1 className="font-display text-3xl font-extrabold tracking-tight">Stats</h1>
         <div className="mt-1 text-xs text-muted-foreground">{formatWeekRange(displayWeekStart)}</div>
 
-        {!stat ? (
+        {!hasStats ? (
           <p className="mt-6 text-sm text-muted-foreground">Your stats will appear here after your manager uploads this week's data.</p>
         ) : (
           <div className="mt-6 space-y-3">
             <div className="rounded-2xl bg-white border border-border p-4 flex items-center justify-between">
               <div>
-                <div className="text-xs text-muted-foreground">Items sold this week</div>
-                <div className="font-display text-2xl font-extrabold">{totalItemsCurrent}</div>
+                <div className="text-xs text-muted-foreground">Sales this week</div>
+                <div className="font-display text-2xl font-extrabold">£{totalSalesCurrent.toFixed(0)}</div>
               </div>
               <div className="text-right">
                 <div className="text-xs text-muted-foreground">vs last week</div>
@@ -77,20 +82,30 @@ function Page() {
                 </div>
               </div>
             </div>
-            {cats.map((c) => {
-              const actual = Number(stat[c.key] ?? 0);
-              const tgt = Number(target?.[c.t] ?? 0);
+            {categories.map((c) => {
+              const stat = cur[c.key];
+              const metric = stat?.metric_type || c.metric_type || "sales";
+              const actual = Number(stat?.conversion ?? 0);
+              const tgt = Number(targets[c.key] ?? 0);
               const colour = performanceColour(actual, tgt);
               const tone = colour === "green" ? "var(--brand-green)" : colour === "amber" ? "var(--brand-orange)" : "var(--opportunity)";
-              const items = estimateItemsSold(Number(stat[c.sales] ?? 0), c.cat, prices);
-              const prevItems = prevStat ? estimateItemsSold(Number(prevStat[c.sales] ?? 0), c.cat, prices) : 0;
-              const d = pctDelta(items, prevItems);
+              const qty = Number(stat?.quantity ?? 0);
+              const net = Number(stat?.net_sales ?? stat?.sales ?? 0);
+              const prevStat = prev[c.key];
+              const prevQty = Number(prevStat?.quantity ?? 0);
+              const prevNet = Number(prevStat?.net_sales ?? prevStat?.sales ?? 0);
+              const primary = metric === "quantity" ? qty : net;
+              const prevPrimary = metric === "quantity" ? prevQty : prevNet;
+              const d = prevPrimary > 0 ? ((primary - prevPrimary) / prevPrimary) * 100 : null;
+              const valueLabel = metric === "quantity"
+                ? `${qty.toLocaleString()} sold`
+                : metric === "percentage" ? `${actual.toFixed(0)}%` : `£${net.toFixed(0)}`;
               return (
-                <div key={c.label} className="rounded-2xl bg-white border border-border p-4">
+                <div key={c.key} className="rounded-2xl bg-white border border-border p-4">
                   <div className="flex items-center justify-between">
                     <div className="font-semibold">{c.label}</div>
                     <div className="text-sm font-bold" style={{ color: tone }}>
-                      {items} sold
+                      {valueLabel}
                       {d !== null && (
                         <span className="ml-2 text-xs" style={{ color: d >= 0 ? "var(--brand-green)" : "var(--opportunity)" }}>
                           {d >= 0 ? "↑" : "↓"} {Math.abs(d).toFixed(0)}%
@@ -101,6 +116,9 @@ function Page() {
                   <div className="mt-2 h-2 rounded-full bg-muted overflow-hidden">
                     <div className="h-full" style={{ width: `${Math.min(100, actual)}%`, background: tone }} />
                   </div>
+                  <div className="mt-1 text-xs text-muted-foreground">
+                    {metric === "quantity" ? `${actual.toFixed(1)} per cover` : `${actual.toFixed(0)}% conversion`} / target {tgt.toFixed(0)}{metric === "quantity" ? "" : "%"}
+                  </div>
                 </div>
               );
             })}
@@ -110,4 +128,3 @@ function Page() {
     </ServerLayout>
   );
 }
-

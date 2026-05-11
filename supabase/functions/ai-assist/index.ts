@@ -57,8 +57,8 @@ Deno.serve(async (req) => {
       if (!validImages.length) {
         return new Response(JSON.stringify({ error: "no images provided" }), { status: 400, headers: { ...cors, "Content-Type": "application/json" } });
       }
-      const sys = "You are an OCR and data-extraction assistant for restaurant server-performance reports. Read every image carefully and extract one row per individual server/staff member. Reply ONLY with JSON: {\"rows\":[{\"server_name\":string,\"total_covers\":number,\"total_sales\":number,\"wine_sales\":number,\"dessert_sales\":number,\"cocktail_sales\":number,\"sides_sales\":number,\"spirits_sales\":number,\"sparkling_sales\":number}],\"week_start\":string|null,\"confidence\":number,\"notes\":string}. RULES: (1) confidence is 0-1 (your certainty the data is correct and complete). Use <0.5 if image is blurry/cropped or critical fields are missing. (2) Numbers MUST be plain numbers — strip currency symbols, commas, %. (3) If a category is not shown for a server, use 0. (4) week_start: an ISO Monday date (YYYY-MM-DD) if a date or week is visible, else null. (5) Skip TOTAL/SUMMARY rows — only individual servers. (6) notes: brief description of issues if confidence<0.7.";
-      const userContent: any[] = [{ type: "text", text: "Extract server sales rows from these report images." }];
+      const sys = "You are an OCR and data-extraction assistant for restaurant server-performance reports. Read every image carefully and extract one row per individual server/staff member. Reply ONLY with JSON: {\"rows\":[{\"server_name\":string,\"total_covers\":number,\"total_sales\":number,\"categories\":{<slug>:{\"label\":string,\"quantity\":number,\"net_sales\":number,\"sales\":number,\"metric_type\":\"quantity\"|\"sales\"|\"percentage\"}}}],\"week_start\":string|null,\"confidence\":number,\"notes\":string}.\nRULES:\n(1) confidence 0-1. Use <0.5 if image is blurry/cropped or fields are missing.\n(2) Numbers MUST be plain numbers — strip currency symbols, commas, %.\n(3) `categories` MUST contain EVERY sales category, product or menu-item line visible in the report. Use the EXACT names from the report. DO NOT invent or merge into generic buckets like 'wine' or 'cocktail' unless the report literally labels them so. For an item-based report (Product Name + Quantity + Net) every product is its own category. Key = lowercase snake_case slug of the label. Label = the original text as printed.\n(4) For each category, capture BOTH the quantity sold AND the net revenue when both columns are present in the report:\n    - If columns include Quantity AND Net (or £/$ amount): set quantity=<units sold>, net_sales=<revenue>, metric_type='quantity'.\n    - If only revenue is shown: set net_sales=<revenue>, quantity=0, metric_type='sales'.\n    - If only a percentage is shown: set net_sales=<percent>, metric_type='percentage'.\n  Always also set `sales` = net_sales (legacy compatibility field).\n(5) `total_sales` is the server's overall sales figure if shown in the report; otherwise sum of category net_sales. Never copy a single product's net into total_sales.\n(6) Skip TOTAL / SUMMARY / grand-total rows — only individual servers.\n(7) week_start: ISO Monday date (YYYY-MM-DD) if visible, else null.\n(8) notes: short description of issues if confidence<0.7.";
+      const userContent: any[] = [{ type: "text", text: "Extract every server's row. For each row, extract every product/category line with its quantity sold and net revenue when both are present. Use the exact product names from the report — do not collapse into wine/cocktail/dessert buckets unless the report labels them so." }];
       for (const url of validImages) userContent.push({ type: "image_url", image_url: { url } });
       const out = await callAI([
         { role: "system", content: sys },
@@ -66,17 +66,41 @@ Deno.serve(async (req) => {
       ], true);
       let parsed: any = { rows: [], confidence: 0, notes: "" };
       try { parsed = JSON.parse(out); } catch {}
-      const rows = (Array.isArray(parsed.rows) ? parsed.rows : []).map((r: any) => ({
-        server_name: String(r.server_name || "").trim(),
-        total_covers: Number(r.total_covers) || 0,
-        total_sales: Number(r.total_sales) || 0,
-        wine_sales: Number(r.wine_sales) || 0,
-        dessert_sales: Number(r.dessert_sales) || 0,
-        cocktail_sales: Number(r.cocktail_sales) || 0,
-        sides_sales: Number(r.sides_sales) || 0,
-        spirits_sales: Number(r.spirits_sales) || 0,
-        sparkling_sales: Number(r.sparkling_sales) || 0,
-      })).filter((r: any) => r.server_name && (r.total_sales > 0 || r.total_covers > 0));
+      const rows = (Array.isArray(parsed.rows) ? parsed.rows : []).map((r: any) => {
+        const cats = (r.categories && typeof r.categories === "object") ? r.categories : {};
+        const normCats: Record<string, { label: string; sales: number; quantity: number; net_sales: number; metric_type: string }> = {};
+        for (const [k, v] of Object.entries(cats)) {
+          const key = String(k).toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+          if (!key) continue;
+          const vv = v as any;
+          const qty = Number(vv?.quantity) || 0;
+          const net = Number(vv?.net_sales ?? vv?.sales) || 0;
+          let metric = String(vv?.metric_type || "").toLowerCase();
+          if (!["quantity","sales","percentage"].includes(metric)) {
+            metric = qty > 0 ? "quantity" : "sales";
+          }
+          normCats[key] = {
+            label: String(vv?.label || k),
+            sales: net,
+            net_sales: net,
+            quantity: qty,
+            metric_type: metric,
+          };
+        }
+        const legacy = (k: string) => Number(normCats[k]?.net_sales) || Number((r as any)[`${k}_sales`]) || 0;
+        return {
+          server_name: String(r.server_name || "").trim(),
+          total_covers: Number(r.total_covers) || 0,
+          total_sales: Number(r.total_sales) || 0,
+          wine_sales: legacy("wine"),
+          dessert_sales: legacy("dessert") || legacy("desserts"),
+          cocktail_sales: legacy("cocktail") || legacy("cocktails"),
+          sides_sales: legacy("sides") || legacy("side"),
+          spirits_sales: legacy("spirits") || legacy("spirit"),
+          sparkling_sales: legacy("sparkling") || legacy("champagne") || legacy("prosecco"),
+          categories: normCats,
+        };
+      }).filter((r: any) => r.server_name && (r.total_sales > 0 || r.total_covers > 0 || Object.keys(r.categories).length > 0));
       const confidence = Math.max(0, Math.min(1, Number(parsed.confidence) || 0));
       return Response.json({
         ok: true,
@@ -149,19 +173,25 @@ Deno.serve(async (req) => {
 
     if (action === "generate_priorities") {
       const weekStart = payload?.weekStart;
-      const { data: stats } = await admin.from("server_stats").select("*").eq("venue_id", venueId).eq("week_start", weekStart);
-      const { data: targets } = await admin.from("server_targets").select("*").eq("venue_id", venueId);
+      const { data: vcats } = await admin.from("venue_categories").select("key, label").eq("venue_id", venueId).order("sort_order");
+      const { data: catStats } = await admin.from("server_category_stats").select("category_key, conversion").eq("venue_id", venueId).eq("week_start", weekStart);
+      const { data: catTargets } = await admin.from("server_category_targets").select("category_key, target").eq("venue_id", venueId);
       const { data: menus } = await admin.from("venue_menu").select("parsed_items").eq("venue_id", venueId).order("uploaded_at", { ascending: false }).limit(10);
       const menuItems = (menus ?? []).flatMap((m: any) => (m.parsed_items ?? [])).slice(0, 80).map((i: any) => `${i.name}${i.category ? " ("+i.category+")" : ""}`).join(", ");
-      const tgt = targets?.[0];
-      const cats = ["wine", "dessert", "cocktail", "sides", "spirits", "sparkling"];
+      const fallback = [
+        { key: "wine", label: "Wine" }, { key: "cocktail", label: "Cocktails" },
+        { key: "dessert", label: "Desserts" }, { key: "sides", label: "Sides" },
+        { key: "spirits", label: "Spirits" }, { key: "sparkling", label: "Sparkling" },
+      ];
+      const cats = (vcats && vcats.length ? vcats : fallback) as { key: string; label: string }[];
       const avgs: Record<string, number> = {};
       for (const c of cats) {
-        const key = `${c}_conversion`;
-        const vals = (stats ?? []).map((s: any) => Number(s[key] ?? 0)).filter(Boolean);
-        avgs[c] = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : 0;
+        const vals = (catStats ?? []).filter((s: any) => s.category_key === c.key).map((s: any) => Number(s.conversion ?? 0)).filter(Boolean);
+        avgs[c.key] = vals.length ? vals.reduce((a: number, b: number) => a + b, 0) / vals.length : 0;
       }
-      const gaps = cats.map((c) => `${c}: avg ${avgs[c].toFixed(0)}% vs target ${Number((tgt as any)?.[`${c}_target`] ?? 0)}%`).join(", ");
+      const targetByKey: Record<string, number> = {};
+      for (const t of (catTargets ?? [])) targetByKey[(t as any).category_key] = Number((t as any).target) || 0;
+      const gaps = cats.map((c) => `${c.label}: avg ${avgs[c.key].toFixed(0)}% vs target ${(targetByKey[c.key] || 0).toFixed(0)}%`).join(", ");
       const sys = "You are a hospitality coach. Given the team's weak categories and the venue menu items, choose 3-5 specific menu items to PUSH this week. Reply ONLY with JSON: {\"priorities\":[{\"item_name\":string,\"category\":string,\"priority_flag\":\"push\"|\"seasonal\"|\"standard\",\"reason\":string}]}";
       const usr = `Team performance gaps: ${gaps}.\nMenu items available: ${menuItems || "(none uploaded)"}\nReturn 3-5 priorities targeting the weakest categories using actual menu items where possible.`;
       const out = await callAI([{ role: "system", content: sys }, { role: "user", content: usr }], true);
@@ -190,20 +220,36 @@ Deno.serve(async (req) => {
       if (cached?.suggestions && Array.isArray(cached.suggestions) && (cached.suggestions as any[]).length > 0) {
         return Response.json({ ok: true, suggestions: cached.suggestions, cached: true }, { headers: cors });
       }
-      const { data: cur } = await admin.from("server_stats").select("*").eq("venue_id", venueId).eq("user_id", userId).eq("week_start", weekStart).maybeSingle();
-      const { data: prev } = await admin.from("server_stats").select("*").eq("venue_id", venueId).eq("user_id", userId).lt("week_start", weekStart).order("week_start", { ascending: false }).limit(1).maybeSingle();
-      const { data: tg } = await admin.from("server_targets").select("*").eq("venue_id", venueId).eq("user_id", userId).maybeSingle();
+      const { data: vcats } = await admin.from("venue_categories").select("key, label").eq("venue_id", venueId).order("sort_order");
+      const { data: curCat } = await admin.from("server_category_stats").select("category_key, sales, conversion").eq("venue_id", venueId).eq("user_id", userId).eq("week_start", weekStart);
+      const { data: prevWeekRow } = await admin.from("server_category_stats").select("week_start").eq("venue_id", venueId).eq("user_id", userId).lt("week_start", weekStart).order("week_start", { ascending: false }).limit(1).maybeSingle();
+      const prevWeek = (prevWeekRow as any)?.week_start || null;
+      const { data: prevCat } = prevWeek
+        ? await admin.from("server_category_stats").select("category_key, conversion").eq("venue_id", venueId).eq("user_id", userId).eq("week_start", prevWeek)
+        : { data: [] as any[] };
+      const { data: catTargets } = await admin.from("server_category_targets").select("category_key, target").eq("venue_id", venueId).eq("user_id", userId);
       const { data: menus } = await admin.from("venue_menu").select("parsed_items").eq("venue_id", venueId).order("uploaded_at", { ascending: false }).limit(3);
       const menuItems = (menus ?? []).flatMap((m: any) => (m.parsed_items ?? [])).slice(0, 60);
-      const cats = ["wine", "dessert", "cocktail", "sides", "spirits", "sparkling"];
+      const fallback = [
+        { key: "wine", label: "Wine" }, { key: "cocktail", label: "Cocktails" },
+        { key: "dessert", label: "Desserts" }, { key: "sides", label: "Sides" },
+        { key: "spirits", label: "Spirits" }, { key: "sparkling", label: "Sparkling" },
+      ];
+      const cats = (vcats && vcats.length ? vcats : fallback) as { key: string; label: string }[];
+      const curByKey: Record<string, number> = {};
+      for (const r of (curCat ?? [])) curByKey[(r as any).category_key] = Number((r as any).conversion ?? 0);
+      const prevByKey: Record<string, number> = {};
+      for (const r of (prevCat ?? [])) prevByKey[(r as any).category_key] = Number((r as any).conversion ?? 0);
+      const tgtByKey: Record<string, number> = {};
+      for (const r of (catTargets ?? [])) tgtByKey[(r as any).category_key] = Number((r as any).target ?? 0);
       const lines = cats.map((c) => {
-        const a = Number((cur as any)?.[`${c}_conversion`] ?? 0);
-        const p = Number((prev as any)?.[`${c}_conversion`] ?? 0);
-        const t = Number((tg as any)?.[`${c}_target`] ?? 0);
+        const a = curByKey[c.key] ?? 0;
+        const p = prevByKey[c.key] ?? 0;
+        const t = tgtByKey[c.key] ?? 0;
         const delta = p ? (a - p) : 0;
-        return `${c}: ${a.toFixed(0)}% (target ${t.toFixed(0)}%, ${delta >= 0 ? "+" : ""}${delta.toFixed(0)}% vs last week)`;
+        return `${c.label}: ${a.toFixed(0)}% (target ${t.toFixed(0)}%, ${delta >= 0 ? "+" : ""}${delta.toFixed(0)}% vs last week)`;
       }).join("\n");
-      const sys = "You are a hospitality coach. Given a single server's weekly performance vs target and last week, plus the venue menu, return 3-4 short, specific, actionable coaching tips. Reply ONLY with JSON: {\"suggestions\":[{\"category\":\"wine\"|\"dessert\"|\"cocktail\"|\"sides\"|\"spirits\"|\"sparkling\"|\"general\",\"tip\":string}]}. Mention real menu items where helpful.";
+      const sys = "You are a hospitality coach. Given a single server's weekly performance vs target and last week across the venue's tracked sales categories, plus the venue menu, return 3-4 short, specific, actionable coaching tips. Reply ONLY with JSON: {\"suggestions\":[{\"category\":string,\"tip\":string}]}. The category field should be the lowercase name of one of the listed categories (or 'general'). Mention real menu items where helpful.";
       const usr = `Performance:\n${lines}\nMenu items: ${menuItems.map((i: any) => i.name).filter(Boolean).slice(0, 40).join(", ") || "(none)"}`;
       const out = await callAI([{ role: "system", content: sys }, { role: "user", content: usr }], true);
       let suggestions: any[] = [];
