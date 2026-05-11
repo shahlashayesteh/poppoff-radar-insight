@@ -3,7 +3,16 @@ import { useEffect, useState } from "react";
 import { ServerLayout } from "@/components/server-layout";
 import { supabase } from "@/integrations/supabase/client";
 import { useRoleGate } from "@/lib/auth-gate";
-import { claimServerCsvData, recordLogin, pctDelta, estimateItemsSold, fetchVenueAvgPrices, type CategoryKey } from "@/lib/server-data";
+import {
+  claimServerCsvData,
+  recordLogin,
+  pctDelta,
+  estimateItemsSold,
+  fetchVenueAvgPrices,
+  loadServerCategoryRows,
+  type CategoryKey,
+  type ServerCatRow,
+} from "@/lib/server-data";
 import { Trophy, Flame, ArrowRight, TrendingDown, Sparkles } from "lucide-react";
 import { getMondayOfWeek, toISODate, formatWeekRange, performanceColour, latestStatsWeek } from "@/lib/week";
 
@@ -29,6 +38,15 @@ function Ring({ fillPct, color, displayValue }: { fillPct: number; color: string
   );
 }
 
+const LEGACY_CATS = [
+  { key: "wine", label: "wine", conv: "wine_conversion", t: "wine_target", sales: "wine_sales" },
+  { key: "cocktail", label: "cocktails", conv: "cocktail_conversion", t: "cocktail_target", sales: "cocktail_sales" },
+  { key: "dessert", label: "desserts", conv: "dessert_conversion", t: "dessert_target", sales: "dessert_sales" },
+  { key: "sides", label: "sides", conv: "sides_conversion", t: "sides_target", sales: "sides_sales" },
+  { key: "spirits", label: "spirits", conv: "spirits_conversion", t: "spirits_target", sales: "spirits_sales" },
+  { key: "sparkling", label: "sparkling", conv: "sparkling_conversion", t: "sparkling_target", sales: "sparkling_sales" },
+] as const;
+
 function ServerDashboard() {
   useRoleGate("server");
   const [name, setName] = useState("");
@@ -37,6 +55,7 @@ function ServerDashboard() {
   const [target, setTarget] = useState<Targets | null>(null);
   const [streak, setStreak] = useState(0);
   const [prices, setPrices] = useState<Record<string, number>>({});
+  const [dynRows, setDynRows] = useState<ServerCatRow[]>([]);
   const [coaching, setCoaching] = useState<{ category: string; tip: string }[] | null>(null);
   const [coachLoading, setCoachLoading] = useState(false);
   const weekStart = toISODate(getMondayOfWeek());
@@ -68,6 +87,8 @@ function ServerDashboard() {
       const { data: sk } = await supabase.from("server_streaks").select("current_streak").eq("user_id", u.user.id).eq("venue_id", venueId).maybeSingle();
       setStreak((sk as any)?.current_streak ?? 0);
       setPrices(await fetchVenueAvgPrices(venueId));
+      const rows = await loadServerCategoryRows(venueId, u.user.id, visibleWeek, prev?.week_start ?? null);
+      setDynRows(rows);
       await supabase.from("server_stat_views").insert({ user_id: u.user.id, venue_id: venueId, week_start: visibleWeek });
       if (st) {
         setCoachLoading(true);
@@ -91,87 +112,98 @@ function ServerDashboard() {
     return colour === "green" ? "var(--brand-green)" : colour === "amber" ? "var(--brand-orange)" : "var(--opportunity)";
   };
 
-  const allCats = [
-    { label: "wine", conv: "wine_conversion", t: "wine_target", sales: "wine_sales", cat: "wine" as CategoryKey },
-    { label: "cocktails", conv: "cocktail_conversion", t: "cocktail_target", sales: "cocktail_sales", cat: "cocktail" as CategoryKey },
-    { label: "desserts", conv: "dessert_conversion", t: "dessert_target", sales: "dessert_sales", cat: "dessert" as CategoryKey },
-    { label: "sides", conv: "sides_conversion", t: "sides_target", sales: "sides_sales", cat: "sides" as CategoryKey },
-    { label: "spirits", conv: "spirits_conversion", t: "spirits_target", sales: "spirits_sales", cat: "spirits" as CategoryKey },
-    { label: "sparkling", conv: "sparkling_conversion", t: "sparkling_target", sales: "sparkling_sales", cat: "sparkling" as CategoryKey },
-  ] as const;
+  // Build a unified row list — prefer dynamic venue categories; fall back to
+  // legacy six columns on server_stats when the venue hasn't tracked any
+  // dynamic categories yet.
+  type UniRow = {
+    label: string;
+    conversion: number;
+    target: number;
+    items: number;
+    prevItems: number;
+  };
+  const buildLegacyRows = (): UniRow[] => {
+    if (!stat) return [];
+    return LEGACY_CATS.map((c) => {
+      const conv = Number((stat as any)[c.conv] ?? 0);
+      const tgt = Number((target as any)?.[c.t] ?? 0);
+      const items = estimateItemsSold(Number((stat as any)[c.sales] ?? 0), c.key as CategoryKey, prices);
+      const prevItems = prevStat
+        ? estimateItemsSold(Number((prevStat as any)[c.sales] ?? 0), c.key as CategoryKey, prices)
+        : 0;
+      return { label: c.label, conversion: conv, target: tgt, items, prevItems };
+    });
+  };
+  const uniRows: UniRow[] =
+    dynRows.length > 0
+      ? dynRows.map((r) => ({
+          label: r.label,
+          conversion: r.conversion,
+          target: r.target,
+          items: r.items,
+          prevItems: r.prevItems,
+        }))
+      : buildLegacyRows();
 
-  // Compute week-over-week deltas using item counts per category
+  // Smashed / work-on cards
   let smashed: { label: string; delta: number } | null = null;
   let workOn: { label: string; delta: number | null } | null = null;
-  if (stat) {
-    const rows = allCats.map((c) => {
-      const curItems = estimateItemsSold(Number((stat as any)[c.sales] ?? 0), c.cat, prices);
-      const prevItems = prevStat ? estimateItemsSold(Number((prevStat as any)[c.sales] ?? 0), c.cat, prices) : 0;
-      const d = pctDelta(curItems, prevItems);
-      const actualConv = Number((stat as any)[c.conv] ?? 0);
-      const tgt = Number((target as any)?.[c.t] ?? 0);
-      const ratio = tgt > 0 ? actualConv / tgt : 1;
-      return { label: c.label, d, ratio };
+  if (stat && uniRows.length) {
+    const enriched = uniRows.map((r) => {
+      const d = pctDelta(r.items, r.prevItems);
+      const ratio = r.target > 0 ? r.conversion / r.target : 1;
+      return { ...r, d, ratio };
     });
-    const positives = rows.filter((r) => r.d !== null && (r.d as number) > 0) as { label: string; d: number; ratio: number }[];
+    const positives = enriched.filter((r) => r.d !== null && (r.d as number) > 0) as (typeof enriched[number] & { d: number })[];
     if (positives.length) {
       const best = positives.reduce((a, b) => (b.d > a.d ? b : a));
       smashed = { label: best.label, delta: best.d };
     }
-    const withDelta = rows.filter((r) => r.d !== null) as { label: string; d: number; ratio: number }[];
+    const withDelta = enriched.filter((r) => r.d !== null) as (typeof enriched[number] & { d: number })[];
     if (withDelta.length) {
       const allPositive = withDelta.every((r) => r.d >= 0);
       if (allPositive) {
-        const worstByRatio = rows.reduce((a, b) => (b.ratio < a.ratio ? b : a));
+        const worstByRatio = enriched.reduce((a, b) => (b.ratio < a.ratio ? b : a));
         workOn = { label: worstByRatio.label, delta: worstByRatio.d };
       } else {
         const worst = withDelta.reduce((a, b) => (b.d < a.d ? b : a));
         workOn = { label: worst.label, delta: worst.d };
       }
     } else {
-      // No previous data — fall back to lowest target ratio
-      const worstByRatio = rows.reduce((a, b) => (b.ratio < a.ratio ? b : a));
+      const worstByRatio = enriched.reduce((a, b) => (b.ratio < a.ratio ? b : a));
       workOn = { label: worstByRatio.label, delta: null };
     }
   }
 
-  // Dynamically pick best / middle / needs-work from categories with usable data
+  // Top 3 picker — works on the unified rows.
   type RingRole = "Crushing it" | "Could be better" | "Focus here";
   type Top3Item = {
     label: string;
     role: RingRole;
-    conv: string;
-    t: string;
-    sales: string;
-    cat: CategoryKey;
+    conversion: number;
+    target: number;
+    items: number;
+    prevItems: number;
   };
   const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
   let top3: Top3Item[] = [];
   let allGreen = false;
-  if (stat && target) {
-    const usable = allCats
-      .map((c) => {
-        const actualConv = Number((stat as any)[c.conv] ?? 0);
-        const tgt = Number((target as any)?.[c.t] ?? 0);
-        const sales = Number((stat as any)[c.sales] ?? 0);
-        return { c, ratio: tgt > 0 ? actualConv / tgt : 0, tgt, sales, actualConv };
-      })
-      .filter((r) => r.tgt > 0 && r.sales > 0)
+  if (stat && uniRows.length) {
+    const usable = uniRows
+      .map((r) => ({ ...r, ratio: r.target > 0 ? r.conversion / r.target : 0 }))
+      .filter((r) => r.target > 0 && r.items > 0)
       .sort((a, b) => b.ratio - a.ratio);
 
-    type Pick = { item: typeof allCats[number]; actualConv: number; tgt: number };
-    const picks: Pick[] = [];
+    const picks: UniRow[] = [];
     if (usable.length >= 3) {
-      picks.push({ item: usable[0].c, actualConv: usable[0].actualConv, tgt: usable[0].tgt });
-      const midIdx = Math.floor(usable.length / 2);
-      picks.push({ item: usable[midIdx].c, actualConv: usable[midIdx].actualConv, tgt: usable[midIdx].tgt });
-      const last = usable.length - 1;
-      picks.push({ item: usable[last].c, actualConv: usable[last].actualConv, tgt: usable[last].tgt });
+      picks.push(usable[0]);
+      picks.push(usable[Math.floor(usable.length / 2)]);
+      picks.push(usable[usable.length - 1]);
     } else if (usable.length === 2) {
-      picks.push({ item: usable[0].c, actualConv: usable[0].actualConv, tgt: usable[0].tgt });
-      picks.push({ item: usable[1].c, actualConv: usable[1].actualConv, tgt: usable[1].tgt });
+      picks.push(usable[0]);
+      picks.push(usable[1]);
     } else if (usable.length === 1) {
-      picks.push({ item: usable[0].c, actualConv: usable[0].actualConv, tgt: usable[0].tgt });
+      picks.push(usable[0]);
     }
 
     const roleFromColour = (actual: number, tgt: number): RingRole => {
@@ -181,15 +213,15 @@ function ServerDashboard() {
       return "Focus here";
     };
 
-    allGreen = picks.length === 3 && picks.every((p) => performanceColour(p.actualConv, p.tgt) === "green");
+    allGreen = picks.length === 3 && picks.every((p) => performanceColour(p.conversion, p.target) === "green");
 
     top3 = picks.map((p) => ({
-      label: cap(p.item.label),
-      role: roleFromColour(p.actualConv, p.tgt),
-      conv: p.item.conv,
-      t: p.item.t,
-      sales: p.item.sales,
-      cat: p.item.cat,
+      label: cap(p.label),
+      role: roleFromColour(p.conversion, p.target),
+      conversion: p.conversion,
+      target: p.target,
+      items: p.items,
+      prevItems: p.prevItems,
     }));
   }
 
@@ -210,18 +242,14 @@ function ServerDashboard() {
             top3.length > 0 ? (
               <div className="mt-4 grid grid-cols-3 gap-2">
                 {top3.map((c) => {
-                  const actualConv = Number((stat as any)[c.conv] ?? 0);
-                  const tgt = Number((target as any)?.[c.t] ?? 0);
-                  const tone = toneFor(actualConv, tgt);
-                  const fillPct = tgt > 0 ? (actualConv / tgt) * 100 : actualConv;
-                  const items = estimateItemsSold(Number((stat as any)[c.sales] ?? 0), c.cat, prices);
-                  const prevItems = prevStat ? estimateItemsSold(Number((prevStat as any)[c.sales] ?? 0), c.cat, prices) : 0;
-                  const d = pctDelta(items, prevItems);
+                  const tone = toneFor(c.conversion, c.target);
+                  const fillPct = c.target > 0 ? (c.conversion / c.target) * 100 : c.conversion;
+                  const d = pctDelta(c.items, c.prevItems);
                   return (
                     <div key={c.label} className="flex flex-col items-center">
                       <div className="text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: tone }}>{c.role}</div>
                       <div className="text-xs text-muted-foreground mb-2">{c.label}</div>
-                      <Ring fillPct={fillPct} color={tone} displayValue={items} />
+                      <Ring fillPct={fillPct} color={tone} displayValue={c.items} />
                       {d !== null ? (
                         <div className="mt-1 text-xs font-semibold" style={{ color: d >= 0 ? "var(--brand-green)" : "var(--opportunity)" }}>
                           {d >= 0 ? "↑" : "↓"} {d >= 0 ? "+" : "-"}{Math.abs(d).toFixed(0)}%

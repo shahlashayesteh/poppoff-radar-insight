@@ -2,7 +2,16 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { ServerLayout } from "@/components/server-layout";
 import { supabase } from "@/integrations/supabase/client";
-import { claimServerCsvData, recordLogin, fetchVenueAvgPrices, estimateItemsSold, pctDelta, type CategoryKey } from "@/lib/server-data";
+import {
+  claimServerCsvData,
+  recordLogin,
+  fetchVenueAvgPrices,
+  estimateItemsSold,
+  loadServerCategoryRows,
+  pctDelta,
+  type CategoryKey,
+  type ServerCatRow,
+} from "@/lib/server-data";
 import { getMondayOfWeek, toISODate, formatWeekRange, performanceColour, latestStatsWeek } from "@/lib/week";
 
 export const Route = createFileRoute("/server/stats")({ component: Page });
@@ -10,7 +19,7 @@ export const Route = createFileRoute("/server/stats")({ component: Page });
 type Stat = any;
 type Target = any;
 
-const cats: { key: string; t: string; sales: string; cat: CategoryKey; label: string }[] = [
+const LEGACY_CATS: { key: string; t: string; sales: string; cat: CategoryKey; label: string }[] = [
   { key: "wine_conversion", t: "wine_target", sales: "wine_sales", cat: "wine", label: "Wine" },
   { key: "cocktail_conversion", t: "cocktail_target", sales: "cocktail_sales", cat: "cocktail", label: "Cocktails" },
   { key: "dessert_conversion", t: "dessert_target", sales: "dessert_sales", cat: "dessert", label: "Desserts" },
@@ -19,11 +28,14 @@ const cats: { key: string; t: string; sales: string; cat: CategoryKey; label: st
   { key: "sparkling_conversion", t: "sparkling_target", sales: "sparkling_sales", cat: "sparkling", label: "Sparkling" },
 ];
 
+type Row = { label: string; conversion: number; target: number; items: number; prevItems: number };
+
 function Page() {
   const [stat, setStat] = useState<Stat | null>(null);
   const [prevStat, setPrevStat] = useState<Stat | null>(null);
   const [target, setTarget] = useState<Target | null>(null);
   const [prices, setPrices] = useState<Record<string, number>>({});
+  const [dynRows, setDynRows] = useState<ServerCatRow[]>([]);
   const weekStart = toISODate(getMondayOfWeek());
   const [displayWeekStart, setDisplayWeekStart] = useState<string>(weekStart);
 
@@ -48,11 +60,33 @@ function Page() {
       const { data: tg } = await supabase.from("server_targets").select("*").eq("user_id", u.user.id).eq("venue_id", venueId).maybeSingle();
       setTarget(tg);
       setPrices(await fetchVenueAvgPrices(venueId));
+      setDynRows(await loadServerCategoryRows(venueId, u.user.id, visibleWeek, prev?.week_start ?? null));
     })();
   }, [weekStart]);
 
-  const totalItemsCurrent = stat ? cats.reduce((sum, c) => sum + estimateItemsSold(Number(stat[c.sales] ?? 0), c.cat, prices), 0) : 0;
-  const totalItemsPrev = prevStat ? cats.reduce((sum, c) => sum + estimateItemsSold(Number(prevStat[c.sales] ?? 0), c.cat, prices), 0) : 0;
+  const legacyRows = (): Row[] => {
+    if (!stat) return [];
+    return LEGACY_CATS.map((c) => ({
+      label: c.label,
+      conversion: Number(stat[c.key] ?? 0),
+      target: Number(target?.[c.t] ?? 0),
+      items: estimateItemsSold(Number(stat[c.sales] ?? 0), c.cat, prices),
+      prevItems: prevStat ? estimateItemsSold(Number(prevStat[c.sales] ?? 0), c.cat, prices) : 0,
+    }));
+  };
+  const rows: Row[] =
+    dynRows.length > 0
+      ? dynRows.map((r) => ({
+          label: r.label,
+          conversion: r.conversion,
+          target: r.target,
+          items: r.items,
+          prevItems: r.prevItems,
+        }))
+      : legacyRows();
+
+  const totalItemsCurrent = rows.reduce((s, r) => s + r.items, 0);
+  const totalItemsPrev = rows.reduce((s, r) => s + r.prevItems, 0);
   const totalDelta = pctDelta(totalItemsCurrent, totalItemsPrev);
 
   return (
@@ -77,20 +111,16 @@ function Page() {
                 </div>
               </div>
             </div>
-            {cats.map((c) => {
-              const actual = Number(stat[c.key] ?? 0);
-              const tgt = Number(target?.[c.t] ?? 0);
-              const colour = performanceColour(actual, tgt);
+            {rows.map((r) => {
+              const colour = performanceColour(r.conversion, r.target);
               const tone = colour === "green" ? "var(--brand-green)" : colour === "amber" ? "var(--brand-orange)" : "var(--opportunity)";
-              const items = estimateItemsSold(Number(stat[c.sales] ?? 0), c.cat, prices);
-              const prevItems = prevStat ? estimateItemsSold(Number(prevStat[c.sales] ?? 0), c.cat, prices) : 0;
-              const d = pctDelta(items, prevItems);
+              const d = pctDelta(r.items, r.prevItems);
               return (
-                <div key={c.label} className="rounded-2xl bg-white border border-border p-4">
+                <div key={r.label} className="rounded-2xl bg-white border border-border p-4">
                   <div className="flex items-center justify-between">
-                    <div className="font-semibold">{c.label}</div>
+                    <div className="font-semibold">{r.label}</div>
                     <div className="text-sm font-bold" style={{ color: tone }}>
-                      {items} sold
+                      {r.items} sold
                       {d !== null && (
                         <span className="ml-2 text-xs" style={{ color: d >= 0 ? "var(--brand-green)" : "var(--opportunity)" }}>
                           {d >= 0 ? "↑" : "↓"} {Math.abs(d).toFixed(0)}%
@@ -99,7 +129,7 @@ function Page() {
                     </div>
                   </div>
                   <div className="mt-2 h-2 rounded-full bg-muted overflow-hidden">
-                    <div className="h-full" style={{ width: `${Math.min(100, actual)}%`, background: tone }} />
+                    <div className="h-full" style={{ width: `${Math.min(100, r.conversion)}%`, background: tone }} />
                   </div>
                 </div>
               );
@@ -110,4 +140,3 @@ function Page() {
     </ServerLayout>
   );
 }
-

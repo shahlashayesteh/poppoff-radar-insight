@@ -209,17 +209,36 @@ Deno.serve(async (req) => {
       const { data: tg } = await admin.from("server_targets").select("*").eq("venue_id", venueId).eq("user_id", userId).maybeSingle();
       const { data: menus } = await admin.from("venue_menu").select("parsed_items").eq("venue_id", venueId).order("uploaded_at", { ascending: false }).limit(3);
       const menuItems = (menus ?? []).flatMap((m: any) => (m.parsed_items ?? [])).slice(0, 60);
-      const cats = ["wine", "dessert", "cocktail", "sides", "spirits", "sparkling"];
+      // Prefer dynamic venue categories; fall back to legacy six if none exist.
+      const { data: vcRows } = await admin.from("venue_categories").select("key,label,sort_order").eq("venue_id", venueId).order("sort_order");
+      const { data: curCats } = await admin.from("server_category_stats").select("category_key,conversion,metric_type,quantity").eq("venue_id", venueId).eq("user_id", userId).eq("week_start", weekStart);
+      const { data: prevCats } = prev?.week_start
+        ? await admin.from("server_category_stats").select("category_key,conversion").eq("venue_id", venueId).eq("user_id", userId).eq("week_start", prev.week_start)
+        : { data: [] as any[] };
+      const { data: catTargets } = await admin.from("server_category_targets").select("category_key,target").eq("venue_id", venueId).eq("user_id", userId);
+      const curMap = Object.fromEntries(((curCats ?? []) as any[]).map((r) => [r.category_key, r]));
+      const prevMap = Object.fromEntries(((prevCats ?? []) as any[]).map((r) => [r.category_key, r]));
+      const tgtMap = Object.fromEntries(((catTargets ?? []) as any[]).map((r) => [r.category_key, Number(r.target) || 0]));
+      const dynCats = (vcRows ?? []) as { key: string; label: string }[];
+      const cats = dynCats.length ? dynCats.map((c) => c.key) : ["wine", "dessert", "cocktail", "sides", "spirits", "sparkling"];
+      const labelFor = (k: string) => dynCats.find((c) => c.key === k)?.label || k;
       const lines = cats.map((c) => {
-        const a = Number((cur as any)?.[`${c}_conversion`] ?? 0);
-        const p = Number((prev as any)?.[`${c}_conversion`] ?? 0);
-        const t = Number((tg as any)?.[`${c}_target`] ?? 0);
+        const a = dynCats.length
+          ? Number(curMap[c]?.conversion ?? 0)
+          : Number((cur as any)?.[`${c}_conversion`] ?? 0);
+        const p = dynCats.length
+          ? Number(prevMap[c]?.conversion ?? 0)
+          : Number((prev as any)?.[`${c}_conversion`] ?? 0);
+        const t = dynCats.length
+          ? Number(tgtMap[c] ?? 0)
+          : Number((tg as any)?.[`${c}_target`] ?? 0);
         const delta = p ? (a - p) : 0;
-        return `${c}: ${a.toFixed(0)}% (target ${t.toFixed(0)}%, ${delta >= 0 ? "+" : ""}${delta.toFixed(0)}% vs last week)`;
+        return `${labelFor(c)}: ${a.toFixed(0)}% (target ${t.toFixed(0)}%, ${delta >= 0 ? "+" : ""}${delta.toFixed(0)}% vs last week)`;
       }).join("\n");
       const spc = Number((cur as any)?.spend_per_cover ?? 0);
       const spcTarget = Number((tg as any)?.spend_per_cover_target ?? 0);
-      const sys = "You are a hospitality coach producing PERSONAL coaching tips for ONE specific server based on THEIR own weekly stats. Reply ONLY with JSON: {\"suggestions\":[{\"category\":\"wine\"|\"dessert\"|\"cocktail\"|\"sides\"|\"spirits\"|\"sparkling\"|\"general\",\"tip\":string}]}. RULES: (1) Return 3-4 tips. (2) PRIORITISE the 1-2 categories where this server is FURTHEST BELOW their target — those tips are mandatory. (3) Optionally include 1 tip celebrating a category they are above target on. (4) EVERY tip MUST cite the server's specific number(s) for that category from the data provided — e.g. 'Your wine conversion is 42% vs target 60% (down 8% from last week) — try …'. Do NOT give generic advice that omits their numbers. (5) Tips MUST be actionable and reference a real menu item from the list when relevant. (6) Keep each tip to 1-2 short sentences.";
+      const catList = cats.map(labelFor).concat(["general"]).join("|");
+      const sys = `You are a hospitality coach producing PERSONAL coaching tips for ONE specific server based on THEIR own weekly stats. Reply ONLY with JSON: {"suggestions":[{"category":string,"tip":string}]}. The "category" MUST be one of: ${catList}. RULES: (1) Return 3-4 tips. (2) PRIORITISE the 1-2 categories where this server is FURTHEST BELOW their target — those tips are mandatory. (3) Optionally include 1 tip celebrating a category they are above target on. (4) EVERY tip MUST cite the server's specific number(s) for that category from the data provided — e.g. 'Your wine conversion is 42% vs target 60% (down 8% from last week) — try …'. Do NOT give generic advice that omits their numbers. (5) Tips MUST be actionable and reference a real menu item from the list when relevant. (6) Keep each tip to 1-2 short sentences.`;
       const usr = `This server's week:\nSpend per cover: £${spc.toFixed(2)} (target £${spcTarget.toFixed(2)})\n${lines}\nMenu items: ${menuItems.map((i: any) => i.name).filter(Boolean).slice(0, 40).join(", ") || "(none)"}`;
       const out = await callAI([{ role: "system", content: sys }, { role: "user", content: usr }], true);
       let suggestions: any[] = [];
