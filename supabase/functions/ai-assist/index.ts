@@ -45,9 +45,17 @@ Deno.serve(async (req) => {
     const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE);
     const { action, venueId, payload } = await req.json();
 
-    // verify caller manages this venue
+    // verify caller manages this venue (or, for server_coaching, is the server themselves)
     const { data: v } = await admin.from("venues").select("id, manager_id").eq("id", venueId).maybeSingle();
-    if (!v || v.manager_id !== u.user.id) {
+    const bodyJson = await req.json();
+    const { action, payload } = bodyJson;
+    const isManager = !!v && v.manager_id === u.user.id;
+    let isSelfServer = false;
+    if (!isManager && action === "server_coaching" && payload?.userId === u.user.id) {
+      const { data: mem } = await admin.from("venue_members").select("user_id").eq("venue_id", venueId).eq("user_id", u.user.id).maybeSingle();
+      isSelfServer = !!mem;
+    }
+    if (!v || (!isManager && !isSelfServer)) {
       return new Response(JSON.stringify({ error: "forbidden" }), { status: 403, headers: { ...cors, "Content-Type": "application/json" } });
     }
 
