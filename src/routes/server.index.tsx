@@ -136,10 +136,7 @@ function ServerDashboard() {
   }
 
   // Dynamically pick best / middle / needs-work from categories with usable data
-  type RingRole =
-    | "Crushing it" | "Solid" | "Focus here"
-    | "On fire" | "Keep going"
-    | "Closest to target" | "Needs work" | "Biggest focus";
+  type RingRole = "Crushing it" | "Could be better" | "Focus here";
   type Top3Item = {
     label: string;
     role: RingRole;
@@ -150,7 +147,7 @@ function ServerDashboard() {
   };
   const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
   let top3: Top3Item[] = [];
-  let mode: "all-green" | "all-red" | "mixed" = "mixed";
+  let allGreen = false;
   if (stat && target) {
     const usable = allCats
       .map((c) => {
@@ -162,49 +159,33 @@ function ServerDashboard() {
       .filter((r) => r.tgt > 0 && r.sales > 0)
       .sort((a, b) => b.ratio - a.ratio);
 
-    type Pick = { item: typeof allCats[number]; actualConv: number; tgt: number; slot: "best" | "mid" | "worst" | "only" };
+    type Pick = { item: typeof allCats[number]; actualConv: number; tgt: number };
     const picks: Pick[] = [];
     if (usable.length >= 3) {
-      picks.push({ item: usable[0].c, actualConv: usable[0].actualConv, tgt: usable[0].tgt, slot: "best" });
+      picks.push({ item: usable[0].c, actualConv: usable[0].actualConv, tgt: usable[0].tgt });
       const midIdx = Math.floor(usable.length / 2);
-      picks.push({ item: usable[midIdx].c, actualConv: usable[midIdx].actualConv, tgt: usable[midIdx].tgt, slot: "mid" });
+      picks.push({ item: usable[midIdx].c, actualConv: usable[midIdx].actualConv, tgt: usable[midIdx].tgt });
       const last = usable.length - 1;
-      picks.push({ item: usable[last].c, actualConv: usable[last].actualConv, tgt: usable[last].tgt, slot: "worst" });
+      picks.push({ item: usable[last].c, actualConv: usable[last].actualConv, tgt: usable[last].tgt });
     } else if (usable.length === 2) {
-      picks.push({ item: usable[0].c, actualConv: usable[0].actualConv, tgt: usable[0].tgt, slot: "best" });
-      picks.push({ item: usable[1].c, actualConv: usable[1].actualConv, tgt: usable[1].tgt, slot: "worst" });
+      picks.push({ item: usable[0].c, actualConv: usable[0].actualConv, tgt: usable[0].tgt });
+      picks.push({ item: usable[1].c, actualConv: usable[1].actualConv, tgt: usable[1].tgt });
     } else if (usable.length === 1) {
-      picks.push({ item: usable[0].c, actualConv: usable[0].actualConv, tgt: usable[0].tgt, slot: "only" });
+      picks.push({ item: usable[0].c, actualConv: usable[0].actualConv, tgt: usable[0].tgt });
     }
 
-    if (picks.length === 3) {
-      const colours = picks.map((p) => performanceColour(p.actualConv, p.tgt));
-      if (colours.every((c) => c === "green")) mode = "all-green";
-      else if (colours.every((c) => c === "red")) mode = "all-red";
-    }
-
-    const roleFor = (slot: Pick["slot"]): RingRole => {
-      if (mode === "all-green") {
-        if (slot === "best") return "Crushing it";
-        if (slot === "mid") return "On fire";
-        if (slot === "worst") return "Keep going";
-        return "Crushing it";
-      }
-      if (mode === "all-red") {
-        if (slot === "best") return "Closest to target";
-        if (slot === "mid") return "Needs work";
-        if (slot === "worst") return "Biggest focus";
-        return "Needs work";
-      }
-      if (slot === "best") return "Crushing it";
-      if (slot === "mid") return "Solid";
-      if (slot === "worst") return "Focus here";
-      return "Solid";
+    const roleFromColour = (actual: number, tgt: number): RingRole => {
+      const col = performanceColour(actual, tgt);
+      if (col === "green") return "Crushing it";
+      if (col === "amber") return "Could be better";
+      return "Focus here";
     };
+
+    allGreen = picks.length === 3 && picks.every((p) => performanceColour(p.actualConv, p.tgt) === "green");
 
     top3 = picks.map((p) => ({
       label: cap(p.item.label),
-      role: roleFor(p.slot),
+      role: roleFromColour(p.actualConv, p.tgt),
       conv: p.item.conv,
       t: p.item.t,
       sales: p.item.sales,
