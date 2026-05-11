@@ -165,19 +165,25 @@ Deno.serve(async (req) => {
 
     if (action === "generate_priorities") {
       const weekStart = payload?.weekStart;
-      const { data: stats } = await admin.from("server_stats").select("*").eq("venue_id", venueId).eq("week_start", weekStart);
-      const { data: targets } = await admin.from("server_targets").select("*").eq("venue_id", venueId);
+      const { data: vcats } = await admin.from("venue_categories").select("key, label").eq("venue_id", venueId).order("sort_order");
+      const { data: catStats } = await admin.from("server_category_stats").select("category_key, conversion").eq("venue_id", venueId).eq("week_start", weekStart);
+      const { data: catTargets } = await admin.from("server_category_targets").select("category_key, target").eq("venue_id", venueId);
       const { data: menus } = await admin.from("venue_menu").select("parsed_items").eq("venue_id", venueId).order("uploaded_at", { ascending: false }).limit(10);
       const menuItems = (menus ?? []).flatMap((m: any) => (m.parsed_items ?? [])).slice(0, 80).map((i: any) => `${i.name}${i.category ? " ("+i.category+")" : ""}`).join(", ");
-      const tgt = targets?.[0];
-      const cats = ["wine", "dessert", "cocktail", "sides", "spirits", "sparkling"];
+      const fallback = [
+        { key: "wine", label: "Wine" }, { key: "cocktail", label: "Cocktails" },
+        { key: "dessert", label: "Desserts" }, { key: "sides", label: "Sides" },
+        { key: "spirits", label: "Spirits" }, { key: "sparkling", label: "Sparkling" },
+      ];
+      const cats = (vcats && vcats.length ? vcats : fallback) as { key: string; label: string }[];
       const avgs: Record<string, number> = {};
       for (const c of cats) {
-        const key = `${c}_conversion`;
-        const vals = (stats ?? []).map((s: any) => Number(s[key] ?? 0)).filter(Boolean);
-        avgs[c] = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : 0;
+        const vals = (catStats ?? []).filter((s: any) => s.category_key === c.key).map((s: any) => Number(s.conversion ?? 0)).filter(Boolean);
+        avgs[c.key] = vals.length ? vals.reduce((a: number, b: number) => a + b, 0) / vals.length : 0;
       }
-      const gaps = cats.map((c) => `${c}: avg ${avgs[c].toFixed(0)}% vs target ${Number((tgt as any)?.[`${c}_target`] ?? 0)}%`).join(", ");
+      const targetByKey: Record<string, number> = {};
+      for (const t of (catTargets ?? [])) targetByKey[(t as any).category_key] = Number((t as any).target) || 0;
+      const gaps = cats.map((c) => `${c.label}: avg ${avgs[c.key].toFixed(0)}% vs target ${(targetByKey[c.key] || 0).toFixed(0)}%`).join(", ");
       const sys = "You are a hospitality coach. Given the team's weak categories and the venue menu items, choose 3-5 specific menu items to PUSH this week. Reply ONLY with JSON: {\"priorities\":[{\"item_name\":string,\"category\":string,\"priority_flag\":\"push\"|\"seasonal\"|\"standard\",\"reason\":string}]}";
       const usr = `Team performance gaps: ${gaps}.\nMenu items available: ${menuItems || "(none uploaded)"}\nReturn 3-5 priorities targeting the weakest categories using actual menu items where possible.`;
       const out = await callAI([{ role: "system", content: sys }, { role: "user", content: usr }], true);
@@ -206,20 +212,36 @@ Deno.serve(async (req) => {
       if (cached?.suggestions && Array.isArray(cached.suggestions) && (cached.suggestions as any[]).length > 0) {
         return Response.json({ ok: true, suggestions: cached.suggestions, cached: true }, { headers: cors });
       }
-      const { data: cur } = await admin.from("server_stats").select("*").eq("venue_id", venueId).eq("user_id", userId).eq("week_start", weekStart).maybeSingle();
-      const { data: prev } = await admin.from("server_stats").select("*").eq("venue_id", venueId).eq("user_id", userId).lt("week_start", weekStart).order("week_start", { ascending: false }).limit(1).maybeSingle();
-      const { data: tg } = await admin.from("server_targets").select("*").eq("venue_id", venueId).eq("user_id", userId).maybeSingle();
+      const { data: vcats } = await admin.from("venue_categories").select("key, label").eq("venue_id", venueId).order("sort_order");
+      const { data: curCat } = await admin.from("server_category_stats").select("category_key, sales, conversion").eq("venue_id", venueId).eq("user_id", userId).eq("week_start", weekStart);
+      const { data: prevWeekRow } = await admin.from("server_category_stats").select("week_start").eq("venue_id", venueId).eq("user_id", userId).lt("week_start", weekStart).order("week_start", { ascending: false }).limit(1).maybeSingle();
+      const prevWeek = (prevWeekRow as any)?.week_start || null;
+      const { data: prevCat } = prevWeek
+        ? await admin.from("server_category_stats").select("category_key, conversion").eq("venue_id", venueId).eq("user_id", userId).eq("week_start", prevWeek)
+        : { data: [] as any[] };
+      const { data: catTargets } = await admin.from("server_category_targets").select("category_key, target").eq("venue_id", venueId).eq("user_id", userId);
       const { data: menus } = await admin.from("venue_menu").select("parsed_items").eq("venue_id", venueId).order("uploaded_at", { ascending: false }).limit(3);
       const menuItems = (menus ?? []).flatMap((m: any) => (m.parsed_items ?? [])).slice(0, 60);
-      const cats = ["wine", "dessert", "cocktail", "sides", "spirits", "sparkling"];
+      const fallback = [
+        { key: "wine", label: "Wine" }, { key: "cocktail", label: "Cocktails" },
+        { key: "dessert", label: "Desserts" }, { key: "sides", label: "Sides" },
+        { key: "spirits", label: "Spirits" }, { key: "sparkling", label: "Sparkling" },
+      ];
+      const cats = (vcats && vcats.length ? vcats : fallback) as { key: string; label: string }[];
+      const curByKey: Record<string, number> = {};
+      for (const r of (curCat ?? [])) curByKey[(r as any).category_key] = Number((r as any).conversion ?? 0);
+      const prevByKey: Record<string, number> = {};
+      for (const r of (prevCat ?? [])) prevByKey[(r as any).category_key] = Number((r as any).conversion ?? 0);
+      const tgtByKey: Record<string, number> = {};
+      for (const r of (catTargets ?? [])) tgtByKey[(r as any).category_key] = Number((r as any).target ?? 0);
       const lines = cats.map((c) => {
-        const a = Number((cur as any)?.[`${c}_conversion`] ?? 0);
-        const p = Number((prev as any)?.[`${c}_conversion`] ?? 0);
-        const t = Number((tg as any)?.[`${c}_target`] ?? 0);
+        const a = curByKey[c.key] ?? 0;
+        const p = prevByKey[c.key] ?? 0;
+        const t = tgtByKey[c.key] ?? 0;
         const delta = p ? (a - p) : 0;
-        return `${c}: ${a.toFixed(0)}% (target ${t.toFixed(0)}%, ${delta >= 0 ? "+" : ""}${delta.toFixed(0)}% vs last week)`;
+        return `${c.label}: ${a.toFixed(0)}% (target ${t.toFixed(0)}%, ${delta >= 0 ? "+" : ""}${delta.toFixed(0)}% vs last week)`;
       }).join("\n");
-      const sys = "You are a hospitality coach. Given a single server's weekly performance vs target and last week, plus the venue menu, return 3-4 short, specific, actionable coaching tips. Reply ONLY with JSON: {\"suggestions\":[{\"category\":\"wine\"|\"dessert\"|\"cocktail\"|\"sides\"|\"spirits\"|\"sparkling\"|\"general\",\"tip\":string}]}. Mention real menu items where helpful.";
+      const sys = "You are a hospitality coach. Given a single server's weekly performance vs target and last week across the venue's tracked sales categories, plus the venue menu, return 3-4 short, specific, actionable coaching tips. Reply ONLY with JSON: {\"suggestions\":[{\"category\":string,\"tip\":string}]}. The category field should be the lowercase name of one of the listed categories (or 'general'). Mention real menu items where helpful.";
       const usr = `Performance:\n${lines}\nMenu items: ${menuItems.map((i: any) => i.name).filter(Boolean).slice(0, 40).join(", ") || "(none)"}`;
       const out = await callAI([{ role: "system", content: sys }, { role: "user", content: usr }], true);
       let suggestions: any[] = [];
