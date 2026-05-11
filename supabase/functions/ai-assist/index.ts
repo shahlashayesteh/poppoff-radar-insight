@@ -51,6 +51,42 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "forbidden" }), { status: 403, headers: { ...cors, "Content-Type": "application/json" } });
     }
 
+    if (action === "parse_stats_image") {
+      const images: string[] = Array.isArray(payload?.images) ? payload.images.slice(0, 4) : [];
+      const validImages = images.filter((u) => typeof u === "string" && u.startsWith("data:image/"));
+      if (!validImages.length) {
+        return new Response(JSON.stringify({ error: "no images provided" }), { status: 400, headers: { ...cors, "Content-Type": "application/json" } });
+      }
+      const sys = "You are an OCR and data-extraction assistant for restaurant server-performance reports. Read every image carefully and extract one row per individual server/staff member. Reply ONLY with JSON: {\"rows\":[{\"server_name\":string,\"total_covers\":number,\"total_sales\":number,\"wine_sales\":number,\"dessert_sales\":number,\"cocktail_sales\":number,\"sides_sales\":number,\"spirits_sales\":number,\"sparkling_sales\":number}],\"week_start\":string|null,\"confidence\":number,\"notes\":string}. RULES: (1) confidence is 0-1 (your certainty the data is correct and complete). Use <0.5 if image is blurry/cropped or critical fields are missing. (2) Numbers MUST be plain numbers — strip currency symbols, commas, %. (3) If a category is not shown for a server, use 0. (4) week_start: an ISO Monday date (YYYY-MM-DD) if a date or week is visible, else null. (5) Skip TOTAL/SUMMARY rows — only individual servers. (6) notes: brief description of issues if confidence<0.7.";
+      const userContent: any[] = [{ type: "text", text: "Extract server sales rows from these report images." }];
+      for (const url of validImages) userContent.push({ type: "image_url", image_url: { url } });
+      const out = await callAI([
+        { role: "system", content: sys },
+        { role: "user", content: userContent },
+      ], true);
+      let parsed: any = { rows: [], confidence: 0, notes: "" };
+      try { parsed = JSON.parse(out); } catch {}
+      const rows = (Array.isArray(parsed.rows) ? parsed.rows : []).map((r: any) => ({
+        server_name: String(r.server_name || "").trim(),
+        total_covers: Number(r.total_covers) || 0,
+        total_sales: Number(r.total_sales) || 0,
+        wine_sales: Number(r.wine_sales) || 0,
+        dessert_sales: Number(r.dessert_sales) || 0,
+        cocktail_sales: Number(r.cocktail_sales) || 0,
+        sides_sales: Number(r.sides_sales) || 0,
+        spirits_sales: Number(r.spirits_sales) || 0,
+        sparkling_sales: Number(r.sparkling_sales) || 0,
+      })).filter((r: any) => r.server_name && (r.total_sales > 0 || r.total_covers > 0));
+      const confidence = Math.max(0, Math.min(1, Number(parsed.confidence) || 0));
+      return Response.json({
+        ok: true,
+        rows,
+        confidence,
+        week_start: parsed.week_start || null,
+        notes: String(parsed.notes || ""),
+      }, { headers: cors });
+    }
+
     if (action === "parse_menu") {
       const text = String(payload?.menu_text ?? "").slice(0, 20000);
       const images: string[] = Array.isArray(payload?.images) ? payload.images.slice(0, 8) : [];
