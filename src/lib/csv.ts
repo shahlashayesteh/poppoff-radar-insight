@@ -220,7 +220,7 @@ const HEADER_ALIASES: Record<string, CanonicalField> = {
 };
 
 const CATEGORY_KEYWORDS: Record<
-  Exclude<keyof CsvRow, "server_name" | "total_covers" | "total_sales" | "week_start">,
+  Exclude<keyof CsvRow, "server_name" | "total_covers" | "total_sales" | "week_start" | "categories">,
   string[]
 > = {
   sparkling_sales: ["sparkling", "champagne", "prosecco", "cava", "crémant", "cremant"],
