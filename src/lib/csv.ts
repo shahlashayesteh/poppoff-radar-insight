@@ -455,6 +455,7 @@ function emptyAccumulator(serverName: string, weekStart: string): Accumulator {
     coverCandidates: [],
     checkIds: new Set<string>(),
     sumCoverCandidates: false,
+    categoriesAcc: {},
   };
 }
 
