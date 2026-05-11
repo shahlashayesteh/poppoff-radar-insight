@@ -427,6 +427,42 @@ export async function parseStatsCsv(file: File): Promise<CsvRow[]> {
     throw new Error("I couldn't find a server/staff name column in this CSV");
   }
 
+  // Identify columns that are dynamic categories (numeric, not already mapped).
+  const KNOWN_CANONICAL = new Set<string>([
+    "server_name",
+    "total_covers",
+    "total_sales",
+    "wine_sales",
+    "dessert_sales",
+    "cocktail_sales",
+    "sides_sales",
+    "spirits_sales",
+    "sparkling_sales",
+    "date",
+    "category",
+    "item",
+    "quantity",
+    "check_id",
+  ]);
+  const dynamicCategoryHeaders: { header: string; key: string; label: string }[] = [];
+  for (const h of headers) {
+    const canon = canonicalHeader(h);
+    if (KNOWN_CANONICAL.has(canon)) continue;
+    if (h === serverHeader || h === salesHeader) continue;
+    // Skip if no numeric data
+    const numericCount = rows
+      .slice(0, 30)
+      .filter((r) => Math.abs(numberFromCsv(r[h])) > 0).length;
+    if (numericCount === 0) continue;
+    const label = h.replace(/_/g, " ").replace(/\bsales\b/i, "").trim() || h.trim();
+    const key = label
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "_")
+      .replace(/^_+|_+$/g, "");
+    if (!key) continue;
+    dynamicCategoryHeaders.push({ header: h, key, label: label.replace(/\b\w/g, (m) => m.toUpperCase()) });
+  }
+
   const grouped = new Map<string, Accumulator>();
 
   rows.forEach((raw) => {
@@ -464,6 +500,34 @@ export async function parseStatsCsv(file: File): Promise<CsvRow[]> {
     } else {
       acc.total_sales += directTotal;
       if (bucket) acc[bucket] += directTotal;
+      // Long-form: also capture unknown categories dynamically
+      if (!bucket && categoryHeader) {
+        const text = String(raw[categoryHeader] ?? "").trim();
+        if (text && directTotal !== 0) {
+          const dynKey = text
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, "_")
+            .replace(/^_+|_+$/g, "");
+          if (dynKey) {
+            const existing = acc.categories[dynKey];
+            acc.categories[dynKey] = {
+              label: existing?.label || text,
+              sales: (existing?.sales || 0) + directTotal,
+            };
+          }
+        }
+      }
+    }
+
+    // Wide-form: dynamic per-row category columns
+    for (const d of dynamicCategoryHeaders) {
+      const val = numberFromCsv(raw[d.header]);
+      if (!val) continue;
+      const existing = acc.categories[d.key];
+      acc.categories[d.key] = {
+        label: existing?.label || d.label,
+        sales: (existing?.sales || 0) + val,
+      };
     }
 
     const covers = numberFromCsv(raw.total_covers ?? (coversHeader ? raw[coversHeader] : 0));
@@ -484,7 +548,8 @@ export async function parseStatsCsv(file: File): Promise<CsvRow[]> {
         row.cocktail_sales +
         row.sides_sales +
         row.spirits_sales +
-        row.sparkling_sales;
+        row.sparkling_sales +
+        Object.values(row.categories).reduce((s, c) => s + (c.sales || 0), 0);
       const total_sales = row.total_sales || categoryTotal;
       const coverTotal = coverCandidates.reduce((sum, value) => sum + value, 0);
       const total_covers = Math.round(
@@ -494,5 +559,9 @@ export async function parseStatsCsv(file: File): Promise<CsvRow[]> {
       );
       return { ...row, total_sales, total_covers };
     })
-    .filter((row) => row.server_name && (row.total_sales > 0 || row.total_covers > 0));
+    .filter(
+      (row) =>
+        row.server_name &&
+        (row.total_sales > 0 || row.total_covers > 0 || Object.keys(row.categories).length > 0),
+    );
 }
