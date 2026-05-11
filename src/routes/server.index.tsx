@@ -4,7 +4,7 @@ import { ServerLayout } from "@/components/server-layout";
 import { supabase } from "@/integrations/supabase/client";
 import { useRoleGate } from "@/lib/auth-gate";
 import { claimServerCsvData, recordLogin, pctDelta, estimateItemsSold, fetchVenueAvgPrices, type CategoryKey } from "@/lib/server-data";
-import { Trophy, Flame, ArrowRight, TrendingDown } from "lucide-react";
+import { Trophy, Flame, ArrowRight, TrendingDown, Sparkles } from "lucide-react";
 import { getMondayOfWeek, toISODate, formatWeekRange, performanceColour, latestStatsWeek } from "@/lib/week";
 
 export const Route = createFileRoute("/server/")({ component: ServerDashboard });
