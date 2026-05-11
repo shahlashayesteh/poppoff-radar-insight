@@ -171,6 +171,15 @@ function ManagerDashboard() {
       .eq("venue_id", v.id)
       .eq("week_start", visibleWeek);
     setAcks(Object.fromEntries((ak ?? []).map((r) => [r.user_id, true])));
+
+    const vcats = await fetchVenueCategories(v.id);
+    setVenueCategories(vcats);
+    const cs = await fetchCategoryStatsForVenueWeek(v.id, visibleWeek);
+    setCatStatsByUser(
+      indexCategoryStats(cs) as unknown as Record<string, Record<string, { sales: number; conversion: number }>>,
+    );
+    const ct = await fetchCategoryTargets(v.id);
+    setCatTargetsByUser(indexCategoryTargets(ct));
   };
 
   useEffect(() => {
