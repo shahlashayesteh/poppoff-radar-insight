@@ -463,6 +463,31 @@ function makeKey(serverName: string, weekStart: string) {
   return `${serverName.trim().toLowerCase()}::${weekStart}`;
 }
 
+/**
+ * Ensure a CsvRow has a `categories` map populated. Used to normalize rows
+ * coming from OCR (image upload) or other paths that may only carry the
+ * legacy six `*_sales` columns. Idempotent — preserves existing entries.
+ */
+export function ensureCategories(row: CsvRow): CsvRow {
+  const existing = row.categories ? { ...row.categories } : {};
+  for (const field of LEGACY_SALES_FIELDS) {
+    const sales = Number((row as any)[field] || 0);
+    if (!sales) continue;
+    const stem = field.slice(0, -"_sales".length);
+    if (!existing[stem]) {
+      existing[stem] = {
+        label: LEGACY_LABELS[field] || humanizeStem(stem),
+        sales,
+        quantity: 0,
+        metric_type: "sales",
+      };
+    } else if (!existing[stem].sales) {
+      existing[stem] = { ...existing[stem], sales };
+    }
+  }
+  return { ...row, categories: existing };
+}
+
 export async function parseStatsCsv(file: File): Promise<CsvRow[]> {
   const text = await file.text();
   const result = parseCsvText(text);
