@@ -91,12 +91,6 @@ function ServerDashboard() {
     return colour === "green" ? "var(--brand-green)" : colour === "amber" ? "var(--brand-orange)" : "var(--opportunity)";
   };
 
-  const top3 = [
-    { label: "Wine", conv: "wine_conversion", t: "wine_target", sales: "wine_sales", cat: "wine" as CategoryKey },
-    { label: "Cocktails", conv: "cocktail_conversion", t: "cocktail_target", sales: "cocktail_sales", cat: "cocktail" as CategoryKey },
-    { label: "Desserts", conv: "dessert_conversion", t: "dessert_target", sales: "dessert_sales", cat: "dessert" as CategoryKey },
-  ] as const;
-
   const allCats = [
     { label: "wine", conv: "wine_conversion", t: "wine_target", sales: "wine_sales", cat: "wine" as CategoryKey },
     { label: "cocktails", conv: "cocktail_conversion", t: "cocktail_target", sales: "cocktail_sales", cat: "cocktail" as CategoryKey },
