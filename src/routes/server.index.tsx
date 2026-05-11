@@ -233,6 +233,29 @@ function ServerDashboard() {
         </div>
       )}
 
+      {stat && (coachLoading || (coaching && coaching.length > 0)) && (
+        <div className="px-5 mt-4">
+          <div className="rounded-3xl bg-white border border-border p-5">
+            <div className="inline-flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-brand-orange" />
+              <div className="font-semibold">Your coaching this week</div>
+            </div>
+            {coachLoading ? (
+              <p className="mt-3 text-sm text-muted-foreground">Writing tips from your week…</p>
+            ) : (
+              <ul className="mt-3 space-y-2">
+                {coaching!.map((s, i) => (
+                  <li key={i} className="rounded-2xl border border-border p-3 flex gap-3">
+                    <span className="inline-flex items-center justify-center text-[10px] font-bold uppercase tracking-wider rounded-full px-2 py-0.5 h-fit shrink-0" style={{ background: "color-mix(in oklab, var(--brand-green) 12%, white)", color: "var(--brand-green)" }}>{s.category}</span>
+                    <span className="text-sm text-foreground/90">{s.tip}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+      )}
+
       <div className="px-5 mt-4 mb-6">
         <Link to="/server/progress" className="block rounded-3xl bg-white border border-border p-4 flex items-center gap-3">
           <div className="h-10 w-10 rounded-full bg-brand-orange/15 grid place-items-center"><Flame className="h-5 w-5 text-brand-orange" /></div>
