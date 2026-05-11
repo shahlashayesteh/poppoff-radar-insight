@@ -369,16 +369,10 @@ function inferSalesHeader(headers: string[], rows: RawRow[]) {
   return numericHeaders[0]?.h;
 }
 
-function categoryBucket(
-  value: unknown,
-): keyof Omit<CsvRow, "server_name" | "total_covers" | "total_sales" | "week_start"> | null {
+function categoryBucket(value: unknown): LegacyCategorySales | null {
   const text = String(value ?? "").toLowerCase();
   for (const [bucket, terms] of Object.entries(CATEGORY_KEYWORDS)) {
-    if (terms.some((term) => text.includes(term)))
-      return bucket as keyof Omit<
-        CsvRow,
-        "server_name" | "total_covers" | "total_sales" | "week_start"
-      >;
+    if (terms.some((term) => text.includes(term))) return bucket as LegacyCategorySales;
   }
   return null;
 }
@@ -395,6 +389,7 @@ function emptyAccumulator(serverName: string, weekStart: string): Accumulator {
     sides_sales: 0,
     spirits_sales: 0,
     sparkling_sales: 0,
+    categories: {},
     coverCandidates: [],
     checkIds: new Set<string>(),
     sumCoverCandidates: false,
