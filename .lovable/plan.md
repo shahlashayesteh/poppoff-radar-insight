@@ -1,61 +1,57 @@
-## Goal
+## Diagnosis
 
-Make the whole stats pipeline flexible so each venue tracks whatever categories appear in *their* CSV/image (e.g. edamame, water, nibbles) — not just the six legacy ones (wine, cocktail, dessert, sides, spirits, sparkling). Manager dashboard, server home, server stats, and coaching should all render the venue's own categories.
+The toast "Edge Function returned a non-2xx status code" is the **generic** message that `supabase.functions.invoke` always throws on any non-2xx — it is **not** the actual cause. The real reason is hidden in the response body, which the current client code never reads.
 
-## Current state (why this is broken today)
+Edge function logs only show `booted` lines and no `[ai-assist] ...` messages from our `callAI` fallback. That means one of two things is happening:
 
-The **database is already dynamic** — good news:
-- `venue_categories` stores one row per category per venue (label + slug `key`)
-- `server_category_stats` stores per-server-per-week sales/conversion for any category key
-- `server_category_targets` stores per-server targets per category
-- `process_csv_upload` already reads `_row->'categories'` jsonb and writes those tables
+1. The handler **does** throw, but the outer `catch (e)` returns a 500 JSON `{error: "..."}` **without calling `console.error`** — so it never appears in logs (lines 319–321 of `ai-assist/index.ts`).
+2. The request is rejected before the handler runs (auth/JWT expired, or the combined base64 image payload exceeds the edge body limit — the recent client-side image compression mitigates this but doesn't prevent very large multi-image uploads).
 
-The **client is hardcoded to the six legacy buckets**:
-- `src/lib/csv.ts` — `CATEGORY_KEYWORDS` only maps words it recognises into the six buckets; anything else (edamame, water, nibbles, bread basket…) is silently dropped. The output `CsvRow` only has the six `*_sales` fields.
-- `src/routes/manager.index.tsx` — preview table has fixed Wine/Cocktail/Dessert/Sides/Spirits/Sparkling columns; `confirmPreview` sends those rows directly to `process_csv_upload` with no `categories` field.
-- `src/routes/server.index.tsx` (Top 3) and `src/routes/server.stats.tsx` read the six legacy columns from `server_stats`, never `server_category_stats` / `venue_categories`.
+Either way the client surfaces only the generic non-2xx error, so we cannot tell which it is from the user side.
 
-Net effect: even though the DB can store "edamame_sales", nothing in the UI ever puts it there or reads it back.
+The Gemini → OpenAI fallback added earlier **is** still in place and correct; the problem is purely that errors aren't being **reported** to the user or to logs.
 
-## Plan
+## Fix plan (3 small, surgical changes)
 
-### 1. Parser: keep all categories the file gives us
-File: `src/lib/csv.ts`
-- Extend `CsvRow` with `categories: Record<string, { label: string; sales: number; quantity?: number; metric_type?: "sales" | "quantity" }>`.
-- When the CSV has a `category`/`item` column, bucket each row under its **own** label (slugify for the key, keep original text as `label`). Stop forcing it into the 6 keyword buckets. The legacy six still get filled when keywords match, so old CSVs keep working.
-- When the CSV has wide columns (e.g. `wine_sales`, `edamame_sales`, `water_sales`), every numeric `*_sales`/`*_qty` column becomes a category entry. Unknown columns are no longer ignored.
-- `total_sales` still aggregates everything.
+### 1. `supabase/functions/ai-assist/index.ts` — log every failure
+- In the outer `try/catch` (around line 319), add `console.error("[ai-assist] handler error:", e)` before returning the 500 JSON.
+- For `parse_stats_image`, add a defensive size guard: if total length of all base64 `validImages` strings exceeds ~6,000,000 chars, return `{ error: "Images too large — please upload fewer or smaller images." }` with status 413 before calling the AI gateway.
+- Log at request entry: `console.log("[ai-assist] action=", action, "images=", validImages?.length)` for the image action so we can see whether requests even arrive.
 
-### 2. Manager preview: show the categories that were actually found
-File: `src/routes/manager.index.tsx`
-- Replace the hardcoded Wine/Cocktail/Dessert/Sides/Spirits/Sparkling columns with a dynamic set built from the union of `categories` keys across the preview rows.
-- Manager can rename a column header (updates the `label`), delete a column ("we don't track this"), or add a new one before importing.
-- `confirmPreview` passes the `categories` map straight through to `process_csv_upload`, which already handles it.
+### 2. `src/routes/manager.index.tsx` — surface the real error to the user
+The `supabase.functions.invoke` JS client puts the response body on `error.context` (a `Response` object). Read it and prefer its `error` field in the toast.
 
-### 3. Server home — Top 3 from the venue's own categories
-File: `src/routes/server.index.tsx`
-- Load `venue_categories` for the venue + this server's `server_category_stats` and `server_category_targets` for the visible week (and previous week for delta).
-- Drop the hardcoded `allCats` array; build it from the venue rows.
-- Best / Mid / Focus picking, "Crushing it / Could be better / Focus here" labels and the all-green gating logic stay exactly as they are — they just iterate over the dynamic list.
-- "You smashed X" and "You need to work on X" cards also read from the same dynamic list, so the label that shows up is the venue's real label (e.g. "Edamame", not "Sides").
+Change the two `invoke("ai-assist", ...)` callsites (image OCR at ~line 303 and `generate_priorities` at ~line 297) to:
 
-### 4. Server stats page — same dynamic list
-File: `src/routes/server.stats.tsx`
-- Replace the fixed wine/cocktail/dessert array with the dynamic categories the venue tracks. Each row shows `conversion` vs `target` for that key, using the venue's label.
+```ts
+const { data, error } = await supabase.functions.invoke("ai-assist", { body: { ... } });
+if (error) {
+  let serverMsg = error.message;
+  try {
+    const j = await (error as any).context?.json?.();
+    if (j?.error) serverMsg = j.error;
+  } catch { /* ignore */ }
+  throw new Error(serverMsg);
+}
+```
 
-### 5. Coaching tips
-File: `supabase/functions/ai-assist/index.ts` (server_coaching action)
-- Pass the venue's actual category list + this server's per-category stats/targets to the model so tips talk about real categories (edamame, water…) instead of "try upselling wine".
-- No schema change.
+This turns "Edge Function returned a non-2xx status code" into the real reason (e.g. `Gemini 429: ...`, `Images too large`, `unauthorized`, or the friendly `Image extraction failed. Please try again or upload a clearer image.` we already throw from `callAI`).
 
-### Out of scope
-- No DB migrations. `venue_categories` / `server_category_stats` / `server_category_targets` already cover this.
-- The legacy six `*_sales` columns on `server_stats` stay (other code still uses them for SPC + the milestone trigger). They become a subset of the dynamic categories rather than the only ones.
-- No changes to the ring fill / colour thresholds.
+### 3. No other changes
+- Gemini stays primary; OpenAI fallback stays untouched.
+- No changes to calculations, ring colors, targets, thresholds, schema, OCR prompts, ring scoring, dashboard logic, dynamic categories, CSV uploads, or styling.
+- Client-side image compression (1600px / JPEG q0.82) stays as-is.
 
-### Files touched
-- `src/lib/csv.ts`
-- `src/routes/manager.index.tsx`
-- `src/routes/server.index.tsx`
-- `src/routes/server.stats.tsx`
-- `supabase/functions/ai-assist/index.ts`
+## What we expect after deploy
+
+- If Gemini was returning 429/402/5xx and the deployed version didn't have the fallback yet, the new fallback kicks in (already shipped) and uses OpenAI.
+- If the payload was too large, the user now sees: **"Images too large — please upload fewer or smaller images."**
+- If the session token was expired, the user sees: **"unauthorized"** instead of the generic message, and we know to suggest re-logging in.
+- All future failures will appear in edge function logs with the `[ai-assist]` prefix so we can diagnose without guessing.
+
+## Files to change
+
+- `supabase/functions/ai-assist/index.ts` — outer catch logging + payload size guard + entry log
+- `src/routes/manager.index.tsx` — read `error.context` body at the two `invoke("ai-assist", ...)` sites
+
+No other files touched.
