@@ -134,16 +134,22 @@ function ServerDashboard() {
       return { label: c.label, conversion: conv, target: tgt, items, prevItems };
     });
   };
-  const uniRows: UniRow[] =
-    dynRows.length > 0
-      ? dynRows.map((r) => ({
-          label: r.label,
-          conversion: r.conversion,
-          target: r.target,
-          items: r.items,
-          prevItems: r.prevItems,
-        }))
-      : buildLegacyRows();
+  // Only prefer dynamic rows when the venue actually has usable data for the
+  // visible week — at least one category with a real stat or target. Otherwise
+  // fall back to the legacy six-column path so existing venues keep rendering
+  // exactly as before.
+  const hasDynamicData =
+    dynRows.length > 0 &&
+    dynRows.some((r) => r.conversion > 0 || r.sales > 0 || r.items > 0 || r.target > 0);
+  const uniRows: UniRow[] = hasDynamicData
+    ? dynRows.map((r) => ({
+        label: r.label,
+        conversion: r.conversion,
+        target: r.target,
+        items: r.items,
+        prevItems: r.prevItems,
+      }))
+    : buildLegacyRows();
 
   // Smashed / work-on cards
   let smashed: { label: string; delta: number } | null = null;
