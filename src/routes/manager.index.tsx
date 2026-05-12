@@ -302,7 +302,14 @@ function ManagerDashboard() {
             payload: { weekStart: week },
           },
         });
-        if (aiErr) toast.error(`AI: ${aiErr.message}`);
+        if (aiErr) {
+          let msg = aiErr.message;
+          try {
+            const j = await (aiErr as any).context?.json?.();
+            if (j?.error) msg = j.error;
+          } catch { /* ignore */ }
+          toast.error(`AI: ${msg}`);
+        }
       }),
     );
     setDisplayWeekStart(weeks[0] || importWeek);
