@@ -30,18 +30,22 @@ import { Route as ManagerReportsRouteImport } from './routes/manager.reports'
 import { Route as ManagerPrioritiesRouteImport } from './routes/manager.priorities'
 import { Route as ManagerMenuRouteImport } from './routes/manager.menu'
 import { Route as ManagerCoachingRouteImport } from './routes/manager.coaching'
+import { Route as EmailUnsubscribeRouteImport } from './routes/email/unsubscribe'
 import { Route as CheckoutSuccessRouteImport } from './routes/checkout.success'
 import { Route as CheckoutRetryRouteImport } from './routes/checkout.retry'
 import { Route as ManagerServerIndexRouteImport } from './routes/manager.server.index'
 import { Route as DemoServerIndexRouteImport } from './routes/demo.server.index'
 import { Route as DemoManagerIndexRouteImport } from './routes/demo.manager.index'
 import { Route as ManagerServerIdRouteImport } from './routes/manager.server.$id'
+import { Route as LovableEmailSuppressionRouteImport } from './routes/lovable/email/suppression'
 import { Route as DemoServerWelcomeRouteImport } from './routes/demo.server.welcome'
 import { Route as DemoServerProgressRouteImport } from './routes/demo.server.progress'
 import { Route as DemoServerMenuRouteImport } from './routes/demo.server.menu'
 import { Route as DemoManagerTeamRouteImport } from './routes/demo.manager.team'
 import { Route as DemoManagerPrioritiesRouteImport } from './routes/demo.manager.priorities'
 import { Route as DemoManagerMenuRouteImport } from './routes/demo.manager.menu'
+import { Route as LovableEmailTransactionalSendRouteImport } from './routes/lovable/email/transactional/send'
+import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/lovable/email/transactional/preview'
 import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
 import { Route as DemoManagerServerIdRouteImport } from './routes/demo.manager.server.$id'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
@@ -151,6 +155,11 @@ const ManagerCoachingRoute = ManagerCoachingRouteImport.update({
   path: '/manager/coaching',
   getParentRoute: () => rootRouteImport,
 } as any)
+const EmailUnsubscribeRoute = EmailUnsubscribeRouteImport.update({
+  id: '/email/unsubscribe',
+  path: '/email/unsubscribe',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CheckoutSuccessRoute = CheckoutSuccessRouteImport.update({
   id: '/checkout/success',
   path: '/checkout/success',
@@ -179,6 +188,11 @@ const DemoManagerIndexRoute = DemoManagerIndexRouteImport.update({
 const ManagerServerIdRoute = ManagerServerIdRouteImport.update({
   id: '/manager/server/$id',
   path: '/manager/server/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LovableEmailSuppressionRoute = LovableEmailSuppressionRouteImport.update({
+  id: '/lovable/email/suppression',
+  path: '/lovable/email/suppression',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DemoServerWelcomeRoute = DemoServerWelcomeRouteImport.update({
@@ -211,6 +225,18 @@ const DemoManagerMenuRoute = DemoManagerMenuRouteImport.update({
   path: '/demo/manager/menu',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LovableEmailTransactionalSendRoute =
+  LovableEmailTransactionalSendRouteImport.update({
+    id: '/lovable/email/transactional/send',
+    path: '/lovable/email/transactional/send',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const LovableEmailTransactionalPreviewRoute =
+  LovableEmailTransactionalPreviewRouteImport.update({
+    id: '/lovable/email/transactional/preview',
+    path: '/lovable/email/transactional/preview',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const LovableEmailQueueProcessRoute =
   LovableEmailQueueProcessRouteImport.update({
     id: '/lovable/email/queue/process',
@@ -240,6 +266,7 @@ export interface FileRoutesByFullPath {
   '/terms': typeof TermsRoute
   '/checkout/retry': typeof CheckoutRetryRoute
   '/checkout/success': typeof CheckoutSuccessRoute
+  '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/manager/coaching': typeof ManagerCoachingRoute
   '/manager/menu': typeof ManagerMenuRoute
   '/manager/priorities': typeof ManagerPrioritiesRoute
@@ -259,6 +286,7 @@ export interface FileRoutesByFullPath {
   '/demo/server/menu': typeof DemoServerMenuRoute
   '/demo/server/progress': typeof DemoServerProgressRoute
   '/demo/server/welcome': typeof DemoServerWelcomeRoute
+  '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/manager/server/$id': typeof ManagerServerIdRoute
   '/demo/manager/': typeof DemoManagerIndexRoute
   '/demo/server/': typeof DemoServerIndexRoute
@@ -266,6 +294,8 @@ export interface FileRoutesByFullPath {
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/demo/manager/server/$id': typeof DemoManagerServerIdRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
+  '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
+  '/lovable/email/transactional/send': typeof LovableEmailTransactionalSendRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -278,6 +308,7 @@ export interface FileRoutesByTo {
   '/terms': typeof TermsRoute
   '/checkout/retry': typeof CheckoutRetryRoute
   '/checkout/success': typeof CheckoutSuccessRoute
+  '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/manager/coaching': typeof ManagerCoachingRoute
   '/manager/menu': typeof ManagerMenuRoute
   '/manager/priorities': typeof ManagerPrioritiesRoute
@@ -297,6 +328,7 @@ export interface FileRoutesByTo {
   '/demo/server/menu': typeof DemoServerMenuRoute
   '/demo/server/progress': typeof DemoServerProgressRoute
   '/demo/server/welcome': typeof DemoServerWelcomeRoute
+  '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/manager/server/$id': typeof ManagerServerIdRoute
   '/demo/manager': typeof DemoManagerIndexRoute
   '/demo/server': typeof DemoServerIndexRoute
@@ -304,6 +336,8 @@ export interface FileRoutesByTo {
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/demo/manager/server/$id': typeof DemoManagerServerIdRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
+  '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
+  '/lovable/email/transactional/send': typeof LovableEmailTransactionalSendRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -317,6 +351,7 @@ export interface FileRoutesById {
   '/terms': typeof TermsRoute
   '/checkout/retry': typeof CheckoutRetryRoute
   '/checkout/success': typeof CheckoutSuccessRoute
+  '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/manager/coaching': typeof ManagerCoachingRoute
   '/manager/menu': typeof ManagerMenuRoute
   '/manager/priorities': typeof ManagerPrioritiesRoute
@@ -336,6 +371,7 @@ export interface FileRoutesById {
   '/demo/server/menu': typeof DemoServerMenuRoute
   '/demo/server/progress': typeof DemoServerProgressRoute
   '/demo/server/welcome': typeof DemoServerWelcomeRoute
+  '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/manager/server/$id': typeof ManagerServerIdRoute
   '/demo/manager/': typeof DemoManagerIndexRoute
   '/demo/server/': typeof DemoServerIndexRoute
@@ -343,6 +379,8 @@ export interface FileRoutesById {
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/demo/manager/server/$id': typeof DemoManagerServerIdRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
+  '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
+  '/lovable/email/transactional/send': typeof LovableEmailTransactionalSendRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -357,6 +395,7 @@ export interface FileRouteTypes {
     | '/terms'
     | '/checkout/retry'
     | '/checkout/success'
+    | '/email/unsubscribe'
     | '/manager/coaching'
     | '/manager/menu'
     | '/manager/priorities'
@@ -376,6 +415,7 @@ export interface FileRouteTypes {
     | '/demo/server/menu'
     | '/demo/server/progress'
     | '/demo/server/welcome'
+    | '/lovable/email/suppression'
     | '/manager/server/$id'
     | '/demo/manager/'
     | '/demo/server/'
@@ -383,6 +423,8 @@ export interface FileRouteTypes {
     | '/api/public/payments/webhook'
     | '/demo/manager/server/$id'
     | '/lovable/email/queue/process'
+    | '/lovable/email/transactional/preview'
+    | '/lovable/email/transactional/send'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -395,6 +437,7 @@ export interface FileRouteTypes {
     | '/terms'
     | '/checkout/retry'
     | '/checkout/success'
+    | '/email/unsubscribe'
     | '/manager/coaching'
     | '/manager/menu'
     | '/manager/priorities'
@@ -414,6 +457,7 @@ export interface FileRouteTypes {
     | '/demo/server/menu'
     | '/demo/server/progress'
     | '/demo/server/welcome'
+    | '/lovable/email/suppression'
     | '/manager/server/$id'
     | '/demo/manager'
     | '/demo/server'
@@ -421,6 +465,8 @@ export interface FileRouteTypes {
     | '/api/public/payments/webhook'
     | '/demo/manager/server/$id'
     | '/lovable/email/queue/process'
+    | '/lovable/email/transactional/preview'
+    | '/lovable/email/transactional/send'
   id:
     | '__root__'
     | '/'
@@ -433,6 +479,7 @@ export interface FileRouteTypes {
     | '/terms'
     | '/checkout/retry'
     | '/checkout/success'
+    | '/email/unsubscribe'
     | '/manager/coaching'
     | '/manager/menu'
     | '/manager/priorities'
@@ -452,6 +499,7 @@ export interface FileRouteTypes {
     | '/demo/server/menu'
     | '/demo/server/progress'
     | '/demo/server/welcome'
+    | '/lovable/email/suppression'
     | '/manager/server/$id'
     | '/demo/manager/'
     | '/demo/server/'
@@ -459,6 +507,8 @@ export interface FileRouteTypes {
     | '/api/public/payments/webhook'
     | '/demo/manager/server/$id'
     | '/lovable/email/queue/process'
+    | '/lovable/email/transactional/preview'
+    | '/lovable/email/transactional/send'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -472,6 +522,7 @@ export interface RootRouteChildren {
   TermsRoute: typeof TermsRoute
   CheckoutRetryRoute: typeof CheckoutRetryRoute
   CheckoutSuccessRoute: typeof CheckoutSuccessRoute
+  EmailUnsubscribeRoute: typeof EmailUnsubscribeRoute
   ManagerCoachingRoute: typeof ManagerCoachingRoute
   ManagerMenuRoute: typeof ManagerMenuRoute
   ManagerPrioritiesRoute: typeof ManagerPrioritiesRoute
@@ -490,6 +541,7 @@ export interface RootRouteChildren {
   DemoServerMenuRoute: typeof DemoServerMenuRoute
   DemoServerProgressRoute: typeof DemoServerProgressRoute
   DemoServerWelcomeRoute: typeof DemoServerWelcomeRoute
+  LovableEmailSuppressionRoute: typeof LovableEmailSuppressionRoute
   ManagerServerIdRoute: typeof ManagerServerIdRoute
   DemoManagerIndexRoute: typeof DemoManagerIndexRoute
   DemoServerIndexRoute: typeof DemoServerIndexRoute
@@ -497,6 +549,8 @@ export interface RootRouteChildren {
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
   DemoManagerServerIdRoute: typeof DemoManagerServerIdRoute
   LovableEmailQueueProcessRoute: typeof LovableEmailQueueProcessRoute
+  LovableEmailTransactionalPreviewRoute: typeof LovableEmailTransactionalPreviewRoute
+  LovableEmailTransactionalSendRoute: typeof LovableEmailTransactionalSendRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -648,6 +702,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ManagerCoachingRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/email/unsubscribe': {
+      id: '/email/unsubscribe'
+      path: '/email/unsubscribe'
+      fullPath: '/email/unsubscribe'
+      preLoaderRoute: typeof EmailUnsubscribeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/checkout/success': {
       id: '/checkout/success'
       path: '/checkout/success'
@@ -690,6 +751,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ManagerServerIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/lovable/email/suppression': {
+      id: '/lovable/email/suppression'
+      path: '/lovable/email/suppression'
+      fullPath: '/lovable/email/suppression'
+      preLoaderRoute: typeof LovableEmailSuppressionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/demo/server/welcome': {
       id: '/demo/server/welcome'
       path: '/demo/server/welcome'
@@ -730,6 +798,20 @@ declare module '@tanstack/react-router' {
       path: '/demo/manager/menu'
       fullPath: '/demo/manager/menu'
       preLoaderRoute: typeof DemoManagerMenuRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/lovable/email/transactional/send': {
+      id: '/lovable/email/transactional/send'
+      path: '/lovable/email/transactional/send'
+      fullPath: '/lovable/email/transactional/send'
+      preLoaderRoute: typeof LovableEmailTransactionalSendRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/lovable/email/transactional/preview': {
+      id: '/lovable/email/transactional/preview'
+      path: '/lovable/email/transactional/preview'
+      fullPath: '/lovable/email/transactional/preview'
+      preLoaderRoute: typeof LovableEmailTransactionalPreviewRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/lovable/email/queue/process': {
@@ -778,6 +860,7 @@ const rootRouteChildren: RootRouteChildren = {
   TermsRoute: TermsRoute,
   CheckoutRetryRoute: CheckoutRetryRoute,
   CheckoutSuccessRoute: CheckoutSuccessRoute,
+  EmailUnsubscribeRoute: EmailUnsubscribeRoute,
   ManagerCoachingRoute: ManagerCoachingRoute,
   ManagerMenuRoute: ManagerMenuRoute,
   ManagerPrioritiesRoute: ManagerPrioritiesRoute,
@@ -796,6 +879,7 @@ const rootRouteChildren: RootRouteChildren = {
   DemoServerMenuRoute: DemoServerMenuRoute,
   DemoServerProgressRoute: DemoServerProgressRoute,
   DemoServerWelcomeRoute: DemoServerWelcomeRoute,
+  LovableEmailSuppressionRoute: LovableEmailSuppressionRoute,
   ManagerServerIdRoute: ManagerServerIdRoute,
   DemoManagerIndexRoute: DemoManagerIndexRoute,
   DemoServerIndexRoute: DemoServerIndexRoute,
@@ -803,6 +887,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
   DemoManagerServerIdRoute: DemoManagerServerIdRoute,
   LovableEmailQueueProcessRoute: LovableEmailQueueProcessRoute,
+  LovableEmailTransactionalPreviewRoute: LovableEmailTransactionalPreviewRoute,
+  LovableEmailTransactionalSendRoute: LovableEmailTransactionalSendRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

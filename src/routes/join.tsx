@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { Logo } from "@/components/logo";
 import { supabase } from "@/integrations/supabase/client";
+import { notifySignup } from "@/lib/email/send";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/join")({
@@ -54,6 +55,15 @@ function Join() {
     if (u.user && vid) {
       await supabase.from("server_targets").insert({ venue_id: vid as unknown as string, user_id: u.user.id }).then(() => {}, () => {});
       await supabase.from("server_streaks" as never).insert({ venue_id: vid as unknown as string, user_id: u.user.id, current_streak: 0, longest_streak: 0 } as never).then(() => {}, () => {});
+    }
+    if (u.user) {
+      void notifySignup({
+        role: "server",
+        fullName,
+        email,
+        businessOrVenue: companyName,
+        userId: u.user.id,
+      });
     }
     toast.success("You're in! Welcome to your team.");
     navigate({ to: "/server" });
