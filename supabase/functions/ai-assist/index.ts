@@ -12,24 +12,77 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_ANON = Deno.env.get("SUPABASE_ANON_KEY")!;
 const SUPABASE_SERVICE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")!;
+const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY") ?? "";
 
-async function callAI(messages: any[], json = false) {
-  const body: any = {
-    model: "google/gemini-2.5-flash",
-    messages,
-  };
+async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs = 60000) {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...init, signal: ctrl.signal });
+  } finally {
+    clearTimeout(t);
+  }
+}
+
+async function callGemini(messages: any[], json: boolean): Promise<string> {
+  const body: any = { model: "google/gemini-2.5-flash", messages };
   if (json) body.response_format = { type: "json_object" };
-  const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+  const r = await fetchWithTimeout("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${LOVABLE_API_KEY}` },
     body: JSON.stringify(body),
   });
   if (!r.ok) {
-    const t = await r.text();
-    throw new Error(`AI ${r.status}: ${t}`);
+    const t = await r.text().catch(() => "");
+    throw new Error(`Gemini ${r.status}: ${t.slice(0, 500)}`);
   }
   const j = await r.json();
   return j.choices?.[0]?.message?.content ?? "";
+}
+
+async function callOpenAI(messages: any[], json: boolean): Promise<string> {
+  if (!OPENAI_API_KEY) throw new Error("OPENAI_API_KEY not configured");
+  const body: any = { model: "gpt-4o-mini", messages };
+  if (json) body.response_format = { type: "json_object" };
+  const r = await fetchWithTimeout("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${OPENAI_API_KEY}` },
+    body: JSON.stringify(body),
+  });
+  if (!r.ok) {
+    const t = await r.text().catch(() => "");
+    throw new Error(`OpenAI ${r.status}: ${t.slice(0, 500)}`);
+  }
+  const j = await r.json();
+  return j.choices?.[0]?.message?.content ?? "";
+}
+
+async function callAI(messages: any[], json = false): Promise<string> {
+  // Primary: Lovable AI Gateway (Gemini). Fallback: OpenAI gpt-4o-mini.
+  try {
+    const out = await callGemini(messages, json);
+    console.log("[ai-assist] provider=gemini ok");
+    return out;
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    console.warn("[ai-assist] gemini failed, falling back to openai:", msg);
+    if (!OPENAI_API_KEY) {
+      throw new Error(
+        "Image extraction failed. Please try again or upload a clearer image.",
+      );
+    }
+    try {
+      const out = await callOpenAI(messages, json);
+      console.log("[ai-assist] provider=openai (fallback) ok");
+      return out;
+    } catch (e2) {
+      const msg2 = e2 instanceof Error ? e2.message : String(e2);
+      console.error("[ai-assist] openai fallback also failed:", msg2);
+      throw new Error(
+        "Image extraction failed. Please try again or upload a clearer image.",
+      );
+    }
+  }
 }
 
 Deno.serve(async (req) => {
