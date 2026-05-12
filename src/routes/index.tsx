@@ -229,7 +229,7 @@ function Landing() {
           <ol className="mt-10 grid md:grid-cols-5 gap-4">
             {[
               "Manager uploads weekly sales data.",
-              "Manager confirms menu priorities.",
+              "Managers track coaching consistency, team performance, and estimated uplift.",
               "PoppOff creates personal scorecards.",
               "Servers see their weekly focus.",
               "Managers see coaching priorities and uplift.",
