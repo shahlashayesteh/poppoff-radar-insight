@@ -44,6 +44,7 @@ import { Route as DemoServerMenuRouteImport } from './routes/demo.server.menu'
 import { Route as DemoManagerTeamRouteImport } from './routes/demo.manager.team'
 import { Route as DemoManagerPrioritiesRouteImport } from './routes/demo.manager.priorities'
 import { Route as DemoManagerMenuRouteImport } from './routes/demo.manager.menu'
+import { Route as ApiPublicContactRouteImport } from './routes/api/public/contact'
 import { Route as LovableEmailTransactionalSendRouteImport } from './routes/lovable/email/transactional/send'
 import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/lovable/email/transactional/preview'
 import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
@@ -225,6 +226,11 @@ const DemoManagerMenuRoute = DemoManagerMenuRouteImport.update({
   path: '/demo/manager/menu',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicContactRoute = ApiPublicContactRouteImport.update({
+  id: '/api/public/contact',
+  path: '/api/public/contact',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LovableEmailTransactionalSendRoute =
   LovableEmailTransactionalSendRouteImport.update({
     id: '/lovable/email/transactional/send',
@@ -280,6 +286,7 @@ export interface FileRoutesByFullPath {
   '/signup/manager': typeof SignupManagerRoute
   '/manager/': typeof ManagerIndexRoute
   '/server/': typeof ServerIndexRoute
+  '/api/public/contact': typeof ApiPublicContactRoute
   '/demo/manager/menu': typeof DemoManagerMenuRoute
   '/demo/manager/priorities': typeof DemoManagerPrioritiesRoute
   '/demo/manager/team': typeof DemoManagerTeamRoute
@@ -322,6 +329,7 @@ export interface FileRoutesByTo {
   '/signup/manager': typeof SignupManagerRoute
   '/manager': typeof ManagerIndexRoute
   '/server': typeof ServerIndexRoute
+  '/api/public/contact': typeof ApiPublicContactRoute
   '/demo/manager/menu': typeof DemoManagerMenuRoute
   '/demo/manager/priorities': typeof DemoManagerPrioritiesRoute
   '/demo/manager/team': typeof DemoManagerTeamRoute
@@ -365,6 +373,7 @@ export interface FileRoutesById {
   '/signup/manager': typeof SignupManagerRoute
   '/manager/': typeof ManagerIndexRoute
   '/server/': typeof ServerIndexRoute
+  '/api/public/contact': typeof ApiPublicContactRoute
   '/demo/manager/menu': typeof DemoManagerMenuRoute
   '/demo/manager/priorities': typeof DemoManagerPrioritiesRoute
   '/demo/manager/team': typeof DemoManagerTeamRoute
@@ -409,6 +418,7 @@ export interface FileRouteTypes {
     | '/signup/manager'
     | '/manager/'
     | '/server/'
+    | '/api/public/contact'
     | '/demo/manager/menu'
     | '/demo/manager/priorities'
     | '/demo/manager/team'
@@ -451,6 +461,7 @@ export interface FileRouteTypes {
     | '/signup/manager'
     | '/manager'
     | '/server'
+    | '/api/public/contact'
     | '/demo/manager/menu'
     | '/demo/manager/priorities'
     | '/demo/manager/team'
@@ -493,6 +504,7 @@ export interface FileRouteTypes {
     | '/signup/manager'
     | '/manager/'
     | '/server/'
+    | '/api/public/contact'
     | '/demo/manager/menu'
     | '/demo/manager/priorities'
     | '/demo/manager/team'
@@ -535,6 +547,7 @@ export interface RootRouteChildren {
   ServerWelcomeRoute: typeof ServerWelcomeRoute
   ManagerIndexRoute: typeof ManagerIndexRoute
   ServerIndexRoute: typeof ServerIndexRoute
+  ApiPublicContactRoute: typeof ApiPublicContactRoute
   DemoManagerMenuRoute: typeof DemoManagerMenuRoute
   DemoManagerPrioritiesRoute: typeof DemoManagerPrioritiesRoute
   DemoManagerTeamRoute: typeof DemoManagerTeamRoute
@@ -800,6 +813,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DemoManagerMenuRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/contact': {
+      id: '/api/public/contact'
+      path: '/api/public/contact'
+      fullPath: '/api/public/contact'
+      preLoaderRoute: typeof ApiPublicContactRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/lovable/email/transactional/send': {
       id: '/lovable/email/transactional/send'
       path: '/lovable/email/transactional/send'
@@ -873,6 +893,7 @@ const rootRouteChildren: RootRouteChildren = {
   ServerWelcomeRoute: ServerWelcomeRoute,
   ManagerIndexRoute: ManagerIndexRoute,
   ServerIndexRoute: ServerIndexRoute,
+  ApiPublicContactRoute: ApiPublicContactRoute,
   DemoManagerMenuRoute: DemoManagerMenuRoute,
   DemoManagerPrioritiesRoute: DemoManagerPrioritiesRoute,
   DemoManagerTeamRoute: DemoManagerTeamRoute,
