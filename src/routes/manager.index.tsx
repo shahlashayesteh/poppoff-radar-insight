@@ -302,7 +302,14 @@ function ManagerDashboard() {
             payload: { weekStart: week },
           },
         });
-        if (aiErr) toast.error(`AI: ${aiErr.message}`);
+        if (aiErr) {
+          let msg = aiErr.message;
+          try {
+            const j = await (aiErr as any).context?.json?.();
+            if (j?.error) msg = j.error;
+          } catch { /* ignore */ }
+          toast.error(`AI: ${msg}`);
+        }
       }),
     );
     setDisplayWeekStart(weeks[0] || importWeek);
@@ -340,7 +347,14 @@ function ManagerDashboard() {
             payload: { images: dataUrls },
           },
         });
-        if (error) throw error;
+        if (error) {
+          let msg = error.message;
+          try {
+            const j = await (error as any).context?.json?.();
+            if (j?.error) msg = j.error;
+          } catch { /* ignore */ }
+          throw new Error(msg);
+        }
         const result = data as {
           rows: CsvRow[];
           confidence: number;

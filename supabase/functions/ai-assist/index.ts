@@ -113,8 +113,14 @@ Deno.serve(async (req) => {
     if (action === "parse_stats_image") {
       const images: string[] = Array.isArray(payload?.images) ? payload.images.slice(0, 4) : [];
       const validImages = images.filter((u) => typeof u === "string" && u.startsWith("data:image/"));
+      console.log("[ai-assist] action=parse_stats_image images=", validImages.length);
       if (!validImages.length) {
         return new Response(JSON.stringify({ error: "no images provided" }), { status: 400, headers: { ...cors, "Content-Type": "application/json" } });
+      }
+      const totalBytes = validImages.reduce((n, s) => n + s.length, 0);
+      if (totalBytes > 6_000_000) {
+        console.warn("[ai-assist] payload too large:", totalBytes);
+        return new Response(JSON.stringify({ error: "Images too large — please upload fewer or smaller images." }), { status: 413, headers: { ...cors, "Content-Type": "application/json" } });
       }
       const sys = "You are an OCR and data-extraction assistant for restaurant server-performance reports. Read every image carefully and extract one row per individual server/staff member. Reply ONLY with JSON: {\"rows\":[{\"server_name\":string,\"total_covers\":number,\"total_sales\":number,\"wine_sales\":number,\"dessert_sales\":number,\"cocktail_sales\":number,\"sides_sales\":number,\"spirits_sales\":number,\"sparkling_sales\":number}],\"week_start\":string|null,\"confidence\":number,\"notes\":string}. RULES: (1) confidence is 0-1 (your certainty the data is correct and complete). Use <0.5 if image is blurry/cropped or critical fields are missing. (2) Numbers MUST be plain numbers — strip currency symbols, commas, %. (3) If a category is not shown for a server, use 0. (4) week_start: an ISO Monday date (YYYY-MM-DD) if a date or week is visible, else null. (5) Skip TOTAL/SUMMARY rows — only individual servers. (6) notes: brief description of issues if confidence<0.7.";
       const userContent: any[] = [{ type: "text", text: "Extract server sales rows from these report images." }];
@@ -317,6 +323,7 @@ Deno.serve(async (req) => {
 
     return new Response(JSON.stringify({ error: "unknown action" }), { status: 400, headers: { ...cors, "Content-Type": "application/json" } });
   } catch (e) {
+    console.error("[ai-assist] handler error:", e instanceof Error ? e.stack || e.message : String(e));
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : String(e) }), { status: 500, headers: { ...cors, "Content-Type": "application/json" } });
   }
 });
