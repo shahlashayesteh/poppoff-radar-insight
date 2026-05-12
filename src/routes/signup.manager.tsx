@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Logo } from "@/components/logo";
 import { supabase } from "@/integrations/supabase/client";
+import { notifySignup } from "@/lib/email/send";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/signup/manager")({
@@ -75,6 +76,15 @@ function SignUpManager() {
       return;
     }
     try { localStorage.removeItem("poppoff_pending_price_id"); } catch {}
+    if (u.user) {
+      void notifySignup({
+        role: "manager",
+        fullName,
+        email,
+        businessOrVenue: businessName,
+        userId: u.user.id,
+      });
+    }
     toast.success("Welcome to PoppOff!");
     navigate({ to: "/manager" });
   };
