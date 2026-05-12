@@ -138,9 +138,14 @@ function ServerDashboard() {
   // visible week — at least one category with a real stat or target. Otherwise
   // fall back to the legacy six-column path so existing venues keep rendering
   // exactly as before.
+  // Dynamic path requires real per-category STATS for the visible week, not
+  // just targets. Targets alone (e.g. seeded sides=1) would leave every row
+  // with items=0 and the Top 3 filter would drop them all. When no category
+  // has any actual sales/items/conversion this week, fall back to the legacy
+  // six columns on server_stats.
   const hasDynamicData =
     dynRows.length > 0 &&
-    dynRows.some((r) => r.conversion > 0 || r.sales > 0 || r.items > 0 || r.target > 0);
+    dynRows.some((r) => r.conversion > 0 || r.sales > 0 || r.items > 0);
   const uniRows: UniRow[] = hasDynamicData
     ? dynRows.map((r) => ({
         label: r.label,
