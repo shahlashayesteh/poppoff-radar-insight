@@ -16,6 +16,7 @@ import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as JoinRouteImport } from './routes/join'
+import { Route as ContactRouteImport } from './routes/contact'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ServerIndexRouteImport } from './routes/server.index'
 import { Route as ManagerIndexRouteImport } from './routes/manager.index'
@@ -84,6 +85,11 @@ const LoginRoute = LoginRouteImport.update({
 const JoinRoute = JoinRouteImport.update({
   id: '/join',
   path: '/join',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ContactRoute = ContactRouteImport.update({
+  id: '/contact',
+  path: '/contact',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -263,6 +269,7 @@ const ApiPublicPaymentsWebhookRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/contact': typeof ContactRoute
   '/join': typeof JoinRoute
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
@@ -306,6 +313,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/contact': typeof ContactRoute
   '/join': typeof JoinRoute
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
@@ -350,6 +358,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/contact': typeof ContactRoute
   '/join': typeof JoinRoute
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
@@ -395,6 +404,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/contact'
     | '/join'
     | '/login'
     | '/privacy'
@@ -438,6 +448,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/contact'
     | '/join'
     | '/login'
     | '/privacy'
@@ -481,6 +492,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/contact'
     | '/join'
     | '/login'
     | '/privacy'
@@ -525,6 +537,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ContactRoute: typeof ContactRoute
   JoinRoute: typeof JoinRoute
   LoginRoute: typeof LoginRoute
   PrivacyRoute: typeof PrivacyRoute
@@ -615,6 +628,13 @@ declare module '@tanstack/react-router' {
       path: '/join'
       fullPath: '/join'
       preLoaderRoute: typeof JoinRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/contact': {
+      id: '/contact'
+      path: '/contact'
+      fullPath: '/contact'
+      preLoaderRoute: typeof ContactRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -871,6 +891,7 @@ const SignupRouteWithChildren =
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ContactRoute: ContactRoute,
   JoinRoute: JoinRoute,
   LoginRoute: LoginRoute,
   PrivacyRoute: PrivacyRoute,
