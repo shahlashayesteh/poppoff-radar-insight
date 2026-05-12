@@ -699,7 +699,7 @@ function ManagerDashboard() {
                   </table>
                   {catCols.length === 0 && (
                     <p className="mt-2 text-xs text-muted-foreground">
-                      No per-category breakdown was extracted — only totals will be imported.
+                      No category columns detected in your image. Totals will be imported — you can still confirm.
                     </p>
                   )}
                 </div>
