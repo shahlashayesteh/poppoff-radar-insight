@@ -122,8 +122,8 @@ Deno.serve(async (req) => {
         console.warn("[ai-assist] payload too large:", totalBytes);
         return new Response(JSON.stringify({ error: "Images too large — please upload fewer or smaller images." }), { status: 413, headers: { ...cors, "Content-Type": "application/json" } });
       }
-      const sys = "You are an OCR and data-extraction assistant for restaurant server-performance reports. Read every image carefully and extract one row per individual server/staff member. Reply ONLY with JSON: {\"rows\":[{\"server_name\":string,\"total_covers\":number,\"total_sales\":number,\"wine_sales\":number,\"dessert_sales\":number,\"cocktail_sales\":number,\"sides_sales\":number,\"spirits_sales\":number,\"sparkling_sales\":number}],\"week_start\":string|null,\"confidence\":number,\"notes\":string}. RULES: (1) confidence is 0-1 (your certainty the data is correct and complete). Use <0.5 if image is blurry/cropped or critical fields are missing. (2) Numbers MUST be plain numbers — strip currency symbols, commas, %. (3) If a category is not shown for a server, use 0. (4) week_start: an ISO Monday date (YYYY-MM-DD) if a date or week is visible, else null. (5) Skip TOTAL/SUMMARY rows — only individual servers. (6) notes: brief description of issues if confidence<0.7.";
-      const userContent: any[] = [{ type: "text", text: "Extract server sales rows from these report images." }];
+      const sys = "You are an OCR and data-extraction assistant for restaurant server-performance reports. Read every image carefully and extract one row per individual server/staff member. Reply ONLY with JSON: {\"rows\":[{\"server_name\":string,\"total_covers\":number,\"total_sales\":number,\"categories\":[{\"label\":string,\"quantity\":number,\"net_sales\":number}]}],\"week_start\":string|null,\"confidence\":number,\"notes\":string}. RULES: (1) Read EVERY column header in the report. Each non-total product/category column becomes one entry in `categories`. Pair sibling 'Quantity'+'Net' (or 'Qty'+'Sales', 'Units'+'Revenue', etc.) columns under the same category label. If only one of the pair exists, fill it and set the other to 0. (2) Use the column header text verbatim as `label` (e.g. 'Salted Edamame', 'SESAME CRACKERS', 'Wine', 'Dessert'). Do NOT invent or rename categories. (3) Skip TOTAL / SUMMARY rows entirely. The 'Total Quantity' / 'Total Net' trailing columns become `total_sales` (use Total Net) — do NOT include them in `categories`. If the report has no covers column, set total_covers to 0. (4) Negative values are allowed (refunds) — preserve the sign. (5) If the same server appears across multiple images, MERGE their categories into ONE row (sum quantities and net_sales per category label). (6) Numbers MUST be plain — strip £, $, €, commas, %. Empty cells = 0. (7) confidence 0-1; use <0.5 if blurry / cropped / critical fields missing. (8) week_start: ISO Monday date YYYY-MM-DD if visible, else null. (9) notes: brief issue description if confidence<0.7.";
+      const userContent: any[] = [{ type: "text", text: "Extract server sales rows from these report images. Use the dynamic categories format described in the system prompt." }];
       for (const url of validImages) userContent.push({ type: "image_url", image_url: { url } });
       const out = await callAI([
         { role: "system", content: sys },
@@ -131,17 +131,80 @@ Deno.serve(async (req) => {
       ], true);
       let parsed: any = { rows: [], confidence: 0, notes: "" };
       try { parsed = JSON.parse(out); } catch {}
-      const rows = (Array.isArray(parsed.rows) ? parsed.rows : []).map((r: any) => ({
-        server_name: String(r.server_name || "").trim(),
-        total_covers: Number(r.total_covers) || 0,
-        total_sales: Number(r.total_sales) || 0,
-        wine_sales: Number(r.wine_sales) || 0,
-        dessert_sales: Number(r.dessert_sales) || 0,
-        cocktail_sales: Number(r.cocktail_sales) || 0,
-        sides_sales: Number(r.sides_sales) || 0,
-        spirits_sales: Number(r.spirits_sales) || 0,
-        sparkling_sales: Number(r.sparkling_sales) || 0,
-      })).filter((r: any) => r.server_name && (r.total_sales > 0 || r.total_covers > 0));
+
+      const slugify = (s: string) =>
+        String(s || "")
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "_")
+          .replace(/^_+|_+$/g, "")
+          .slice(0, 60) || "category";
+
+      const LEGACY_KEYS: Record<string, string> = {
+        wine: "wine_sales",
+        wines: "wine_sales",
+        dessert: "dessert_sales",
+        desserts: "dessert_sales",
+        cocktail: "cocktail_sales",
+        cocktails: "cocktail_sales",
+        side: "sides_sales",
+        sides: "sides_sales",
+        spirit: "spirits_sales",
+        spirits: "spirits_sales",
+        sparkling: "sparkling_sales",
+        champagne: "sparkling_sales",
+      };
+
+      const rows = (Array.isArray(parsed.rows) ? parsed.rows : []).map((r: any) => {
+        const categoriesMap: Record<string, { label: string; sales: number; quantity: number; metric_type: "sales" | "quantity" }> = {};
+        const legacy: Record<string, number> = {
+          wine_sales: 0,
+          dessert_sales: 0,
+          cocktail_sales: 0,
+          sides_sales: 0,
+          spirits_sales: 0,
+          sparkling_sales: 0,
+        };
+        const cats = Array.isArray(r.categories) ? r.categories : [];
+        for (const c of cats) {
+          const label = String(c?.label || "").trim();
+          if (!label) continue;
+          const net = Number(c?.net_sales ?? c?.sales ?? 0) || 0;
+          const qty = Number(c?.quantity ?? 0) || 0;
+          if (!net && !qty) continue;
+          const key = slugify(label);
+          const existing = categoriesMap[key];
+          if (existing) {
+            existing.sales += net;
+            existing.quantity += qty;
+            existing.metric_type = existing.sales !== 0 ? "sales" : "quantity";
+          } else {
+            categoriesMap[key] = {
+              label,
+              sales: net,
+              quantity: qty,
+              metric_type: net !== 0 ? "sales" : "quantity",
+            };
+          }
+          const legacyKey = LEGACY_KEYS[key];
+          if (legacyKey) legacy[legacyKey] += net;
+        }
+
+        const catSalesSum = Object.values(categoriesMap).reduce((s, v) => s + v.sales, 0);
+        const rawTotal = Number(r.total_sales) || 0;
+        const totalSales = rawTotal !== 0 ? rawTotal : catSalesSum;
+
+        return {
+          server_name: String(r.server_name || "").trim(),
+          total_covers: Number(r.total_covers) || 0,
+          total_sales: totalSales,
+          ...legacy,
+          categories: categoriesMap,
+        };
+      }).filter((r: any) =>
+        r.server_name &&
+        (r.total_sales !== 0 || r.total_covers > 0 || Object.keys(r.categories).length > 0),
+      );
+
       const confidence = Math.max(0, Math.min(1, Number(parsed.confidence) || 0));
       return Response.json({
         ok: true,
