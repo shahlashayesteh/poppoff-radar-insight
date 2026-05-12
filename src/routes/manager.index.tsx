@@ -218,10 +218,43 @@ function ManagerDashboard() {
 
   const fileToDataUrl = (file: File) =>
     new Promise<string>((resolve, reject) => {
-      const r = new FileReader();
-      r.onload = () => resolve(String(r.result || ""));
-      r.onerror = () => reject(r.error || new Error("read failed"));
-      r.readAsDataURL(file);
+      // Compress/downscale images before OCR to stay under edge body limits
+      // and reduce OpenAI/Gemini latency. Non-images pass through unchanged.
+      if (!file.type.startsWith("image/")) {
+        const r = new FileReader();
+        r.onload = () => resolve(String(r.result || ""));
+        r.onerror = () => reject(r.error || new Error("read failed"));
+        r.readAsDataURL(file);
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        const img = new Image();
+        img.onload = () => {
+          try {
+            const MAX = 1600;
+            let { width: w, height: h } = img;
+            if (w > MAX || h > MAX) {
+              const k = Math.min(MAX / w, MAX / h);
+              w = Math.round(w * k);
+              h = Math.round(h * k);
+            }
+            const canvas = document.createElement("canvas");
+            canvas.width = w;
+            canvas.height = h;
+            const ctx = canvas.getContext("2d");
+            if (!ctx) return resolve(String(reader.result || ""));
+            ctx.drawImage(img, 0, 0, w, h);
+            resolve(canvas.toDataURL("image/jpeg", 0.82));
+          } catch {
+            resolve(String(reader.result || ""));
+          }
+        };
+        img.onerror = () => resolve(String(reader.result || ""));
+        img.src = String(reader.result || "");
+      };
+      reader.onerror = () => reject(reader.error || new Error("read failed"));
+      reader.readAsDataURL(file);
     });
 
   const importRows = async (rows: CsvRow[], fileCount: number, sourceLabel: string) => {
