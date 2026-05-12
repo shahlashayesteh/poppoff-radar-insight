@@ -74,8 +74,13 @@ function Page() {
       prevItems: prevStat ? estimateItemsSold(Number(prevStat[c.sales] ?? 0), c.cat, prices) : 0,
     }));
   };
+  const hasDynamicData =
+    dynRows.length > 0 &&
+    dynRows.some(
+      (r) => r.conversion > 0 || r.sales > 0 || r.items > 0 || r.prevItems > 0 || r.prevSales > 0,
+    );
   const rows: Row[] =
-    dynRows.length > 0
+    hasDynamicData
       ? dynRows.map((r) => ({
           label: r.label,
           conversion: r.conversion,
