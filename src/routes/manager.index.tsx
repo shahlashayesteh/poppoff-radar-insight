@@ -347,7 +347,14 @@ function ManagerDashboard() {
             payload: { images: dataUrls },
           },
         });
-        if (error) throw error;
+        if (error) {
+          let msg = error.message;
+          try {
+            const j = await (error as any).context?.json?.();
+            if (j?.error) msg = j.error;
+          } catch { /* ignore */ }
+          throw new Error(msg);
+        }
         const result = data as {
           rows: CsvRow[];
           confidence: number;
