@@ -323,6 +323,7 @@ Deno.serve(async (req) => {
 
     return new Response(JSON.stringify({ error: "unknown action" }), { status: 400, headers: { ...cors, "Content-Type": "application/json" } });
   } catch (e) {
+    console.error("[ai-assist] handler error:", e instanceof Error ? e.stack || e.message : String(e));
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : String(e) }), { status: 500, headers: { ...cors, "Content-Type": "application/json" } });
   }
 });
