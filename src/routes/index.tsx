@@ -39,6 +39,7 @@ function Landing() {
             <a href="#how" className="hover:text-brand-green">How it works</a>
             <a href="#pricing" className="hover:text-brand-green">Pricing</a>
             <a href="#about" className="hover:text-brand-green">About</a>
+            <Link to="/contact" className="hover:text-brand-green">Contact</Link>
           </nav>
           <div className="flex items-center gap-2">
             <Link to="/signin" className="rounded-xl px-3 py-2 text-sm font-semibold border border-border hover:border-foreground">Sign in</Link>

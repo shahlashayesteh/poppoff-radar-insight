@@ -16,6 +16,7 @@ import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as JoinRouteImport } from './routes/join'
+import { Route as ContactRouteImport } from './routes/contact'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ServerIndexRouteImport } from './routes/server.index'
 import { Route as ManagerIndexRouteImport } from './routes/manager.index'
@@ -44,6 +45,7 @@ import { Route as DemoServerMenuRouteImport } from './routes/demo.server.menu'
 import { Route as DemoManagerTeamRouteImport } from './routes/demo.manager.team'
 import { Route as DemoManagerPrioritiesRouteImport } from './routes/demo.manager.priorities'
 import { Route as DemoManagerMenuRouteImport } from './routes/demo.manager.menu'
+import { Route as ApiPublicContactRouteImport } from './routes/api/public/contact'
 import { Route as LovableEmailTransactionalSendRouteImport } from './routes/lovable/email/transactional/send'
 import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/lovable/email/transactional/preview'
 import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
@@ -83,6 +85,11 @@ const LoginRoute = LoginRouteImport.update({
 const JoinRoute = JoinRouteImport.update({
   id: '/join',
   path: '/join',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ContactRoute = ContactRouteImport.update({
+  id: '/contact',
+  path: '/contact',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -225,6 +232,11 @@ const DemoManagerMenuRoute = DemoManagerMenuRouteImport.update({
   path: '/demo/manager/menu',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicContactRoute = ApiPublicContactRouteImport.update({
+  id: '/api/public/contact',
+  path: '/api/public/contact',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LovableEmailTransactionalSendRoute =
   LovableEmailTransactionalSendRouteImport.update({
     id: '/lovable/email/transactional/send',
@@ -257,6 +269,7 @@ const ApiPublicPaymentsWebhookRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/contact': typeof ContactRoute
   '/join': typeof JoinRoute
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
@@ -280,6 +293,7 @@ export interface FileRoutesByFullPath {
   '/signup/manager': typeof SignupManagerRoute
   '/manager/': typeof ManagerIndexRoute
   '/server/': typeof ServerIndexRoute
+  '/api/public/contact': typeof ApiPublicContactRoute
   '/demo/manager/menu': typeof DemoManagerMenuRoute
   '/demo/manager/priorities': typeof DemoManagerPrioritiesRoute
   '/demo/manager/team': typeof DemoManagerTeamRoute
@@ -299,6 +313,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/contact': typeof ContactRoute
   '/join': typeof JoinRoute
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
@@ -322,6 +337,7 @@ export interface FileRoutesByTo {
   '/signup/manager': typeof SignupManagerRoute
   '/manager': typeof ManagerIndexRoute
   '/server': typeof ServerIndexRoute
+  '/api/public/contact': typeof ApiPublicContactRoute
   '/demo/manager/menu': typeof DemoManagerMenuRoute
   '/demo/manager/priorities': typeof DemoManagerPrioritiesRoute
   '/demo/manager/team': typeof DemoManagerTeamRoute
@@ -342,6 +358,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/contact': typeof ContactRoute
   '/join': typeof JoinRoute
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
@@ -365,6 +382,7 @@ export interface FileRoutesById {
   '/signup/manager': typeof SignupManagerRoute
   '/manager/': typeof ManagerIndexRoute
   '/server/': typeof ServerIndexRoute
+  '/api/public/contact': typeof ApiPublicContactRoute
   '/demo/manager/menu': typeof DemoManagerMenuRoute
   '/demo/manager/priorities': typeof DemoManagerPrioritiesRoute
   '/demo/manager/team': typeof DemoManagerTeamRoute
@@ -386,6 +404,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/contact'
     | '/join'
     | '/login'
     | '/privacy'
@@ -409,6 +428,7 @@ export interface FileRouteTypes {
     | '/signup/manager'
     | '/manager/'
     | '/server/'
+    | '/api/public/contact'
     | '/demo/manager/menu'
     | '/demo/manager/priorities'
     | '/demo/manager/team'
@@ -428,6 +448,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/contact'
     | '/join'
     | '/login'
     | '/privacy'
@@ -451,6 +472,7 @@ export interface FileRouteTypes {
     | '/signup/manager'
     | '/manager'
     | '/server'
+    | '/api/public/contact'
     | '/demo/manager/menu'
     | '/demo/manager/priorities'
     | '/demo/manager/team'
@@ -470,6 +492,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/contact'
     | '/join'
     | '/login'
     | '/privacy'
@@ -493,6 +516,7 @@ export interface FileRouteTypes {
     | '/signup/manager'
     | '/manager/'
     | '/server/'
+    | '/api/public/contact'
     | '/demo/manager/menu'
     | '/demo/manager/priorities'
     | '/demo/manager/team'
@@ -513,6 +537,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ContactRoute: typeof ContactRoute
   JoinRoute: typeof JoinRoute
   LoginRoute: typeof LoginRoute
   PrivacyRoute: typeof PrivacyRoute
@@ -535,6 +560,7 @@ export interface RootRouteChildren {
   ServerWelcomeRoute: typeof ServerWelcomeRoute
   ManagerIndexRoute: typeof ManagerIndexRoute
   ServerIndexRoute: typeof ServerIndexRoute
+  ApiPublicContactRoute: typeof ApiPublicContactRoute
   DemoManagerMenuRoute: typeof DemoManagerMenuRoute
   DemoManagerPrioritiesRoute: typeof DemoManagerPrioritiesRoute
   DemoManagerTeamRoute: typeof DemoManagerTeamRoute
@@ -602,6 +628,13 @@ declare module '@tanstack/react-router' {
       path: '/join'
       fullPath: '/join'
       preLoaderRoute: typeof JoinRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/contact': {
+      id: '/contact'
+      path: '/contact'
+      fullPath: '/contact'
+      preLoaderRoute: typeof ContactRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -800,6 +833,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DemoManagerMenuRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/contact': {
+      id: '/api/public/contact'
+      path: '/api/public/contact'
+      fullPath: '/api/public/contact'
+      preLoaderRoute: typeof ApiPublicContactRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/lovable/email/transactional/send': {
       id: '/lovable/email/transactional/send'
       path: '/lovable/email/transactional/send'
@@ -851,6 +891,7 @@ const SignupRouteWithChildren =
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ContactRoute: ContactRoute,
   JoinRoute: JoinRoute,
   LoginRoute: LoginRoute,
   PrivacyRoute: PrivacyRoute,
@@ -873,6 +914,7 @@ const rootRouteChildren: RootRouteChildren = {
   ServerWelcomeRoute: ServerWelcomeRoute,
   ManagerIndexRoute: ManagerIndexRoute,
   ServerIndexRoute: ServerIndexRoute,
+  ApiPublicContactRoute: ApiPublicContactRoute,
   DemoManagerMenuRoute: DemoManagerMenuRoute,
   DemoManagerPrioritiesRoute: DemoManagerPrioritiesRoute,
   DemoManagerTeamRoute: DemoManagerTeamRoute,
