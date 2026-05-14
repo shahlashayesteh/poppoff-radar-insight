@@ -38,6 +38,7 @@ import { Route as ManagerPrioritiesRouteImport } from './routes/manager.prioriti
 import { Route as ManagerMenuRouteImport } from './routes/manager.menu'
 import { Route as ManagerCoachingRouteImport } from './routes/manager.coaching'
 import { Route as EmailUnsubscribeRouteImport } from './routes/email/unsubscribe'
+import { Route as DemoManagerDashboardRouteImport } from './routes/demo.manager-dashboard'
 import { Route as CheckoutSuccessRouteImport } from './routes/checkout.success'
 import { Route as CheckoutRetryRouteImport } from './routes/checkout.retry'
 import { Route as ManagerServerIndexRouteImport } from './routes/manager.server.index'
@@ -208,6 +209,11 @@ const EmailUnsubscribeRoute = EmailUnsubscribeRouteImport.update({
   path: '/email/unsubscribe',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DemoManagerDashboardRoute = DemoManagerDashboardRouteImport.update({
+  id: '/demo/manager-dashboard',
+  path: '/demo/manager-dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CheckoutSuccessRoute = CheckoutSuccessRouteImport.update({
   id: '/checkout/success',
   path: '/checkout/success',
@@ -326,6 +332,7 @@ export interface FileRoutesByFullPath {
   '/terms': typeof TermsRoute
   '/checkout/retry': typeof CheckoutRetryRoute
   '/checkout/success': typeof CheckoutSuccessRoute
+  '/demo/manager-dashboard': typeof DemoManagerDashboardRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/manager/coaching': typeof ManagerCoachingRoute
   '/manager/menu': typeof ManagerMenuRoute
@@ -376,6 +383,7 @@ export interface FileRoutesByTo {
   '/terms': typeof TermsRoute
   '/checkout/retry': typeof CheckoutRetryRoute
   '/checkout/success': typeof CheckoutSuccessRoute
+  '/demo/manager-dashboard': typeof DemoManagerDashboardRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/manager/coaching': typeof ManagerCoachingRoute
   '/manager/menu': typeof ManagerMenuRoute
@@ -427,6 +435,7 @@ export interface FileRoutesById {
   '/terms': typeof TermsRoute
   '/checkout/retry': typeof CheckoutRetryRoute
   '/checkout/success': typeof CheckoutSuccessRoute
+  '/demo/manager-dashboard': typeof DemoManagerDashboardRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/manager/coaching': typeof ManagerCoachingRoute
   '/manager/menu': typeof ManagerMenuRoute
@@ -479,6 +488,7 @@ export interface FileRouteTypes {
     | '/terms'
     | '/checkout/retry'
     | '/checkout/success'
+    | '/demo/manager-dashboard'
     | '/email/unsubscribe'
     | '/manager/coaching'
     | '/manager/menu'
@@ -529,6 +539,7 @@ export interface FileRouteTypes {
     | '/terms'
     | '/checkout/retry'
     | '/checkout/success'
+    | '/demo/manager-dashboard'
     | '/email/unsubscribe'
     | '/manager/coaching'
     | '/manager/menu'
@@ -579,6 +590,7 @@ export interface FileRouteTypes {
     | '/terms'
     | '/checkout/retry'
     | '/checkout/success'
+    | '/demo/manager-dashboard'
     | '/email/unsubscribe'
     | '/manager/coaching'
     | '/manager/menu'
@@ -630,6 +642,7 @@ export interface RootRouteChildren {
   TermsRoute: typeof TermsRoute
   CheckoutRetryRoute: typeof CheckoutRetryRoute
   CheckoutSuccessRoute: typeof CheckoutSuccessRoute
+  DemoManagerDashboardRoute: typeof DemoManagerDashboardRoute
   EmailUnsubscribeRoute: typeof EmailUnsubscribeRoute
   ManagerCoachingRoute: typeof ManagerCoachingRoute
   ManagerMenuRoute: typeof ManagerMenuRoute
@@ -867,6 +880,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EmailUnsubscribeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/demo/manager-dashboard': {
+      id: '/demo/manager-dashboard'
+      path: '/demo/manager-dashboard'
+      fullPath: '/demo/manager-dashboard'
+      preLoaderRoute: typeof DemoManagerDashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/checkout/success': {
       id: '/checkout/success'
       path: '/checkout/success'
@@ -1033,6 +1053,7 @@ const rootRouteChildren: RootRouteChildren = {
   TermsRoute: TermsRoute,
   CheckoutRetryRoute: CheckoutRetryRoute,
   CheckoutSuccessRoute: CheckoutSuccessRoute,
+  DemoManagerDashboardRoute: DemoManagerDashboardRoute,
   EmailUnsubscribeRoute: EmailUnsubscribeRoute,
   ManagerCoachingRoute: ManagerCoachingRoute,
   ManagerMenuRoute: ManagerMenuRoute,
