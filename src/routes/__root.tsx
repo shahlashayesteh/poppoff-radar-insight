@@ -87,7 +87,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       },
       { property: "og:type", content: "website" },
       { property: "og:site_name", content: "PoppOff" },
+      { property: "og:image", content: "https://poppoffstats.com/og-image.jpg" },
+      { property: "og:image:width", content: "1200" },
+      { property: "og:image:height", content: "630" },
+      { property: "og:image:alt", content: "PoppOff — Personal stats for every server" },
       { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:image", content: "https://poppoffstats.com/og-image.jpg" },
+      { name: "twitter:image:alt", content: "PoppOff — Personal stats for every server" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
@@ -106,8 +112,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
           "@type": "Organization",
           name: "PoppOff",
           url: "https://poppoffstats.com",
+          logo: "https://poppoffstats.com/og-image.jpg",
           description:
             "Personal scorecards, AI coaching and menu-specific upsells for premium restaurants.",
+          sameAs: [
+            "https://www.linkedin.com/company/poppoffstats/",
+            "https://www.instagram.com/poppoffstats/",
+          ],
         }),
       },
     ],
