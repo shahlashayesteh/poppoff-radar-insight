@@ -16,9 +16,11 @@ import { Route as SigninRouteImport } from './routes/signin'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as RestaurantServerPerformanceSoftwareRouteImport } from './routes/restaurant-server-performance-software'
 import { Route as RestaurantSalesCoachingSoftwareRouteImport } from './routes/restaurant-sales-coaching-software'
+import { Route as RestaurantLeaderboardSoftwareRouteImport } from './routes/restaurant-leaderboard-software'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as JoinRouteImport } from './routes/join'
+import { Route as HospitalityPerformanceSoftwareRouteImport } from './routes/hospitality-performance-software'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ServerIndexRouteImport } from './routes/server.index'
@@ -92,6 +94,12 @@ const RestaurantSalesCoachingSoftwareRoute =
     path: '/restaurant-sales-coaching-software',
     getParentRoute: () => rootRouteImport,
   } as any)
+const RestaurantLeaderboardSoftwareRoute =
+  RestaurantLeaderboardSoftwareRouteImport.update({
+    id: '/restaurant-leaderboard-software',
+    path: '/restaurant-leaderboard-software',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const PrivacyRoute = PrivacyRouteImport.update({
   id: '/privacy',
   path: '/privacy',
@@ -107,6 +115,12 @@ const JoinRoute = JoinRouteImport.update({
   path: '/join',
   getParentRoute: () => rootRouteImport,
 } as any)
+const HospitalityPerformanceSoftwareRoute =
+  HospitalityPerformanceSoftwareRouteImport.update({
+    id: '/hospitality-performance-software',
+    path: '/hospitality-performance-software',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ContactRoute = ContactRouteImport.update({
   id: '/contact',
   path: '/contact',
@@ -290,9 +304,11 @@ const ApiPublicPaymentsWebhookRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/contact': typeof ContactRoute
+  '/hospitality-performance-software': typeof HospitalityPerformanceSoftwareRoute
   '/join': typeof JoinRoute
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
+  '/restaurant-leaderboard-software': typeof RestaurantLeaderboardSoftwareRoute
   '/restaurant-sales-coaching-software': typeof RestaurantSalesCoachingSoftwareRoute
   '/restaurant-server-performance-software': typeof RestaurantServerPerformanceSoftwareRoute
   '/settings': typeof SettingsRoute
@@ -337,9 +353,11 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/contact': typeof ContactRoute
+  '/hospitality-performance-software': typeof HospitalityPerformanceSoftwareRoute
   '/join': typeof JoinRoute
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
+  '/restaurant-leaderboard-software': typeof RestaurantLeaderboardSoftwareRoute
   '/restaurant-sales-coaching-software': typeof RestaurantSalesCoachingSoftwareRoute
   '/restaurant-server-performance-software': typeof RestaurantServerPerformanceSoftwareRoute
   '/settings': typeof SettingsRoute
@@ -385,9 +403,11 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/contact': typeof ContactRoute
+  '/hospitality-performance-software': typeof HospitalityPerformanceSoftwareRoute
   '/join': typeof JoinRoute
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
+  '/restaurant-leaderboard-software': typeof RestaurantLeaderboardSoftwareRoute
   '/restaurant-sales-coaching-software': typeof RestaurantSalesCoachingSoftwareRoute
   '/restaurant-server-performance-software': typeof RestaurantServerPerformanceSoftwareRoute
   '/settings': typeof SettingsRoute
@@ -434,9 +454,11 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/contact'
+    | '/hospitality-performance-software'
     | '/join'
     | '/login'
     | '/privacy'
+    | '/restaurant-leaderboard-software'
     | '/restaurant-sales-coaching-software'
     | '/restaurant-server-performance-software'
     | '/settings'
@@ -481,9 +503,11 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/contact'
+    | '/hospitality-performance-software'
     | '/join'
     | '/login'
     | '/privacy'
+    | '/restaurant-leaderboard-software'
     | '/restaurant-sales-coaching-software'
     | '/restaurant-server-performance-software'
     | '/settings'
@@ -528,9 +552,11 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/contact'
+    | '/hospitality-performance-software'
     | '/join'
     | '/login'
     | '/privacy'
+    | '/restaurant-leaderboard-software'
     | '/restaurant-sales-coaching-software'
     | '/restaurant-server-performance-software'
     | '/settings'
@@ -576,9 +602,11 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ContactRoute: typeof ContactRoute
+  HospitalityPerformanceSoftwareRoute: typeof HospitalityPerformanceSoftwareRoute
   JoinRoute: typeof JoinRoute
   LoginRoute: typeof LoginRoute
   PrivacyRoute: typeof PrivacyRoute
+  RestaurantLeaderboardSoftwareRoute: typeof RestaurantLeaderboardSoftwareRoute
   RestaurantSalesCoachingSoftwareRoute: typeof RestaurantSalesCoachingSoftwareRoute
   RestaurantServerPerformanceSoftwareRoute: typeof RestaurantServerPerformanceSoftwareRoute
   SettingsRoute: typeof SettingsRoute
@@ -671,6 +699,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RestaurantSalesCoachingSoftwareRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/restaurant-leaderboard-software': {
+      id: '/restaurant-leaderboard-software'
+      path: '/restaurant-leaderboard-software'
+      fullPath: '/restaurant-leaderboard-software'
+      preLoaderRoute: typeof RestaurantLeaderboardSoftwareRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/privacy': {
       id: '/privacy'
       path: '/privacy'
@@ -690,6 +725,13 @@ declare module '@tanstack/react-router' {
       path: '/join'
       fullPath: '/join'
       preLoaderRoute: typeof JoinRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/hospitality-performance-software': {
+      id: '/hospitality-performance-software'
+      path: '/hospitality-performance-software'
+      fullPath: '/hospitality-performance-software'
+      preLoaderRoute: typeof HospitalityPerformanceSoftwareRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/contact': {
@@ -954,9 +996,11 @@ const SignupRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ContactRoute: ContactRoute,
+  HospitalityPerformanceSoftwareRoute: HospitalityPerformanceSoftwareRoute,
   JoinRoute: JoinRoute,
   LoginRoute: LoginRoute,
   PrivacyRoute: PrivacyRoute,
+  RestaurantLeaderboardSoftwareRoute: RestaurantLeaderboardSoftwareRoute,
   RestaurantSalesCoachingSoftwareRoute: RestaurantSalesCoachingSoftwareRoute,
   RestaurantServerPerformanceSoftwareRoute:
     RestaurantServerPerformanceSoftwareRoute,
@@ -1001,3 +1045,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
