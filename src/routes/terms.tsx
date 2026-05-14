@@ -2,7 +2,18 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { Logo } from "@/components/logo";
 
 export const Route = createFileRoute("/terms")({
-  head: () => ({ meta: [{ title: "Terms of Service — PoppOff" }, { name: "description", content: "PoppOff terms of service." }] }),
+  head: () => ({
+    meta: [
+      { title: "Terms of Service — PoppOff" },
+      { name: "description", content: "The terms that govern your use of PoppOff's analytics and coaching service for restaurant teams." },
+      { property: "og:title", content: "Terms of Service — PoppOff" },
+      { property: "og:description", content: "The terms that govern your use of PoppOff's analytics and coaching service for restaurant teams." },
+      { property: "og:url", content: "https://poppoffstats.com/terms" },
+    ],
+    links: [
+      { rel: "canonical", href: "https://poppoffstats.com/terms" },
+    ],
+  }),
   component: Terms,
 });
 
