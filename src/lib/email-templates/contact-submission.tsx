@@ -56,7 +56,7 @@ export const template = {
     return `New contact form message from ${name}`
   },
   displayName: 'Contact form submission',
-  to: 'hello@poppoffstats.com',
+  to: 'sholoola@yahoo.com',
   previewData: {
     name: 'Jane Doe',
     restaurant: 'The Sample Bistro',
