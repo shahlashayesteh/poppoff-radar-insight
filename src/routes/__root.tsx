@@ -109,15 +109,28 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         type: "application/ld+json",
         children: JSON.stringify({
           "@context": "https://schema.org",
-          "@type": "Organization",
-          name: "PoppOff",
-          url: "https://poppoffstats.com",
-          logo: "https://poppoffstats.com/og-image.jpg",
-          description:
-            "Personal scorecards, AI coaching and menu-specific upsells for premium restaurants.",
-          sameAs: [
-            "https://www.linkedin.com/company/poppoffstats/",
-            "https://www.instagram.com/poppoffstats/",
+          "@graph": [
+            {
+              "@type": "Organization",
+              "@id": "https://poppoffstats.com/#organization",
+              name: "PoppOff",
+              url: "https://poppoffstats.com",
+              logo: "https://poppoffstats.com/og-image.jpg",
+              description:
+                "Personal performance scorecards and AI coaching for restaurants and hospitality groups.",
+              sameAs: [
+                "https://www.linkedin.com/company/poppoffstats/",
+                "https://www.instagram.com/poppoffstats/",
+              ],
+            },
+            {
+              "@type": "WebSite",
+              "@id": "https://poppoffstats.com/#website",
+              name: "PoppOff",
+              url: "https://poppoffstats.com",
+              publisher: { "@id": "https://poppoffstats.com/#organization" },
+              inLanguage: "en",
+            },
           ],
         }),
       },

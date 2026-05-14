@@ -17,6 +17,33 @@ export const Route = createFileRoute("/contact")({
     links: [
       { rel: "canonical", href: "https://poppoffstats.com/contact" },
     ],
+    scripts: [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "ContactPage",
+          name: "Contact PoppOff",
+          url: "https://poppoffstats.com/contact",
+          description:
+            "Contact the PoppOff team about server performance analytics and coaching for restaurants and hospitality groups.",
+          mainEntity: {
+            "@type": "Organization",
+            name: "PoppOff",
+            url: "https://poppoffstats.com",
+            email: "hello@poppoffstats.com",
+            contactPoint: [
+              {
+                "@type": "ContactPoint",
+                contactType: "customer support",
+                email: "hello@poppoffstats.com",
+                availableLanguage: ["en"],
+              },
+            ],
+          },
+        }),
+      },
+    ],
   }),
   component: ContactPage,
 });

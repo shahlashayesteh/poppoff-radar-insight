@@ -1,0 +1,14 @@
+# PoppOff
+
+> Personal performance stats and AI coaching for restaurant servers, built for restaurants and hospitality groups.
+
+PoppOff turns POS data into per-server scorecards and weekly coaching priorities, so restaurant operators can lift sales and service consistency without micromanaging the floor. Servers see their own stats, menu mix, and progress; managers see team performance, coaching priorities, and estimated uplift across the venue.
+
+## Pages
+- [Home](https://poppoffstats.com/): Product overview — what PoppOff does, how it works, and pricing
+- [Contact](https://poppoffstats.com/contact): Contact the PoppOff team — email hello@poppoffstats.com
+- [Privacy Policy](https://poppoffstats.com/privacy): How PoppOff collects and protects data from restaurants and their teams
+- [Terms of Service](https://poppoffstats.com/terms): Terms governing use of PoppOff
+
+## Optional
+- [Sitemap](https://poppoffstats.com/sitemap.xml): Machine-readable index of indexable pages
