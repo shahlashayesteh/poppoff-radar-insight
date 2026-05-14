@@ -321,7 +321,7 @@ function Landing() {
               "PoppOff identifies revenue gaps, opportunities and focus items for each server.",
               "Each server gets personalised scorecards, targets, leaderboards and coaching insights.",
               "Servers see clear daily and weekly focus areas, targets and progress.",
-              "Managers see coaching priorities and uplift.",
+              "Managers simply track performance, engagement and uplift.",
             ].map((step, i) => (
               <li key={i} className="rounded-2xl bg-white border border-border p-5">
                 <div className="font-display text-3xl font-extrabold" style={{ color: i % 2 ? "var(--brand-orange)" : "var(--brand-green)" }}>0{i + 1}</div>
