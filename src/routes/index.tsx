@@ -124,7 +124,7 @@ function Landing() {
         <div className="mx-auto max-w-7xl px-6 py-4 flex items-center justify-between">
           <Logo className="text-2xl" />
           <nav className="hidden md:flex items-center gap-8 text-sm font-medium">
-            <a href="#product" className="hover:text-brand-green">Product</a>
+            <a href="#" className="hover:text-brand-green">Home</a>
             <a href="#how" className="hover:text-brand-green">How it works</a>
             <a href="#pricing" className="hover:text-brand-green">Pricing</a>
             <a href="#about" className="hover:text-brand-green">About</a>
