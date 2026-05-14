@@ -27,7 +27,7 @@ function SignUpChooser() {
               </span>
               <div className="mt-4 font-bold text-lg">I'm a Manager</div>
               <div className="mt-1 text-sm text-muted-foreground">Set up your venue, invite your team, and start coaching.</div>
-            </Link>
+            </a>
             <Link to="/join" className="text-left rounded-2xl border border-border bg-white p-6 hover:border-brand-green transition">
               <span className="h-11 w-11 rounded-xl grid place-items-center" style={{ background: "color-mix(in oklab, var(--brand-green) 14%, white)" }}>
                 <User className="h-5 w-5" style={{ color: "var(--brand-green)" }} />
