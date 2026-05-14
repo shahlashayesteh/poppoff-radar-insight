@@ -13,6 +13,31 @@ export const Route = createFileRoute("/terms")({
     links: [
       { rel: "canonical", href: "https://poppoffstats.com/terms" },
     ],
+    scripts: [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "WebPage",
+          url: "https://poppoffstats.com/terms",
+          name: "Terms of Service — PoppOff",
+          description: "The terms that govern your use of PoppOff's analytics and coaching service for restaurant teams.",
+          isPartOf: { "@id": "https://poppoffstats.com/#website" },
+          inLanguage: "en",
+        }),
+      },
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "BreadcrumbList",
+          itemListElement: [
+            { "@type": "ListItem", position: 1, name: "Home", item: "https://poppoffstats.com/" },
+            { "@type": "ListItem", position: 2, name: "Terms of Service", item: "https://poppoffstats.com/terms" },
+          ],
+        }),
+      },
+    ],
   }),
   component: Terms,
 });
