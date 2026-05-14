@@ -51,8 +51,10 @@ import { Route as DemoServerWelcomeRouteImport } from './routes/demo.server.welc
 import { Route as DemoServerProgressRouteImport } from './routes/demo.server.progress'
 import { Route as DemoServerMenuRouteImport } from './routes/demo.server.menu'
 import { Route as DemoManagerTeamRouteImport } from './routes/demo.manager.team'
+import { Route as DemoManagerReportsRouteImport } from './routes/demo.manager.reports'
 import { Route as DemoManagerPrioritiesRouteImport } from './routes/demo.manager.priorities'
 import { Route as DemoManagerMenuRouteImport } from './routes/demo.manager.menu'
+import { Route as DemoManagerCoachingRouteImport } from './routes/demo.manager.coaching'
 import { Route as ApiPublicContactRouteImport } from './routes/api/public/contact'
 import { Route as DemoManagerServerIndexRouteImport } from './routes/demo.manager.server.index'
 import { Route as LovableEmailTransactionalSendRouteImport } from './routes/lovable/email/transactional/send'
@@ -276,6 +278,11 @@ const DemoManagerTeamRoute = DemoManagerTeamRouteImport.update({
   path: '/demo/manager/team',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DemoManagerReportsRoute = DemoManagerReportsRouteImport.update({
+  id: '/demo/manager/reports',
+  path: '/demo/manager/reports',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DemoManagerPrioritiesRoute = DemoManagerPrioritiesRouteImport.update({
   id: '/demo/manager/priorities',
   path: '/demo/manager/priorities',
@@ -284,6 +291,11 @@ const DemoManagerPrioritiesRoute = DemoManagerPrioritiesRouteImport.update({
 const DemoManagerMenuRoute = DemoManagerMenuRouteImport.update({
   id: '/demo/manager/menu',
   path: '/demo/manager/menu',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DemoManagerCoachingRoute = DemoManagerCoachingRouteImport.update({
+  id: '/demo/manager/coaching',
+  path: '/demo/manager/coaching',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicContactRoute = ApiPublicContactRouteImport.update({
@@ -361,8 +373,10 @@ export interface FileRoutesByFullPath {
   '/manager/': typeof ManagerIndexRoute
   '/server/': typeof ServerIndexRoute
   '/api/public/contact': typeof ApiPublicContactRoute
+  '/demo/manager/coaching': typeof DemoManagerCoachingRoute
   '/demo/manager/menu': typeof DemoManagerMenuRoute
   '/demo/manager/priorities': typeof DemoManagerPrioritiesRoute
+  '/demo/manager/reports': typeof DemoManagerReportsRoute
   '/demo/manager/team': typeof DemoManagerTeamRoute
   '/demo/server/menu': typeof DemoServerMenuRoute
   '/demo/server/progress': typeof DemoServerProgressRoute
@@ -414,8 +428,10 @@ export interface FileRoutesByTo {
   '/manager': typeof ManagerIndexRoute
   '/server': typeof ServerIndexRoute
   '/api/public/contact': typeof ApiPublicContactRoute
+  '/demo/manager/coaching': typeof DemoManagerCoachingRoute
   '/demo/manager/menu': typeof DemoManagerMenuRoute
   '/demo/manager/priorities': typeof DemoManagerPrioritiesRoute
+  '/demo/manager/reports': typeof DemoManagerReportsRoute
   '/demo/manager/team': typeof DemoManagerTeamRoute
   '/demo/server/menu': typeof DemoServerMenuRoute
   '/demo/server/progress': typeof DemoServerProgressRoute
@@ -468,8 +484,10 @@ export interface FileRoutesById {
   '/manager/': typeof ManagerIndexRoute
   '/server/': typeof ServerIndexRoute
   '/api/public/contact': typeof ApiPublicContactRoute
+  '/demo/manager/coaching': typeof DemoManagerCoachingRoute
   '/demo/manager/menu': typeof DemoManagerMenuRoute
   '/demo/manager/priorities': typeof DemoManagerPrioritiesRoute
+  '/demo/manager/reports': typeof DemoManagerReportsRoute
   '/demo/manager/team': typeof DemoManagerTeamRoute
   '/demo/server/menu': typeof DemoServerMenuRoute
   '/demo/server/progress': typeof DemoServerProgressRoute
@@ -523,8 +541,10 @@ export interface FileRouteTypes {
     | '/manager/'
     | '/server/'
     | '/api/public/contact'
+    | '/demo/manager/coaching'
     | '/demo/manager/menu'
     | '/demo/manager/priorities'
+    | '/demo/manager/reports'
     | '/demo/manager/team'
     | '/demo/server/menu'
     | '/demo/server/progress'
@@ -576,8 +596,10 @@ export interface FileRouteTypes {
     | '/manager'
     | '/server'
     | '/api/public/contact'
+    | '/demo/manager/coaching'
     | '/demo/manager/menu'
     | '/demo/manager/priorities'
+    | '/demo/manager/reports'
     | '/demo/manager/team'
     | '/demo/server/menu'
     | '/demo/server/progress'
@@ -629,8 +651,10 @@ export interface FileRouteTypes {
     | '/manager/'
     | '/server/'
     | '/api/public/contact'
+    | '/demo/manager/coaching'
     | '/demo/manager/menu'
     | '/demo/manager/priorities'
+    | '/demo/manager/reports'
     | '/demo/manager/team'
     | '/demo/server/menu'
     | '/demo/server/progress'
@@ -682,8 +706,10 @@ export interface RootRouteChildren {
   ManagerIndexRoute: typeof ManagerIndexRoute
   ServerIndexRoute: typeof ServerIndexRoute
   ApiPublicContactRoute: typeof ApiPublicContactRoute
+  DemoManagerCoachingRoute: typeof DemoManagerCoachingRoute
   DemoManagerMenuRoute: typeof DemoManagerMenuRoute
   DemoManagerPrioritiesRoute: typeof DemoManagerPrioritiesRoute
+  DemoManagerReportsRoute: typeof DemoManagerReportsRoute
   DemoManagerTeamRoute: typeof DemoManagerTeamRoute
   DemoServerMenuRoute: typeof DemoServerMenuRoute
   DemoServerProgressRoute: typeof DemoServerProgressRoute
@@ -997,6 +1023,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DemoManagerTeamRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/demo/manager/reports': {
+      id: '/demo/manager/reports'
+      path: '/demo/manager/reports'
+      fullPath: '/demo/manager/reports'
+      preLoaderRoute: typeof DemoManagerReportsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/demo/manager/priorities': {
       id: '/demo/manager/priorities'
       path: '/demo/manager/priorities'
@@ -1009,6 +1042,13 @@ declare module '@tanstack/react-router' {
       path: '/demo/manager/menu'
       fullPath: '/demo/manager/menu'
       preLoaderRoute: typeof DemoManagerMenuRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/demo/manager/coaching': {
+      id: '/demo/manager/coaching'
+      path: '/demo/manager/coaching'
+      fullPath: '/demo/manager/coaching'
+      preLoaderRoute: typeof DemoManagerCoachingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/contact': {
@@ -1109,8 +1149,10 @@ const rootRouteChildren: RootRouteChildren = {
   ManagerIndexRoute: ManagerIndexRoute,
   ServerIndexRoute: ServerIndexRoute,
   ApiPublicContactRoute: ApiPublicContactRoute,
+  DemoManagerCoachingRoute: DemoManagerCoachingRoute,
   DemoManagerMenuRoute: DemoManagerMenuRoute,
   DemoManagerPrioritiesRoute: DemoManagerPrioritiesRoute,
+  DemoManagerReportsRoute: DemoManagerReportsRoute,
   DemoManagerTeamRoute: DemoManagerTeamRoute,
   DemoServerMenuRoute: DemoServerMenuRoute,
   DemoServerProgressRoute: DemoServerProgressRoute,
