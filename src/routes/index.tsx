@@ -320,7 +320,7 @@ function Landing() {
               "Manager uploads weekly sales data.",
               "PoppOff identifies revenue gaps, opportunities and focus items for each server.",
               "Each server gets personalised scorecards, targets, leaderboards and coaching insights.",
-              "Servers see their weekly focus.",
+              "Servers see clear daily and weekly focus areas, targets and progress.",
               "Managers see coaching priorities and uplift.",
             ].map((step, i) => (
               <li key={i} className="rounded-2xl bg-white border border-border p-5">
