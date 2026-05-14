@@ -99,7 +99,7 @@ function Page() {
             <ol className="mt-8 grid md:grid-cols-5 gap-4">
               {[
                 "Manager uploads weekly sales data.",
-                "Managers simply track performance, engagement, and estimated uplift.",
+                "PoppOff identifies revenue gaps, opportunities and focus items for each server.",
                 "PoppOff creates personal scorecards.",
                 "Servers see their weekly focus.",
                 "Managers see coaching priorities and uplift.",
