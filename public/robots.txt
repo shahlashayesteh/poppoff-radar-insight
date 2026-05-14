@@ -8,7 +8,8 @@ Disallow: /join
 Disallow: /signin
 Disallow: /signup
 Disallow: /login
-Disallow: /demo
+Disallow: /demo/manager
+Disallow: /demo/server
 Disallow: /lovable
 Disallow: /api
 
@@ -23,7 +24,8 @@ Disallow: /join
 Disallow: /signin
 Disallow: /signup
 Disallow: /login
-Disallow: /demo
+Disallow: /demo/manager
+Disallow: /demo/server
 Disallow: /lovable
 Disallow: /api
 
@@ -37,7 +39,8 @@ Disallow: /join
 Disallow: /signin
 Disallow: /signup
 Disallow: /login
-Disallow: /demo
+Disallow: /demo/manager
+Disallow: /demo/server
 Disallow: /lovable
 Disallow: /api
 
@@ -51,7 +54,8 @@ Disallow: /join
 Disallow: /signin
 Disallow: /signup
 Disallow: /login
-Disallow: /demo
+Disallow: /demo/manager
+Disallow: /demo/server
 Disallow: /lovable
 Disallow: /api
 
@@ -65,7 +69,8 @@ Disallow: /join
 Disallow: /signin
 Disallow: /signup
 Disallow: /login
-Disallow: /demo
+Disallow: /demo/manager
+Disallow: /demo/server
 Disallow: /lovable
 Disallow: /api
 
@@ -79,7 +84,8 @@ Disallow: /join
 Disallow: /signin
 Disallow: /signup
 Disallow: /login
-Disallow: /demo
+Disallow: /demo/manager
+Disallow: /demo/server
 Disallow: /lovable
 Disallow: /api
 
@@ -93,7 +99,8 @@ Disallow: /join
 Disallow: /signin
 Disallow: /signup
 Disallow: /login
-Disallow: /demo
+Disallow: /demo/manager
+Disallow: /demo/server
 Disallow: /lovable
 Disallow: /api
 
@@ -107,7 +114,8 @@ Disallow: /join
 Disallow: /signin
 Disallow: /signup
 Disallow: /login
-Disallow: /demo
+Disallow: /demo/manager
+Disallow: /demo/server
 Disallow: /lovable
 Disallow: /api
 
@@ -121,7 +129,8 @@ Disallow: /join
 Disallow: /signin
 Disallow: /signup
 Disallow: /login
-Disallow: /demo
+Disallow: /demo/manager
+Disallow: /demo/server
 Disallow: /lovable
 Disallow: /api
 
@@ -135,7 +144,8 @@ Disallow: /join
 Disallow: /signin
 Disallow: /signup
 Disallow: /login
-Disallow: /demo
+Disallow: /demo/manager
+Disallow: /demo/server
 Disallow: /lovable
 Disallow: /api
 

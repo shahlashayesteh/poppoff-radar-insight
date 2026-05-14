@@ -14,9 +14,14 @@ import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as SigninRouteImport } from './routes/signin'
 import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as RestaurantUpsellingSoftwareRouteImport } from './routes/restaurant-upselling-software'
+import { Route as RestaurantServerPerformanceSoftwareRouteImport } from './routes/restaurant-server-performance-software'
+import { Route as RestaurantSalesCoachingSoftwareRouteImport } from './routes/restaurant-sales-coaching-software'
+import { Route as RestaurantLeaderboardSoftwareRouteImport } from './routes/restaurant-leaderboard-software'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as JoinRouteImport } from './routes/join'
+import { Route as HospitalityPerformanceSoftwareRouteImport } from './routes/hospitality-performance-software'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ServerIndexRouteImport } from './routes/server.index'
@@ -33,6 +38,8 @@ import { Route as ManagerPrioritiesRouteImport } from './routes/manager.prioriti
 import { Route as ManagerMenuRouteImport } from './routes/manager.menu'
 import { Route as ManagerCoachingRouteImport } from './routes/manager.coaching'
 import { Route as EmailUnsubscribeRouteImport } from './routes/email/unsubscribe'
+import { Route as DemoServerScorecardRouteImport } from './routes/demo.server-scorecard'
+import { Route as DemoManagerDashboardRouteImport } from './routes/demo.manager-dashboard'
 import { Route as CheckoutSuccessRouteImport } from './routes/checkout.success'
 import { Route as CheckoutRetryRouteImport } from './routes/checkout.retry'
 import { Route as ManagerServerIndexRouteImport } from './routes/manager.server.index'
@@ -78,6 +85,30 @@ const SettingsRoute = SettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RestaurantUpsellingSoftwareRoute =
+  RestaurantUpsellingSoftwareRouteImport.update({
+    id: '/restaurant-upselling-software',
+    path: '/restaurant-upselling-software',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const RestaurantServerPerformanceSoftwareRoute =
+  RestaurantServerPerformanceSoftwareRouteImport.update({
+    id: '/restaurant-server-performance-software',
+    path: '/restaurant-server-performance-software',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const RestaurantSalesCoachingSoftwareRoute =
+  RestaurantSalesCoachingSoftwareRouteImport.update({
+    id: '/restaurant-sales-coaching-software',
+    path: '/restaurant-sales-coaching-software',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const RestaurantLeaderboardSoftwareRoute =
+  RestaurantLeaderboardSoftwareRouteImport.update({
+    id: '/restaurant-leaderboard-software',
+    path: '/restaurant-leaderboard-software',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const PrivacyRoute = PrivacyRouteImport.update({
   id: '/privacy',
   path: '/privacy',
@@ -93,6 +124,12 @@ const JoinRoute = JoinRouteImport.update({
   path: '/join',
   getParentRoute: () => rootRouteImport,
 } as any)
+const HospitalityPerformanceSoftwareRoute =
+  HospitalityPerformanceSoftwareRouteImport.update({
+    id: '/hospitality-performance-software',
+    path: '/hospitality-performance-software',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ContactRoute = ContactRouteImport.update({
   id: '/contact',
   path: '/contact',
@@ -171,6 +208,16 @@ const ManagerCoachingRoute = ManagerCoachingRouteImport.update({
 const EmailUnsubscribeRoute = EmailUnsubscribeRouteImport.update({
   id: '/email/unsubscribe',
   path: '/email/unsubscribe',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DemoServerScorecardRoute = DemoServerScorecardRouteImport.update({
+  id: '/demo/server-scorecard',
+  path: '/demo/server-scorecard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DemoManagerDashboardRoute = DemoManagerDashboardRouteImport.update({
+  id: '/demo/manager-dashboard',
+  path: '/demo/manager-dashboard',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CheckoutSuccessRoute = CheckoutSuccessRouteImport.update({
@@ -276,9 +323,14 @@ const ApiPublicPaymentsWebhookRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/contact': typeof ContactRoute
+  '/hospitality-performance-software': typeof HospitalityPerformanceSoftwareRoute
   '/join': typeof JoinRoute
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
+  '/restaurant-leaderboard-software': typeof RestaurantLeaderboardSoftwareRoute
+  '/restaurant-sales-coaching-software': typeof RestaurantSalesCoachingSoftwareRoute
+  '/restaurant-server-performance-software': typeof RestaurantServerPerformanceSoftwareRoute
+  '/restaurant-upselling-software': typeof RestaurantUpsellingSoftwareRoute
   '/settings': typeof SettingsRoute
   '/signin': typeof SigninRoute
   '/signup': typeof SignupRouteWithChildren
@@ -286,6 +338,8 @@ export interface FileRoutesByFullPath {
   '/terms': typeof TermsRoute
   '/checkout/retry': typeof CheckoutRetryRoute
   '/checkout/success': typeof CheckoutSuccessRoute
+  '/demo/manager-dashboard': typeof DemoManagerDashboardRoute
+  '/demo/server-scorecard': typeof DemoServerScorecardRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/manager/coaching': typeof ManagerCoachingRoute
   '/manager/menu': typeof ManagerMenuRoute
@@ -321,9 +375,14 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/contact': typeof ContactRoute
+  '/hospitality-performance-software': typeof HospitalityPerformanceSoftwareRoute
   '/join': typeof JoinRoute
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
+  '/restaurant-leaderboard-software': typeof RestaurantLeaderboardSoftwareRoute
+  '/restaurant-sales-coaching-software': typeof RestaurantSalesCoachingSoftwareRoute
+  '/restaurant-server-performance-software': typeof RestaurantServerPerformanceSoftwareRoute
+  '/restaurant-upselling-software': typeof RestaurantUpsellingSoftwareRoute
   '/settings': typeof SettingsRoute
   '/signin': typeof SigninRoute
   '/signup': typeof SignupRouteWithChildren
@@ -331,6 +390,8 @@ export interface FileRoutesByTo {
   '/terms': typeof TermsRoute
   '/checkout/retry': typeof CheckoutRetryRoute
   '/checkout/success': typeof CheckoutSuccessRoute
+  '/demo/manager-dashboard': typeof DemoManagerDashboardRoute
+  '/demo/server-scorecard': typeof DemoServerScorecardRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/manager/coaching': typeof ManagerCoachingRoute
   '/manager/menu': typeof ManagerMenuRoute
@@ -367,9 +428,14 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/contact': typeof ContactRoute
+  '/hospitality-performance-software': typeof HospitalityPerformanceSoftwareRoute
   '/join': typeof JoinRoute
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
+  '/restaurant-leaderboard-software': typeof RestaurantLeaderboardSoftwareRoute
+  '/restaurant-sales-coaching-software': typeof RestaurantSalesCoachingSoftwareRoute
+  '/restaurant-server-performance-software': typeof RestaurantServerPerformanceSoftwareRoute
+  '/restaurant-upselling-software': typeof RestaurantUpsellingSoftwareRoute
   '/settings': typeof SettingsRoute
   '/signin': typeof SigninRoute
   '/signup': typeof SignupRouteWithChildren
@@ -377,6 +443,8 @@ export interface FileRoutesById {
   '/terms': typeof TermsRoute
   '/checkout/retry': typeof CheckoutRetryRoute
   '/checkout/success': typeof CheckoutSuccessRoute
+  '/demo/manager-dashboard': typeof DemoManagerDashboardRoute
+  '/demo/server-scorecard': typeof DemoServerScorecardRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/manager/coaching': typeof ManagerCoachingRoute
   '/manager/menu': typeof ManagerMenuRoute
@@ -414,9 +482,14 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/contact'
+    | '/hospitality-performance-software'
     | '/join'
     | '/login'
     | '/privacy'
+    | '/restaurant-leaderboard-software'
+    | '/restaurant-sales-coaching-software'
+    | '/restaurant-server-performance-software'
+    | '/restaurant-upselling-software'
     | '/settings'
     | '/signin'
     | '/signup'
@@ -424,6 +497,8 @@ export interface FileRouteTypes {
     | '/terms'
     | '/checkout/retry'
     | '/checkout/success'
+    | '/demo/manager-dashboard'
+    | '/demo/server-scorecard'
     | '/email/unsubscribe'
     | '/manager/coaching'
     | '/manager/menu'
@@ -459,9 +534,14 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/contact'
+    | '/hospitality-performance-software'
     | '/join'
     | '/login'
     | '/privacy'
+    | '/restaurant-leaderboard-software'
+    | '/restaurant-sales-coaching-software'
+    | '/restaurant-server-performance-software'
+    | '/restaurant-upselling-software'
     | '/settings'
     | '/signin'
     | '/signup'
@@ -469,6 +549,8 @@ export interface FileRouteTypes {
     | '/terms'
     | '/checkout/retry'
     | '/checkout/success'
+    | '/demo/manager-dashboard'
+    | '/demo/server-scorecard'
     | '/email/unsubscribe'
     | '/manager/coaching'
     | '/manager/menu'
@@ -504,9 +586,14 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/contact'
+    | '/hospitality-performance-software'
     | '/join'
     | '/login'
     | '/privacy'
+    | '/restaurant-leaderboard-software'
+    | '/restaurant-sales-coaching-software'
+    | '/restaurant-server-performance-software'
+    | '/restaurant-upselling-software'
     | '/settings'
     | '/signin'
     | '/signup'
@@ -514,6 +601,8 @@ export interface FileRouteTypes {
     | '/terms'
     | '/checkout/retry'
     | '/checkout/success'
+    | '/demo/manager-dashboard'
+    | '/demo/server-scorecard'
     | '/email/unsubscribe'
     | '/manager/coaching'
     | '/manager/menu'
@@ -550,9 +639,14 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ContactRoute: typeof ContactRoute
+  HospitalityPerformanceSoftwareRoute: typeof HospitalityPerformanceSoftwareRoute
   JoinRoute: typeof JoinRoute
   LoginRoute: typeof LoginRoute
   PrivacyRoute: typeof PrivacyRoute
+  RestaurantLeaderboardSoftwareRoute: typeof RestaurantLeaderboardSoftwareRoute
+  RestaurantSalesCoachingSoftwareRoute: typeof RestaurantSalesCoachingSoftwareRoute
+  RestaurantServerPerformanceSoftwareRoute: typeof RestaurantServerPerformanceSoftwareRoute
+  RestaurantUpsellingSoftwareRoute: typeof RestaurantUpsellingSoftwareRoute
   SettingsRoute: typeof SettingsRoute
   SigninRoute: typeof SigninRoute
   SignupRoute: typeof SignupRouteWithChildren
@@ -560,6 +654,8 @@ export interface RootRouteChildren {
   TermsRoute: typeof TermsRoute
   CheckoutRetryRoute: typeof CheckoutRetryRoute
   CheckoutSuccessRoute: typeof CheckoutSuccessRoute
+  DemoManagerDashboardRoute: typeof DemoManagerDashboardRoute
+  DemoServerScorecardRoute: typeof DemoServerScorecardRoute
   EmailUnsubscribeRoute: typeof EmailUnsubscribeRoute
   ManagerCoachingRoute: typeof ManagerCoachingRoute
   ManagerMenuRoute: typeof ManagerMenuRoute
@@ -629,6 +725,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/restaurant-upselling-software': {
+      id: '/restaurant-upselling-software'
+      path: '/restaurant-upselling-software'
+      fullPath: '/restaurant-upselling-software'
+      preLoaderRoute: typeof RestaurantUpsellingSoftwareRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/restaurant-server-performance-software': {
+      id: '/restaurant-server-performance-software'
+      path: '/restaurant-server-performance-software'
+      fullPath: '/restaurant-server-performance-software'
+      preLoaderRoute: typeof RestaurantServerPerformanceSoftwareRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/restaurant-sales-coaching-software': {
+      id: '/restaurant-sales-coaching-software'
+      path: '/restaurant-sales-coaching-software'
+      fullPath: '/restaurant-sales-coaching-software'
+      preLoaderRoute: typeof RestaurantSalesCoachingSoftwareRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/restaurant-leaderboard-software': {
+      id: '/restaurant-leaderboard-software'
+      path: '/restaurant-leaderboard-software'
+      fullPath: '/restaurant-leaderboard-software'
+      preLoaderRoute: typeof RestaurantLeaderboardSoftwareRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/privacy': {
       id: '/privacy'
       path: '/privacy'
@@ -648,6 +772,13 @@ declare module '@tanstack/react-router' {
       path: '/join'
       fullPath: '/join'
       preLoaderRoute: typeof JoinRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/hospitality-performance-software': {
+      id: '/hospitality-performance-software'
+      path: '/hospitality-performance-software'
+      fullPath: '/hospitality-performance-software'
+      preLoaderRoute: typeof HospitalityPerformanceSoftwareRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/contact': {
@@ -760,6 +891,20 @@ declare module '@tanstack/react-router' {
       path: '/email/unsubscribe'
       fullPath: '/email/unsubscribe'
       preLoaderRoute: typeof EmailUnsubscribeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/demo/server-scorecard': {
+      id: '/demo/server-scorecard'
+      path: '/demo/server-scorecard'
+      fullPath: '/demo/server-scorecard'
+      preLoaderRoute: typeof DemoServerScorecardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/demo/manager-dashboard': {
+      id: '/demo/manager-dashboard'
+      path: '/demo/manager-dashboard'
+      fullPath: '/demo/manager-dashboard'
+      preLoaderRoute: typeof DemoManagerDashboardRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/checkout/success': {
@@ -912,9 +1057,15 @@ const SignupRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ContactRoute: ContactRoute,
+  HospitalityPerformanceSoftwareRoute: HospitalityPerformanceSoftwareRoute,
   JoinRoute: JoinRoute,
   LoginRoute: LoginRoute,
   PrivacyRoute: PrivacyRoute,
+  RestaurantLeaderboardSoftwareRoute: RestaurantLeaderboardSoftwareRoute,
+  RestaurantSalesCoachingSoftwareRoute: RestaurantSalesCoachingSoftwareRoute,
+  RestaurantServerPerformanceSoftwareRoute:
+    RestaurantServerPerformanceSoftwareRoute,
+  RestaurantUpsellingSoftwareRoute: RestaurantUpsellingSoftwareRoute,
   SettingsRoute: SettingsRoute,
   SigninRoute: SigninRoute,
   SignupRoute: SignupRouteWithChildren,
@@ -922,6 +1073,8 @@ const rootRouteChildren: RootRouteChildren = {
   TermsRoute: TermsRoute,
   CheckoutRetryRoute: CheckoutRetryRoute,
   CheckoutSuccessRoute: CheckoutSuccessRoute,
+  DemoManagerDashboardRoute: DemoManagerDashboardRoute,
+  DemoServerScorecardRoute: DemoServerScorecardRoute,
   EmailUnsubscribeRoute: EmailUnsubscribeRoute,
   ManagerCoachingRoute: ManagerCoachingRoute,
   ManagerMenuRoute: ManagerMenuRoute,
@@ -956,13 +1109,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

@@ -18,6 +18,13 @@ export const Route = createFileRoute("/sitemap.xml")({
           { path: "/contact", changefreq: "monthly", priority: "0.8" },
           { path: "/privacy", changefreq: "yearly", priority: "0.3" },
           { path: "/terms", changefreq: "yearly", priority: "0.3" },
+          { path: "/restaurant-server-performance-software", changefreq: "monthly", priority: "0.7" },
+          { path: "/restaurant-sales-coaching-software", changefreq: "monthly", priority: "0.7" },
+          { path: "/hospitality-performance-software", changefreq: "monthly", priority: "0.7" },
+          { path: "/restaurant-leaderboard-software", changefreq: "monthly", priority: "0.7" },
+          { path: "/restaurant-upselling-software", changefreq: "monthly", priority: "0.7" },
+          { path: "/demo/manager-dashboard", changefreq: "monthly", priority: "0.6" },
+          { path: "/demo/server-scorecard", changefreq: "monthly", priority: "0.6" },
         ];
 
         const urls = entries.map((e) =>
