@@ -18,7 +18,89 @@ export const Route = createFileRoute("/")({
     links: [
       { rel: "canonical", href: "https://poppoffstats.com/" },
     ],
-  }),
+    scripts: [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "WebPage",
+          "@id": "https://poppoffstats.com/#webpage",
+          url: "https://poppoffstats.com/",
+          name: "PoppOff — Every shift. Every win.",
+          description: "Personal scorecards, weekly coaching priorities, and menu intelligence for restaurants and hospitality groups.",
+          isPartOf: { "@id": "https://poppoffstats.com/#website" },
+          about: { "@id": "https://poppoffstats.com/#organization" },
+          inLanguage: "en",
+        }),
+      },
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "BreadcrumbList",
+          itemListElement: [
+            { "@type": "ListItem", position: 1, name: "Home", item: "https://poppoffstats.com/" },
+          ],
+        }),
+      },
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "FAQPage",
+          mainEntity: [
+            {
+              "@type": "Question",
+              name: "What is restaurant server performance software?",
+              acceptedAnswer: {
+                "@type": "Answer",
+                text: "Restaurant server performance software turns POS sales data into per-server scorecards so operators have shared visibility into how each server is performing. PoppOff focuses on server performance tracking and restaurant staff performance management — giving managers and servers the same numbers to coach against, week after week.",
+              },
+            },
+            {
+              "@type": "Question",
+              name: "How does PoppOff work?",
+              acceptedAnswer: {
+                "@type": "Answer",
+                text: "Managers upload weekly POS sales data. PoppOff turns it into personal scorecards for each server, surfaces a weekly focus area, and gives managers coaching priorities and estimated uplift across the venue. The flow is: sales data in, personal scorecards out, weekly coaching priorities for the team.",
+              },
+            },
+            {
+              "@type": "Question",
+              name: "Can restaurant servers see their own performance?",
+              acceptedAnswer: {
+                "@type": "Answer",
+                text: "Yes. Every server gets a personal scorecard showing their menu mix, streaks, milestones, and how they compare to their own best weeks. The goal is visibility — servers know where they stand and what to work on next.",
+              },
+            },
+            {
+              "@type": "Question",
+              name: "Does PoppOff use POS sales data?",
+              acceptedAnswer: {
+                "@type": "Answer",
+                text: "Yes. PoppOff is built around the sales data restaurants already capture in their POS. Managers upload weekly sales data and PoppOff transforms it into scorecards, coaching priorities, and menu mix insights.",
+              },
+            },
+            {
+              "@type": "Question",
+              name: "How does PoppOff help restaurants improve sales?",
+              acceptedAnswer: {
+                "@type": "Answer",
+                text: "PoppOff makes performance visible at the server and team level, then turns that visibility into restaurant coaching priorities and menu pairing suggestions. Managers focus their coaching where it will move the numbers most, and servers see exactly which categories — wine, cocktails, desserts — to grow next.",
+              },
+            },
+            {
+              "@type": "Question",
+              name: "How can managers keep restaurant teams accountable?",
+              acceptedAnswer: {
+                "@type": "Answer",
+                text: "PoppOff supports restaurant employee accountability by giving managers and servers a shared, transparent view of the same performance numbers. It is designed for visibility, coaching consistency, and operational clarity — not monitoring. Managers run a steady weekly cadence built on the same scorecards their team can see.",
+              },
+            },
+          ],
+        }),
+      },
+    ],
   component: Landing,
 });
 
