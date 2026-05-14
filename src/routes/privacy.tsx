@@ -13,6 +13,31 @@ export const Route = createFileRoute("/privacy")({
     links: [
       { rel: "canonical", href: "https://poppoffstats.com/privacy" },
     ],
+    scripts: [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "WebPage",
+          url: "https://poppoffstats.com/privacy",
+          name: "Privacy Policy — PoppOff",
+          description: "How PoppOff collects, uses, and protects data from restaurants and their teams.",
+          isPartOf: { "@id": "https://poppoffstats.com/#website" },
+          inLanguage: "en",
+        }),
+      },
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "BreadcrumbList",
+          itemListElement: [
+            { "@type": "ListItem", position: 1, name: "Home", item: "https://poppoffstats.com/" },
+            { "@type": "ListItem", position: 2, name: "Privacy Policy", item: "https://poppoffstats.com/privacy" },
+          ],
+        }),
+      },
+    ],
   }),
   component: Privacy,
 });
