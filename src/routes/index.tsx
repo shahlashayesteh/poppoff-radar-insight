@@ -127,7 +127,6 @@ function Landing() {
             <a href="#" className="hover:text-brand-green">Home</a>
             <a href="#how" className="hover:text-brand-green">How it works</a>
             <a href="#pricing" className="hover:text-brand-green">Pricing</a>
-            <a href="#about" className="hover:text-brand-green">About</a>
             <Link to="/contact" className="hover:text-brand-green">Contact</Link>
           </nav>
           <div className="flex items-center gap-2">
