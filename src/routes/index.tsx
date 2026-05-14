@@ -319,7 +319,7 @@ function Landing() {
             {[
               "Manager uploads weekly sales data.",
               "PoppOff identifies revenue gaps, opportunities and focus items for each server.",
-              "PoppOff creates personal scorecards.",
+              "Each server gets personalised scorecards, targets, leaderboards and coaching insights.",
               "Servers see their weekly focus.",
               "Managers see coaching priorities and uplift.",
             ].map((step, i) => (
