@@ -372,7 +372,7 @@ function Landing() {
               </div>
             ))}
           </div>
-          <p className="mt-6 text-xs text-muted-foreground">No credit card required on Starter trial. Cancel anytime.</p>
+          <p className="mt-6 text-xs text-muted-foreground">No contract. Cancel anytime.</p>
         </div>
       </section>
 
