@@ -97,7 +97,7 @@ function ContactPage() {
         <div className="mx-auto max-w-7xl px-6 py-4 flex items-center justify-between">
           <Link to="/"><Logo className="text-2xl" /></Link>
           <nav className="hidden md:flex items-center gap-8 text-sm font-medium">
-            <Link to="/" hash="product" className="hover:text-brand-green">Product</Link>
+            <Link to="/" className="hover:text-brand-green">Home</Link>
             <Link to="/" hash="how" className="hover:text-brand-green">How it works</Link>
             <Link to="/" hash="pricing" className="hover:text-brand-green">Pricing</Link>
             <Link to="/contact" className="hover:text-brand-green text-brand-green">Contact</Link>
