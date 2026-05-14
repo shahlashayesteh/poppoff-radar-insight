@@ -40,6 +40,12 @@ export function ManagerLayout({ children }: { children: React.ReactNode }) {
   const [businessName, setBusinessName] = useState<string>("");
 
   useEffect(() => {
+    if (isDemo) {
+      setName("Demo Manager");
+      setBusinessName("The Demo Restaurant");
+      setInitials("DM");
+      return;
+    }
     (async () => {
       const { data } = await supabase.auth.getUser();
       if (!data.user) return;
@@ -50,9 +56,10 @@ export function ManagerLayout({ children }: { children: React.ReactNode }) {
       const parts = String(n).trim().split(/\s+/).filter(Boolean);
       setInitials((parts[0]?.[0] || "") + (parts[1]?.[0] || ""));
     })();
-  }, []);
+  }, [isDemo]);
 
   const signOut = async () => {
+    if (isDemo) return;
     await supabase.auth.signOut();
     navigate({ to: "/" });
   };
