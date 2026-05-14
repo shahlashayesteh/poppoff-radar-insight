@@ -94,6 +94,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:image", content: "https://poppoffstats.com/og-image.jpg" },
       { name: "twitter:image:alt", content: "PoppOff — Personal stats for every server" },
+      { name: "google-site-verification", content: "kjmYUsmYS04cI_cW3dhNqwH7bRDklUeE3mykdOpLcc4" },
+      { name: "msvalidate.01", content: "0DF4DCBD32F9E898166EC9481187CCD" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
