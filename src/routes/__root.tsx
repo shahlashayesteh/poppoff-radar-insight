@@ -86,6 +86,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
           "Personal scorecards, AI coaching and menu-specific upsells for premium restaurants.",
       },
       { property: "og:type", content: "website" },
+      { property: "og:site_name", content: "PoppOff" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
     links: [

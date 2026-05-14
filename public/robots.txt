@@ -1,0 +1,15 @@
+User-agent: *
+Allow: /
+Disallow: /manager
+Disallow: /server
+Disallow: /settings
+Disallow: /checkout
+Disallow: /join
+Disallow: /signin
+Disallow: /signup
+Disallow: /login
+Disallow: /demo
+Disallow: /lovable
+Disallow: /api
+
+Sitemap: https://poppoffstats.com/sitemap.xml
