@@ -14,6 +14,7 @@ import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as SigninRouteImport } from './routes/signin'
 import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as RestaurantUpsellingSoftwareRouteImport } from './routes/restaurant-upselling-software'
 import { Route as RestaurantServerPerformanceSoftwareRouteImport } from './routes/restaurant-server-performance-software'
 import { Route as RestaurantSalesCoachingSoftwareRouteImport } from './routes/restaurant-sales-coaching-software'
 import { Route as RestaurantLeaderboardSoftwareRouteImport } from './routes/restaurant-leaderboard-software'
@@ -82,6 +83,12 @@ const SettingsRoute = SettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RestaurantUpsellingSoftwareRoute =
+  RestaurantUpsellingSoftwareRouteImport.update({
+    id: '/restaurant-upselling-software',
+    path: '/restaurant-upselling-software',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const RestaurantServerPerformanceSoftwareRoute =
   RestaurantServerPerformanceSoftwareRouteImport.update({
     id: '/restaurant-server-performance-software',
@@ -311,6 +318,7 @@ export interface FileRoutesByFullPath {
   '/restaurant-leaderboard-software': typeof RestaurantLeaderboardSoftwareRoute
   '/restaurant-sales-coaching-software': typeof RestaurantSalesCoachingSoftwareRoute
   '/restaurant-server-performance-software': typeof RestaurantServerPerformanceSoftwareRoute
+  '/restaurant-upselling-software': typeof RestaurantUpsellingSoftwareRoute
   '/settings': typeof SettingsRoute
   '/signin': typeof SigninRoute
   '/signup': typeof SignupRouteWithChildren
@@ -360,6 +368,7 @@ export interface FileRoutesByTo {
   '/restaurant-leaderboard-software': typeof RestaurantLeaderboardSoftwareRoute
   '/restaurant-sales-coaching-software': typeof RestaurantSalesCoachingSoftwareRoute
   '/restaurant-server-performance-software': typeof RestaurantServerPerformanceSoftwareRoute
+  '/restaurant-upselling-software': typeof RestaurantUpsellingSoftwareRoute
   '/settings': typeof SettingsRoute
   '/signin': typeof SigninRoute
   '/signup': typeof SignupRouteWithChildren
@@ -410,6 +419,7 @@ export interface FileRoutesById {
   '/restaurant-leaderboard-software': typeof RestaurantLeaderboardSoftwareRoute
   '/restaurant-sales-coaching-software': typeof RestaurantSalesCoachingSoftwareRoute
   '/restaurant-server-performance-software': typeof RestaurantServerPerformanceSoftwareRoute
+  '/restaurant-upselling-software': typeof RestaurantUpsellingSoftwareRoute
   '/settings': typeof SettingsRoute
   '/signin': typeof SigninRoute
   '/signup': typeof SignupRouteWithChildren
@@ -461,6 +471,7 @@ export interface FileRouteTypes {
     | '/restaurant-leaderboard-software'
     | '/restaurant-sales-coaching-software'
     | '/restaurant-server-performance-software'
+    | '/restaurant-upselling-software'
     | '/settings'
     | '/signin'
     | '/signup'
@@ -510,6 +521,7 @@ export interface FileRouteTypes {
     | '/restaurant-leaderboard-software'
     | '/restaurant-sales-coaching-software'
     | '/restaurant-server-performance-software'
+    | '/restaurant-upselling-software'
     | '/settings'
     | '/signin'
     | '/signup'
@@ -559,6 +571,7 @@ export interface FileRouteTypes {
     | '/restaurant-leaderboard-software'
     | '/restaurant-sales-coaching-software'
     | '/restaurant-server-performance-software'
+    | '/restaurant-upselling-software'
     | '/settings'
     | '/signin'
     | '/signup'
@@ -609,6 +622,7 @@ export interface RootRouteChildren {
   RestaurantLeaderboardSoftwareRoute: typeof RestaurantLeaderboardSoftwareRoute
   RestaurantSalesCoachingSoftwareRoute: typeof RestaurantSalesCoachingSoftwareRoute
   RestaurantServerPerformanceSoftwareRoute: typeof RestaurantServerPerformanceSoftwareRoute
+  RestaurantUpsellingSoftwareRoute: typeof RestaurantUpsellingSoftwareRoute
   SettingsRoute: typeof SettingsRoute
   SigninRoute: typeof SigninRoute
   SignupRoute: typeof SignupRouteWithChildren
@@ -683,6 +697,13 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/restaurant-upselling-software': {
+      id: '/restaurant-upselling-software'
+      path: '/restaurant-upselling-software'
+      fullPath: '/restaurant-upselling-software'
+      preLoaderRoute: typeof RestaurantUpsellingSoftwareRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/restaurant-server-performance-software': {
@@ -1004,6 +1025,7 @@ const rootRouteChildren: RootRouteChildren = {
   RestaurantSalesCoachingSoftwareRoute: RestaurantSalesCoachingSoftwareRoute,
   RestaurantServerPerformanceSoftwareRoute:
     RestaurantServerPerformanceSoftwareRoute,
+  RestaurantUpsellingSoftwareRoute: RestaurantUpsellingSoftwareRoute,
   SettingsRoute: SettingsRoute,
   SigninRoute: SigninRoute,
   SignupRoute: SignupRouteWithChildren,
