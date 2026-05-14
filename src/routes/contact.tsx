@@ -43,6 +43,17 @@ export const Route = createFileRoute("/contact")({
           },
         }),
       },
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "BreadcrumbList",
+          itemListElement: [
+            { "@type": "ListItem", position: 1, name: "Home", item: "https://poppoffstats.com/" },
+            { "@type": "ListItem", position: 2, name: "Contact", item: "https://poppoffstats.com/contact" },
+          ],
+        }),
+      },
     ],
   }),
   component: ContactPage,
