@@ -38,6 +38,7 @@ import { Route as ManagerPrioritiesRouteImport } from './routes/manager.prioriti
 import { Route as ManagerMenuRouteImport } from './routes/manager.menu'
 import { Route as ManagerCoachingRouteImport } from './routes/manager.coaching'
 import { Route as EmailUnsubscribeRouteImport } from './routes/email/unsubscribe'
+import { Route as DemoServerScorecardRouteImport } from './routes/demo.server-scorecard'
 import { Route as DemoManagerDashboardRouteImport } from './routes/demo.manager-dashboard'
 import { Route as CheckoutSuccessRouteImport } from './routes/checkout.success'
 import { Route as CheckoutRetryRouteImport } from './routes/checkout.retry'
@@ -209,6 +210,11 @@ const EmailUnsubscribeRoute = EmailUnsubscribeRouteImport.update({
   path: '/email/unsubscribe',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DemoServerScorecardRoute = DemoServerScorecardRouteImport.update({
+  id: '/demo/server-scorecard',
+  path: '/demo/server-scorecard',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DemoManagerDashboardRoute = DemoManagerDashboardRouteImport.update({
   id: '/demo/manager-dashboard',
   path: '/demo/manager-dashboard',
@@ -333,6 +339,7 @@ export interface FileRoutesByFullPath {
   '/checkout/retry': typeof CheckoutRetryRoute
   '/checkout/success': typeof CheckoutSuccessRoute
   '/demo/manager-dashboard': typeof DemoManagerDashboardRoute
+  '/demo/server-scorecard': typeof DemoServerScorecardRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/manager/coaching': typeof ManagerCoachingRoute
   '/manager/menu': typeof ManagerMenuRoute
@@ -384,6 +391,7 @@ export interface FileRoutesByTo {
   '/checkout/retry': typeof CheckoutRetryRoute
   '/checkout/success': typeof CheckoutSuccessRoute
   '/demo/manager-dashboard': typeof DemoManagerDashboardRoute
+  '/demo/server-scorecard': typeof DemoServerScorecardRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/manager/coaching': typeof ManagerCoachingRoute
   '/manager/menu': typeof ManagerMenuRoute
@@ -436,6 +444,7 @@ export interface FileRoutesById {
   '/checkout/retry': typeof CheckoutRetryRoute
   '/checkout/success': typeof CheckoutSuccessRoute
   '/demo/manager-dashboard': typeof DemoManagerDashboardRoute
+  '/demo/server-scorecard': typeof DemoServerScorecardRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/manager/coaching': typeof ManagerCoachingRoute
   '/manager/menu': typeof ManagerMenuRoute
@@ -489,6 +498,7 @@ export interface FileRouteTypes {
     | '/checkout/retry'
     | '/checkout/success'
     | '/demo/manager-dashboard'
+    | '/demo/server-scorecard'
     | '/email/unsubscribe'
     | '/manager/coaching'
     | '/manager/menu'
@@ -540,6 +550,7 @@ export interface FileRouteTypes {
     | '/checkout/retry'
     | '/checkout/success'
     | '/demo/manager-dashboard'
+    | '/demo/server-scorecard'
     | '/email/unsubscribe'
     | '/manager/coaching'
     | '/manager/menu'
@@ -591,6 +602,7 @@ export interface FileRouteTypes {
     | '/checkout/retry'
     | '/checkout/success'
     | '/demo/manager-dashboard'
+    | '/demo/server-scorecard'
     | '/email/unsubscribe'
     | '/manager/coaching'
     | '/manager/menu'
@@ -643,6 +655,7 @@ export interface RootRouteChildren {
   CheckoutRetryRoute: typeof CheckoutRetryRoute
   CheckoutSuccessRoute: typeof CheckoutSuccessRoute
   DemoManagerDashboardRoute: typeof DemoManagerDashboardRoute
+  DemoServerScorecardRoute: typeof DemoServerScorecardRoute
   EmailUnsubscribeRoute: typeof EmailUnsubscribeRoute
   ManagerCoachingRoute: typeof ManagerCoachingRoute
   ManagerMenuRoute: typeof ManagerMenuRoute
@@ -880,6 +893,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EmailUnsubscribeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/demo/server-scorecard': {
+      id: '/demo/server-scorecard'
+      path: '/demo/server-scorecard'
+      fullPath: '/demo/server-scorecard'
+      preLoaderRoute: typeof DemoServerScorecardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/demo/manager-dashboard': {
       id: '/demo/manager-dashboard'
       path: '/demo/manager-dashboard'
@@ -1054,6 +1074,7 @@ const rootRouteChildren: RootRouteChildren = {
   CheckoutRetryRoute: CheckoutRetryRoute,
   CheckoutSuccessRoute: CheckoutSuccessRoute,
   DemoManagerDashboardRoute: DemoManagerDashboardRoute,
+  DemoServerScorecardRoute: DemoServerScorecardRoute,
   EmailUnsubscribeRoute: EmailUnsubscribeRoute,
   ManagerCoachingRoute: ManagerCoachingRoute,
   ManagerMenuRoute: ManagerMenuRoute,
