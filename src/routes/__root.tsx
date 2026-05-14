@@ -98,6 +98,19 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap",
       },
     ],
+    scripts: [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "Organization",
+          name: "PoppOff",
+          url: "https://poppoffstats.com",
+          description:
+            "Personal scorecards, AI coaching and menu-specific upsells for premium restaurants.",
+        }),
+      },
+    ],
   }),
   shellComponent: RootShell,
   component: RootComponent,
