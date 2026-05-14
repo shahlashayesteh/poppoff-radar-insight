@@ -2,7 +2,18 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { Logo } from "@/components/logo";
 
 export const Route = createFileRoute("/privacy")({
-  head: () => ({ meta: [{ title: "Privacy Policy — PoppOff" }, { name: "description", content: "PoppOff privacy policy." }] }),
+  head: () => ({
+    meta: [
+      { title: "Privacy Policy — PoppOff" },
+      { name: "description", content: "How PoppOff collects, uses, and protects data from restaurants and their teams." },
+      { property: "og:title", content: "Privacy Policy — PoppOff" },
+      { property: "og:description", content: "How PoppOff collects, uses, and protects data from restaurants and their teams." },
+      { property: "og:url", content: "https://poppoffstats.com/privacy" },
+    ],
+    links: [
+      { rel: "canonical", href: "https://poppoffstats.com/privacy" },
+    ],
+  }),
   component: Privacy,
 });
 

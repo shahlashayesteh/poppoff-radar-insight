@@ -10,6 +10,12 @@ export const Route = createFileRoute("/contact")({
       { name: "description", content: "Have a question or want to speak to the PoppOff team? Send us a message and we'll get back to you shortly." },
       { property: "og:title", content: "Contact PoppOff" },
       { property: "og:description", content: "Speak to the PoppOff team about server performance, coaching, and pricing for your restaurant or hospitality group." },
+      { property: "og:url", content: "https://poppoffstats.com/contact" },
+      { name: "twitter:title", content: "Contact PoppOff" },
+      { name: "twitter:description", content: "Speak to the PoppOff team about server performance, coaching, and pricing for your restaurant or hospitality group." },
+    ],
+    links: [
+      { rel: "canonical", href: "https://poppoffstats.com/contact" },
     ],
   }),
   component: ContactPage,

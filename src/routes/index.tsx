@@ -11,6 +11,12 @@ export const Route = createFileRoute("/")({
       { name: "description", content: "Personal stats, streaks, and milestones for restaurant servers. Turn your numbers into momentum and more money in your pocket." },
       { property: "og:title", content: "PoppOff — Every shift. Every win." },
       { property: "og:description", content: "Personal stats, streaks, and milestones for restaurant servers." },
+      { property: "og:url", content: "https://poppoffstats.com/" },
+      { name: "twitter:title", content: "PoppOff — Every shift. Every win." },
+      { name: "twitter:description", content: "Personal stats, streaks, and milestones for restaurant servers." },
+    ],
+    links: [
+      { rel: "canonical", href: "https://poppoffstats.com/" },
     ],
   }),
   component: Landing,
