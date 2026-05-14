@@ -21,7 +21,7 @@ function SignUpChooser() {
           <h1 className="font-display text-4xl font-extrabold tracking-tight">Create your account</h1>
           <p className="mt-2 text-foreground/70">Choose how you'll use PoppOff.</p>
           <div className="mt-8 grid sm:grid-cols-2 gap-4">
-            <Link to="/signup/manager" className="text-left rounded-2xl border border-border bg-white p-6 hover:border-brand-orange transition">
+            <a href="/#pricing" className="text-left rounded-2xl border border-border bg-white p-6 hover:border-brand-orange transition">
               <span className="h-11 w-11 rounded-xl grid place-items-center" style={{ background: "color-mix(in oklab, var(--brand-orange) 14%, white)" }}>
                 <Shield className="h-5 w-5" style={{ color: "var(--brand-orange)" }} />
               </span>
