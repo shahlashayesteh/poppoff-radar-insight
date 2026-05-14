@@ -9,6 +9,13 @@ PoppOff turns POS data into per-server scorecards and weekly coaching priorities
 - [Contact](https://poppoffstats.com/contact): Contact the PoppOff team — email hello@poppoffstats.com
 - [Privacy Policy](https://poppoffstats.com/privacy): How PoppOff collects and protects data from restaurants and their teams
 - [Terms of Service](https://poppoffstats.com/terms): Terms governing use of PoppOff
+- [Restaurant server performance software](https://poppoffstats.com/restaurant-server-performance-software): How PoppOff makes server performance visible across a restaurant
+- [Restaurant sales coaching software](https://poppoffstats.com/restaurant-sales-coaching-software): Weekly coaching priorities for restaurant managers, built on POS data
+- [Hospitality performance software](https://poppoffstats.com/hospitality-performance-software): Performance scorecards and coaching for hospitality groups and multi-venue operators
+- [Restaurant leaderboard software](https://poppoffstats.com/restaurant-leaderboard-software): Shared scoreboards that build friendly competition and team momentum
+- [Restaurant upselling software](https://poppoffstats.com/restaurant-upselling-software): Menu intelligence and pairing suggestions that help servers grow check size
+- [Manager dashboard demo](https://poppoffstats.com/demo/manager-dashboard): What managers see — team scorecards, coaching priorities, menu pairing
+- [Server scorecard demo](https://poppoffstats.com/demo/server-scorecard): What servers see — personal scorecard, streaks, milestones, weekly focus
 
 ## Optional
 - [Sitemap](https://poppoffstats.com/sitemap.xml): Machine-readable index of indexable pages
