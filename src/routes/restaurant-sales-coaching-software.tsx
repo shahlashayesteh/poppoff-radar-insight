@@ -94,7 +94,7 @@ function Page() {
             <div className="text-xs uppercase tracking-widest text-brand-green font-bold">How it works</div>
             <h2 className="mt-2 font-display text-3xl md:text-4xl font-extrabold tracking-tight">Sales data in. Wins out.</h2>
             <ol className="mt-8 grid md:grid-cols-5 gap-4">
-              {["Manager uploads weekly sales data.","Managers track coaching consistency, team performance, and estimated uplift.","PoppOff creates personal scorecards.","Servers see their weekly focus.","Managers see coaching priorities and uplift."].map((step, i) => (
+              {["Manager uploads weekly sales data.","Managers simply track performance, engagement, and estimated uplift.","PoppOff creates personal scorecards.","Servers see their weekly focus.","Managers see coaching priorities and uplift."].map((step, i) => (
                 <li key={i} className="rounded-2xl bg-white border border-border p-5">
                   <div className="font-display text-3xl font-extrabold" style={{ color: i % 2 ? "var(--brand-orange)" : "var(--brand-green)" }}>0{i + 1}</div>
                   <p className="mt-3 text-sm">{step}</p>
