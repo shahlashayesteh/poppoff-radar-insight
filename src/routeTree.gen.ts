@@ -14,6 +14,8 @@ import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as SigninRouteImport } from './routes/signin'
 import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as RestaurantServerPerformanceSoftwareRouteImport } from './routes/restaurant-server-performance-software'
+import { Route as RestaurantSalesCoachingSoftwareRouteImport } from './routes/restaurant-sales-coaching-software'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as JoinRouteImport } from './routes/join'
@@ -78,6 +80,18 @@ const SettingsRoute = SettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RestaurantServerPerformanceSoftwareRoute =
+  RestaurantServerPerformanceSoftwareRouteImport.update({
+    id: '/restaurant-server-performance-software',
+    path: '/restaurant-server-performance-software',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const RestaurantSalesCoachingSoftwareRoute =
+  RestaurantSalesCoachingSoftwareRouteImport.update({
+    id: '/restaurant-sales-coaching-software',
+    path: '/restaurant-sales-coaching-software',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const PrivacyRoute = PrivacyRouteImport.update({
   id: '/privacy',
   path: '/privacy',
@@ -279,6 +293,8 @@ export interface FileRoutesByFullPath {
   '/join': typeof JoinRoute
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
+  '/restaurant-sales-coaching-software': typeof RestaurantSalesCoachingSoftwareRoute
+  '/restaurant-server-performance-software': typeof RestaurantServerPerformanceSoftwareRoute
   '/settings': typeof SettingsRoute
   '/signin': typeof SigninRoute
   '/signup': typeof SignupRouteWithChildren
@@ -324,6 +340,8 @@ export interface FileRoutesByTo {
   '/join': typeof JoinRoute
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
+  '/restaurant-sales-coaching-software': typeof RestaurantSalesCoachingSoftwareRoute
+  '/restaurant-server-performance-software': typeof RestaurantServerPerformanceSoftwareRoute
   '/settings': typeof SettingsRoute
   '/signin': typeof SigninRoute
   '/signup': typeof SignupRouteWithChildren
@@ -370,6 +388,8 @@ export interface FileRoutesById {
   '/join': typeof JoinRoute
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
+  '/restaurant-sales-coaching-software': typeof RestaurantSalesCoachingSoftwareRoute
+  '/restaurant-server-performance-software': typeof RestaurantServerPerformanceSoftwareRoute
   '/settings': typeof SettingsRoute
   '/signin': typeof SigninRoute
   '/signup': typeof SignupRouteWithChildren
@@ -417,6 +437,8 @@ export interface FileRouteTypes {
     | '/join'
     | '/login'
     | '/privacy'
+    | '/restaurant-sales-coaching-software'
+    | '/restaurant-server-performance-software'
     | '/settings'
     | '/signin'
     | '/signup'
@@ -462,6 +484,8 @@ export interface FileRouteTypes {
     | '/join'
     | '/login'
     | '/privacy'
+    | '/restaurant-sales-coaching-software'
+    | '/restaurant-server-performance-software'
     | '/settings'
     | '/signin'
     | '/signup'
@@ -507,6 +531,8 @@ export interface FileRouteTypes {
     | '/join'
     | '/login'
     | '/privacy'
+    | '/restaurant-sales-coaching-software'
+    | '/restaurant-server-performance-software'
     | '/settings'
     | '/signin'
     | '/signup'
@@ -553,6 +579,8 @@ export interface RootRouteChildren {
   JoinRoute: typeof JoinRoute
   LoginRoute: typeof LoginRoute
   PrivacyRoute: typeof PrivacyRoute
+  RestaurantSalesCoachingSoftwareRoute: typeof RestaurantSalesCoachingSoftwareRoute
+  RestaurantServerPerformanceSoftwareRoute: typeof RestaurantServerPerformanceSoftwareRoute
   SettingsRoute: typeof SettingsRoute
   SigninRoute: typeof SigninRoute
   SignupRoute: typeof SignupRouteWithChildren
@@ -627,6 +655,20 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/restaurant-server-performance-software': {
+      id: '/restaurant-server-performance-software'
+      path: '/restaurant-server-performance-software'
+      fullPath: '/restaurant-server-performance-software'
+      preLoaderRoute: typeof RestaurantServerPerformanceSoftwareRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/restaurant-sales-coaching-software': {
+      id: '/restaurant-sales-coaching-software'
+      path: '/restaurant-sales-coaching-software'
+      fullPath: '/restaurant-sales-coaching-software'
+      preLoaderRoute: typeof RestaurantSalesCoachingSoftwareRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/privacy': {
@@ -915,6 +957,9 @@ const rootRouteChildren: RootRouteChildren = {
   JoinRoute: JoinRoute,
   LoginRoute: LoginRoute,
   PrivacyRoute: PrivacyRoute,
+  RestaurantSalesCoachingSoftwareRoute: RestaurantSalesCoachingSoftwareRoute,
+  RestaurantServerPerformanceSoftwareRoute:
+    RestaurantServerPerformanceSoftwareRoute,
   SettingsRoute: SettingsRoute,
   SigninRoute: SigninRoute,
   SignupRoute: SignupRouteWithChildren,
@@ -956,3 +1001,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
