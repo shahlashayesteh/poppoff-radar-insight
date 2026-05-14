@@ -162,9 +162,9 @@ function Landing() {
               <Link to="/login" className="rounded-xl px-6 py-3 text-sm font-bold text-white inline-flex items-center gap-2" style={{ background: "var(--brand-orange)" }}>
                 See Demo
               </Link>
-              <Link to="/login" className="rounded-xl px-6 py-3 text-sm font-bold border-2 border-foreground inline-flex items-center gap-2">
+              <a href="#pricing" className="rounded-xl px-6 py-3 text-sm font-bold border-2 border-foreground inline-flex items-center gap-2">
                 Start Your Pilot
-              </Link>
+              </a>
             </div>
             <p className="mt-6 text-sm text-foreground/70 max-w-md">
               Designed to help servers improve performance — turning sales data into coaching, motivation, and revenue growth.

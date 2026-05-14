@@ -1,19 +1,15 @@
 ## Change
 
-Update the "I'm a Manager" card on `src/routes/signup.tsx` so it links to the homepage pricing section instead of `/signup/manager`.
+In `src/routes/index.tsx` (line 165), replace the hero "Start Your Pilot" `<Link to="/login">` with a plain `<a href="#pricing">`, keeping the exact same className and inner content. No style, layout, or copy changes.
 
-### Edit
-- File: `src/routes/signup.tsx`
-- Replace the `<Link to="/signup/manager" ...>` wrapping the Manager card with a plain `<a href="/#pricing" ...>` using the **exact same className and inner content**. No style, layout, copy, icon, or hover changes.
-- Using a normal `<a>` (not TanStack `<Link>`) ensures the browser navigates to `/` and resolves the `#pricing` hash, scrolling to `<section id="pricing">` already present in `src/routes/index.tsx` (line 337).
-
-### Smooth scroll
-Confirm `html { scroll-behavior: smooth; }` exists in `src/styles.css`. If missing, add only that single rule globally so the hash jump animates on desktop and mobile. No other CSS changes.
+Smooth scrolling is already enabled globally via `html { scroll-behavior: smooth; }` in `src/styles.css`, and `<section id="pricing">` already exists on the homepage — so the anchor will smooth-scroll on both desktop and mobile.
 
 ### Out of scope
-Server card, header, footer, spacing, typography, colors, animations, responsive behavior, and every other route.
+- The "See Demo" button next to it stays unchanged.
+- The "Start Your Pilot" buttons on the other landing pages (hospitality-performance, sales-coaching, leaderboard, upselling, server-performance) are not touched — the request was specifically about the homepage.
+- No changes to header, footer, SEO, routing, animations, responsive behavior, or any other element.
 
 ### Verification
-- `/signup` renders unchanged visually.
-- Clicking "I'm a Manager" navigates to `/#pricing` and smooth-scrolls to the Pricing section.
-- Clicking "I'm a Server" still goes to `/join`.
+- Homepage renders visually identical.
+- Clicking "Start Your Pilot" stays on `/` and smooth-scrolls to the Pricing section.
+- "See Demo" still goes to `/login`.
