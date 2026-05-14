@@ -1,15 +1,19 @@
+Change the recipient address for contact form notifications from `hello@poppoffstats.com` to `sholoola@yahoo.com`.
+
 ## Change
 
-In `src/routes/index.tsx` (line 165), replace the hero "Start Your Pilot" `<Link to="/login">` with a plain `<a href="#pricing">`, keeping the exact same className and inner content. No style, layout, or copy changes.
+In `src/lib/email-templates/contact-submission.tsx`, update the template's fixed recipient:
 
-Smooth scrolling is already enabled globally via `html { scroll-behavior: smooth; }` in `src/styles.css`, and `<section id="pricing">` already exists on the homepage — so the anchor will smooth-scroll on both desktop and mobile.
+```ts
+to: 'sholoola@yahoo.com',
+```
 
-### Out of scope
-- The "See Demo" button next to it stays unchanged.
-- The "Start Your Pilot" buttons on the other landing pages (hospitality-performance, sales-coaching, leaderboard, upselling, server-performance) are not touched — the request was specifically about the homepage.
-- No changes to header, footer, SEO, routing, animations, responsive behavior, or any other element.
+That `to` field is what `src/routes/api/public/contact.ts` reads (`template.to`) when enqueueing the notification email, so updating it in one place reroutes all future contact form submissions.
 
-### Verification
-- Homepage renders visually identical.
-- Clicking "Start Your Pilot" stays on `/` and smooth-scrolls to the Pricing section.
-- "See Demo" still goes to `/login`.
+## Not changing
+
+- The contact page UI (`src/routes/contact.tsx`) — the visible `hello@poppoffstats.com` mailto link stays as-is unless you want that swapped too.
+- Database storage — submissions still get saved to `contact_submissions`.
+- Email template content, subject, and styling.
+
+Let me know if you also want the mailto link on the contact page updated.
