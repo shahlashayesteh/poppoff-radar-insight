@@ -48,7 +48,9 @@ import { Route as DemoManagerIndexRouteImport } from './routes/demo.manager.inde
 import { Route as ManagerServerIdRouteImport } from './routes/manager.server.$id'
 import { Route as LovableEmailSuppressionRouteImport } from './routes/lovable/email/suppression'
 import { Route as DemoServerWelcomeRouteImport } from './routes/demo.server.welcome'
+import { Route as DemoServerStatsRouteImport } from './routes/demo.server.stats'
 import { Route as DemoServerProgressRouteImport } from './routes/demo.server.progress'
+import { Route as DemoServerProfileRouteImport } from './routes/demo.server.profile'
 import { Route as DemoServerMenuRouteImport } from './routes/demo.server.menu'
 import { Route as DemoManagerTeamRouteImport } from './routes/demo.manager.team'
 import { Route as DemoManagerReportsRouteImport } from './routes/demo.manager.reports'
@@ -263,9 +265,19 @@ const DemoServerWelcomeRoute = DemoServerWelcomeRouteImport.update({
   path: '/demo/server/welcome',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DemoServerStatsRoute = DemoServerStatsRouteImport.update({
+  id: '/demo/server/stats',
+  path: '/demo/server/stats',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DemoServerProgressRoute = DemoServerProgressRouteImport.update({
   id: '/demo/server/progress',
   path: '/demo/server/progress',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DemoServerProfileRoute = DemoServerProfileRouteImport.update({
+  id: '/demo/server/profile',
+  path: '/demo/server/profile',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DemoServerMenuRoute = DemoServerMenuRouteImport.update({
@@ -379,7 +391,9 @@ export interface FileRoutesByFullPath {
   '/demo/manager/reports': typeof DemoManagerReportsRoute
   '/demo/manager/team': typeof DemoManagerTeamRoute
   '/demo/server/menu': typeof DemoServerMenuRoute
+  '/demo/server/profile': typeof DemoServerProfileRoute
   '/demo/server/progress': typeof DemoServerProgressRoute
+  '/demo/server/stats': typeof DemoServerStatsRoute
   '/demo/server/welcome': typeof DemoServerWelcomeRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/manager/server/$id': typeof ManagerServerIdRoute
@@ -434,7 +448,9 @@ export interface FileRoutesByTo {
   '/demo/manager/reports': typeof DemoManagerReportsRoute
   '/demo/manager/team': typeof DemoManagerTeamRoute
   '/demo/server/menu': typeof DemoServerMenuRoute
+  '/demo/server/profile': typeof DemoServerProfileRoute
   '/demo/server/progress': typeof DemoServerProgressRoute
+  '/demo/server/stats': typeof DemoServerStatsRoute
   '/demo/server/welcome': typeof DemoServerWelcomeRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/manager/server/$id': typeof ManagerServerIdRoute
@@ -490,7 +506,9 @@ export interface FileRoutesById {
   '/demo/manager/reports': typeof DemoManagerReportsRoute
   '/demo/manager/team': typeof DemoManagerTeamRoute
   '/demo/server/menu': typeof DemoServerMenuRoute
+  '/demo/server/profile': typeof DemoServerProfileRoute
   '/demo/server/progress': typeof DemoServerProgressRoute
+  '/demo/server/stats': typeof DemoServerStatsRoute
   '/demo/server/welcome': typeof DemoServerWelcomeRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/manager/server/$id': typeof ManagerServerIdRoute
@@ -547,7 +565,9 @@ export interface FileRouteTypes {
     | '/demo/manager/reports'
     | '/demo/manager/team'
     | '/demo/server/menu'
+    | '/demo/server/profile'
     | '/demo/server/progress'
+    | '/demo/server/stats'
     | '/demo/server/welcome'
     | '/lovable/email/suppression'
     | '/manager/server/$id'
@@ -602,7 +622,9 @@ export interface FileRouteTypes {
     | '/demo/manager/reports'
     | '/demo/manager/team'
     | '/demo/server/menu'
+    | '/demo/server/profile'
     | '/demo/server/progress'
+    | '/demo/server/stats'
     | '/demo/server/welcome'
     | '/lovable/email/suppression'
     | '/manager/server/$id'
@@ -657,7 +679,9 @@ export interface FileRouteTypes {
     | '/demo/manager/reports'
     | '/demo/manager/team'
     | '/demo/server/menu'
+    | '/demo/server/profile'
     | '/demo/server/progress'
+    | '/demo/server/stats'
     | '/demo/server/welcome'
     | '/lovable/email/suppression'
     | '/manager/server/$id'
@@ -712,7 +736,9 @@ export interface RootRouteChildren {
   DemoManagerReportsRoute: typeof DemoManagerReportsRoute
   DemoManagerTeamRoute: typeof DemoManagerTeamRoute
   DemoServerMenuRoute: typeof DemoServerMenuRoute
+  DemoServerProfileRoute: typeof DemoServerProfileRoute
   DemoServerProgressRoute: typeof DemoServerProgressRoute
+  DemoServerStatsRoute: typeof DemoServerStatsRoute
   DemoServerWelcomeRoute: typeof DemoServerWelcomeRoute
   LovableEmailSuppressionRoute: typeof LovableEmailSuppressionRoute
   ManagerServerIdRoute: typeof ManagerServerIdRoute
@@ -1002,11 +1028,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DemoServerWelcomeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/demo/server/stats': {
+      id: '/demo/server/stats'
+      path: '/demo/server/stats'
+      fullPath: '/demo/server/stats'
+      preLoaderRoute: typeof DemoServerStatsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/demo/server/progress': {
       id: '/demo/server/progress'
       path: '/demo/server/progress'
       fullPath: '/demo/server/progress'
       preLoaderRoute: typeof DemoServerProgressRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/demo/server/profile': {
+      id: '/demo/server/profile'
+      path: '/demo/server/profile'
+      fullPath: '/demo/server/profile'
+      preLoaderRoute: typeof DemoServerProfileRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/demo/server/menu': {
@@ -1155,7 +1195,9 @@ const rootRouteChildren: RootRouteChildren = {
   DemoManagerReportsRoute: DemoManagerReportsRoute,
   DemoManagerTeamRoute: DemoManagerTeamRoute,
   DemoServerMenuRoute: DemoServerMenuRoute,
+  DemoServerProfileRoute: DemoServerProfileRoute,
   DemoServerProgressRoute: DemoServerProgressRoute,
+  DemoServerStatsRoute: DemoServerStatsRoute,
   DemoServerWelcomeRoute: DemoServerWelcomeRoute,
   LovableEmailSuppressionRoute: LovableEmailSuppressionRoute,
   ManagerServerIdRoute: ManagerServerIdRoute,
