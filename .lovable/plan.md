@@ -1,23 +1,28 @@
-## Change
+## Problem
 
-Remove the `hello@poppoffstats.com` email from the contact page only.
+On the demo manager pages (current route `/demo/manager`, viewport 390px), the sidebar is hidden because `src/components/manager-layout.tsx` uses `hidden md:flex`. There is no mobile nav, so Dashboard, Team, Individual, Trends, Menu Intelligence, Weekly Priorities, Coaching, Reports, and Settings are unreachable on mobile.
 
-### Edit: `src/routes/contact.tsx`
+## Note on shared layout
 
-1. **Remove the visible mailto button** (lines ~120-126):
-   ```tsx
-   <a href="mailto:hello@poppoffstats.com" ...>
-     <Mail className="h-4 w-4 text-brand-orange" />
-     hello@poppoffstats.com
-   </a>
-   ```
-   Also remove the now-unused `Mail` import from `lucide-react`.
+`ManagerLayout` is the same component used by both real `/manager/*` and demo `/demo/manager/*` pages. The mobile dropdown will therefore appear on both — there's no clean way to add it to only the demo pages without duplicating the layout, and the fix is equally desirable on the real manager pages. Visually nothing changes on desktop (≥768px). If you want it strictly demo-only, say so and I'll branch on `isDemo` (already available in the component) so the mobile bar only renders on demo routes.
 
-2. **Remove email references from the page's JSON-LD schema** (ContactPage script): drop the `email` field on the Organization and the entire `contactPoint` array, since both reference `hello@poppoffstats.com`.
+## Change (single file: `src/components/manager-layout.tsx`)
 
-## Not changing
+Add a mobile-only top bar (`md:hidden`) above the existing `<main>`:
 
-- Page copy, form, styling, header/footer, layout
-- Any other route, component, or site content
-- `src/lib/email-templates/contact-submission.tsx` (already routes to `sholoola@yahoo.com`)
-- `src/routes/terms.tsx` and other pages that mention the email
+- Logo on the left, linking to `prefix("/manager")`.
+- A clickable dropdown trigger on the right showing the current page label + chevron.
+- Dropdown lists the same `items` array already in the file, using the same `prefix()` so links work in both demo and real modes.
+- Active item uses the existing `bg-brand-green/10 text-brand-green` style.
+- Footer of the dropdown reuses the existing "Need help?" mailto and "Sign out" button (sign out is already a no-op in demo mode).
+
+Built with the existing shadcn `DropdownMenu` (`@/components/ui/dropdown-menu`). No new dependencies. Desktop sidebar (`hidden md:flex`) is untouched.
+
+## Out of scope
+
+Desktop layout, sidebar design, colors/typography, routes, ServerLayout, any other page or component.
+
+## Verification
+
+- 390px on `/demo/manager`: top bar visible, dropdown opens, every sidebar destination reachable, active item highlighted.
+- ≥768px: layout identical to today.

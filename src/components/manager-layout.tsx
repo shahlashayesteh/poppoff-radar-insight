@@ -11,11 +11,17 @@ import {
   Settings as SettingsIcon,
   LogOut,
   HelpCircle,
+  ChevronDown,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { Logo } from "./logo";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 type NavItem = { to: string; label: string; icon: typeof LayoutDashboard; key?: string };
 const items: NavItem[] = [
