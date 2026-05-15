@@ -1,19 +1,23 @@
-Change the recipient address for contact form notifications from `hello@poppoffstats.com` to `sholoola@yahoo.com`.
-
 ## Change
 
-In `src/lib/email-templates/contact-submission.tsx`, update the template's fixed recipient:
+Remove the `hello@poppoffstats.com` email from the contact page only.
 
-```ts
-to: 'sholoola@yahoo.com',
-```
+### Edit: `src/routes/contact.tsx`
 
-That `to` field is what `src/routes/api/public/contact.ts` reads (`template.to`) when enqueueing the notification email, so updating it in one place reroutes all future contact form submissions.
+1. **Remove the visible mailto button** (lines ~120-126):
+   ```tsx
+   <a href="mailto:hello@poppoffstats.com" ...>
+     <Mail className="h-4 w-4 text-brand-orange" />
+     hello@poppoffstats.com
+   </a>
+   ```
+   Also remove the now-unused `Mail` import from `lucide-react`.
+
+2. **Remove email references from the page's JSON-LD schema** (ContactPage script): drop the `email` field on the Organization and the entire `contactPoint` array, since both reference `hello@poppoffstats.com`.
 
 ## Not changing
 
-- The contact page UI (`src/routes/contact.tsx`) — the visible `hello@poppoffstats.com` mailto link stays as-is unless you want that swapped too.
-- Database storage — submissions still get saved to `contact_submissions`.
-- Email template content, subject, and styling.
-
-Let me know if you also want the mailto link on the contact page updated.
+- Page copy, form, styling, header/footer, layout
+- Any other route, component, or site content
+- `src/lib/email-templates/contact-submission.tsx` (already routes to `sholoola@yahoo.com`)
+- `src/routes/terms.tsx` and other pages that mention the email
