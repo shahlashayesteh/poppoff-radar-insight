@@ -70,6 +70,9 @@ export function ManagerLayout({ children }: { children: React.ReactNode }) {
     navigate({ to: "/" });
   };
 
+  const currentItem = items.find((it) => path === prefix(it.to) && (!("key" in it) || !it.key));
+  const currentLabel = currentItem?.label ?? "Menu";
+
   return (
     <div className="min-h-screen flex bg-white">
       <aside className="hidden md:flex w-60 flex-col bg-white border-r border-border sticky top-0 h-screen">
