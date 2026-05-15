@@ -108,13 +108,6 @@ function ContactPage() {
             Have a question or want to speak to the PoppOff team? Send us a message and we'll get back to you shortly.
           </p>
 
-          <a
-            href="mailto:hello@poppoffstats.com"
-            className="mt-6 inline-flex items-center gap-2 rounded-xl border border-border px-4 py-2 text-sm font-semibold hover:border-foreground"
-          >
-            <Mail className="h-4 w-4 text-brand-orange" />
-            hello@poppoffstats.com
-          </a>
 
           <div className="mt-10 rounded-2xl border border-border bg-white p-6 md:p-8 shadow-sm">
             {sent ? (
