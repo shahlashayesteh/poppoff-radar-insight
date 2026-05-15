@@ -11,11 +11,17 @@ import {
   Settings as SettingsIcon,
   LogOut,
   HelpCircle,
+  ChevronDown,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { Logo } from "./logo";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 type NavItem = { to: string; label: string; icon: typeof LayoutDashboard; key?: string };
 const items: NavItem[] = [
@@ -64,6 +70,9 @@ export function ManagerLayout({ children }: { children: React.ReactNode }) {
     navigate({ to: "/" });
   };
 
+  const currentItem = items.find((it) => path === prefix(it.to) && (!("key" in it) || !it.key));
+  const currentLabel = currentItem?.label ?? "Menu";
+
   return (
     <div className="min-h-screen flex bg-white">
       <aside className="hidden md:flex w-60 flex-col bg-white border-r border-border sticky top-0 h-screen">
@@ -107,7 +116,47 @@ export function ManagerLayout({ children }: { children: React.ReactNode }) {
           </button>
         </div>
       </aside>
-      <main className="flex-1 min-w-0">{children}</main>
+      <div className="flex-1 min-w-0 flex flex-col">
+        <div className="md:hidden sticky top-0 z-30 flex items-center justify-between gap-3 px-4 py-3 bg-white border-b border-border">
+          <a href={prefix("/manager")}><Logo className="text-xl" /></a>
+          <DropdownMenu>
+            <DropdownMenuTrigger className="inline-flex items-center gap-2 rounded-xl border border-border px-3 py-2 text-sm font-semibold text-foreground hover:bg-muted">
+              {currentLabel}
+              <ChevronDown className="h-4 w-4" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-60 p-2">
+              {items.map((it) => {
+                const target = prefix(it.to);
+                const active = path === target;
+                return (
+                  <a
+                    key={(("key" in it && it.key) || "") + it.to + it.label}
+                    href={target}
+                    className={cn(
+                      "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
+                      active
+                        ? "bg-brand-green/10 text-brand-green font-semibold"
+                        : "text-foreground/70 hover:bg-muted hover:text-foreground"
+                    )}
+                  >
+                    <it.icon className="h-4 w-4" />
+                    {it.label}
+                  </a>
+                );
+              })}
+              <div className="mt-1 pt-1 border-t border-border">
+                <a href="mailto:hello@poppoffstats.com" className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs text-muted-foreground hover:text-foreground">
+                  <HelpCircle className="h-3.5 w-3.5" /> Need help?
+                </a>
+                <button onClick={signOut} className="w-full text-left flex items-center gap-2 rounded-lg px-3 py-2 text-xs text-muted-foreground hover:text-foreground">
+                  <LogOut className="h-3.5 w-3.5" /> Sign out
+                </button>
+              </div>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+        <main className="flex-1 min-w-0">{children}</main>
+      </div>
     </div>
   );
 }
