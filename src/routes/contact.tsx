@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { Logo } from "@/components/logo";
-import { Mail, Loader2, CheckCircle2 } from "lucide-react";
+import { Loader2, CheckCircle2 } from "lucide-react";
 
 export const Route = createFileRoute("/contact")({
   head: () => ({
@@ -31,15 +31,6 @@ export const Route = createFileRoute("/contact")({
             "@type": "Organization",
             name: "PoppOff",
             url: "https://poppoffstats.com",
-            email: "hello@poppoffstats.com",
-            contactPoint: [
-              {
-                "@type": "ContactPoint",
-                contactType: "customer support",
-                email: "hello@poppoffstats.com",
-                availableLanguage: ["en"],
-              },
-            ],
           },
         }),
       },
