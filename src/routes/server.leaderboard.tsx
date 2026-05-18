@@ -128,34 +128,6 @@ function Page() {
             </div>
           </div>
         ) : null}
-          <div
-            className="mt-5 rounded-3xl border-2 p-5 flex items-center gap-4"
-            style={{
-              borderColor: me.rank === 1 ? "var(--brand-green)" : "color-mix(in oklab, var(--brand-orange) 35%, transparent)",
-              background: me.rank === 1
-                ? "color-mix(in oklab, var(--brand-green) 10%, white)"
-                : "color-mix(in oklab, var(--brand-orange) 6%, white)",
-            }}
-          >
-            <div className="h-16 w-16 rounded-full grid place-items-center shrink-0"
-              style={{ background: me.rank === 1 ? "var(--brand-green)" : "var(--brand-orange)", color: "white" }}>
-              {me.rank === 1 ? <Crown className="h-8 w-8" /> : <span className="font-display text-2xl font-extrabold">#{me.rank}</span>}
-            </div>
-            <div className="flex-1">
-              <div className="font-display text-xl font-extrabold leading-tight">
-                {me.rank === 1 ? "You're #1 this week" : `You're #${me.rank} of ${total}`}
-              </div>
-              {myPct !== null && me.rank !== 1 && (
-                <div className="text-xs text-muted-foreground mt-0.5">Outperforming {myPct}% of the team</div>
-              )}
-              {me.movementPct !== null && (
-                <div className="mt-1 text-sm font-semibold" style={{ color: me.movementPct >= 0 ? "var(--brand-green)" : "var(--opportunity)" }}>
-                  {me.movementPct >= 0 ? "Up" : "Down"} {Math.abs(Math.round(me.movementPct))}% on your usual week
-                </div>
-              )}
-            </div>
-          </div>
-        )}
 
         {/* Highlights row */}
         {(movers.length > 0 || topStreakName) && (
