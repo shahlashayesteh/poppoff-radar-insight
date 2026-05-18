@@ -1,86 +1,52 @@
-# Performance Intelligence Engine — Motivation Layer
+## Problem
 
-Server-facing UI now speaks human performance language ("Up 14% on your usual",
-"Only 3 desserts to hit target", "You're #2 of 7"), backed by the same engine
-that powers manager analytics. The analytical numbers (pp, deltas, scores)
-stay internal — they drive scoring, ranking, and coaching, but never appear
-on a server screen.
+On real server accounts the leaderboard shows "No leaderboard data for this week yet" even though the venue has uploaded sales.
 
-## Motivation helpers (`performance-engine.ts`)
-- `ragFromRing` / `ragColor` / `ragSoftBg` / `ragBorder` — strong red/amber/green
-  from target progress. Used everywhere on server screens.
-- `humanMomentum(row)` — sales vs 4wk avg → "Up 12% on your usual" / "Down 8%
-  on your usual" / "Right on your usual".
-- `humanTotalsMomentum(perf)` — same logic for weekly total.
-- `humanTargetCall(row)` — "Only 3 desserts to hit target" / "Beat target by
-  4 points" / "On target — hold the line".
-- `humanItemsDelta(row)` — "8 more cocktails than usual".
-- `itemsToTarget(row)` — opportunity-aware estimate of items needed.
+Root cause: in `src/routes/server.leaderboard.tsx` the `displayWeekStart` is resolved by querying `server_stats` for the latest `week_start`. RLS restricts servers to their own rows, so:
 
-## Leaderboard
-- New SQL function `venue_weekly_leaderboard(venue_id, week_start)`
-  (SECURITY DEFINER, restricted to venue members / manager) returns each
-  server's weekly sales, prev week, 4-week avg, and per-category breakdown
-  without exposing raw rows.
-- `loadVenueLeaderboard()` + `categoryLeaderboard()` + `weeklyMovers()` +
-  `percentileRank()` in the engine.
-- New page `/server/leaderboard` — overall + per-category tabs, "Most
-  improved" + "Longest streak" highlights, current-server row highlighted.
-- Home page shows "You're #N of M" hero chip with a tap-through.
+- If the signed-in server has no row for the most recent uploaded week (common: CSV name didn't match, server joined after the last upload, or rows exist only for older weeks), the helper falls back to today's calendar Monday.
+- The `venue_weekly_leaderboard` RPC is then called for an empty week and returns 0 rows → empty state.
 
-# Pre-existing engine notes (still current)
+The manager-facing surfaces don't have this bug because managers can read every row in the venue.
 
-Central module: `src/lib/performance-engine.ts` — the single source of truth for every server-performance number (home, stats, manager view, AI coaching).
+## Fix
 
+Resolve "latest week with venue data" from a venue-wide source instead of the caller's own rows, so every server sees the same week the manager sees.
 
-Central module: `src/lib/performance-engine.ts` — the single source of truth for every server-performance number (home, stats, manager view, AI coaching).
+### Database
 
-## What it does
+Add a `SECURITY DEFINER` SQL function:
 
-- **Venue-level loader** — `loadVenuePerformance({venueId, weekStart, userIds})` runs the engine for every server in parallel and returns ranked entries, totals, and an avg overall score. Manager surfaces consume this so the team table, server detail, and overview cards always agree with the server's own page.
-- **Overall server score** (`overallScore`) — commercially-weighted avg of category scores (weight = expectedSales → sales → 1). Single number used for ranking and team-table colour.
-- **Score tone / label** (`scoreTone`, `scoreLabel`) — central translation from 0–100 score to Focus / Improving / Strong / Crushing + colour, replacing every page's local `performanceColour` call on real surfaces.
-- **Blended performance score** (0–100):
-  - 35% target achievement
-  - 30% trend vs 4wk avg
-  - 25% commercial impact, **normalised vs expected category sales** (baseline conversion × opportunity × avg price) so dessert outperformance isn't outweighed by average wine just because wine has higher £.
-  - 10% consistency — **neutral 0.5 when sample < 3 weeks or opportunity < 20**, so peak/difficult shifts aren't punished.
-- **Revenue Influence** — `(current − venueBaseline) / 100 × opportunity × avgPrice`. Foundation for "who actually moves £" rather than "who sold most".
-- **Fairness / context foundation** — `server_stats.context jsonb` and `server_category_stats.opportunity_count` columns. Engine threads them through; UI ignores when null.
+```text
+public.latest_venue_stats_week(p_venue_id uuid) returns date
+```
 
-## Pages wired to the engine
+- Authorize: caller must be `is_venue_member(p_venue_id)` OR `is_venue_manager(p_venue_id)`.
+- Returns `max(week_start)` across `server_category_stats` for the venue (falling back to `server_stats` if category stats are absent), or `null` when the venue has no data yet.
+- Stable, search_path locked to `public`.
 
-- `server.index.tsx` — Top 3 + Smashed + Work-on driven by `performanceScore`. Rings use target-based fill + elite tiers. Deltas show "vs 4wk avg".
-- `server.stats.tsx` — bars use `ringPct`. Each row shows both "Xpp wk" and "Xpp 4wk". Items line uses `formatItems()`.
-- `manager.server.$id.tsx` — fully rebuilt on the engine: overall-score KPI, totals strip with WoW + 4wk + revenue influence, category breakdown rows with status tone + dual deltas + revenue influence.
-- `manager.team.tsx` — server cards ranked by engine overall score; each card shows score, status label, rank, WoW/4wk sales delta, revenue influence.
-- `manager.index.tsx` — team-table category dots now come from `statusTone(engine row)` via `loadVenuePerformance`, so the manager dashboard matches the server's own status colour exactly. KPI tiles + upload flow unchanged.
+This is read-only on existing tables. No schema changes, no data migration.
 
-## Legacy paths removed from real surfaces
+### Frontend
 
-- `performanceColour` no longer drives any real-surface dot/bar (only `demo.*` routes keep it for unrelated parity reasons, per scope).
-- Manager-server detail no longer reads `server_stats.<cat>_conversion` directly — it consumes engine rows only.
+In `src/routes/server.leaderboard.tsx`:
 
+- Replace the `latestStatsWeek(supabase.from("server_stats")...)` call with a call to the new `latest_venue_stats_week` RPC.
+- If the RPC returns `null`, keep the current behaviour (show the current calendar week + empty state).
+- Keep the rest of the page unchanged (tabs, hero, highlights, RAG copy).
 
-## AI coaching upgrade (`supabase/functions/ai-assist/index.ts → server_coaching`)
+Optionally apply the same RPC swap to `src/routes/server.index.tsx` and `src/routes/server.stats.tsx` so the server's own dashboard week selector also tracks the venue's true latest week rather than only weeks where the server has personal rows. This makes the "Ranks" chip on the home page consistent with the leaderboard page. (Manager surfaces stay as-is — they already see everything.)
 
-System prompt rewritten:
-- Lead with trend/feel, not data-science phrasing.
-- Ban "pp", "delta", "percentage points", "vs average", "conversion rate".
-- Frame dips gently when 4-week trend is healthy.
-- Sound like a floor manager, not a BI dashboard.
+### Out of scope
 
-Deterministic stat block (built from DB, not AI) still appended verbatim to each tip so numbers are always exact.
+- No UI redesign.
+- No changes to the demo account routes.
+- No changes to scoring, RAG thresholds, or `performance-engine` logic.
+- No changes to manager dashboards.
 
-## Out of scope (intentionally — foundations only)
+## Verification
 
-- Demo routes (`src/routes/demo.*`) untouched.
-- Section/daypart/booking-type UI inputs — schema ready, no UI yet.
-- Backfill of historical `opportunity_count`.
-- Leaderboards / predictive coaching / peak-hour weighting — engine ready, screens future work.
-
-## Verification checklist
-
-- Same conversion, delta, status label, ring fill on home / stats / manager-server / coaching for the same server+week.
-- Chloe's dessert: ring fills to `current/target`; "vs 4wk avg" replaces volatile WoW noise; items label shows "~N est." when no real POS qty.
-- No file under `src/routes/demo.` modified.
+1. Sign in as a real server who has zero `server_stats` rows for the most recent uploaded week. Leaderboard now shows that week's ranking instead of the empty state.
+2. Sign in as a server who does have rows for the latest week. Same week and ranking as before — no regression.
+3. Sign in as the manager. `manager.team` and `manager.server.$id` still resolve to the same latest week (they already used venue-wide data).
+4. Brand-new venue with no uploads: leaderboard still shows the empty state (RPC returns null → fallback).
