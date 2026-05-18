@@ -9,14 +9,20 @@ import { getMondayOfWeek, toISODate, formatWeekRange, latestStatsWeek } from "@/
 import {
   loadServerPerformance,
   loadVenueLeaderboard,
-  ragFromRing,
   ragColor,
   ragSoftBg,
   ragBorder,
   eliteVisual,
-  humanMomentum,
-  humanTargetCall,
-  itemsToTarget,
+  momentumPct,
+  ragFromMomentum,
+  magnitudeFillPct,
+  topMovers,
+  biggestGainer,
+  biggestDecliner,
+  nextWeekOpportunity,
+  weeklyReflection,
+  reflectionLine,
+  opportunityLine,
   percentileRank,
   type CategoryMetric,
   type ServerPerformance,
@@ -40,7 +46,7 @@ function Ring({ fillPct, color, displayValue, glow, pulse }: { fillPct: number; 
         <circle cx="50" cy="50" r={r} fill="none" stroke={color} strokeWidth="11" strokeDasharray={c} strokeDashoffset={offset} strokeLinecap="round" />
       </svg>
       <div className="absolute inset-0 grid place-items-center">
-        <span className="font-display text-3xl font-bold leading-none text-foreground">{displayValue}</span>
+        <span className="font-display text-2xl font-bold leading-none text-foreground">{displayValue}</span>
       </div>
     </div>
   );
@@ -50,6 +56,13 @@ function ragLabel(rag: Rag): string {
   if (rag === "green") return "WINNING";
   if (rag === "amber") return "CLOSE";
   return "FOCUS";
+}
+
+function signedPctLabel(pct: number | null): string {
+  if (pct === null) return "—";
+  const r = Math.round(pct);
+  if (r === 0) return "0%";
+  return `${r > 0 ? "+" : ""}${r}%`;
 }
 
 function itemsTotalFor(row: LeaderboardRow, prices: Record<string, number>): number {
@@ -156,83 +169,42 @@ function ServerDashboard() {
     };
   }, [venueId, displayWeekStart, fetchCoaching]);
 
-  const rows: CategoryMetric[] = perf?.rows ?? [];
+  // -------------------------------------------------------------------------
+  // Curated insights — Home is "what mattered most + what to push next".
+  // All numbers come from the engine; no math here.
+  // -------------------------------------------------------------------------
+  const movers: CategoryMetric[] = topMovers(perf, 3);
+  const reflection = weeklyReflection(perf);
+  const gainer = biggestGainer(perf);
+  const decliner = biggestDecliner(perf);
+  const opportunity = nextWeekOpportunity(perf);
 
-  const smashed = (() => {
-    if (!rows.length) return null;
-    const winners = rows
-      .filter((r) => (r.deltaVs4wk ?? r.deltaWoW ?? 0) > 0)
-      .sort((a, b) => b.score - a.score);
-    if (!winners.length) return null;
-    const top = winners[0];
-    return { row: top, momentum: humanMomentum(top), call: humanTargetCall(top) };
+  // Next-week opportunity list (up to 3 picks): the primary opportunity
+  // plus other under-target categories with meaningful lift, de-duped.
+  const opportunityList: CategoryMetric[] = (() => {
+    const rows = perf?.rows ?? [];
+    const candidates = rows
+      .filter((r) => r.target > 0 && r.current < r.target)
+      .sort((a, b) => {
+        const av = (((a.target - a.current) / 100)) * (a.avgUnitPrice ?? 0);
+        const bv = (((b.target - b.current) / 100)) * (b.avgUnitPrice ?? 0);
+        return bv - av;
+      });
+    const seen = new Set<string>();
+    const picked: CategoryMetric[] = [];
+    if (opportunity) { picked.push(opportunity); seen.add(opportunity.key); }
+    for (const c of candidates) {
+      if (seen.has(c.key)) continue;
+      picked.push(c);
+      seen.add(c.key);
+      if (picked.length >= 3) break;
+    }
+    return picked;
   })();
-
-  const top3: CategoryMetric[] = rows
-    .filter((r) => r.target > 0 || r.items > 0)
-    .slice()
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 3);
-
-  const workOn = rows
-    .filter((r) => r.score < 60 || (r.deltaVs4wk !== null && r.deltaVs4wk < -1))
-    .sort((a, b) => a.score - b.score)
-    .slice(0, 3);
-
-  const allGreen = top3.length >= 3 && top3.every((r) => ragFromRing(r.ringPct, r.target > 0) === "green");
-  // Weekly Focus card always renders red — focus areas are urgent, never amber.
-  const focusTone: Rag = "red";
-
-  const joinLabels = (xs: string[]) =>
-    xs.length <= 1 ? xs.join("") : xs.length === 2 ? `${xs[0]} and ${xs[1]}` : `${xs.slice(0, -1).join(", ")} and ${xs[xs.length - 1]}`;
 
   const totalServers = board.length;
   const myRank = myRow?.rank ?? null;
   const pct = myRank ? percentileRank(myRank, totalServers) : null;
-
-  // ---- Tonight's Push goals ----
-  type PushGoal = { id: string; rag: Rag; text: string };
-  const pushGoals: PushGoal[] = (() => {
-    const out: PushGoal[] = [];
-    // 1) Target-proximity wins
-    for (const r of rows) {
-      const need = itemsToTarget(r);
-      if (need !== null && need > 0 && need <= 5) {
-        out.push({ id: `tgt-${r.key}`, rag: "green", text: `Sell ${need} more ${r.label.toLowerCase()} to hit target` });
-      }
-    }
-    // 2) Go-green nudges (amber that would cross 90% with itemsToTarget worth of items)
-    for (const r of rows) {
-      const rag = ragFromRing(r.ringPct, r.target > 0);
-      if (rag !== "amber") continue;
-      const need = itemsToTarget(r);
-      if (need !== null && need > 0 && need <= 6) {
-        out.push({ id: `green-${r.key}`, rag: "amber", text: `Sell ${need} more ${r.label.toLowerCase()} to turn it green` });
-      }
-    }
-    // 3) Streak protection
-    if (streak > 0 && smashed?.row) {
-      const need = itemsToTarget(smashed.row);
-      if (need !== null && need > 0 && need <= 3) {
-        out.push({ id: `streak`, rag: "green", text: `Sell 1 more ${smashed.row.label.toLowerCase()} to keep your ${streak}-week streak alive` });
-      }
-    }
-    // 4) Rank chase
-    if (myRank && myRank > 1 && Object.keys(prices).length > 0) {
-      const above = board.find((r) => r.rank === myRank - 1);
-      if (above && myRow) {
-        const aboveItems = itemsTotalFor(above, prices);
-        const myItems = itemsTotalFor(myRow, prices);
-        const gap = aboveItems - myItems;
-        if (gap > 0) {
-          out.push({ id: `rank`, rag: "red", text: `Move up 1 rank — ${gap} item${gap === 1 ? "" : "s"} behind ${above.full_name ?? "the server above you"}` });
-        }
-      }
-    }
-    // de-dup by id, cap 4
-    const seen = new Set<string>();
-    return out.filter((g) => (seen.has(g.id) ? false : (seen.add(g.id), true))).slice(0, 4);
-  })();
 
   // ---- Leaderboard Pulse ----
   const pulse = (() => {
@@ -289,54 +261,43 @@ function ServerDashboard() {
         </div>
       )}
 
-      {/* Top 3 circles */}
+      {/* Top 3 — biggest movers (magnitude-driven barometers) */}
       <div className="px-5 mt-4">
         <div className="rounded-3xl bg-white border border-border p-5">
-          <div className="font-semibold">Your Top 3</div>
+          <div className="font-semibold">What mattered most this week</div>
           {hasStat ? (
-            top3.length > 0 ? (
+            movers.length > 0 ? (
               <div className="mt-4 grid grid-cols-3 gap-2">
-                {top3.map((c) => {
-                  const baseRag = ragFromRing(c.ringPct, c.target > 0);
-                  const mo = humanMomentum(c);
-                  // Any category trending down forces a red treatment so
-                  // declining stats never appear as orange/amber.
-                  const rag: Rag = mo?.rag === "red" ? "red" : baseRag;
+                {movers.map((c) => {
+                  const m = momentumPct(c);
+                  const rag = ragFromMomentum(m);
                   const tone = ragColor(rag);
                   const elite = eliteVisual(c.eliteTier);
-                  const call = humanTargetCall(c);
                   return (
                     <div key={c.key} className="flex flex-col items-center">
                       <div className="text-[10px] font-extrabold uppercase tracking-wider mb-1 flex items-center gap-1" style={{ color: tone }}>
                         {ragLabel(rag)}
-                        {elite.badge && (
+                        {elite.badge && rag === "green" && (
                           <span className="text-[8px] rounded-full px-1.5 py-0.5" style={{ background: "color-mix(in oklab, var(--brand-green) 14%, white)", color: "var(--brand-green)" }}>{elite.badge}</span>
                         )}
                       </div>
                       <div className="text-xs text-muted-foreground mb-2">{c.label}</div>
                       <Ring
-                        fillPct={c.ringPct}
+                        fillPct={magnitudeFillPct(m)}
                         color={tone}
-                        displayValue={c.items}
-                        glow={elite.glow}
-                        pulse={rag === "red" && c.ringPct < 50}
+                        displayValue={signedPctLabel(m)}
+                        glow={rag === "green" ? elite.glow : "none"}
+                        pulse={rag === "red" && m !== null && m <= -15}
                       />
-                      {mo ? (
-                        <div className="mt-2 text-[11px] font-semibold text-center leading-tight" style={{ color: ragColor(mo.rag) }}>
-                          {mo.text}
-                        </div>
-                      ) : (
-                        <div className="mt-2 text-[11px] text-muted-foreground">New category</div>
-                      )}
-                      {call && (
-                        <div className="mt-1 text-[10px] text-muted-foreground text-center leading-tight">{call}</div>
-                      )}
+                      <div className="mt-2 text-[11px] font-semibold text-center leading-tight" style={{ color: tone }}>
+                        {m === null ? "New category" : "vs your usual"}
+                      </div>
                     </div>
                   );
                 })}
               </div>
             ) : (
-              <p className="mt-3 text-sm text-muted-foreground">Not enough category data yet — once a few categories have sales and targets we'll highlight your best.</p>
+              <p className="mt-3 text-sm text-muted-foreground">Not enough category data yet to highlight movement.</p>
             )
           ) : (
             <p className="mt-3 text-sm text-muted-foreground">No stats for this week yet. Your manager will upload them after service.</p>
@@ -344,84 +305,94 @@ function ServerDashboard() {
         </div>
       </div>
 
-      {/* Weekly Win */}
-      {hasStat && smashed && (
+      {/* Weekly performance summary — one-line emotional headline */}
+      {hasStat && reflection && (
+        <div className="px-5 mt-4">
+          <div className="rounded-3xl border-2 p-5"
+            style={{ borderColor: ragBorder(reflection.rag), background: ragSoftBg(reflection.rag) }}>
+            <div className="text-[10px] font-extrabold uppercase tracking-wider" style={{ color: ragColor(reflection.rag) }}>
+              Weekly summary
+            </div>
+            <div className="mt-1 font-display text-xl font-extrabold leading-tight">
+              {reflection.text}
+            </div>
+            {gainer && decliner && (
+              <div className="mt-2 text-xs text-foreground/70 font-medium leading-snug">
+                {gainer.label} helped offset weaker {decliner.label.toLowerCase()} performance.
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Biggest win this week */}
+      {hasStat && gainer && (
         <div className="px-5 mt-4">
           <div className="rounded-3xl border-2 p-5 flex items-center gap-4"
             style={{ borderColor: ragBorder("green"), background: ragSoftBg("green") }}>
             <Trophy className="h-12 w-12 shrink-0" style={{ color: "var(--brand-green)" }} />
             <div className="flex-1">
-              <div className="font-display text-lg font-extrabold leading-tight">
-                You're crushing <span style={{ color: "var(--brand-green)" }}>{smashed.row.label}</span>
+              <div className="text-[10px] font-extrabold uppercase tracking-wider" style={{ color: "var(--brand-green)" }}>
+                Biggest win this week
               </div>
-              {smashed.momentum && (
-                <div className="mt-1 text-sm font-semibold" style={{ color: "var(--brand-green)" }}>
-                  {smashed.momentum.text}
-                </div>
-              )}
-              {smashed.call && (
-                <div className="text-xs text-foreground/70 mt-0.5 font-medium">{smashed.call}</div>
-              )}
+              <div className="font-display text-lg font-extrabold leading-tight mt-0.5">
+                {reflectionLine(gainer)}
+              </div>
+              <div className="text-xs text-foreground/70 mt-1 font-medium">
+                {gainer.label} became one of your strongest categories.
+              </div>
             </div>
             <div className="h-9 w-9 rounded-full text-white grid place-items-center text-sm" style={{ background: "var(--brand-green)" }}>✓</div>
           </div>
         </div>
       )}
 
-      {/* Weekly Focus */}
-      {hasStat && !allGreen && workOn.length > 0 && (
+      {/* Biggest miss this week */}
+      {hasStat && decliner && (
         <div className="px-5 mt-4">
           <div className="rounded-3xl border-2 p-5 flex items-start gap-4"
-            style={{ borderColor: ragBorder(focusTone), background: ragSoftBg(focusTone) }}>
-            <TrendingDown className="h-12 w-12 shrink-0" style={{ color: ragColor(focusTone) }} />
+            style={{ borderColor: ragBorder("red"), background: ragSoftBg("red") }}>
+            <TrendingDown className="h-12 w-12 shrink-0" style={{ color: ragColor("red") }} />
             <div className="flex-1">
-              <div className="font-display text-lg font-extrabold leading-tight" style={{ color: ragColor(focusTone) }}>
-                Push {joinLabels(workOn.map((w) => w.label))} this week
+              <div className="text-[10px] font-extrabold uppercase tracking-wider" style={{ color: ragColor("red") }}>
+                Biggest miss this week
               </div>
-              <ul className="mt-2 space-y-1.5 text-xs">
-                {workOn.map((w) => {
-                  const need = itemsToTarget(w);
-                  const rag = ragFromRing(w.ringPct, w.target > 0);
-                  let line: string;
-                  if (need !== null && need > 0 && rag === "amber") {
-                    line = `${need} more to go green`;
-                  } else if (need !== null && need > 0) {
-                    line = `${need} more to hit target`;
-                  } else {
-                    line = humanTargetCall(w) ?? humanMomentum(w)?.text ?? "Needs a push";
-                  }
-                  return (
-                    <li key={w.key} className="leading-tight">
-                      <span className="font-bold" style={{ color: ragColor(focusTone) }}>{w.label}:</span>{" "}
-                      <span className="text-foreground/85 font-medium">{line}</span>
-                    </li>
-                  );
-                })}
-              </ul>
+              <div className="font-display text-lg font-extrabold leading-tight mt-0.5" style={{ color: ragColor("red") }}>
+                {reflectionLine(decliner)}
+              </div>
+              <div className="text-xs text-foreground/80 mt-1 font-medium">
+                {decliner.label} created the biggest drag on your ranking this week.
+              </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* Tonight's Push */}
-      {hasStat && pushGoals.length > 0 && (
+      {/* Next week opportunities */}
+      {hasStat && opportunityList.length > 0 && (
         <div className="px-5 mt-4">
-          <div className="rounded-3xl bg-white border-2 border-border p-5"
+          <div className="rounded-3xl bg-white border-2 p-5"
             style={{ borderColor: "color-mix(in oklab, var(--brand-orange) 35%, transparent)" }}>
             <div className="inline-flex items-center gap-2">
               <div className="h-8 w-8 rounded-full grid place-items-center" style={{ background: "var(--brand-orange)", color: "white" }}>
                 <Zap className="h-4 w-4" />
               </div>
-              <div className="font-display text-lg font-extrabold leading-tight">Tonight's Push</div>
+              <div className="font-display text-lg font-extrabold leading-tight">Next week opportunities</div>
             </div>
             <ul className="mt-3 space-y-2">
-              {pushGoals.map((g) => (
-                <li key={g.id} className="flex items-start gap-3 rounded-2xl px-3 py-2.5"
-                  style={{ background: ragSoftBg(g.rag) }}>
-                  <Target className="h-4 w-4 shrink-0 mt-0.5" style={{ color: ragColor(g.rag) }} />
-                  <span className="text-sm font-medium text-foreground/90 leading-snug">{g.text}</span>
-                </li>
-              ))}
+              {opportunityList.map((o, idx) => {
+                const isPrimary = idx === 0;
+                const rag: Rag = isPrimary ? "red" : "amber";
+                return (
+                  <li key={o.key} className="flex items-start gap-3 rounded-2xl px-3 py-2.5"
+                    style={{ background: ragSoftBg(rag) }}>
+                    <Target className="h-4 w-4 shrink-0 mt-0.5" style={{ color: ragColor(rag) }} />
+                    <span className="text-sm font-medium text-foreground/90 leading-snug">
+                      {opportunityLine(o)}
+                    </span>
+                  </li>
+                );
+              })}
             </ul>
           </div>
         </div>
@@ -435,7 +406,7 @@ function ServerDashboard() {
             <div className="flex items-center justify-between">
               <div className="inline-flex items-center gap-2">
                 <Trophy className="h-5 w-5" style={{ color: "var(--brand-green)" }} />
-                <div className="font-display text-lg font-extrabold leading-tight">Leaderboard Pulse</div>
+                <div className="font-display text-lg font-extrabold leading-tight">Ranking movement</div>
               </div>
               <ArrowRight className="h-4 w-4 text-muted-foreground" />
             </div>
@@ -447,7 +418,7 @@ function ServerDashboard() {
                   </div>
                   <div className="mt-1 font-display text-sm font-extrabold leading-tight truncate">{pulse.catch.name}</div>
                   <div className="text-[11px] text-foreground/70 mt-0.5">
-                    {pulse.catch.gap === 0 ? "Tied — push past them" : `${pulse.catch.gap} item${pulse.catch.gap === 1 ? "" : "s"} ahead`}
+                    {pulse.catch.gap === 0 ? "Tied — overtake next week" : `${pulse.catch.gap} item${pulse.catch.gap === 1 ? "" : "s"} ahead`}
                   </div>
                 </div>
               ) : <div />}
@@ -473,7 +444,7 @@ function ServerDashboard() {
           <div className="rounded-3xl bg-white border border-border p-5">
             <div className="inline-flex items-center gap-2">
               <Sparkles className="h-4 w-4 text-brand-orange" />
-              <div className="font-semibold">Your coaching this week</div>
+              <div className="font-semibold">Your coaching for next week</div>
             </div>
             {coachLoading ? (
               <p className="mt-3 text-sm text-muted-foreground">Writing tips from your week…</p>
