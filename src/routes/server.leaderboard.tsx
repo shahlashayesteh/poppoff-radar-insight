@@ -75,7 +75,8 @@ function Page() {
   }, [streaks]);
   const topStreakName = useMemo(() => {
     if (!topStreak) return null;
-    return board.find((b) => b.user_id === topStreak.user_id)?.full_name ?? "Unknown";
+    // Only show if the streak holder is on the board — avoids "Unknown" labels.
+    return board.find((b) => b.user_id === topStreak.user_id)?.full_name ?? null;
   }, [topStreak, board]);
 
   const tabs = [{ key: "overall", label: "Overall" }, ...cats.map((c) => ({ key: c.key, label: c.label }))];

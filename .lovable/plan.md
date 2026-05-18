@@ -1,46 +1,37 @@
-## Findings
+## What I found
 
-The server leaderboard is still empty for some server accounts because the current leaderboard path is fragile in two ways:
+The uploaded sales data exists for the venue and week shown:
 
-1. **Leaderboard RPC only reads category stats**
-   - `venue_weekly_leaderboard` builds rankings from `server_category_stats` only.
-   - If an upload creates `server_stats` but no usable category rows, the leaderboard returns no rows even though manager stats exist.
+- Week: Mar 30 – Apr 5
+- `server_stats`: 8 server rows, £14,839 total sales
+- `server_category_stats`: 48 category rows
+- The ranking query itself returns the correct 8 servers when run directly.
 
-2. **Matched server accounts and placeholder upload rows can diverge**
-   - Manager uploads create placeholder profile rows when CSV names do not match a real signed-up server exactly.
-   - The leaderboard can rank placeholder/upload identities while the logged-in server account may have no matching current-week row, so the server may not see themselves even when the venue has leaderboard data.
+The mismatch is caused by the `venue_weekly_leaderboard` database function. Because it returns a column named `user_id`, the unqualified `SELECT user_id` inside the function is ambiguous in PL/pgSQL. When called as a signed-in server, it errors with:
 
-Current database snapshot confirms this risk:
-- Venue `tere` has uploaded data for 8 stat users.
-- Only 4 of the signed-up server accounts have matched stats.
-- Some uploaded leaderboard rows are placeholders/no-role accounts.
-- Other venues/accounts currently have no uploaded stats at all, so they correctly show empty.
+```text
+column reference "user_id" is ambiguous
+```
 
-## Plan
+The frontend catches that RPC error and returns an empty array, so the page shows “No leaderboard data for this week yet.” The “Longest streak: Unknown” still appears because streaks load from a separate table, but the leaderboard board is empty, so it cannot map that streak user to a name.
 
-1. **Make the leaderboard database function robust**
-   - Update `venue_weekly_leaderboard` so it ranks from `server_stats.total_sales` as the primary source of weekly overall sales.
-   - Join category stats only for category breakdown tabs.
-   - Keep the security rule: only venue members or the venue manager can call it.
-   - Keep `latest_venue_stats_week` as the venue-wide latest uploaded week helper.
+## Fix plan
 
-2. **Fix identity matching for signed-up servers**
-   - Add or update a safe database repair/helper flow so when a signed-up server account exists with the same normalized name as a placeholder uploaded profile, the uploaded stats/category rows are merged into the real server account.
-   - This uses the existing `merge_server_account_data` pattern rather than duplicating rows.
+1. Update the `venue_weekly_leaderboard` function
+   - Qualify every column reference with table aliases, especially `user_id`, `week_start`, and `venue_id`.
+   - Keep the ranking source as `server_stats.total_sales` so managers’ uploaded totals drive the leaderboard.
+   - Keep category breakdowns joined from `server_category_stats` for tabs.
+   - Keep access limited to authenticated venue members/managers.
 
-3. **Make the frontend expose backend errors instead of silently hiding them**
-   - Update `loadVenueLeaderboard` so RPC errors are logged in development and can be diagnosed instead of returning an indistinguishable empty array.
-   - Keep the server-facing UI simple: if there is genuinely no uploaded data, show the empty message; if data exists, show rankings.
+2. Improve the frontend fallback behavior
+   - If the leaderboard RPC fails, keep logging the real error instead of silently looking like “no data.”
+   - Make the empty state distinguish between “no uploaded data” and “data could not load” so this problem is visible next time.
 
-4. **Align rank calculations**
-   - Ensure `/server/leaderboard` overall ranking is calculated from uploaded venue sales for the selected week.
-   - Keep category tabs based on parsed category data when present.
-   - Note: `server.progress.tsx` still uses the older `get_leaderboard_position` function ranked by spend-per-cover. I will leave that unless you want this same fix extended there too.
+3. Fix the streak name mismatch
+   - Only show “Longest streak” when that streak user exists in the leaderboard, or fetch profile names for streak users separately.
+   - This prevents “Unknown” appearing above an empty board.
 
-## Expected result
-
-- Servers in a venue with uploaded manager stats will see the weekly leaderboard.
-- Rankings will be parsed from manager uploads automatically.
-- Overall top-to-bottom order will be based on weekly uploaded sales.
-- Category tabs will still work when category data was parsed.
-- Server accounts whose uploaded stats were sitting on placeholder profiles will be merged so they can see their own position.
+4. Validate the fix
+   - Re-test `venue_weekly_leaderboard` as a simulated signed-in server account.
+   - Confirm it returns all 8 ranked rows for Mar 30 – Apr 5.
+   - Confirm the server leaderboard will show: #1 Maria Santos, #2 Sophie Turner, #3 Daniel Clarke, and so on down to #8.
