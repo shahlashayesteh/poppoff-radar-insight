@@ -80,8 +80,8 @@ function Page() {
 
   const tabs = [{ key: "overall", label: "Overall" }, ...cats.map((c) => ({ key: c.key, label: c.label }))];
   const activeCat = cats.find((c) => c.key === activeTab) ?? null;
-  const catBoard = activeCat ? categoryLeaderboard(board, activeCat.key, 10) : [];
-  const overallBoard = board.slice(0, 10);
+  const catBoard = activeCat ? categoryLeaderboard(board, activeCat.key, 999) : [];
+  const overallBoard = board;
 
   return (
     <ServerLayout>
@@ -91,7 +91,7 @@ function Page() {
         <div className="mt-1 text-xs text-muted-foreground">{formatWeekRange(displayWeekStart)}</div>
 
         {/* My rank hero */}
-        {me && total > 1 && (
+        {me && total > 1 ? (
           <div
             className="mt-5 rounded-3xl border-2 p-5 flex items-center gap-4"
             style={{
@@ -119,7 +119,15 @@ function Page() {
               )}
             </div>
           </div>
-        )}
+        ) : !me && total > 0 ? (
+          <div className="mt-5 rounded-3xl border-2 border-dashed p-5"
+            style={{ borderColor: "color-mix(in oklab, var(--brand-orange) 35%, transparent)", background: "color-mix(in oklab, var(--brand-orange) 6%, white)" }}>
+            <div className="font-display text-base font-extrabold">You're not on the board yet</div>
+            <div className="text-xs text-muted-foreground mt-1">
+              Your manager hasn't uploaded your sales for this week. Here's where the rest of the team stands.
+            </div>
+          </div>
+        ) : null}
 
         {/* Highlights row */}
         {(movers.length > 0 || topStreakName) && (
