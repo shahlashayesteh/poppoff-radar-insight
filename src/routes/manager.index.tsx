@@ -815,17 +815,20 @@ function ManagerDashboard() {
                           {s?.spend_per_cover ? `£${Number(s.spend_per_cover).toFixed(0)}` : "—"}
                         </td>
                         {cats.map((c) => {
-                          const actual = s ? Number(s[c.key] ?? 0) : 0;
-                          const target = t ? Number(t[c.tKey]) : 0;
                           if (!s)
                             return (
                               <td key={c.label} className="px-3 text-center text-muted-foreground">
                                 —
                               </td>
                             );
+                          // Source of truth: engine row for this user+label.
+                          const row = venuePerf?.byUser[m.id]?.perf.rows.find(
+                            (r) => r.label.toLowerCase() === c.label.toLowerCase(),
+                          );
+                          const tone = row ? statusTone(row.statusLabel) : "var(--brand-orange)";
                           return (
                             <td key={c.label} className="px-3 text-center">
-                              <Dot s={performanceColour(actual, target)} />
+                              <span className="inline-block h-3 w-3 rounded-full" style={{ background: tone }} />
                             </td>
                           );
                         })}
