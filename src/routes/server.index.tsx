@@ -14,7 +14,6 @@ import {
   ragSoftBg,
   ragBorder,
   eliteVisual,
-  formatItems,
   humanMomentum,
   humanTargetCall,
   humanItemsDelta,
@@ -340,8 +339,6 @@ function ServerDashboard() {
           </div>
         </Link>
       </div>
-      {/* formatItems kept for consistency with stats page imports */}
-      <span className="hidden">{formatItems({ quantity: 0, quantitySource: "real" })}</span>
     </ServerLayout>
   );
 }
