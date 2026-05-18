@@ -1062,4 +1062,25 @@ export function opportunityLine(row: CategoryMetric): string {
   return `${row.label} is the easiest win to chase next week`;
 }
 
+/** Estimated weekly target in items (real units), not %. */
+export function targetItems(row: CategoryMetric): number | null {
+  if (!row.target || row.target <= 0) return null;
+  if (row.opportunityCount && row.opportunityCount > 0) {
+    return Math.max(0, Math.round((row.target / 100) * row.opportunityCount));
+  }
+  if (row.current > 0 && row.items > 0) {
+    return Math.max(0, Math.round(row.items * (row.target / row.current)));
+  }
+  return null;
+}
+
+/** Estimated £ uplift if the category closes the gap next week. */
+export function opportunityUpliftGBP(row: CategoryMetric): number | null {
+  const need = itemsToTarget(row);
+  const price = row.avgUnitPrice ?? null;
+  if (!need || !price || need <= 0) return null;
+  return Math.round(need * price);
+}
+
+
 
