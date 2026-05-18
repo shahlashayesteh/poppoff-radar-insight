@@ -242,6 +242,7 @@ function MenuIntel() {
       await supabase.from("weekly_priorities").delete().eq("venue_id", venueId);
       await supabase.functions.invoke("ai-assist", { body: { action: "invalidate_coaching", venueId } });
       await loadPairings(venueId);
+      void regeneratePriorities(venueId);
     } catch (e: any) {
       toast.error(e.message || "Pairing failed");
     } finally {
