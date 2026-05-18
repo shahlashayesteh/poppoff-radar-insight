@@ -130,6 +130,7 @@ export async function loadServerCategoryRows(
       key: c.key,
       label: c.label,
       conversion: Number(cur?.conversion ?? 0),
+      prevConversion: Number(prev?.conversion ?? 0),
       target: Number(tgtMap[c.key] ?? 0),
       sales: Number(cur?.net_sales ?? cur?.sales ?? 0),
       prevSales: Number(prev?.net_sales ?? prev?.sales ?? 0),
