@@ -350,7 +350,7 @@ function ServerDashboard() {
                 You smashed <span style={{ color: "var(--brand-green)" }}>{smashed.label}</span> this week!
               </div>
               <div className="mt-1 text-xs">
-                <span className="font-semibold" style={{ color: "var(--brand-green)" }}>+{smashed.delta.toFixed(0)}%</span>{" "}
+                <span className="font-semibold" style={{ color: "var(--brand-green)" }}>+{smashed.delta.toFixed(1)}%</span>{" "}
                 <span className="text-muted-foreground">vs last week</span>
               </div>
             </div>
