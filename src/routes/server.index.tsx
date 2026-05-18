@@ -224,7 +224,7 @@ function ServerDashboard() {
         const myItems = itemsTotalFor(myRow, prices);
         const gap = aboveItems - myItems;
         if (gap > 0) {
-          out.push({ id: `rank`, rag: "amber", text: `Move up 1 rank — ${gap} item${gap === 1 ? "" : "s"} behind ${above.full_name ?? "the server above you"}` });
+          out.push({ id: `rank`, rag: "red", text: `Move up 1 rank — ${gap} item${gap === 1 ? "" : "s"} behind ${above.full_name ?? "the server above you"}` });
         }
       }
     }
