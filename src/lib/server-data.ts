@@ -32,9 +32,20 @@ export async function fetchVenueAvgPrices(venueId: string): Promise<Record<strin
       const cat = String(it?.category || "").toLowerCase();
       const priceNum = Number(String(it?.price || "").replace(/[^0-9.]/g, ""));
       if (!priceNum) continue;
-      for (const k of Object.keys(buckets)) {
-        if (cat.includes(k)) buckets[k].push(priceNum);
+      const tokens = cat.split(/[^a-z]+/).filter(Boolean);
+      const has = (w: string) => tokens.includes(w) || tokens.includes(w + "s");
+      // Resolve compound categories to a single bucket so "dessert wines &
+      // digestifs" doesn't inflate the dessert avg price, and "sparkling
+      // water" doesn't get counted as sparkling wine.
+      let assigned: string | null = null;
+      if (has("dessert") && (has("wine") || has("digestif"))) assigned = "wine";
+      else if (has("sparkling") && has("water")) assigned = null;
+      else {
+        for (const k of Object.keys(buckets)) {
+          if (has(k)) { assigned = k; break; }
+        }
       }
+      if (assigned) buckets[assigned].push(priceNum);
     }
   }
   const out: Record<string, number> = {};
