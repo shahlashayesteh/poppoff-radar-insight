@@ -211,11 +211,11 @@ function ServerDashboard() {
     return r.conversion - r.prevConversion;
   };
 
-  // Smashed card (still based on best wow positive delta across all categories).
+  // Smashed card (best week-over-week conversion gain in percentage points).
   let smashed: { label: string; delta: number } | null = null;
   if (stat && uniRows.length) {
     const positives = uniRows
-      .map((r) => ({ label: r.label, d: pctDelta(r.items, r.prevItems) }))
+      .map((r) => ({ label: r.label, d: convDelta(r) }))
       .filter((r) => r.d !== null && (r.d as number) > 0) as { label: string; d: number }[];
     if (positives.length) {
       const best = positives.reduce((a, b) => (b.d > a.d ? b : a));
@@ -229,6 +229,7 @@ function ServerDashboard() {
     label: string;
     role: RingRole;
     conversion: number;
+    prevConversion: number;
     target: number;
     items: number;
     prevItems: number;
@@ -262,11 +263,12 @@ function ServerDashboard() {
     };
 
     top3 = picks.map((p) => {
-      const d = pctDelta(p.items, p.prevItems);
+      const d = convDelta(p);
       return {
         label: cap(p.label),
         role: deltaBucket(d).role,
         conversion: p.conversion,
+        prevConversion: p.prevConversion,
         target: p.target,
         items: p.items,
         prevItems: p.prevItems,
@@ -274,12 +276,12 @@ function ServerDashboard() {
     });
     allGreen =
       top3.length === 3 &&
-      top3.every((t) => deltaBucket(pctDelta(t.items, t.prevItems)).tone === "var(--brand-green)");
+      top3.every((t) => deltaBucket(convDelta(t)).tone === "var(--brand-green)");
   }
 
   // Work-on list: red entries from Top 3 only.
   const workOnList = top3
-    .map((t) => ({ label: t.label, d: pctDelta(t.items, t.prevItems) }))
+    .map((t) => ({ label: t.label, d: convDelta(t) }))
     .filter((t) => deltaBucket(t.d).tone === "var(--opportunity)");
   const joinLabels = (xs: string[]) =>
     xs.length <= 1
