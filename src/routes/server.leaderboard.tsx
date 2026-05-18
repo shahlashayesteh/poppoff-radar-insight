@@ -56,14 +56,16 @@ function Page() {
       if (latestErr) console.warn("[leaderboard] latest_venue_stats_week failed", latestErr);
       const visibleWeek = (latest as string | null) || weekStart;
       setDisplayWeekStart(visibleWeek);
-      const [lb, vc, sk] = await Promise.all([
+      const [lb, vc, sk, pr] = await Promise.all([
         loadVenueLeaderboard({ venueId: v, weekStart: visibleWeek }),
         supabase.from("venue_categories").select("key,label,sort_order").eq("venue_id", v).order("sort_order"),
         supabase.from("server_streaks").select("user_id,current_streak,longest_streak").eq("venue_id", v),
+        fetchVenueAvgPrices(v),
       ]);
       setBoard(lb);
       setCats((vc.data ?? []) as CatDef[]);
       setStreaks((sk.data ?? []) as Streak[]);
+      setPrices(pr);
     })();
   }, [weekStart]);
 
