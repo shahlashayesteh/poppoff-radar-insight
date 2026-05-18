@@ -163,9 +163,17 @@ function MenuIntel() {
     toast.success("Menu deleted");
   };
 
+  const onGeneratePairingsClick = () => {
+    if (!venueId) return;
+    if (menus.length === 0) { toast.error("Upload at least one menu first"); return; }
+    if (pairings.length > 0) { setConfirmRegen(true); return; }
+    void generatePairings();
+  };
+
   const generatePairings = async () => {
     if (!venueId) return;
     if (menus.length === 0) { toast.error("Upload at least one menu first"); return; }
+    setConfirmRegen(false);
     setPairingLoading(true);
     setPairingProgress({ done: 0, total: 0 });
     try {
