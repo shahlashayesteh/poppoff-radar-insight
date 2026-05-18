@@ -161,6 +161,7 @@ function ServerDashboard() {
   type UniRow = {
     label: string;
     conversion: number;
+    prevConversion: number;
     target: number;
     items: number;
     prevItems: number;
@@ -169,12 +170,13 @@ function ServerDashboard() {
     if (!stat) return [];
     return LEGACY_CATS.map((c) => {
       const conv = Number((stat as any)[c.conv] ?? 0);
+      const prevConv = Number((prevStat as any)?.[c.conv] ?? 0);
       const tgt = Number((target as any)?.[c.t] ?? 0);
       const items = estimateItemsSold(Number((stat as any)[c.sales] ?? 0), c.key as CategoryKey, prices);
       const prevItems = prevStat
         ? estimateItemsSold(Number((prevStat as any)[c.sales] ?? 0), c.key as CategoryKey, prices)
         : 0;
-      return { label: c.label, conversion: conv, target: tgt, items, prevItems };
+      return { label: c.label, conversion: conv, prevConversion: prevConv, target: tgt, items, prevItems };
     });
   };
   // Only prefer dynamic rows when the venue actually has usable data for the
@@ -193,11 +195,21 @@ function ServerDashboard() {
     ? dynRows.map((r) => ({
         label: r.label,
         conversion: r.conversion,
+        prevConversion: r.prevConversion,
         target: r.target,
         items: r.items,
         prevItems: r.prevItems,
       }))
     : buildLegacyRows();
+
+  // Conversion percentage-point delta vs previous week. Returns null when
+  // there is no previous-week signal at all (both 0). This is the
+  // source-of-truth metric used by coaching insights, so home + stats + the
+  // AI tips all speak the same language.
+  const convDelta = (r: { conversion: number; prevConversion: number }): number | null => {
+    if (!r.prevConversion && !r.conversion) return null;
+    return r.conversion - r.prevConversion;
+  };
 
   // Smashed card (still based on best wow positive delta across all categories).
   let smashed: { label: string; delta: number } | null = null;
