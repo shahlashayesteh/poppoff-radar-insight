@@ -41,6 +41,19 @@ function MenuIntel() {
     setPairings(((data ?? []) as unknown) as Pairing[]);
   };
 
+  // After a menu/pairing change, ask the AI for fresh "push this week" priorities
+  // so the server-facing /server/menu page does not go blank.
+  const regeneratePriorities = async (v: string) => {
+    const weekStart = toISODate(getMondayOfWeek());
+    try {
+      await supabase.functions.invoke("ai-assist", {
+        body: { action: "generate_priorities", venueId: v, payload: { weekStart } },
+      });
+    } catch (err) {
+      console.error("regeneratePriorities failed", err);
+    }
+  };
+
   useEffect(() => {
     (async () => {
       const venue = await getManagerVenue();
