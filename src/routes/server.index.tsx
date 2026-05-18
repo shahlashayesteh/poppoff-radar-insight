@@ -370,7 +370,7 @@ function ServerDashboard() {
         </div>
       )}
 
-      {/* Next week opportunities */}
+      {/* Next week opportunities — concrete Target / Actual / Gap + reward */}
       {hasStat && opportunityList.length > 0 && (
         <div className="px-5 mt-4">
           <div className="rounded-3xl bg-white border-2 p-5"
@@ -381,17 +381,60 @@ function ServerDashboard() {
               </div>
               <div className="font-display text-lg font-extrabold leading-tight">Next week opportunities</div>
             </div>
-            <ul className="mt-3 space-y-2">
+            <ul className="mt-3 space-y-2.5">
               {opportunityList.map((o, idx) => {
                 const isPrimary = idx === 0;
                 const rag: Rag = isPrimary ? "red" : "amber";
+                const tone = ragColor(rag);
+                const word = o.label.toLowerCase();
+                const tgtN = targetItems(o);
+                const actualN = o.items > 0 ? o.items : null;
+                const gapN = tgtN !== null && actualN !== null ? Math.max(0, tgtN - actualN) : null;
+                const uplift = opportunityUpliftGBP(o);
+                // Future reward — connects action to outcome
+                let reward: string | null = null;
+                if (pulse?.catch && uplift !== null) {
+                  reward = `Could move you above ${pulse.catch.name}`;
+                } else if (uplift !== null && uplift >= 30) {
+                  reward = `Roughly £${uplift} in uplift`;
+                } else if (pulse?.watch) {
+                  reward = `Protects your rank from ${pulse.watch.name}`;
+                } else if (myRank && myRank > 1) {
+                  reward = `Strong week could lift your rank`;
+                }
                 return (
-                  <li key={o.key} className="flex items-start gap-3 rounded-2xl px-3 py-2.5"
+                  <li key={o.key} className="rounded-2xl px-3.5 py-3"
                     style={{ background: ragSoftBg(rag) }}>
-                    <Target className="h-4 w-4 shrink-0 mt-0.5" style={{ color: ragColor(rag) }} />
-                    <span className="text-sm font-medium text-foreground/90 leading-snug">
-                      {opportunityLine(o)}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <Target className="h-4 w-4 shrink-0" style={{ color: tone }} />
+                      <span className="font-display text-sm font-extrabold" style={{ color: tone }}>{o.label}</span>
+                    </div>
+                    {tgtN !== null && actualN !== null ? (
+                      <div className="mt-1.5 text-[13px] leading-snug text-foreground/90 font-medium">
+                        <div>Target: <span className="font-bold">{tgtN} {word}</span> a week</div>
+                        <div>You finished on <span className="font-bold">{actualN}</span></div>
+                        {gapN !== null && gapN > 0 && (
+                          <div className="mt-0.5" style={{ color: tone }}>
+                            <span className="font-bold">{gapN} more {word}</span> next week → back above target
+                          </div>
+                        )}
+                        {gapN === 0 && (
+                          <div className="mt-0.5" style={{ color: "var(--brand-green)" }}>
+                            Hold this pace to stay green
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="mt-1.5 text-[13px] leading-snug text-foreground/90 font-medium">
+                        {o.label} is your easiest win to chase next week
+                      </div>
+                    )}
+                    {reward && (
+                      <div className="mt-2 inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider"
+                        style={{ color: "var(--brand-green)" }}>
+                        <Sparkles className="h-3 w-3" /> {reward}
+                      </div>
+                    )}
                   </li>
                 );
               })}
@@ -399,6 +442,7 @@ function ServerDashboard() {
           </div>
         </div>
       )}
+
 
       {/* Leaderboard Pulse */}
       {hasStat && pulse && (pulse.catch || pulse.watch) && (
