@@ -262,9 +262,10 @@ function ServerDashboard() {
             top3.length > 0 ? (
               <div className="mt-4 grid grid-cols-3 gap-2">
                 {top3.map((c) => {
-                  const tone = toneFor(c.conversion, c.target);
-                  const fillPct = c.target > 0 ? (c.conversion / c.target) * 100 : c.conversion;
                   const d = pctDelta(c.items, c.prevItems);
+                  const bucket = deltaBucket(d);
+                  const tone = bucket.tone;
+                  const fillPct = bucket.fillPct;
                   return (
                     <div key={c.label} className="flex flex-col items-center">
                       <div className="text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: tone }}>{c.role}</div>
