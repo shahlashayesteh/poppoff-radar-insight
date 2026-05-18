@@ -754,12 +754,12 @@ export function ragColor(rag: Rag): string {
 
 export function ragSoftBg(rag: Rag): string {
   const c = ragColor(rag);
-  return `color-mix(in oklab, ${c} 10%, white)`;
+  return `color-mix(in oklab, ${c} 14%, white)`;
 }
 
 export function ragBorder(rag: Rag): string {
   const c = ragColor(rag);
-  return `color-mix(in oklab, ${c} 45%, transparent)`;
+  return `color-mix(in oklab, ${c} 55%, transparent)`;
 }
 
 /** Estimate how many more items needed to hit target this week. */
