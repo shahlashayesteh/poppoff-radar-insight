@@ -88,6 +88,25 @@ function Page() {
   const catBoard = activeCat ? categoryLeaderboard(board, activeCat.key, 999) : [];
   const overallBoard = board;
 
+  const itemsForRow = (r: LeaderboardRow): number => {
+    const byCat = r.current_by_category;
+    if (!byCat) return 0;
+    let total = 0;
+    for (const [key, c] of Object.entries(byCat)) {
+      if (c?.quantity != null && c.quantity > 0) {
+        total += Math.round(Number(c.quantity));
+      } else if (c?.sales) {
+        total += estimateItemsSold(Number(c.sales), key as CategoryKey, prices);
+      }
+    }
+    return total;
+  };
+  const itemsForCatRow = (r: { catSales: number; catQty: number | null }, key: string): number => {
+    if (r.catQty != null && r.catQty > 0) return Math.round(r.catQty);
+    if (r.catSales > 0) return estimateItemsSold(r.catSales, key as CategoryKey, prices);
+    return 0;
+  };
+
   return (
     <ServerLayout>
       <div className="px-5 pt-6">
