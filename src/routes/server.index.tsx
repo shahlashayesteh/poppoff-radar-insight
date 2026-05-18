@@ -480,33 +480,73 @@ function ServerDashboard() {
                 </div>
               ) : <div />}
             </div>
+            {(() => {
+              // Future-reward hook — what a strong next week unlocks.
+              if (myRank && myRank <= 2 && pulse.watch) {
+                return (
+                  <div className="mt-3 text-[12px] font-bold" style={{ color: "var(--brand-green)" }}>
+                    A strong week protects your top spot
+                  </div>
+                );
+              }
+              if (pulse.catch && pulse.catch.gap > 0 && pulse.catch.gap <= 10) {
+                return (
+                  <div className="mt-3 text-[12px] font-bold" style={{ color: "var(--brand-green)" }}>
+                    You're 1 strong week away from #{(myRank ?? 0) - 1}
+                  </div>
+                );
+              }
+              if (pulse.catch) {
+                return (
+                  <div className="mt-3 text-[12px] font-bold" style={{ color: "var(--brand-green)" }}>
+                    A stronger week could move you up the board
+                  </div>
+                );
+              }
+              return null;
+            })()}
           </Link>
         </div>
       )}
 
-      {/* Coaching */}
+      {/* Coaching — short, punchy, immediately actionable. */}
       {hasStat && (coachLoading || (coaching && coaching.length > 0)) && (
         <div className="px-5 mt-4">
           <div className="rounded-3xl bg-white border border-border p-5">
             <div className="inline-flex items-center gap-2">
               <Sparkles className="h-4 w-4 text-brand-orange" />
-              <div className="font-semibold">Your coaching for next week</div>
+              <div className="font-semibold">Quick coaching for next week</div>
             </div>
             {coachLoading ? (
               <p className="mt-3 text-sm text-muted-foreground">Writing tips from your week…</p>
             ) : (
-              <ul className="mt-3 space-y-2">
-                {coaching!.map((s, i) => (
-                  <li key={i} className="rounded-2xl border border-border p-3 flex gap-3">
-                    <span className="inline-flex items-center justify-center text-[10px] font-bold uppercase tracking-wider rounded-full px-2 py-0.5 h-fit shrink-0" style={{ background: "color-mix(in oklab, var(--brand-green) 12%, white)", color: "var(--brand-green)" }}>{s.category}</span>
-                    <span className="text-sm text-foreground/90">{s.tip}</span>
-                  </li>
-                ))}
+              <ul className="mt-3 space-y-1.5">
+                {coaching!.map((s, i) => {
+                  // Strip any verbose appended stats parenthetical so cached
+                  // tips also feel punchy. Keep first sentence only.
+                  const cleaned = String(s.tip || "")
+                    .replace(/\s*\([^)]*\)\s*$/g, "")
+                    .replace(/\s+/g, " ")
+                    .trim();
+                  const firstSentence = cleaned.split(/(?<=[.!?])\s+/)[0] || cleaned;
+                  const short = firstSentence.replace(/\.$/, "");
+                  return (
+                    <li key={i} className="rounded-xl px-3 py-2 flex items-start gap-2.5"
+                      style={{ background: "color-mix(in oklab, var(--brand-green) 6%, white)" }}>
+                      <span className="mt-1 h-1.5 w-1.5 rounded-full shrink-0" style={{ background: "var(--brand-green)" }} />
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{s.category}</div>
+                        <div className="text-[13px] font-semibold text-foreground leading-snug">{short}</div>
+                      </div>
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </div>
         </div>
       )}
+
 
       <div className="px-5 mt-4 mb-6 grid grid-cols-2 gap-3">
         <Link to="/server/leaderboard" className="rounded-3xl bg-white border border-border p-4 flex items-center gap-3">
