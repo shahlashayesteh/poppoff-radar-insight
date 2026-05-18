@@ -163,7 +163,8 @@ function MenuIntel() {
     setPendingMenu(null);
     if (venueId) {
       await loadMenus(venueId);
-      // Clear stale per-server coaching that referenced the deleted menu
+      // Clear stale per-server coaching + priorities that referenced the deleted menu
+      await supabase.from("weekly_priorities").delete().eq("venue_id", venueId);
       await supabase.functions.invoke("ai-assist", { body: { action: "invalidate_coaching", venueId } });
     }
     toast.success("Menu deleted · coaching refreshed");
