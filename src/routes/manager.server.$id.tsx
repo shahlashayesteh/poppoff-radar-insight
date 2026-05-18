@@ -18,14 +18,7 @@ import { toast } from "sonner";
 
 export const Route = createFileRoute("/manager/server/$id")({ component: ServerView });
 
-const cats = [
-  { key: "wine_conversion", t: "wine_target", label: "Wine" },
-  { key: "cocktail_conversion", t: "cocktail_target", label: "Cocktails" },
-  { key: "dessert_conversion", t: "dessert_target", label: "Desserts" },
-  { key: "sides_conversion", t: "sides_target", label: "Sides" },
-  { key: "spirits_conversion", t: "spirits_target", label: "Spirits" },
-  { key: "sparkling_conversion", t: "sparkling_target", label: "Sparkling" },
-];
+// Category list now comes entirely from the engine — no per-page constants.
 
 function ServerView() {
   const { id } = Route.useParams();
