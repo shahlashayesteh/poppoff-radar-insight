@@ -98,7 +98,7 @@ function Page() {
               const rag = mo?.rag === "red" ? "red" : baseRag;
               const tone = ragColor(rag);
               const elite = eliteVisual(r.eliteTier);
-              const call = humanTargetCall(r);
+              // target-call line intentionally omitted — week is finalized
               const itemsDelta = humanItemsDelta(r);
               return (
                 <div
