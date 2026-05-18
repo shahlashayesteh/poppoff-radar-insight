@@ -4,30 +4,30 @@ Central module: `src/lib/performance-engine.ts` — the single source of truth f
 
 ## What it does
 
-- **Target-based rings** — `ringPct = clamp(current / target, 0, 100)`. Elite over-target tiers (1: 100–120%, 2: 120–150%, 3: 150%+) drive subtle glow + badge so top performers keep progressing past completion.
-- **4-week rolling avg** as the primary behavioural benchmark. WoW remains as secondary signal. Status labels: Focus / Improving / Strong / Crushing, derived from `deltaVs4wk` (fallback WoW only when no history).
-- **Category-aware denominator metadata** (`eligible_covers`, `adult_bev_opportunities`, `eligible_tables`, etc.) — labelled now, recomputable from a real `opportunity_count` later without page changes.
-- **Quantity confidence** — `real` (POS qty), `estimated` (sales ÷ menu avg), `fallback` (default price). UI prefixes "~ est." when not real, never presents estimates as fact.
+- **Venue-level loader** — `loadVenuePerformance({venueId, weekStart, userIds})` runs the engine for every server in parallel and returns ranked entries, totals, and an avg overall score. Manager surfaces consume this so the team table, server detail, and overview cards always agree with the server's own page.
+- **Overall server score** (`overallScore`) — commercially-weighted avg of category scores (weight = expectedSales → sales → 1). Single number used for ranking and team-table colour.
+- **Score tone / label** (`scoreTone`, `scoreLabel`) — central translation from 0–100 score to Focus / Improving / Strong / Crushing + colour, replacing every page's local `performanceColour` call on real surfaces.
 - **Blended performance score** (0–100):
   - 35% target achievement
   - 30% trend vs 4wk avg
   - 25% commercial impact, **normalised vs expected category sales** (baseline conversion × opportunity × avg price) so dessert outperformance isn't outweighed by average wine just because wine has higher £.
   - 10% consistency — **neutral 0.5 when sample < 3 weeks or opportunity < 20**, so peak/difficult shifts aren't punished.
 - **Revenue Influence** — `(current − venueBaseline) / 100 × opportunity × avgPrice`. Foundation for "who actually moves £" rather than "who sold most".
-- **Fairness / context foundation** — `server_stats.context jsonb` and `server_category_stats.opportunity_count` columns added. Engine threads them through; UI ignores when null. Future section/daypart/booking weighting plugs in here.
-
-## Database migration
-
-- `server_category_stats.opportunity_count numeric` (nullable)
-- `server_stats.context jsonb` (nullable)
-
-Both nullable, so historical data + every existing read continues to render unchanged.
+- **Fairness / context foundation** — `server_stats.context jsonb` and `server_category_stats.opportunity_count` columns. Engine threads them through; UI ignores when null.
 
 ## Pages wired to the engine
 
-- `src/routes/server.index.tsx` — Top 3 + Smashed + Work-on driven by `performanceScore`. Rings use target-based fill + elite tiers. Deltas show "vs 4wk avg" (primary).
-- `src/routes/server.stats.tsx` — bars use `ringPct`. Each row shows both "Xpp wk" and "Xpp 4wk" plus status label. Items line uses `formatItems()` ("123 sold" vs "~123 est."). Top tile shows real £ delta WoW + 4wk.
-- `src/routes/manager.server.$id.tsx` — category breakdown bars now use the same target-based fill so manager + server views match exactly.
+- `server.index.tsx` — Top 3 + Smashed + Work-on driven by `performanceScore`. Rings use target-based fill + elite tiers. Deltas show "vs 4wk avg".
+- `server.stats.tsx` — bars use `ringPct`. Each row shows both "Xpp wk" and "Xpp 4wk". Items line uses `formatItems()`.
+- `manager.server.$id.tsx` — fully rebuilt on the engine: overall-score KPI, totals strip with WoW + 4wk + revenue influence, category breakdown rows with status tone + dual deltas + revenue influence.
+- `manager.team.tsx` — server cards ranked by engine overall score; each card shows score, status label, rank, WoW/4wk sales delta, revenue influence.
+- `manager.index.tsx` — team-table category dots now come from `statusTone(engine row)` via `loadVenuePerformance`, so the manager dashboard matches the server's own status colour exactly. KPI tiles + upload flow unchanged.
+
+## Legacy paths removed from real surfaces
+
+- `performanceColour` no longer drives any real-surface dot/bar (only `demo.*` routes keep it for unrelated parity reasons, per scope).
+- Manager-server detail no longer reads `server_stats.<cat>_conversion` directly — it consumes engine rows only.
+
 
 ## AI coaching upgrade (`supabase/functions/ai-assist/index.ts → server_coaching`)
 
