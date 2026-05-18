@@ -243,8 +243,8 @@ function Page() {
                       )}
                     </div>
                     <div className="text-right">
-                      <div className="font-display text-base font-extrabold">£{Math.round(r.current_sales)}</div>
-                      <div className="text-[10px] uppercase tracking-wider text-muted-foreground">sales</div>
+                      <div className="font-display text-base font-extrabold">{itemsForRow(r)}</div>
+                      <div className="text-[10px] uppercase tracking-wider text-muted-foreground">items sold</div>
                     </div>
                   </li>
                 );
@@ -267,12 +267,9 @@ function Page() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="font-semibold truncate text-sm">{r.full_name ?? "Unnamed"}{isMe ? " (you)" : ""}</div>
-                      {r.catQty !== null && r.catQty > 0 && (
-                        <div className="text-[11px] text-muted-foreground">{r.catQty} sold</div>
-                      )}
                     </div>
                     <div className="text-right">
-                      <div className="font-display text-base font-extrabold">£{Math.round(r.catSales)}</div>
+                      <div className="font-display text-base font-extrabold">{itemsForCatRow(r, activeCat!.key)}</div>
                       <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{activeCat?.label}</div>
                     </div>
                   </li>
