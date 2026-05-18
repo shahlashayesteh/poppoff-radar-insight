@@ -120,12 +120,14 @@ function ServerView() {
                 const tgt = Number(target?.[c.t] ?? 0);
                 const colour = performanceColour(actual, tgt);
                 const tone = colour === "green" ? "var(--brand-green)" : colour === "amber" ? "var(--brand-orange)" : "var(--opportunity)";
+                // Target-based ring fill (matches the server's own view).
+                const fillPct = tgt > 0 ? Math.max(0, Math.min(100, (actual / tgt) * 100)) : 0;
                 return (
                   <div key={c.label} className="flex items-center gap-4">
                     <span className="inline-block h-3 w-3 rounded-full" style={{ background: tone }} />
                     <div className="w-32 text-sm font-medium">{c.label}</div>
                     <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
-                      <div className="h-full rounded-full" style={{ width: `${Math.min(100, actual)}%`, background: tone }} />
+                      <div className="h-full rounded-full" style={{ width: `${fillPct}%`, background: tone }} />
                     </div>
                     <div className="w-24 text-right text-xs text-muted-foreground">{actual.toFixed(0)}% / {tgt}%</div>
                   </div>
