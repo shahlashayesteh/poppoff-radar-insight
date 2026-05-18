@@ -221,7 +221,8 @@ function MenuIntel() {
 
       if (failures > 0) toast.warning(`${chunks.length - failures}/${chunks.length} batches succeeded`);
       else toast.success(`Pairings ready · sent to your team (${collected.length} suggestions)`);
-      // Wipe stale per-server coaching so every server regenerates against the new pairings
+      // Wipe stale per-server coaching + priorities so every server regenerates against the new pairings
+      await supabase.from("weekly_priorities").delete().eq("venue_id", venueId);
       await supabase.functions.invoke("ai-assist", { body: { action: "invalidate_coaching", venueId } });
       await loadPairings(venueId);
     } catch (e: any) {
