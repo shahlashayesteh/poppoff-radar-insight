@@ -1,52 +1,46 @@
-## Problem
+## Findings
 
-On real server accounts the leaderboard shows "No leaderboard data for this week yet" even though the venue has uploaded sales.
+The server leaderboard is still empty for some server accounts because the current leaderboard path is fragile in two ways:
 
-Root cause: in `src/routes/server.leaderboard.tsx` the `displayWeekStart` is resolved by querying `server_stats` for the latest `week_start`. RLS restricts servers to their own rows, so:
+1. **Leaderboard RPC only reads category stats**
+   - `venue_weekly_leaderboard` builds rankings from `server_category_stats` only.
+   - If an upload creates `server_stats` but no usable category rows, the leaderboard returns no rows even though manager stats exist.
 
-- If the signed-in server has no row for the most recent uploaded week (common: CSV name didn't match, server joined after the last upload, or rows exist only for older weeks), the helper falls back to today's calendar Monday.
-- The `venue_weekly_leaderboard` RPC is then called for an empty week and returns 0 rows → empty state.
+2. **Matched server accounts and placeholder upload rows can diverge**
+   - Manager uploads create placeholder profile rows when CSV names do not match a real signed-up server exactly.
+   - The leaderboard can rank placeholder/upload identities while the logged-in server account may have no matching current-week row, so the server may not see themselves even when the venue has leaderboard data.
 
-The manager-facing surfaces don't have this bug because managers can read every row in the venue.
+Current database snapshot confirms this risk:
+- Venue `tere` has uploaded data for 8 stat users.
+- Only 4 of the signed-up server accounts have matched stats.
+- Some uploaded leaderboard rows are placeholders/no-role accounts.
+- Other venues/accounts currently have no uploaded stats at all, so they correctly show empty.
 
-## Fix
+## Plan
 
-Resolve "latest week with venue data" from a venue-wide source instead of the caller's own rows, so every server sees the same week the manager sees.
+1. **Make the leaderboard database function robust**
+   - Update `venue_weekly_leaderboard` so it ranks from `server_stats.total_sales` as the primary source of weekly overall sales.
+   - Join category stats only for category breakdown tabs.
+   - Keep the security rule: only venue members or the venue manager can call it.
+   - Keep `latest_venue_stats_week` as the venue-wide latest uploaded week helper.
 
-### Database
+2. **Fix identity matching for signed-up servers**
+   - Add or update a safe database repair/helper flow so when a signed-up server account exists with the same normalized name as a placeholder uploaded profile, the uploaded stats/category rows are merged into the real server account.
+   - This uses the existing `merge_server_account_data` pattern rather than duplicating rows.
 
-Add a `SECURITY DEFINER` SQL function:
+3. **Make the frontend expose backend errors instead of silently hiding them**
+   - Update `loadVenueLeaderboard` so RPC errors are logged in development and can be diagnosed instead of returning an indistinguishable empty array.
+   - Keep the server-facing UI simple: if there is genuinely no uploaded data, show the empty message; if data exists, show rankings.
 
-```text
-public.latest_venue_stats_week(p_venue_id uuid) returns date
-```
+4. **Align rank calculations**
+   - Ensure `/server/leaderboard` overall ranking is calculated from uploaded venue sales for the selected week.
+   - Keep category tabs based on parsed category data when present.
+   - Note: `server.progress.tsx` still uses the older `get_leaderboard_position` function ranked by spend-per-cover. I will leave that unless you want this same fix extended there too.
 
-- Authorize: caller must be `is_venue_member(p_venue_id)` OR `is_venue_manager(p_venue_id)`.
-- Returns `max(week_start)` across `server_category_stats` for the venue (falling back to `server_stats` if category stats are absent), or `null` when the venue has no data yet.
-- Stable, search_path locked to `public`.
+## Expected result
 
-This is read-only on existing tables. No schema changes, no data migration.
-
-### Frontend
-
-In `src/routes/server.leaderboard.tsx`:
-
-- Replace the `latestStatsWeek(supabase.from("server_stats")...)` call with a call to the new `latest_venue_stats_week` RPC.
-- If the RPC returns `null`, keep the current behaviour (show the current calendar week + empty state).
-- Keep the rest of the page unchanged (tabs, hero, highlights, RAG copy).
-
-Optionally apply the same RPC swap to `src/routes/server.index.tsx` and `src/routes/server.stats.tsx` so the server's own dashboard week selector also tracks the venue's true latest week rather than only weeks where the server has personal rows. This makes the "Ranks" chip on the home page consistent with the leaderboard page. (Manager surfaces stay as-is — they already see everything.)
-
-### Out of scope
-
-- No UI redesign.
-- No changes to the demo account routes.
-- No changes to scoring, RAG thresholds, or `performance-engine` logic.
-- No changes to manager dashboards.
-
-## Verification
-
-1. Sign in as a real server who has zero `server_stats` rows for the most recent uploaded week. Leaderboard now shows that week's ranking instead of the empty state.
-2. Sign in as a server who does have rows for the latest week. Same week and ranking as before — no regression.
-3. Sign in as the manager. `manager.team` and `manager.server.$id` still resolve to the same latest week (they already used venue-wide data).
-4. Brand-new venue with no uploads: leaderboard still shows the empty state (RPC returns null → fallback).
+- Servers in a venue with uploaded manager stats will see the weekly leaderboard.
+- Rankings will be parsed from manager uploads automatically.
+- Overall top-to-bottom order will be based on weekly uploaded sales.
+- Category tabs will still work when category data was parsed.
+- Server accounts whose uploaded stats were sitting on placeholder profiles will be merged so they can see their own position.
