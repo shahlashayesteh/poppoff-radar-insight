@@ -388,21 +388,26 @@ Deno.serve(async (req) => {
       const prevMap = Object.fromEntries(((prevCats ?? []) as any[]).map((r) => [r.category_key, r]));
       const tgtMap = Object.fromEntries(((catTargets ?? []) as any[]).map((r) => [r.category_key, Number(r.target) || 0]));
       const dynCats = (vcRows ?? []) as { key: string; label: string }[];
-      const cats = dynCats.length ? dynCats.map((c) => c.key) : ["wine", "dessert", "cocktail", "sides", "spirits", "sparkling"];
+      const LEGACY_SIX = new Set(["wine", "dessert", "cocktail", "sides", "spirits", "sparkling"]);
+      const cats = dynCats.length ? dynCats.map((c) => c.key) : Array.from(LEGACY_SIX);
       const labelFor = (k: string) => dynCats.find((c) => c.key === k)?.label || k;
+      // Per-category fallback: prefer dynamic server_category_stats when present;
+      // otherwise fall back to legacy server_stats.<cat>_conversion columns so
+      // venues that only upload CSV legacy data still get real numbers.
       const lines = cats.map((c) => {
-        const a = dynCats.length
-          ? Number(curMap[c]?.conversion ?? 0)
-          : Number((cur as any)?.[`${c}_conversion`] ?? 0);
-        const p = dynCats.length
-          ? Number(prevMap[c]?.conversion ?? 0)
-          : Number((prev as any)?.[`${c}_conversion`] ?? 0);
-        const t = dynCats.length
-          ? Number(tgtMap[c] ?? 0)
-          : Number((tg as any)?.[`${c}_target`] ?? 0);
+        const hasDyn = !!curMap[c];
+        let a = hasDyn ? Number(curMap[c]?.conversion ?? 0) : 0;
+        let p = hasDyn ? Number(prevMap[c]?.conversion ?? 0) : 0;
+        let t = hasDyn ? Number(tgtMap[c] ?? 0) : 0;
+        if (!hasDyn && LEGACY_SIX.has(c)) {
+          a = Number((cur as any)?.[`${c}_conversion`] ?? 0);
+          p = Number((prev as any)?.[`${c}_conversion`] ?? 0);
+          t = Number((tg as any)?.[`${c}_target`] ?? 0);
+        }
+        if (a === 0 && t === 0) return null;
         const delta = p ? (a - p) : 0;
         return `${labelFor(c)}: ${a.toFixed(0)}% (target ${t.toFixed(0)}%, ${delta >= 0 ? "+" : ""}${delta.toFixed(0)}% vs last week)`;
-      }).join("\n");
+      }).filter(Boolean).join("\n");
       const spc = Number((cur as any)?.spend_per_cover ?? 0);
       const spcTarget = Number((tg as any)?.spend_per_cover_target ?? 0);
       const catList = cats.map(labelFor).concat(["general"]).join("|");

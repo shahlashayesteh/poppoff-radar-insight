@@ -1,40 +1,41 @@
-## Problem
+## What's wrong
 
-Two issues on Chloe's server account after the new menu upload:
+**1. Coaching cites the wrong numbers (the "0% vs target 0%" tips).**
+Chloe's actual stats for week 2026-03-30 are wine 33%, dessert 9%, cocktail 34%, SPC £46.85. But her cached coaching says:
+- "Your cocktail conversion is 0% vs target 0%…"
+- "Your dessert conversion is 0% vs target 0%…"
 
-1. **`/server/menu` still shows old menu items** in the "Push these this week" section. That section reads from `weekly_priorities`, which was never cleared when the new menu was uploaded. Chloe's venue still has rows for `YUZU LEMON DROP`, `WAGYU BEEF DUMPLING`, `ASIAN PEAR STICKY TOFFEE PUDDING`, etc. for past weeks.
-2. **Coaching looks "blank"** on the home page right after a menu change because the cache is invalidated immediately but new tips take a few seconds to generate, and there is no loading indicator during that gap. (Database now has fresh tips referencing the new Liberty & Oak menu, so generation itself works.)
+Why: the `server_coaching` handler in `supabase/functions/ai-assist/index.ts` checks `venue_categories`. Her venue has 9 rows there (6 auto-seeded legacy + 3 menu-item categories), so the code takes the "dynamic" branch and reads every category value from `server_category_stats`. Chloe has **zero** `server_category_stats` rows for that week (her data was uploaded in the legacy six-column shape into `server_stats`), so every category resolves to 0% and the AI writes nonsense built on those zeros.
 
-## Fix
+**2. `/server/menu` shows no "Push these this week" items.**
+The previous cleanup deleted all `weekly_priorities` rows for Chloe's venue and added auto-delete on every menu/pairing change. So whenever a manager uploads a new menu or regenerates pairings, the server's priorities go blank until the manager separately clicks "generate priorities". The empty-state copy reads correctly, but the user expects the priorities to refresh alongside pairings.
 
-### 1. Clear stale weekly priorities for Chloe's venue (immediate cleanup)
+(Pairings themselves are fine — 72 rows exist in `venue_pairings` for the venue and the page does render them; only the top "Push these this week" block is empty.)
 
-Run a migration that deletes all `weekly_priorities` rows for venue `cd6604ee-e149-4412-8f03-be479f38dcc5` so Chloe sees a clean slate instead of items from the old menu.
+## Plan
 
-### 2. Invalidate weekly priorities on menu changes (prevent recurrence)
+### 1. Per-category fallback in `server_coaching` (ai-assist edge function)
 
-Extend the existing menu-upload / menu-delete / pairing-regeneration flow in `src/routes/manager.menu.tsx` so it also deletes `weekly_priorities` rows for the venue whenever the menu or pairings change. This way no other venue ever ends up in Chloe's situation again.
+In `supabase/functions/ai-assist/index.ts`, change the `cats.map(...)` block (≈ lines 391–405) so each category independently picks the best available source:
 
-### 3. Show a loading state for coaching on the server home page
+- If `dynCats` includes the key AND `curMap[key]` exists → use the dynamic conversion/target.
+- Otherwise, if it's one of the legacy six (`wine`, `dessert`, `cocktail`, `sides`, `spirits`, `sparkling`) → fall back to `server_stats.<cat>_conversion`, `server_stats.<cat>_conversion` previous, and `server_targets.<cat>_target`.
+- Skip the row entirely if both sources are zero/missing, so the AI never sees a fake "0% vs target 0%" line.
 
-Update `src/routes/server.index.tsx` so when `server_coaching` is being (re)generated, the UI shows a "Generating fresh coaching based on the new menu…" placeholder instead of an empty area. Trigger this state when:
-- the coaching fetch is in flight, or
-- a realtime menu/pairing change just invalidated the cache.
+Also clear Chloe's existing cached row so the next page load regenerates fresh tips that cite the real numbers.
 
-### 4. Make the `/server/menu` "Push these" section gracefully handle the empty case
+### 2. Auto-regenerate priorities when the menu/pairings change
 
-Once weekly priorities are cleared, the page already shows "Your manager hasn't set this week's priorities yet." Confirm this copy is friendly and visible.
+In `src/routes/manager.menu.tsx`, after each of the three spots that already wipe `weekly_priorities` (post-parse, post-upload, post-delete), invoke `ai-assist` with `action: "generate_priorities"` for the current `weekStart` so the new menu produces fresh "Push these this week" entries instead of leaving the server view blank.
 
-### 5. Verify
+If the manager has no stats yet for that week, `generate_priorities` will still pick items from the menu — that's acceptable and matches the previous behaviour before the cleanup.
 
-- Confirm `weekly_priorities` for Chloe's venue is empty after migration.
-- Confirm the latest `server_coaching` row for Chloe references the new Liberty & Oak menu items (already true).
-- Confirm `/server/menu` no longer shows YUZU LEMON DROP / WAGYU BEEF DUMPLING / ASIAN PEAR STICKY TOFFEE PUDDING.
-- Confirm the server home page shows a loading state instead of a blank panel during regeneration.
+### 3. One-time refresh for Chloe's venue
 
-## Technical details
+After deploying, regenerate priorities once for `venue_id = cd6604ee-e149-4412-8f03-be479f38dcc5` for the current week so her `/server/menu` immediately shows priorities again, and delete her stale `server_coaching` row so the dashboard regenerates with the corrected numbers on next visit.
 
-- Migration: `DELETE FROM weekly_priorities WHERE venue_id = 'cd6604ee-e149-4412-8f03-be479f38dcc5';`
-- `manager.menu.tsx`: after successful menu upload, menu delete, and `regenerate pairings`, additionally call `supabase.from('weekly_priorities').delete().eq('venue_id', venueId)` alongside the existing `invalidate_coaching` call.
-- `server.index.tsx`: add `coachingLoading` state; set true while fetching or right after a realtime invalidation; render a spinner + "Generating fresh coaching…" message in the coaching card body until the new row arrives.
-- No RLS or schema changes required — managers already have full ALL access to `weekly_priorities`.
+### What I am NOT changing
+
+- No DB schema changes.
+- No RLS changes.
+- The `server.index.tsx` and `server.menu.tsx` rendering logic stays as-is — the fix is in data sourcing, not UI.
