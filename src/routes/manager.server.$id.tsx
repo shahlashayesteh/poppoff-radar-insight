@@ -25,6 +25,7 @@ function ServerView() {
   const [name, setName] = useState("");
   const [stat, setStat] = useState<any>(null);
   const [target, setTarget] = useState<any>(null);
+  const [perf, setPerf] = useState<ServerPerformance | null>(null);
   const [streak, setStreak] = useState(0);
   const [viewed, setViewed] = useState(false);
   const [acked, setAcked] = useState(false);
