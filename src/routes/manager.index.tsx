@@ -28,6 +28,7 @@ import {
   latestStatsWeek,
 } from "@/lib/week";
 import { getManagerVenue } from "@/lib/manager-venue";
+import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/manager/")({ component: ManagerDashboard });
@@ -453,14 +454,12 @@ function ManagerDashboard() {
     }
   };
 
+  const [confirmDeleteAll, setConfirmDeleteAll] = useState(false);
+  const [deletingAll, setDeletingAll] = useState(false);
+
   const deleteAllUploads = async () => {
     if (!venue) return;
-    if (
-      !window.confirm(
-        "Delete ALL uploaded CSV stats for this venue? This removes every week of server stats, views, acks, coaching and priorities. This cannot be undone.",
-      )
-    )
-      return;
+    setDeletingAll(true);
     try {
       const { data, error } = await supabase.rpc("delete_csv_uploads", {
         _venue_id: venue.id,
@@ -470,10 +469,13 @@ function ManagerDashboard() {
       const result = data as { deleted_rows: number };
       toast.success(`Deleted ${result?.deleted_rows ?? 0} stat rows`);
       setUploadStatus("All uploaded CSV data deleted.");
+      setConfirmDeleteAll(false);
       await load();
     } catch (err) {
       const message = err instanceof Error ? err.message : "Delete failed";
       toast.error(message);
+    } finally {
+      setDeletingAll(false);
     }
   };
 
