@@ -3,7 +3,16 @@ import { useEffect, useState } from "react";
 import { ManagerLayout } from "@/components/manager-layout";
 import { supabase } from "@/integrations/supabase/client";
 import { getManagerVenue } from "@/lib/manager-venue";
-import { getMondayOfWeek, toISODate, formatWeekRange, performanceColour, latestStatsWeek } from "@/lib/week";
+import { getMondayOfWeek, toISODate, formatWeekRange, latestStatsWeek } from "@/lib/week";
+import {
+  loadServerPerformance,
+  overallScore,
+  statusTone,
+  scoreTone,
+  scoreLabel,
+  formatItems,
+  type ServerPerformance,
+} from "@/lib/performance-engine";
 import { Sparkles, Wand2 } from "lucide-react";
 import { toast } from "sonner";
 
