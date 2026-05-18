@@ -79,6 +79,7 @@ function MenuIntel() {
       setText(""); setLabel("");
       await supabase.from("weekly_priorities").delete().eq("venue_id", venueId);
       await loadMenus(venueId);
+      void regeneratePriorities(venueId);
     } catch (e: any) {
       toast.error(e.message || "AI parse failed");
     } finally {
