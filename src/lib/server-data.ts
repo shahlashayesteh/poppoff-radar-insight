@@ -65,6 +65,7 @@ export type ServerCatRow = {
   key: string;
   label: string;
   conversion: number;
+  prevConversion: number;
   target: number;
   items: number;
   prevItems: number;
