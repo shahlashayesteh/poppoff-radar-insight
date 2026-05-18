@@ -24,6 +24,31 @@ async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs = 6000
   }
 }
 
+function isAbortError(e: unknown): boolean {
+  const msg = e instanceof Error ? e.message : String(e);
+  return /abort|timeout|timed out/i.test(msg);
+}
+
+async function fetchWithRetry(
+  url: string,
+  init: RequestInit,
+  timeoutMs: number,
+  retries = 1,
+): Promise<Response> {
+  let lastErr: unknown;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      return await fetchWithTimeout(url, init, timeoutMs);
+    } catch (e) {
+      lastErr = e;
+      if (!isAbortError(e) || attempt === retries) throw e;
+      console.warn(`[ai-assist] request aborted (attempt ${attempt + 1}), retrying…`);
+      await new Promise((r) => setTimeout(r, 500));
+    }
+  }
+  throw lastErr;
+}
+
 async function callGemini(messages: any[], json: boolean): Promise<string> {
   const body: any = { model: "google/gemini-2.5-flash", messages };
   if (json) body.response_format = { type: "json_object" };
@@ -44,11 +69,11 @@ async function callOpenAI(messages: any[], json: boolean): Promise<string> {
   if (!OPENAI_API_KEY) throw new Error("OPENAI_API_KEY not configured");
   const body: any = { model: "gpt-4o-mini", messages };
   if (json) body.response_format = { type: "json_object" };
-  const r = await fetchWithTimeout("https://api.openai.com/v1/chat/completions", {
+  const r = await fetchWithRetry("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${OPENAI_API_KEY}` },
     body: JSON.stringify(body),
-  });
+  }, 120000, 1);
   if (!r.ok) {
     const t = await r.text().catch(() => "");
     throw new Error(`OpenAI ${r.status}: ${t.slice(0, 500)}`);
