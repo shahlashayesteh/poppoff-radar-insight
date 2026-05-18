@@ -1004,6 +1004,17 @@ export type Database = {
         Args: { _user_id: string; _venue_id: string; _week_start: string }
         Returns: undefined
       }
+      venue_weekly_leaderboard: {
+        Args: { p_venue_id: string; p_week_start: string }
+        Returns: {
+          current_by_category: Json
+          current_sales: number
+          fourwk_avg_sales: number
+          full_name: string
+          prev_sales: number
+          user_id: string
+        }[]
+      }
     }
     Enums: {
       app_role: "manager" | "server"
