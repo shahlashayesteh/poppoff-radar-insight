@@ -425,15 +425,30 @@ Deno.serve(async (req) => {
         `${s.label}: actual ${s.a.toFixed(1)}%, target ${s.t.toFixed(1)}%, vs last week ${s.delta >= 0 ? "+" : ""}${s.delta.toFixed(1)}%`,
       ).join("\n");
       const catList = catStats.map((s) => s.label).concat(["general"]).join("|");
+
+      // Priority categories the coaching MUST address:
+      //  - "biggest miss"   = largest negative momentum (vs last week)
+      //  - "what mattered most" = top movers by absolute momentum
+      const sorted = [...catStats].sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta));
+      const topMoversCats = sorted.slice(0, 3).map((s) => s.label);
+      const decliners = [...catStats].filter((s) => s.delta < 0).sort((a, b) => a.delta - b.delta);
+      const biggestMiss = decliners[0]?.label
+        ?? [...catStats].filter((s) => s.t > 0 && s.a < s.t).sort((a, b) => (a.a - a.t) - (b.a - b.t))[0]?.label
+        ?? null;
+      const priorityList = Array.from(new Set([
+        ...(biggestMiss ? [biggestMiss] : []),
+        ...topMoversCats,
+      ])).slice(0, 4);
+
       const sys = `You are an elite hospitality coach speaking to a server. Reply ONLY with JSON: {"suggestions":[{"category":string,"tip":string}]}. RULES:
 (1) "category" MUST be EXACTLY one of these labels (case-sensitive): ${catList}.
-(2) Return 3-4 tips. Prioritise the 1-2 categories furthest below target. Optionally include 1 celebrating a strong category.
-(3) "tip" is a PUNCHY, IMMEDIATELY ACTIONABLE one-liner — what to DO or SAY on the floor next shift. MAX 10 WORDS. No fluff, no preamble, no trend commentary.
-(4) Imperative verb up front. Examples of the right shape: "Push bourbon pairings earlier next week", "Suggest dessert wine after main clear", "Offer cocktails before mains land", "Pair seafood tables with a crisp white".
+(2) Return EXACTLY 3 tips. The categories MUST be chosen ONLY from this priority list (in this order of importance): ${priorityList.join(", ") || "(use the weakest categories)"}. The FIRST tip MUST address the biggest miss${biggestMiss ? ` (${biggestMiss})` : ""}. The other 2 MUST address the remaining priority categories above. Do NOT pick any category outside this priority list.
+(3) "tip" is a PUNCHY, IMMEDIATELY ACTIONABLE coaching line — what to DO or SAY on the floor next shift to fix that specific stat. MAX 20 WORDS. No fluff, no preamble, no trend commentary.
+(4) Imperative verb up front. Examples: "Push bourbon pairings earlier in the meal so guests have time to commit before mains land", "Suggest a dessert wine when clearing mains — frame it as a pairing, not an upsell".
 (5) ABSOLUTE: NO numbers, percentages, currency, decimals or digits. NO "trending", "consistently", "slightly off", "lagging", "we're". Just the action.
 (6) Reference real menu items from the list when relevant.
-(7) NEVER mention a category not listed above.`;
-      const usr = `This server's week (you do NOT echo numbers — just choose category + write a punchy action under 10 words):\nSpend per cover: actual £${spc.toFixed(2)}, target £${spcTarget.toFixed(2)}\n${lines}\nMenu items: ${menuItems.map((i: any) => i.name).filter(Boolean).slice(0, 40).join(", ") || "(none)"}`;
+(7) NEVER mention a category not listed in rule (1) or outside the priority list in rule (2).`;
+      const usr = `This server's week (you do NOT echo numbers — just choose category from the priority list + write a punchy coaching action under 20 words):\nBiggest miss: ${biggestMiss ?? "(none)"}\nWhat mattered most (top movers): ${topMoversCats.join(", ") || "(none)"}\nSpend per cover: actual £${spc.toFixed(2)}, target £${spcTarget.toFixed(2)}\n${lines}\nMenu items: ${menuItems.map((i: any) => i.name).filter(Boolean).slice(0, 40).join(", ") || "(none)"}`;
       const out = await callAI([{ role: "system", content: sys }, { role: "user", content: usr }], true);
       let aiSuggestions: any[] = [];
       try { const o = JSON.parse(out); aiSuggestions = o.suggestions ?? []; } catch {}
@@ -448,9 +463,15 @@ Deno.serve(async (req) => {
         .replace(/\s{2,}/g, " ")
         .replace(/\s+([,.;:!?])/g, "$1")
         .trim();
+      // Enforce the 20-word ceiling client-side as a safety net.
+      const capWords = (s: string, max: number) => {
+        const words = s.split(/\s+/).filter(Boolean);
+        if (words.length <= max) return s;
+        return words.slice(0, max).join(" ").replace(/[,;:]$/, "");
+      };
       const shorten = (s: string) => {
         const first = s.split(/(?<=[.!?])\s+/)[0] || s;
-        return first.replace(/\.$/, "").trim();
+        return capWords(first.replace(/\.$/, "").trim(), 20);
       };
 
       const suggestions = aiSuggestions
@@ -466,7 +487,7 @@ Deno.serve(async (req) => {
           };
         })
         .filter(Boolean)
-        .slice(0, 4);
+        .slice(0, 3);
 
 
 

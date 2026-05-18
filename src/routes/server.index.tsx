@@ -521,15 +521,17 @@ function ServerDashboard() {
               <p className="mt-3 text-sm text-muted-foreground">Writing tips from your week…</p>
             ) : (
               <ul className="mt-3 space-y-1.5">
-                {coaching!.map((s, i) => {
+                {coaching!.slice(0, 3).map((s, i) => {
                   // Strip any verbose appended stats parenthetical so cached
-                  // tips also feel punchy. Keep first sentence only.
+                  // tips also feel punchy. Keep first sentence, cap at 20 words.
                   const cleaned = String(s.tip || "")
                     .replace(/\s*\([^)]*\)\s*$/g, "")
                     .replace(/\s+/g, " ")
                     .trim();
                   const firstSentence = cleaned.split(/(?<=[.!?])\s+/)[0] || cleaned;
-                  const short = firstSentence.replace(/\.$/, "");
+                  const stripped = firstSentence.replace(/\.$/, "");
+                  const words = stripped.split(/\s+/).filter(Boolean);
+                  const short = words.length > 20 ? words.slice(0, 20).join(" ") : stripped;
                   return (
                     <li key={i} className="rounded-xl px-3 py-2 flex items-start gap-2.5"
                       style={{ background: "color-mix(in oklab, var(--brand-green) 6%, white)" }}>
