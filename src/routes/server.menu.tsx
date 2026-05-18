@@ -94,15 +94,19 @@ function ServerMenu() {
       await loadPairings(v);
 
       // Compute weakest categories from server's own stats vs targets (latest week)
-      const [{ data: catStats }, { data: catTargets }] = await Promise.all([
+      const [{ data: catStats }, { data: catTargets }, { data: legacyStat }, { data: legacyTgt }] = await Promise.all([
         supabase.from("server_category_stats").select("category_key, conversion, quantity, metric_type")
           .eq("user_id", u.user.id).eq("venue_id", v).eq("week_start", visibleWeek),
         supabase.from("server_category_targets").select("category_key, target")
           .eq("user_id", u.user.id).eq("venue_id", v),
+        supabase.from("server_stats").select("wine_conversion,dessert_conversion,cocktail_conversion,sides_conversion,spirits_conversion,sparkling_conversion")
+          .eq("user_id", u.user.id).eq("venue_id", v).eq("week_start", visibleWeek).maybeSingle(),
+        supabase.from("server_targets").select("wine_target,dessert_target,cocktail_target,sides_target,spirits_target,sparkling_target")
+          .eq("user_id", u.user.id).eq("venue_id", v).maybeSingle(),
       ]);
       const tMap = new Map<string, number>();
       (catTargets ?? []).forEach((t: any) => tMap.set(t.category_key, Number(t.target) || 0));
-      const ranked = (catStats ?? [])
+      let ranked = (catStats ?? [])
         .map((s: any) => {
           const target = tMap.get(s.category_key) || 0;
           const actual = s.metric_type === "quantity" ? Number(s.quantity || 0) : Number(s.conversion || 0);
@@ -113,6 +117,21 @@ function ServerMenu() {
         .sort((a, b) => a.gap - b.gap)
         .slice(0, 2)
         .map((r) => r.key);
+      // Fallback to legacy six-column stats when no dynamic category rows exist
+      if (ranked.length === 0 && legacyStat) {
+        const legacyKeys = ["wine", "dessert", "cocktail", "sides", "spirits", "sparkling"] as const;
+        ranked = legacyKeys
+          .map((k) => {
+            const actual = Number((legacyStat as any)[`${k}_conversion`] ?? 0);
+            const target = Number((legacyTgt as any)?.[`${k}_target`] ?? 0);
+            const gap = target > 0 ? actual / target : 1;
+            return { key: k, gap };
+          })
+          .filter((r) => r.gap < 1)
+          .sort((a, b) => a.gap - b.gap)
+          .slice(0, 2)
+          .map((r) => r.key);
+      }
       setWeakCats(ranked);
     })();
   }, [weekStart, loadPairings]);
