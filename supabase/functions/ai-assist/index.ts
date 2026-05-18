@@ -406,13 +406,13 @@ Deno.serve(async (req) => {
         }
         if (a === 0 && t === 0) return null;
         const delta = p ? (a - p) : 0;
-        return `${labelFor(c)}: ${a.toFixed(0)}% (target ${t.toFixed(0)}%, ${delta >= 0 ? "+" : ""}${delta.toFixed(0)}% vs last week)`;
+        return `${labelFor(c)}: ${a.toFixed(1)}% (target ${t.toFixed(1)}%, ${delta >= 0 ? "+" : ""}${delta.toFixed(1)}% vs last week)`;
       }).filter(Boolean).join("\n");
       const spc = Number((cur as any)?.spend_per_cover ?? 0);
       const spcTarget = Number((tg as any)?.spend_per_cover_target ?? 0);
       const catList = cats.map(labelFor).concat(["general"]).join("|");
-      const sys = `You are a hospitality coach producing PERSONAL coaching tips for ONE specific server based on THEIR own weekly stats. Reply ONLY with JSON: {"suggestions":[{"category":string,"tip":string}]}. The "category" MUST be one of: ${catList}. RULES: (1) Return 3-4 tips. (2) PRIORITISE the 1-2 categories where this server is FURTHEST BELOW their target — those tips are mandatory. (3) Optionally include 1 tip celebrating a category they are above target on. (4) EVERY tip MUST cite the server's specific number(s) for that category from the data provided — e.g. 'Your wine conversion is 42% vs target 60% (down 8% from last week) — try …'. Do NOT give generic advice that omits their numbers. (5) Tips MUST be actionable and reference a real menu item from the list when relevant. (6) Keep each tip to 1-2 short sentences.`;
-      const usr = `This server's week:\nSpend per cover: £${spc.toFixed(2)} (target £${spcTarget.toFixed(2)})\n${lines}\nMenu items: ${menuItems.map((i: any) => i.name).filter(Boolean).slice(0, 40).join(", ") || "(none)"}`;
+      const sys = `You are a hospitality coach producing PERSONAL coaching tips for ONE specific server based on THEIR own weekly stats. Reply ONLY with JSON: {"suggestions":[{"category":string,"tip":string}]}. The "category" MUST be one of: ${catList}. RULES: (1) Return 3-4 tips. (2) PRIORITISE the 1-2 categories where this server is FURTHEST BELOW their target — those tips are mandatory. (3) Optionally include 1 tip celebrating a category they are above target on. (4) EVERY tip MUST cite the server's EXACT number(s) for that category from the data provided, copied VERBATIM with the same digits and decimal point — do NOT round, re-calculate, or invent values. If the data says "8.5%" you MUST write "8.5%", never "9%". (5) Tips MUST be actionable and reference a real menu item from the list when relevant. (6) Keep each tip to 1-2 short sentences. (7) NEVER mention a category whose numbers were not provided in the data below.`;
+      const usr = `This server's week (use these EXACT values, do not round):\nSpend per cover: £${spc.toFixed(2)} (target £${spcTarget.toFixed(2)})\n${lines}\nMenu items: ${menuItems.map((i: any) => i.name).filter(Boolean).slice(0, 40).join(", ") || "(none)"}`;
       const out = await callAI([{ role: "system", content: sys }, { role: "user", content: usr }], true);
       let suggestions: any[] = [];
       try { const o = JSON.parse(out); suggestions = o.suggestions ?? []; } catch {}

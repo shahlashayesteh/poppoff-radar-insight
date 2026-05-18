@@ -42,10 +42,19 @@ function MenuIntel() {
   };
 
   // After a menu/pairing change, ask the AI for fresh "push this week" priorities
-  // so the server-facing /server/menu page does not go blank.
+  // for the LATEST uploaded stats week (not the calendar week) so the AI works
+  // from real data. If no stats have been uploaded yet, skip — never seed.
   const regeneratePriorities = async (v: string) => {
-    const weekStart = toISODate(getMondayOfWeek());
     try {
+      const { data: latest } = await supabase
+        .from("server_stats")
+        .select("week_start")
+        .eq("venue_id", v)
+        .order("week_start", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      const weekStart = (latest as any)?.week_start;
+      if (!weekStart) return;
       await supabase.functions.invoke("ai-assist", {
         body: { action: "generate_priorities", venueId: v, payload: { weekStart } },
       });
