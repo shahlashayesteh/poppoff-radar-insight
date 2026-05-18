@@ -40,10 +40,18 @@ function Page() {
       const { data: u } = await supabase.auth.getUser();
       if (!u.user) return;
       setMyId(u.user.id);
+      // Merge any placeholder upload rows (created from CSV name matches) into
+      // this signed-in server account so the leaderboard can show their position.
+      try {
+        await supabase.rpc("claim_placeholder_data" as never, {} as never);
+      } catch (e) {
+        console.warn("[leaderboard] claim_placeholder_data failed", e);
+      }
       const { data: vm } = await supabase.from("venue_members").select("venue_id").eq("user_id", u.user.id).limit(1);
       const v = vm?.[0]?.venue_id;
       if (!v) return;
-      const { data: latest } = await supabase.rpc("latest_venue_stats_week" as never, { p_venue_id: v } as never);
+      const { data: latest, error: latestErr } = await supabase.rpc("latest_venue_stats_week" as never, { p_venue_id: v } as never);
+      if (latestErr) console.warn("[leaderboard] latest_venue_stats_week failed", latestErr);
       const visibleWeek = (latest as string | null) || weekStart;
       setDisplayWeekStart(visibleWeek);
       const [lb, vc, sk] = await Promise.all([

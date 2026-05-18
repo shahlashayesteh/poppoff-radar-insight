@@ -869,7 +869,11 @@ export async function loadVenueLeaderboard(args: {
     p_venue_id: venueId,
     p_week_start: weekStart,
   } as never);
-  if (error || !data) return [];
+  if (error) {
+    console.warn("[leaderboard] venue_weekly_leaderboard failed", error);
+    return [];
+  }
+  if (!data) return [];
   const rows = (data as Array<Omit<LeaderboardRow, "movementPct" | "rank">>).map((r) => {
     const cur = Number(r.current_sales) || 0;
     const avg = Number(r.fourwk_avg_sales) || 0;
