@@ -22,13 +22,15 @@ import {
   nextWeekOpportunity,
   weeklyReflection,
   reflectionLine,
-  opportunityLine,
+  targetItems,
+  opportunityUpliftGBP,
   percentileRank,
   type CategoryMetric,
   type ServerPerformance,
   type LeaderboardRow,
   type Rag,
 } from "@/lib/performance-engine";
+
 
 export const Route = createFileRoute("/server/")({ component: ServerDashboard });
 
@@ -368,7 +370,7 @@ function ServerDashboard() {
         </div>
       )}
 
-      {/* Next week opportunities */}
+      {/* Next week opportunities — concrete Target / Actual / Gap + reward */}
       {hasStat && opportunityList.length > 0 && (
         <div className="px-5 mt-4">
           <div className="rounded-3xl bg-white border-2 p-5"
@@ -379,17 +381,60 @@ function ServerDashboard() {
               </div>
               <div className="font-display text-lg font-extrabold leading-tight">Next week opportunities</div>
             </div>
-            <ul className="mt-3 space-y-2">
+            <ul className="mt-3 space-y-2.5">
               {opportunityList.map((o, idx) => {
                 const isPrimary = idx === 0;
                 const rag: Rag = isPrimary ? "red" : "amber";
+                const tone = ragColor(rag);
+                const word = o.label.toLowerCase();
+                const tgtN = targetItems(o);
+                const actualN = o.items > 0 ? o.items : null;
+                const gapN = tgtN !== null && actualN !== null ? Math.max(0, tgtN - actualN) : null;
+                const uplift = opportunityUpliftGBP(o);
+                // Future reward — connects action to outcome
+                let reward: string | null = null;
+                if (pulse?.catch && uplift !== null) {
+                  reward = `Could move you above ${pulse.catch.name}`;
+                } else if (uplift !== null && uplift >= 30) {
+                  reward = `Roughly £${uplift} in uplift`;
+                } else if (pulse?.watch) {
+                  reward = `Protects your rank from ${pulse.watch.name}`;
+                } else if (myRank && myRank > 1) {
+                  reward = `Strong week could lift your rank`;
+                }
                 return (
-                  <li key={o.key} className="flex items-start gap-3 rounded-2xl px-3 py-2.5"
+                  <li key={o.key} className="rounded-2xl px-3.5 py-3"
                     style={{ background: ragSoftBg(rag) }}>
-                    <Target className="h-4 w-4 shrink-0 mt-0.5" style={{ color: ragColor(rag) }} />
-                    <span className="text-sm font-medium text-foreground/90 leading-snug">
-                      {opportunityLine(o)}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <Target className="h-4 w-4 shrink-0" style={{ color: tone }} />
+                      <span className="font-display text-sm font-extrabold" style={{ color: tone }}>{o.label}</span>
+                    </div>
+                    {tgtN !== null && actualN !== null ? (
+                      <div className="mt-1.5 text-[13px] leading-snug text-foreground/90 font-medium">
+                        <div>Target: <span className="font-bold">{tgtN} {word}</span> a week</div>
+                        <div>You finished on <span className="font-bold">{actualN}</span></div>
+                        {gapN !== null && gapN > 0 && (
+                          <div className="mt-0.5" style={{ color: tone }}>
+                            <span className="font-bold">{gapN} more {word}</span> next week → back above target
+                          </div>
+                        )}
+                        {gapN === 0 && (
+                          <div className="mt-0.5" style={{ color: "var(--brand-green)" }}>
+                            Hold this pace to stay green
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="mt-1.5 text-[13px] leading-snug text-foreground/90 font-medium">
+                        {o.label} is your easiest win to chase next week
+                      </div>
+                    )}
+                    {reward && (
+                      <div className="mt-2 inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider"
+                        style={{ color: "var(--brand-green)" }}>
+                        <Sparkles className="h-3 w-3" /> {reward}
+                      </div>
+                    )}
                   </li>
                 );
               })}
@@ -397,6 +442,7 @@ function ServerDashboard() {
           </div>
         </div>
       )}
+
 
       {/* Leaderboard Pulse */}
       {hasStat && pulse && (pulse.catch || pulse.watch) && (
@@ -434,33 +480,73 @@ function ServerDashboard() {
                 </div>
               ) : <div />}
             </div>
+            {(() => {
+              // Future-reward hook — what a strong next week unlocks.
+              if (myRank && myRank <= 2 && pulse.watch) {
+                return (
+                  <div className="mt-3 text-[12px] font-bold" style={{ color: "var(--brand-green)" }}>
+                    A strong week protects your top spot
+                  </div>
+                );
+              }
+              if (pulse.catch && pulse.catch.gap > 0 && pulse.catch.gap <= 10) {
+                return (
+                  <div className="mt-3 text-[12px] font-bold" style={{ color: "var(--brand-green)" }}>
+                    You're 1 strong week away from #{(myRank ?? 0) - 1}
+                  </div>
+                );
+              }
+              if (pulse.catch) {
+                return (
+                  <div className="mt-3 text-[12px] font-bold" style={{ color: "var(--brand-green)" }}>
+                    A stronger week could move you up the board
+                  </div>
+                );
+              }
+              return null;
+            })()}
           </Link>
         </div>
       )}
 
-      {/* Coaching */}
+      {/* Coaching — short, punchy, immediately actionable. */}
       {hasStat && (coachLoading || (coaching && coaching.length > 0)) && (
         <div className="px-5 mt-4">
           <div className="rounded-3xl bg-white border border-border p-5">
             <div className="inline-flex items-center gap-2">
               <Sparkles className="h-4 w-4 text-brand-orange" />
-              <div className="font-semibold">Your coaching for next week</div>
+              <div className="font-semibold">Quick coaching for next week</div>
             </div>
             {coachLoading ? (
               <p className="mt-3 text-sm text-muted-foreground">Writing tips from your week…</p>
             ) : (
-              <ul className="mt-3 space-y-2">
-                {coaching!.map((s, i) => (
-                  <li key={i} className="rounded-2xl border border-border p-3 flex gap-3">
-                    <span className="inline-flex items-center justify-center text-[10px] font-bold uppercase tracking-wider rounded-full px-2 py-0.5 h-fit shrink-0" style={{ background: "color-mix(in oklab, var(--brand-green) 12%, white)", color: "var(--brand-green)" }}>{s.category}</span>
-                    <span className="text-sm text-foreground/90">{s.tip}</span>
-                  </li>
-                ))}
+              <ul className="mt-3 space-y-1.5">
+                {coaching!.map((s, i) => {
+                  // Strip any verbose appended stats parenthetical so cached
+                  // tips also feel punchy. Keep first sentence only.
+                  const cleaned = String(s.tip || "")
+                    .replace(/\s*\([^)]*\)\s*$/g, "")
+                    .replace(/\s+/g, " ")
+                    .trim();
+                  const firstSentence = cleaned.split(/(?<=[.!?])\s+/)[0] || cleaned;
+                  const short = firstSentence.replace(/\.$/, "");
+                  return (
+                    <li key={i} className="rounded-xl px-3 py-2 flex items-start gap-2.5"
+                      style={{ background: "color-mix(in oklab, var(--brand-green) 6%, white)" }}>
+                      <span className="mt-1 h-1.5 w-1.5 rounded-full shrink-0" style={{ background: "var(--brand-green)" }} />
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{s.category}</div>
+                        <div className="text-[13px] font-semibold text-foreground leading-snug">{short}</div>
+                      </div>
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </div>
         </div>
       )}
+
 
       <div className="px-5 mt-4 mb-6 grid grid-cols-2 gap-3">
         <Link to="/server/leaderboard" className="rounded-3xl bg-white border border-border p-4 flex items-center gap-3">
