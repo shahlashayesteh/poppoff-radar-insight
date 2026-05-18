@@ -260,10 +260,19 @@ Deno.serve(async (req) => {
       try { const o = JSON.parse(out); items = o.items ?? o.menu ?? []; } catch {}
       const stored = text.trim() || `# Visual menu\n${items.map((i: any) => `${i.name}${i.price ? " " + i.price : ""}`).join("\n")}`;
       const ins = await admin.from("venue_menu").insert({ venue_id: venueId, menu_text: stored.slice(0, 20000), parsed_items: items }).select().single();
+      // Invalidate cached server coaching so every server in the venue regenerates against the new menu
+      await admin.from("server_coaching").delete().eq("venue_id", venueId);
       return Response.json({ ok: true, items, menu: ins.data }, { headers: cors });
     }
 
+    if (action === "invalidate_coaching") {
+      await admin.from("server_coaching").delete().eq("venue_id", venueId);
+      return Response.json({ ok: true }, { headers: cors });
+    }
+
     if (action === "list_food_items") {
+      // Manager is about to regenerate pairings — wipe stale per-server coaching too
+      await admin.from("server_coaching").delete().eq("venue_id", venueId);
       const { data: menus } = await admin.from("venue_menu").select("menu_text, parsed_items").eq("venue_id", venueId).order("uploaded_at", { ascending: false }).limit(10);
       const summary = (menus ?? []).map((m, i) => `--- Menu ${i + 1} ---\n${m.menu_text?.slice(0, 3500) || JSON.stringify(m.parsed_items)?.slice(0, 3500)}`).join("\n\n");
       const sys = "Extract ONLY the food item names (starters, mains, sides — NOT drinks, NOT desserts) from the menus below. Reply ONLY with JSON: {\"items\":[string]}. Use exact menu names. Max 60 items.";
