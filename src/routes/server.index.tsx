@@ -168,33 +168,15 @@ function ServerDashboard() {
       }))
     : buildLegacyRows();
 
-  // Smashed / work-on cards
+  // Smashed card (still based on best wow positive delta across all categories).
   let smashed: { label: string; delta: number } | null = null;
-  let workOn: { label: string; delta: number | null } | null = null;
   if (stat && uniRows.length) {
-    const enriched = uniRows.map((r) => {
-      const d = pctDelta(r.items, r.prevItems);
-      const ratio = r.target > 0 ? r.conversion / r.target : 1;
-      return { ...r, d, ratio };
-    });
-    const positives = enriched.filter((r) => r.d !== null && (r.d as number) > 0) as (typeof enriched[number] & { d: number })[];
+    const positives = uniRows
+      .map((r) => ({ label: r.label, d: pctDelta(r.items, r.prevItems) }))
+      .filter((r) => r.d !== null && (r.d as number) > 0) as { label: string; d: number }[];
     if (positives.length) {
       const best = positives.reduce((a, b) => (b.d > a.d ? b : a));
       smashed = { label: best.label, delta: best.d };
-    }
-    const withDelta = enriched.filter((r) => r.d !== null) as (typeof enriched[number] & { d: number })[];
-    if (withDelta.length) {
-      const allPositive = withDelta.every((r) => r.d >= 0);
-      if (allPositive) {
-        const worstByRatio = enriched.reduce((a, b) => (b.ratio < a.ratio ? b : a));
-        workOn = { label: worstByRatio.label, delta: worstByRatio.d };
-      } else {
-        const worst = withDelta.reduce((a, b) => (b.d < a.d ? b : a));
-        workOn = { label: worst.label, delta: worst.d };
-      }
-    } else {
-      const worstByRatio = enriched.reduce((a, b) => (b.ratio < a.ratio ? b : a));
-      workOn = { label: worstByRatio.label, delta: null };
     }
   }
 
