@@ -4,7 +4,7 @@ import { ServerLayout } from "@/components/server-layout";
 import { supabase } from "@/integrations/supabase/client";
 import { useRoleGate } from "@/lib/auth-gate";
 import { Crown, Trophy, TrendingUp, Flame } from "lucide-react";
-import { getMondayOfWeek, toISODate, formatWeekRange, latestStatsWeek } from "@/lib/week";
+import { getMondayOfWeek, toISODate, formatWeekRange } from "@/lib/week";
 import {
   loadVenueLeaderboard,
   categoryLeaderboard,
