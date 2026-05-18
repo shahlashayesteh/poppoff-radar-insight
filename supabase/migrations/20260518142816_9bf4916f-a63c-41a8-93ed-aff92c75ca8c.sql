@@ -1,0 +1,1 @@
+revoke execute on function public.venue_weekly_leaderboard(uuid, date) from public, anon;

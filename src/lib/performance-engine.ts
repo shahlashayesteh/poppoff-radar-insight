@@ -728,3 +728,194 @@ export function scoreLabel(score: number | null): TrendStatus {
   if (score >= 55) return "Improving";
   return "Focus";
 }
+
+// -----------------------------------------------------------------------------
+// MOTIVATION LAYER — translates internal stats into the simple, emotional
+// performance language servers actually react to. The analytical numbers
+// (pp, deltas, scores) stay inside the engine; pages should NEVER show "pp"
+// or "vs 4wk avg" on server-facing surfaces. Use these helpers instead.
+// -----------------------------------------------------------------------------
+
+export type Rag = "green" | "amber" | "red";
+
+/** Strong red/amber/green from ring fill (target progress). */
+export function ragFromRing(ringPct: number, hasTarget: boolean): Rag {
+  if (!hasTarget) return "amber";
+  if (ringPct >= 90) return "green";
+  if (ringPct >= 65) return "amber";
+  return "red";
+}
+
+export function ragColor(rag: Rag): string {
+  if (rag === "green") return "var(--brand-green)";
+  if (rag === "amber") return "var(--brand-orange)";
+  return "var(--opportunity)";
+}
+
+export function ragSoftBg(rag: Rag): string {
+  const c = ragColor(rag);
+  return `color-mix(in oklab, ${c} 10%, white)`;
+}
+
+export function ragBorder(rag: Rag): string {
+  const c = ragColor(rag);
+  return `color-mix(in oklab, ${c} 45%, transparent)`;
+}
+
+/** Estimate how many more items needed to hit target this week. */
+export function itemsToTarget(row: CategoryMetric): number | null {
+  if (!row.target || row.target <= 0) return null;
+  if (row.current >= row.target) return 0;
+  const opp = row.opportunityCount ?? null;
+  if (opp && opp > 0) {
+    const gap = (row.target - row.current) / 100;
+    return Math.max(1, Math.round(gap * opp));
+  }
+  if (row.current > 0 && row.items > 0) {
+    const ratio = row.target / row.current;
+    const projected = Math.round(row.items * ratio);
+    return Math.max(1, projected - row.items);
+  }
+  return null;
+}
+
+/** "Up 12% on your usual" / "Down 8% on your usual" / "Right on your usual". */
+export function humanMomentum(row: CategoryMetric): { text: string; rag: Rag } | null {
+  if (row.fourWeekAvgSales > 0) {
+    const pct = ((row.sales - row.fourWeekAvgSales) / row.fourWeekAvgSales) * 100;
+    const abs = Math.abs(Math.round(pct));
+    if (abs < 3) return { text: "Right on your usual", rag: "amber" };
+    if (pct > 0) return { text: `Up ${abs}% on your usual`, rag: "green" };
+    return { text: `Down ${abs}% on your usual`, rag: "red" };
+  }
+  if (row.prevSales > 0) {
+    const pct = ((row.sales - row.prevSales) / row.prevSales) * 100;
+    const abs = Math.abs(Math.round(pct));
+    if (abs < 3) return { text: "Level with last week", rag: "amber" };
+    if (pct > 0) return { text: `Up ${abs}% on last week`, rag: "green" };
+    return { text: `Down ${abs}% on last week`, rag: "red" };
+  }
+  return null;
+}
+
+export function humanTotalsMomentum(perf: ServerPerformance | null): { text: string; rag: Rag } | null {
+  if (!perf) return null;
+  const t = perf.totals;
+  if (t.fourWeekAvgSales > 0) {
+    const pct = ((t.sales - t.fourWeekAvgSales) / t.fourWeekAvgSales) * 100;
+    const abs = Math.abs(Math.round(pct));
+    if (abs < 3) return { text: "Right on your usual week", rag: "amber" };
+    if (pct > 0) return { text: `${abs}% better than your usual week`, rag: "green" };
+    return { text: `${abs}% below your usual week`, rag: "red" };
+  }
+  return null;
+}
+
+/** "8 desserts to hit target" / "On target — hold the line" / "Beat target by 3". */
+export function humanTargetCall(row: CategoryMetric): string | null {
+  if (!row.target || row.target <= 0) return null;
+  if (row.current >= row.target) {
+    const overPct = Math.round(row.current - row.target);
+    if (overPct <= 0) return "On target — hold the line";
+    if (overPct >= 50) return "Smashed target — keep flying";
+    return `Beat target by ${overPct} points`;
+  }
+  const itemsNeeded = itemsToTarget(row);
+  if (itemsNeeded !== null && itemsNeeded <= 10) {
+    return `Only ${itemsNeeded} more ${row.label.toLowerCase()} to hit target`;
+  }
+  const gap = Math.round(row.target - row.current);
+  return `${gap}% to target`;
+}
+
+/** "8 more sold than usual" using sales-derived approximation. */
+export function humanItemsDelta(row: CategoryMetric): string | null {
+  if (row.items <= 0 || row.sales <= 0 || row.fourWeekAvgSales <= 0) return null;
+  const avgItems = row.items * (row.fourWeekAvgSales / row.sales);
+  const diff = Math.round(row.items - avgItems);
+  if (diff === 0) return null;
+  const word = row.label.toLowerCase();
+  if (diff > 0) return `${diff} more ${word} than usual`;
+  return `${Math.abs(diff)} fewer ${word} than usual`;
+}
+
+// -----------------------------------------------------------------------------
+// LEADERBOARD — backed by the venue_weekly_leaderboard RPC.
+// -----------------------------------------------------------------------------
+
+export interface LeaderboardCat {
+  sales: number;
+  conversion: number | null;
+  quantity: number | null;
+}
+
+export interface LeaderboardRow {
+  user_id: string;
+  full_name: string | null;
+  current_sales: number;
+  prev_sales: number;
+  fourwk_avg_sales: number;
+  current_by_category: Record<string, LeaderboardCat> | null;
+  movementPct: number | null;
+  rank: number;
+}
+
+export async function loadVenueLeaderboard(args: {
+  venueId: string;
+  weekStart: string;
+}): Promise<LeaderboardRow[]> {
+  const { venueId, weekStart } = args;
+  const { data, error } = await supabase.rpc("venue_weekly_leaderboard" as never, {
+    p_venue_id: venueId,
+    p_week_start: weekStart,
+  } as never);
+  if (error || !data) return [];
+  const rows = (data as Array<Omit<LeaderboardRow, "movementPct" | "rank">>).map((r) => {
+    const cur = Number(r.current_sales) || 0;
+    const avg = Number(r.fourwk_avg_sales) || 0;
+    return {
+      ...r,
+      current_sales: cur,
+      prev_sales: Number(r.prev_sales) || 0,
+      fourwk_avg_sales: avg,
+      movementPct: avg > 0 ? ((cur - avg) / avg) * 100 : null,
+      rank: 0,
+    };
+  });
+  rows.sort((a, b) => b.current_sales - a.current_sales);
+  rows.forEach((r, i) => { r.rank = i + 1; });
+  return rows;
+}
+
+export function categoryLeaderboard(
+  rows: LeaderboardRow[],
+  categoryKey: string,
+  limit = 5,
+): Array<LeaderboardRow & { catSales: number; catQty: number | null }> {
+  return rows
+    .map((r) => {
+      const cat = r.current_by_category?.[categoryKey];
+      return {
+        ...r,
+        catSales: Number(cat?.sales) || 0,
+        catQty: cat?.quantity != null ? Number(cat.quantity) : null,
+      };
+    })
+    .filter((r) => r.catSales > 0)
+    .sort((a, b) => b.catSales - a.catSales)
+    .slice(0, limit);
+}
+
+export function weeklyMovers(rows: LeaderboardRow[], limit = 3): LeaderboardRow[] {
+  return rows
+    .filter((r) => r.movementPct !== null && r.movementPct > 0)
+    .sort((a, b) => (b.movementPct ?? 0) - (a.movementPct ?? 0))
+    .slice(0, limit);
+}
+
+/** Percentile rank (0..100). 78 means "outperforming 78% of team". */
+export function percentileRank(rank: number, total: number): number | null {
+  if (!total || total <= 1) return null;
+  return Math.round(((total - rank) / (total - 1)) * 100);
+}
+
