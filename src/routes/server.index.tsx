@@ -375,7 +375,7 @@ function ServerDashboard() {
                 {workOnList.map((w) => (
                   <li key={w.label}>
                     <span className="font-semibold" style={{ color: "var(--opportunity)" }}>
-                      {w.label} {w.d === null ? "—" : `${w.d >= 0 ? "+" : ""}${w.d.toFixed(0)}%`}
+                      {w.label} {w.d === null ? "—" : `${w.d >= 0 ? "+" : ""}${w.d.toFixed(1)}%`}
                     </span>{" "}
                     <span className="text-muted-foreground">vs last week</span>
                   </li>
