@@ -180,7 +180,8 @@ function ServerDashboard() {
     .slice(0, 3);
 
   const allGreen = top3.length >= 3 && top3.every((r) => ragFromRing(r.ringPct, r.target > 0) === "green");
-  const focusTone: Rag = workOn.some((r) => r.target > 0 && r.ringPct < 50) ? "red" : "amber";
+  // Weekly Focus card always renders red — focus areas are urgent, never amber.
+  const focusTone: Rag = "red";
 
   const joinLabels = (xs: string[]) =>
     xs.length <= 1 ? xs.join("") : xs.length === 2 ? `${xs[0]} and ${xs[1]}` : `${xs.slice(0, -1).join(", ")} and ${xs[xs.length - 1]}`;
