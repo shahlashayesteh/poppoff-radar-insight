@@ -142,7 +142,7 @@ function Page() {
                   </div>
                   <div className="mt-2 flex items-start justify-between gap-3 text-xs">
                     <div className="text-foreground/80 font-medium">
-                      {call ?? mo?.text ?? "—"}
+                      {mo?.text ?? "—"}
                     </div>
                     {itemsDelta && mo && (
                       <div className="text-right text-muted-foreground shrink-0">{itemsDelta}</div>
