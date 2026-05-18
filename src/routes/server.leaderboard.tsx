@@ -43,10 +43,8 @@ function Page() {
       const { data: vm } = await supabase.from("venue_members").select("venue_id").eq("user_id", u.user.id).limit(1);
       const v = vm?.[0]?.venue_id;
       if (!v) return;
-      const visibleWeek = await latestStatsWeek(
-        supabase.from("server_stats").select("week_start, created_at").eq("venue_id", v).order("created_at", { ascending: false }).order("week_start", { ascending: false }).limit(1),
-        weekStart,
-      );
+      const { data: latest } = await supabase.rpc("latest_venue_stats_week" as never, { p_venue_id: v } as never);
+      const visibleWeek = (latest as string | null) || weekStart;
       setDisplayWeekStart(visibleWeek);
       const [lb, vc, sk] = await Promise.all([
         loadVenueLeaderboard({ venueId: v, weekStart: visibleWeek }),
