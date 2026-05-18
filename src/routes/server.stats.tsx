@@ -11,7 +11,7 @@ import {
   ragFromRing,
   ragColor,
   humanMomentum,
-  humanTargetCall,
+
   humanItemsDelta,
   humanTotalsMomentum,
   type CategoryMetric,
@@ -98,7 +98,7 @@ function Page() {
               const rag = mo?.rag === "red" ? "red" : baseRag;
               const tone = ragColor(rag);
               const elite = eliteVisual(r.eliteTier);
-              const call = humanTargetCall(r);
+              // target-call line intentionally omitted — week is finalized
               const itemsDelta = humanItemsDelta(r);
               return (
                 <div
@@ -142,7 +142,7 @@ function Page() {
                   </div>
                   <div className="mt-2 flex items-start justify-between gap-3 text-xs">
                     <div className="text-foreground/80 font-medium">
-                      {call ?? mo?.text ?? "—"}
+                      {mo?.text ?? "—"}
                     </div>
                     {itemsDelta && mo && (
                       <div className="text-right text-muted-foreground shrink-0">{itemsDelta}</div>
