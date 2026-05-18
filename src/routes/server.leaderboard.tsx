@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useRoleGate } from "@/lib/auth-gate";
 import { Crown, Trophy, TrendingUp, Flame } from "lucide-react";
 import { getMondayOfWeek, toISODate, formatWeekRange } from "@/lib/week";
+import { fetchVenueAvgPrices, estimateItemsSold, type CategoryKey } from "@/lib/server-data";
 import {
   loadVenueLeaderboard,
   categoryLeaderboard,
@@ -30,6 +31,7 @@ function Page() {
   const [board, setBoard] = useState<LeaderboardRow[]>([]);
   const [cats, setCats] = useState<CatDef[]>([]);
   const [streaks, setStreaks] = useState<Streak[]>([]);
+  const [prices, setPrices] = useState<Record<string, number>>({});
   const [myId, setMyId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string>("overall");
   const weekStart = toISODate(getMondayOfWeek());
@@ -54,14 +56,16 @@ function Page() {
       if (latestErr) console.warn("[leaderboard] latest_venue_stats_week failed", latestErr);
       const visibleWeek = (latest as string | null) || weekStart;
       setDisplayWeekStart(visibleWeek);
-      const [lb, vc, sk] = await Promise.all([
+      const [lb, vc, sk, pr] = await Promise.all([
         loadVenueLeaderboard({ venueId: v, weekStart: visibleWeek }),
         supabase.from("venue_categories").select("key,label,sort_order").eq("venue_id", v).order("sort_order"),
         supabase.from("server_streaks").select("user_id,current_streak,longest_streak").eq("venue_id", v),
+        fetchVenueAvgPrices(v),
       ]);
       setBoard(lb);
       setCats((vc.data ?? []) as CatDef[]);
       setStreaks((sk.data ?? []) as Streak[]);
+      setPrices(pr);
     })();
   }, [weekStart]);
 
@@ -83,6 +87,25 @@ function Page() {
   const activeCat = cats.find((c) => c.key === activeTab) ?? null;
   const catBoard = activeCat ? categoryLeaderboard(board, activeCat.key, 999) : [];
   const overallBoard = board;
+
+  const itemsForRow = (r: LeaderboardRow): number => {
+    const byCat = r.current_by_category;
+    if (!byCat) return 0;
+    let total = 0;
+    for (const [key, c] of Object.entries(byCat)) {
+      if (c?.quantity != null && c.quantity > 0) {
+        total += Math.round(Number(c.quantity));
+      } else if (c?.sales) {
+        total += estimateItemsSold(Number(c.sales), key as CategoryKey, prices);
+      }
+    }
+    return total;
+  };
+  const itemsForCatRow = (r: { catSales: number; catQty: number | null }, key: string): number => {
+    if (r.catQty != null && r.catQty > 0) return Math.round(r.catQty);
+    if (r.catSales > 0) return estimateItemsSold(r.catSales, key as CategoryKey, prices);
+    return 0;
+  };
 
   return (
     <ServerLayout>
@@ -220,8 +243,8 @@ function Page() {
                       )}
                     </div>
                     <div className="text-right">
-                      <div className="font-display text-base font-extrabold">£{Math.round(r.current_sales)}</div>
-                      <div className="text-[10px] uppercase tracking-wider text-muted-foreground">sales</div>
+                      <div className="font-display text-base font-extrabold">{itemsForRow(r)}</div>
+                      <div className="text-[10px] uppercase tracking-wider text-muted-foreground">items sold</div>
                     </div>
                   </li>
                 );
@@ -244,12 +267,9 @@ function Page() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="font-semibold truncate text-sm">{r.full_name ?? "Unnamed"}{isMe ? " (you)" : ""}</div>
-                      {r.catQty !== null && r.catQty > 0 && (
-                        <div className="text-[11px] text-muted-foreground">{r.catQty} sold</div>
-                      )}
                     </div>
                     <div className="text-right">
-                      <div className="font-display text-base font-extrabold">£{Math.round(r.catSales)}</div>
+                      <div className="font-display text-base font-extrabold">{itemsForCatRow(r, activeCat!.key)}</div>
                       <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{activeCat?.label}</div>
                     </div>
                   </li>
