@@ -273,6 +273,16 @@ function ServerMenu() {
           <div className="text-xs text-muted-foreground mt-1">with</div>
           <div className="font-semibold text-sm truncate">{p.pair_with}</div>
           {p.why && <div className="text-xs text-muted-foreground mt-1 line-clamp-2">{p.why}</div>}
+          {timing && (
+            <div className="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold text-brand-orange">
+              <Clock className="h-3 w-3" /> {timing}
+            </div>
+          )}
+          {wording && (
+            <div className="mt-1.5 text-[11px] italic text-foreground/80 leading-snug">
+              💬 {wording}
+            </div>
+          )}
         </div>
         <span className="text-[10px] font-bold rounded-md px-2 py-1 whitespace-nowrap"
           style={{
