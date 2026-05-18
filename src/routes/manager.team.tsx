@@ -3,7 +3,13 @@ import { useEffect, useState } from "react";
 import { ManagerLayout } from "@/components/manager-layout";
 import { supabase } from "@/integrations/supabase/client";
 import { getManagerVenue } from "@/lib/manager-venue";
-import { getMondayOfWeek, toISODate, formatWeekRange, performanceColour, latestStatsWeek } from "@/lib/week";
+import { getMondayOfWeek, toISODate, formatWeekRange, latestStatsWeek } from "@/lib/week";
+import {
+  loadVenuePerformance,
+  scoreTone,
+  scoreLabel,
+  type VenuePerformance,
+} from "@/lib/performance-engine";
 
 export const Route = createFileRoute("/manager/team")({ component: TeamPage });
 
@@ -11,8 +17,7 @@ type Member = { id: string; full_name: string | null };
 
 function TeamPage() {
   const [members, setMembers] = useState<Member[]>([]);
-  const [stats, setStats] = useState<any[]>([]);
-  const [targets, setTargets] = useState<any[]>([]);
+  const [perf, setPerf] = useState<VenuePerformance | null>(null);
   const [loginCounts, setLoginCounts] = useState<Record<string, number>>({});
   const weekStart = toISODate(getMondayOfWeek());
   const [displayWeekStart, setDisplayWeekStart] = useState<string>(weekStart);
@@ -24,19 +29,21 @@ function TeamPage() {
       if (!v) return;
       const { data: vm } = await supabase.from("venue_members").select("user_id").eq("venue_id", v);
       const ids = (vm ?? []).map((x) => x.user_id);
+      let mems: Member[] = [];
       if (ids.length) {
         const { data: profs } = await supabase.from("profiles").select("id, full_name").in("id", ids);
-        setMembers(profs ?? []);
+        mems = profs ?? [];
       }
+      setMembers(mems);
       const visibleWeek = await latestStatsWeek(
         supabase.from("server_stats").select("week_start, created_at").eq("venue_id", v).order("created_at", { ascending: false }).order("week_start", { ascending: false }).limit(1),
         weekStart,
       );
       setDisplayWeekStart(visibleWeek);
-      const { data: st } = await supabase.from("server_stats").select("*").eq("venue_id", v).eq("week_start", visibleWeek);
-      setStats(st ?? []);
-      const { data: tg } = await supabase.from("server_targets").select("*").eq("venue_id", v);
-      setTargets(tg ?? []);
+      if (ids.length) {
+        const venuePerf = await loadVenuePerformance({ venueId: v, weekStart: visibleWeek, userIds: ids });
+        setPerf(venuePerf);
+      }
       const { data: lg } = await supabase.from("server_logins").select("user_id").eq("venue_id", v);
       const counts: Record<string, number> = {};
       for (const r of (lg ?? [])) counts[r.user_id] = (counts[r.user_id] || 0) + 1;
@@ -44,15 +51,18 @@ function TeamPage() {
     })();
   }, [weekStart]);
 
-  const sByUser = Object.fromEntries(stats.map((s) => [s.user_id, s]));
-  const tByUser = Object.fromEntries(targets.map((t) => [t.user_id, t]));
+  // Rank members by overall engine score, falling back to original order for
+  // those without data so the team list stays stable.
+  const ranking = perf?.ranked.map((e, i) => ({ id: e.userId, rank: i + 1 })) ?? [];
+  const rankById = Object.fromEntries(ranking.map((r) => [r.id, r.rank]));
+  const sortedMembers = members.slice().sort((a, b) => (rankById[a.id] ?? 999) - (rankById[b.id] ?? 999));
 
   return (
     <ManagerLayout>
       <div className="px-8 py-8">
         <div className="text-xs uppercase tracking-widest text-muted-foreground">Team</div>
         <h1 className="font-display text-4xl font-extrabold tracking-tight mt-2">Your servers</h1>
-        <div className="mt-1 text-xs text-muted-foreground">{formatWeekRange(displayWeekStart)}</div>
+        <div className="mt-1 text-xs text-muted-foreground">{formatWeekRange(displayWeekStart)} · ranked by overall performance score</div>
 
         {members.length === 0 ? (
           <div className="mt-8 rounded-2xl bg-white border border-border p-6 text-sm text-muted-foreground">
@@ -60,20 +70,38 @@ function TeamPage() {
           </div>
         ) : (
           <div className="mt-8 grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {members.map((m) => {
-              const s = sByUser[m.id];
-              const t = tByUser[m.id];
-              const colour = s && t ? performanceColour(Number(s.spend_per_cover ?? 0), Number(t.spend_per_cover_target)) : "amber";
-              const tone = colour === "green" ? "var(--brand-green)" : colour === "amber" ? "var(--brand-orange)" : "var(--opportunity)";
+            {sortedMembers.map((m) => {
+              const entry = perf?.byUser[m.id];
+              const overall = entry?.overall ?? null;
+              const tone = scoreTone(overall);
+              const label = scoreLabel(overall);
+              const sales = entry?.perf.totals.sales ?? 0;
+              const d4 = entry?.perf.totals.salesDeltaPctVs4wk;
+              const influence = entry?.perf.totals.totalRevenueInfluence ?? 0;
+              const rank = rankById[m.id];
               return (
                 <Link key={m.id} to="/manager/server/$id" params={{ id: m.id }} className="rounded-2xl bg-white border border-border p-5 hover:border-brand-green transition">
-                  <div className="font-display text-lg font-bold">{m.full_name || "Unnamed"}</div>
-                  <div className="mt-3 flex items-center gap-2">
-                    <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: tone }} />
-                    <span className="text-sm">SPC £{s?.spend_per_cover ? Number(s.spend_per_cover).toFixed(0) : "—"}</span>
-                    <span className="text-xs text-muted-foreground">/ £{t?.spend_per_cover_target ?? "—"}</span>
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <div className="font-display text-lg font-bold">{m.full_name || "Unnamed"}</div>
+                      <div className="mt-1 text-[10px] font-bold uppercase tracking-wider" style={{ color: tone }}>{label}{rank ? ` · #${rank}` : ""}</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-xs text-muted-foreground">Score</div>
+                      <div className="font-display text-2xl font-extrabold" style={{ color: tone }}>{overall === null ? "—" : overall.toFixed(0)}</div>
+                    </div>
                   </div>
-                  <div className="mt-1 text-xs text-muted-foreground">{s ? `${s.total_covers} covers · £${Number(s.total_sales).toFixed(0)} sales` : "No stats yet"}</div>
+                  <div className="mt-3 text-xs text-muted-foreground">
+                    £{sales.toFixed(0)} sales
+                    {d4 !== null && d4 !== undefined && (
+                      <> · <span style={{ color: d4 >= 0 ? "var(--brand-green)" : "var(--opportunity)" }}>{d4 >= 0 ? "+" : ""}{d4.toFixed(1)}% vs 4wk</span></>
+                    )}
+                  </div>
+                  <div className="mt-1 text-xs">
+                    <span style={{ color: influence >= 0 ? "var(--brand-green)" : "var(--opportunity)" }}>
+                      {influence >= 0 ? "+" : ""}£{influence.toFixed(0)} revenue influence
+                    </span>
+                  </div>
                   <div className="mt-1 text-xs text-muted-foreground">{loginCounts[m.id] || 0} login{(loginCounts[m.id] || 0) === 1 ? "" : "s"}</div>
                 </Link>
               );
