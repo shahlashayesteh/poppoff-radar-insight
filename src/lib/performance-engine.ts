@@ -923,3 +923,143 @@ export function percentileRank(rank: number, total: number): number | null {
   return Math.round(((total - rank) / (total - 1)) * 100);
 }
 
+// -----------------------------------------------------------------------------
+// REFLECTION / NEXT-WEEK MOTIVATION LAYER — used by the Server Home page to
+// surface a curated, retrospective + forward-looking story of the week.
+// The Stats page keeps its own granular language; this layer translates the
+// SAME numbers into "what mattered most" + "what to push next week".
+// -----------------------------------------------------------------------------
+
+/** Signed momentum % for a category: sales vs 4wk avg, fallback to WoW. */
+export function momentumPct(row: CategoryMetric): number | null {
+  if (row.fourWeekAvgSales > 0) {
+    return ((row.sales - row.fourWeekAvgSales) / row.fourWeekAvgSales) * 100;
+  }
+  if (row.prevSales > 0) {
+    return ((row.sales - row.prevSales) / row.prevSales) * 100;
+  }
+  return null;
+}
+
+/** Color a momentum % with the down=red rule. */
+export function ragFromMomentum(pct: number | null): Rag {
+  if (pct === null) return "amber";
+  if (pct >= 3) return "green";
+  if (pct <= -3) return "red";
+  return "amber";
+}
+
+/** Ring fill scaled to magnitude of movement. 25% movement = full fill. */
+export function magnitudeFillPct(pct: number | null): number {
+  if (pct === null) return 0;
+  return Math.max(8, Math.min(100, Math.abs(pct) * 4));
+}
+
+/** Top N categories that mattered MOST this week, by absolute momentum. */
+export function topMovers(perf: ServerPerformance | null, n = 3): CategoryMetric[] {
+  const rows = perf?.rows ?? [];
+  if (!rows.length) return [];
+  const withMo = rows
+    .map((r) => ({ r, m: momentumPct(r) }))
+    .filter((x) => x.m !== null) as { r: CategoryMetric; m: number }[];
+  withMo.sort((a, b) => Math.abs(b.m) - Math.abs(a.m));
+  const picked = withMo.slice(0, n).map((x) => x.r);
+  if (picked.length < n) {
+    const have = new Set(picked.map((r) => r.key));
+    const fillers = rows
+      .filter((r) => !have.has(r.key) && (r.target > 0 || r.items > 0))
+      .sort((a, b) => b.score - a.score);
+    picked.push(...fillers.slice(0, n - picked.length));
+  }
+  return picked;
+}
+
+/** Biggest positive mover (the "win"). */
+export function biggestGainer(perf: ServerPerformance | null): CategoryMetric | null {
+  const rows = perf?.rows ?? [];
+  let best: { r: CategoryMetric; m: number } | null = null;
+  for (const r of rows) {
+    const m = momentumPct(r);
+    if (m === null || m <= 0) continue;
+    if (!best || m > best.m) best = { r, m };
+  }
+  return best?.r ?? null;
+}
+
+/** Biggest negative mover (the "miss"). */
+export function biggestDecliner(perf: ServerPerformance | null): CategoryMetric | null {
+  const rows = perf?.rows ?? [];
+  let worst: { r: CategoryMetric; m: number } | null = null;
+  for (const r of rows) {
+    const m = momentumPct(r);
+    if (m === null || m >= 0) continue;
+    if (!worst || m < worst.m) worst = { r, m };
+  }
+  return worst?.r ?? null;
+}
+
+/**
+ * Best category to push NEXT week — under-target with the largest
+ * potential revenue lift. Falls back to the biggest decliner.
+ */
+export function nextWeekOpportunity(perf: ServerPerformance | null): CategoryMetric | null {
+  const rows = perf?.rows ?? [];
+  let best: { r: CategoryMetric; v: number } | null = null;
+  for (const r of rows) {
+    if (!r.target || r.target <= 0 || r.current >= r.target) continue;
+    const need = itemsToTarget(r) ?? 0;
+    const price = r.avgUnitPrice ?? 0;
+    const lift = need * price;
+    if (lift <= 0) continue;
+    if (!best || lift > best.v) best = { r, v: lift };
+  }
+  if (best) return best.r;
+  return biggestDecliner(perf);
+}
+
+/** One-line retrospective summary of the whole week. */
+export function weeklyReflection(perf: ServerPerformance | null): { text: string; rag: Rag } | null {
+  if (!perf) return null;
+  const t = perf.totals;
+  if (t.fourWeekAvgSales > 0) {
+    const pct = ((t.sales - t.fourWeekAvgSales) / t.fourWeekAvgSales) * 100;
+    const abs = Math.abs(Math.round(pct));
+    if (abs < 3) return { text: "This week landed right on your usual performance", rag: "amber" };
+    if (pct > 0) return { text: `You performed ${abs}% above your usual week`, rag: "green" };
+    return { text: `This week finished ${abs}% below your usual`, rag: "red" };
+  }
+  if (t.prevSales > 0) {
+    const pct = ((t.sales - t.prevSales) / t.prevSales) * 100;
+    const abs = Math.abs(Math.round(pct));
+    if (abs < 3) return { text: "Level with last week", rag: "amber" };
+    if (pct > 0) return { text: `Up ${abs}% on last week`, rag: "green" };
+    return { text: `Down ${abs}% on last week`, rag: "red" };
+  }
+  return null;
+}
+
+/** Retrospective sentence for a single category. */
+export function reflectionLine(row: CategoryMetric): string {
+  const m = momentumPct(row);
+  if (m === null) return `${row.label} held steady this week`;
+  const abs = Math.abs(Math.round(m));
+  if (abs < 3) return `${row.label} stayed in line with your usual`;
+  if (m > 0) return `${row.label} ran ${abs}% above your usual week`;
+  return `${row.label} fell ${abs}% below your usual`;
+}
+
+/** Forward-looking opportunity sentence — no "tonight"/"this week" framing. */
+export function opportunityLine(row: CategoryMetric): string {
+  const word = row.label.toLowerCase();
+  const need = itemsToTarget(row);
+  if (need !== null && need > 0 && need <= 10) {
+    return `Lifting ${word} by ${need} next week would put you back on target`;
+  }
+  const m = momentumPct(row);
+  if (m !== null && m < 0) {
+    return `${row.label} is your biggest opportunity to recover next week`;
+  }
+  return `${row.label} is the easiest win to chase next week`;
+}
+
+
