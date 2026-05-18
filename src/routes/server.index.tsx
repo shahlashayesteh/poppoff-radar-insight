@@ -115,7 +115,7 @@ function ServerDashboard() {
     })();
   }, [weekStart, fetchCoaching]);
 
-  // Live refresh coaching when the manager uploads a new menu or invalidates cache
+  // Live refresh coaching when the manager uploads a new menu, regenerates pairings, or invalidates cache
   useEffect(() => {
     if (!venueId) return;
     const uId = userIdRef.current;
@@ -124,13 +124,17 @@ function ServerDashboard() {
     const channel = supabase
       .channel(`coaching:${venueId}:${uId}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "venue_menu", filter: `venue_id=eq.${venueId}` }, refresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "venue_pairings", filter: `venue_id=eq.${venueId}` }, refresh)
       .on("postgres_changes", { event: "DELETE", schema: "public", table: "server_coaching", filter: `venue_id=eq.${venueId}` }, refresh)
       .subscribe();
     const onFocus = () => refresh();
+    const onVisible = () => { if (document.visibilityState === "visible") refresh(); };
     window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisible);
     return () => {
       supabase.removeChannel(channel);
       window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisible);
     };
   }, [venueId, displayWeekStart, fetchCoaching]);
 
