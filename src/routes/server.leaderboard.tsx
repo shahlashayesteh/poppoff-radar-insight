@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useRoleGate } from "@/lib/auth-gate";
 import { Crown, Trophy, TrendingUp, Flame } from "lucide-react";
 import { getMondayOfWeek, toISODate, formatWeekRange } from "@/lib/week";
+import { fetchVenueAvgPrices, estimateItemsSold, type CategoryKey } from "@/lib/server-data";
 import {
   loadVenueLeaderboard,
   categoryLeaderboard,
