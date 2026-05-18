@@ -1,0 +1,598 @@
+// =============================================================================
+// Performance Engine — single source of truth for every "how well did this
+// server do" number shown anywhere in the app (home, stats, manager view,
+// coaching prompts). No page may compute its own ring fill, delta, status
+// label, or score.
+//
+// Design principles:
+//   1. Target-based rings (achievement, not movement).
+//   2. 4-week rolling average is the PRIMARY behavioural benchmark;
+//      week-over-week is secondary.
+//   3. Category-aware denominators — fairness foundation only, the actual
+//      conversion number is still whatever the CSV/dynamic stats stored.
+//   4. Items terminology distinguishes real POS quantities from estimates.
+//   5. Blended performance score: target progress, trend, NORMALISED
+//      commercial impact (vs expected, not raw £), CONDITIONAL consistency.
+//   6. Revenue Influence: incremental £ vs venue baseline conversion.
+//   7. Opportunity / context: stored & threaded through, unused in the
+//      visible score yet — future fairness layer can plug in without
+//      touching pages.
+// =============================================================================
+
+import { supabase } from "@/integrations/supabase/client";
+import { fetchVenueAvgPrices, estimateItemsSold, type CategoryKey } from "@/lib/server-data";
+
+// -----------------------------------------------------------------------------
+// Types
+// -----------------------------------------------------------------------------
+
+export type QuantitySource = "real" | "estimated" | "fallback";
+
+export type DenominatorType =
+  | "eligible_covers"
+  | "adult_bev_opportunities"
+  | "eligible_tables"
+  | "celebration_tables"
+  | "alcohol_tables"
+  | "total_tables"
+  | "covers";
+
+export type TrendStatus = "Focus" | "Improving" | "Strong" | "Crushing";
+export type EliteTier = 0 | 1 | 2 | 3; // 0 below, 1 100-120%, 2 120-150%, 3 >=150%
+
+export interface ScoreBreakdown {
+  target: number;       // 0..1 contribution before weight
+  trend: number;        // 0..1
+  commercial: number;   // 0..1 (normalised vs expected, NOT raw share)
+  consistency: number;  // 0..1 (neutral 0.5 when sample too small)
+  applied: { target: number; trend: number; commercial: number; consistency: number };
+}
+
+export interface CategoryMetric {
+  key: string;
+  label: string;
+  denominatorType: DenominatorType;
+
+  // Conversion (percentage points)
+  current: number;
+  prevWeek: number;
+  fourWeekAvg: number;
+  fourWeekValues: number[];     // up to 4 most recent completed weeks (exclusive of current)
+  target: number;
+
+  // Sales (£)
+  sales: number;
+  prevSales: number;
+  fourWeekAvgSales: number;
+
+  // Items / quantity
+  quantity: number;             // best-effort count (real or estimated)
+  quantitySource: QuantitySource;
+  items: number;                // alias for legacy callers — same as quantity
+
+  // Ring / status
+  rawRingPct: number;           // can exceed 100
+  ringPct: number;              // clamped to 100 for the bar fill
+  eliteTier: EliteTier;
+  deltaWoW: number | null;      // pp
+  deltaVs4wk: number | null;    // pp
+  statusLabel: TrendStatus;
+
+  // Scoring
+  score: number;                // 0..100
+  scoreBreakdown: ScoreBreakdown;
+
+  // Fairness / commercial intelligence foundation
+  opportunityCount: number | null;
+  venueBaselineConversion: number | null;
+  expectedSales: number | null;
+  avgUnitPrice: number | null;
+  revenueInfluence: number | null; // £ above venue baseline
+}
+
+export interface PerformanceContext {
+  section?: string | null;
+  daypart?: string | null;
+  avgTableSpend?: number | null;
+  coversPerTable?: number | null;
+  shiftMinutes?: number | null;
+  bookingType?: string | null;
+  menuType?: "set" | "alc" | "mixed" | null;
+  tableVolume?: number | null;
+  [k: string]: unknown;
+}
+
+export interface ServerPerformance {
+  rows: CategoryMetric[];
+  totals: {
+    sales: number;
+    prevSales: number;
+    fourWeekAvgSales: number;
+    salesDeltaPctWoW: number | null;
+    salesDeltaPctVs4wk: number | null;
+    totalRevenueInfluence: number;
+  };
+  context: PerformanceContext;
+}
+
+// -----------------------------------------------------------------------------
+// Pure helpers — exported so UI/coaching share identical logic.
+// -----------------------------------------------------------------------------
+
+export function ringPercent(current: number, target: number): { raw: number; clamped: number } {
+  if (!target || target <= 0) return { raw: 0, clamped: 0 };
+  const raw = (current / target) * 100;
+  return { raw, clamped: Math.max(0, Math.min(100, raw)) };
+}
+
+export function eliteTierOf(rawPct: number): EliteTier {
+  if (rawPct >= 150) return 3;
+  if (rawPct >= 120) return 2;
+  if (rawPct >= 100) return 1;
+  return 0;
+}
+
+/**
+ * Status label. Driven by the 4-week delta when available (primary
+ * behavioural signal), otherwise by week-over-week.
+ */
+export function statusFromDelta(deltaPP: number | null): TrendStatus {
+  if (deltaPP === null || deltaPP <= 0) return "Focus";
+  if (deltaPP <= 2) return "Improving";
+  if (deltaPP <= 5) return "Strong";
+  return "Crushing";
+}
+
+/**
+ * Category denominator metadata — labels the conversion fraction we'd
+ * ideally compute when opportunity data exists. Today the stored
+ * `conversion` value is used directly; this metadata exists so the engine
+ * can recompute against a real opportunity_count in a later release
+ * without UI churn.
+ */
+export function categoryDenominator(rawKey: string): DenominatorType {
+  const k = rawKey.toLowerCase();
+  if (k.includes("dessert")) return "eligible_covers";
+  if (k.includes("side")) return "eligible_covers";
+  if (k.includes("cocktail")) return "adult_bev_opportunities";
+  if (k.includes("wine")) return "eligible_tables";
+  if (k.includes("sparkling") || k.includes("champagne")) return "celebration_tables";
+  if (k.includes("spirit") || k.includes("whisky") || k.includes("whiskey")) return "alcohol_tables";
+  if (k.includes("water")) return "total_tables";
+  return "covers";
+}
+
+function mean(xs: number[]): number {
+  if (!xs.length) return 0;
+  return xs.reduce((a, b) => a + b, 0) / xs.length;
+}
+
+function stddev(xs: number[]): number {
+  if (xs.length < 2) return 0;
+  const m = mean(xs);
+  const v = xs.reduce((a, b) => a + (b - m) * (b - m), 0) / xs.length;
+  return Math.sqrt(v);
+}
+
+// -----------------------------------------------------------------------------
+// Scoring — refined commercial weighting + conditional consistency.
+// -----------------------------------------------------------------------------
+
+const WEIGHTS = { target: 0.35, trend: 0.30, commercial: 0.25, consistency: 0.10 };
+
+function targetScore(current: number, target: number): number {
+  if (!target || target <= 0) return 0.5; // neutral if no target yet
+  return Math.max(0, Math.min(1, current / target));
+}
+
+function trendScore(deltaVs4wk: number | null): number {
+  // Map ±5pp swing to full 0..1 range, centred on 0.5.
+  if (deltaVs4wk === null) return 0.5;
+  const clamped = Math.max(-5, Math.min(5, deltaVs4wk));
+  return 0.5 + (clamped / 10);
+}
+
+/**
+ * Commercial impact — normalised against expected sales for THIS category,
+ * not the server's total sales mix. A strong dessert performer shouldn't
+ * lose to an average wine performer just because wine prices are higher.
+ *
+ * Expected baseline = venue-average conversion × this server's
+ * opportunity (covers fallback) × avg unit price.
+ */
+function commercialScore(currentSales: number, expectedSales: number | null): number {
+  if (!expectedSales || expectedSales <= 0) return 0.5; // neutral
+  const ratio = currentSales / expectedSales;
+  // Cap at 2x expected → full mark; below ~0.25x → 0.
+  return Math.max(0, Math.min(1, (ratio - 0.25) / 1.75));
+}
+
+/**
+ * Consistency — neutral if sample/opportunity volume is too small to
+ * judge fairly. Avoids punishing strong servers on peak/difficult
+ * shifts with naturally volatile cover counts.
+ */
+function consistencyScore(values: number[], opportunityCount: number | null): number {
+  const sample = values.length;
+  const opp = opportunityCount ?? 0;
+  // Need at least 3 prior weeks AND a meaningful opportunity volume (or
+  // unknown opp — we don't punish missing data).
+  if (sample < 3) return 0.5;
+  if (opportunityCount !== null && opp < 20) return 0.5;
+  const m = mean(values);
+  if (m <= 0) return 0.5;
+  const cv = stddev(values) / m; // coefficient of variation
+  return Math.max(0, Math.min(1, 1 - cv));
+}
+
+export function performanceScore(args: {
+  current: number;
+  target: number;
+  deltaVs4wk: number | null;
+  currentSales: number;
+  expectedSales: number | null;
+  fourWeekValues: number[];
+  opportunityCount: number | null;
+}): { score: number; breakdown: ScoreBreakdown } {
+  const t = targetScore(args.current, args.target);
+  const tr = trendScore(args.deltaVs4wk);
+  const c = commercialScore(args.currentSales, args.expectedSales);
+  const cs = consistencyScore(args.fourWeekValues, args.opportunityCount);
+  const applied = {
+    target: t * WEIGHTS.target,
+    trend: tr * WEIGHTS.trend,
+    commercial: c * WEIGHTS.commercial,
+    consistency: cs * WEIGHTS.consistency,
+  };
+  const score = (applied.target + applied.trend + applied.commercial + applied.consistency) * 100;
+  return {
+    score: Math.round(score * 10) / 10,
+    breakdown: { target: t, trend: tr, commercial: c, consistency: cs, applied },
+  };
+}
+
+// -----------------------------------------------------------------------------
+// Loader — one call → fully-baked rows. Pulls current + previous + last 4
+// completed weeks of per-category stats plus venue baselines in parallel.
+// -----------------------------------------------------------------------------
+
+interface CategoryStatRow {
+  category_key: string;
+  conversion: number | null;
+  sales: number | null;
+  net_sales: number | null;
+  quantity: number | null;
+  metric_type: string | null;
+  opportunity_count?: number | null;
+  week_start: string;
+  user_id?: string;
+}
+
+const LEGACY_KEYS = ["wine", "cocktail", "dessert", "sides", "spirits", "sparkling"] as const;
+type LegacyKey = (typeof LEGACY_KEYS)[number];
+
+export async function loadServerPerformance(args: {
+  venueId: string;
+  userId: string;
+  weekStart: string;
+}): Promise<ServerPerformance> {
+  const { venueId, userId, weekStart } = args;
+
+  // Pull category definitions + targets + per-category stats for a wide
+  // window (current + 4 prior weeks) in one round-trip per resource.
+  const [
+    vcRes,
+    statsRes,
+    venueStatsRes,
+    tgtRes,
+    serverStatsRes,
+    pricesMap,
+  ] = await Promise.all([
+    supabase
+      .from("venue_categories")
+      .select("key,label,sort_order")
+      .eq("venue_id", venueId)
+      .order("sort_order"),
+    supabase
+      .from("server_category_stats")
+      .select("category_key,conversion,sales,net_sales,quantity,metric_type,opportunity_count,week_start")
+      .eq("venue_id", venueId)
+      .eq("user_id", userId)
+      .lte("week_start", weekStart)
+      .order("week_start", { ascending: false })
+      .limit(40),
+    // Venue baseline — all servers, last 8 weeks of completed data.
+    supabase
+      .from("server_category_stats")
+      .select("category_key,conversion,sales,net_sales,quantity,week_start,user_id")
+      .eq("venue_id", venueId)
+      .lt("week_start", weekStart)
+      .gte("week_start", isoOffsetDays(weekStart, -56))
+      .limit(2000),
+    supabase
+      .from("server_category_targets")
+      .select("category_key,target")
+      .eq("venue_id", venueId)
+      .eq("user_id", userId),
+    // Legacy fallback + spend per cover context.
+    supabase
+      .from("server_stats")
+      .select("*")
+      .eq("venue_id", venueId)
+      .eq("user_id", userId)
+      .lte("week_start", weekStart)
+      .order("week_start", { ascending: false })
+      .limit(8),
+    fetchVenueAvgPrices(venueId),
+  ]);
+
+  const vc = (vcRes.data ?? []) as { key: string; label: string }[];
+  const allStats = (statsRes.data ?? []) as CategoryStatRow[];
+  const venueStats = (venueStatsRes.data ?? []) as CategoryStatRow[];
+  const tgts = Object.fromEntries(
+    ((tgtRes.data ?? []) as { category_key: string; target: number }[]).map((t) => [t.category_key, Number(t.target) || 0]),
+  );
+  const serverStats = (serverStatsRes.data ?? []) as Array<Record<string, unknown>>;
+
+  // Group per-server stats by category_key (already ordered desc by week).
+  const byCat = new Map<string, CategoryStatRow[]>();
+  for (const r of allStats) {
+    const arr = byCat.get(r.category_key) ?? [];
+    arr.push(r);
+    byCat.set(r.category_key, arr);
+  }
+
+  // Venue baselines — avg conversion per category (across all servers,
+  // prior weeks within the 8-week window). Used as fairness reference.
+  const venueByCat = new Map<string, CategoryStatRow[]>();
+  for (const r of venueStats) {
+    const arr = venueByCat.get(r.category_key) ?? [];
+    arr.push(r);
+    venueByCat.set(r.category_key, arr);
+  }
+
+  const useDynamic = vc.length > 0 && allStats.length > 0;
+  const keys = useDynamic ? vc.map((c) => c.key) : (LEGACY_KEYS as readonly string[]);
+  const labelFor = (k: string) =>
+    vc.find((c) => c.key === k)?.label ?? k.charAt(0).toUpperCase() + k.slice(1);
+
+  // Current-week + prior-week + 4-week-avg helpers --------------------------
+  const rows: CategoryMetric[] = [];
+
+  // Spend-per-cover proxy used as a fallback opportunity count when the
+  // engine doesn't have a real opportunity_count for the week.
+  const currentSrv = serverStats.find((s) => String(s.week_start) === weekStart);
+  const covers = Number((currentSrv?.total_covers as number | undefined) ?? 0);
+
+  for (const k of keys) {
+    let current = 0;
+    let prevWeek = 0;
+    let fourWeekValues: number[] = [];
+    let target = Number(tgts[k] ?? 0);
+    let sales = 0;
+    let prevSales = 0;
+    let fourWeekSalesValues: number[] = [];
+    let quantity = 0;
+    let quantitySource: QuantitySource = "fallback";
+    let opportunityCount: number | null = null;
+
+    if (useDynamic && byCat.has(k)) {
+      const arr = byCat.get(k)!;
+      const cur = arr.find((r) => r.week_start === weekStart);
+      const priors = arr.filter((r) => r.week_start < weekStart);
+      const prev = priors[0];
+      const last4 = priors.slice(0, 4);
+
+      current = Number(cur?.conversion ?? 0);
+      prevWeek = Number(prev?.conversion ?? 0);
+      fourWeekValues = last4.map((r) => Number(r.conversion ?? 0));
+      sales = Number(cur?.net_sales ?? cur?.sales ?? 0);
+      prevSales = Number(prev?.net_sales ?? prev?.sales ?? 0);
+      fourWeekSalesValues = last4.map((r) => Number(r.net_sales ?? r.sales ?? 0));
+      opportunityCount = cur?.opportunity_count != null ? Number(cur.opportunity_count) : null;
+
+      const qty = Number(cur?.quantity ?? 0);
+      if (qty > 0 || cur?.metric_type === "quantity") {
+        quantity = Math.round(qty);
+        quantitySource = "real";
+      } else if (sales > 0) {
+        const price = pricesMap[k];
+        if (price && price > 0) {
+          quantity = Math.round(sales / price);
+          quantitySource = "estimated";
+        } else {
+          quantity = estimateItemsSold(sales, k as CategoryKey, pricesMap);
+          quantitySource = "fallback";
+        }
+      }
+    } else if (LEGACY_KEYS.includes(k as LegacyKey)) {
+      const lk = k as LegacyKey;
+      const fld = `${lk}_conversion`;
+      const sfld = `${lk}_sales`;
+      const tfld = `${lk}_target`;
+      current = Number((currentSrv?.[fld] as number | undefined) ?? 0);
+      const prevSrv = serverStats.find((s) => String(s.week_start) < weekStart);
+      prevWeek = Number((prevSrv?.[fld] as number | undefined) ?? 0);
+      const priors = serverStats.filter((s) => String(s.week_start) < weekStart).slice(0, 4);
+      fourWeekValues = priors.map((s) => Number((s[fld] as number | undefined) ?? 0));
+      sales = Number((currentSrv?.[sfld] as number | undefined) ?? 0);
+      prevSales = Number((prevSrv?.[sfld] as number | undefined) ?? 0);
+      fourWeekSalesValues = priors.map((s) => Number((s[sfld] as number | undefined) ?? 0));
+      // Legacy target may live on the matching server_targets row, but in
+      // legacy mode we read it from the catTargets map (covered above) or
+      // fall back to 0 → ring will render as "—".
+      if (!target) {
+        // legacy server_targets has cocktail_target etc. — not fetched
+        // here, but the dynamic targets path covers it for venues that
+        // upgraded. Leaving 0 makes ringPct null in pages.
+        target = 0;
+      }
+      // legacy has no quantity column — always estimated
+      if (sales > 0) {
+        quantity = estimateItemsSold(sales, lk as CategoryKey, pricesMap);
+        quantitySource = pricesMap[lk] ? "estimated" : "fallback";
+      }
+      target = target || Number((serverStats.find((s) => true)?.[tfld] as number | undefined) ?? 0);
+    } else {
+      continue; // no data for this key at all
+    }
+
+    if (current === 0 && target === 0 && sales === 0 && quantity === 0) {
+      // nothing to report on this category for this server/week
+      continue;
+    }
+
+    const fourWeekAvg = mean(fourWeekValues);
+    const fourWeekAvgSales = mean(fourWeekSalesValues);
+
+    const { raw, clamped } = ringPercent(current, target);
+    const eliteTier = eliteTierOf(raw);
+
+    const deltaWoW = (prevWeek === 0 && current === 0) ? null : current - prevWeek;
+    const deltaVs4wk = fourWeekValues.length ? current - fourWeekAvg : null;
+
+    // PRIMARY status driver: 4wk delta. Falls back to WoW only when we have
+    // no historical baseline yet.
+    const statusLabel = statusFromDelta(deltaVs4wk ?? deltaWoW ?? null);
+
+    // -------- Fairness / revenue influence -----------------------------
+    const venueArr = venueByCat.get(k) ?? [];
+    const venueConvValues = venueArr
+      .map((r) => Number(r.conversion ?? 0))
+      .filter((n) => n > 0);
+    const venueBaselineConversion = venueConvValues.length ? mean(venueConvValues) : null;
+
+    // Average unit price for this category (menu-derived, with default
+    // fallback baked into estimateItemsSold).
+    const avgUnitPrice = pricesMap[k] ?? null;
+
+    // Opportunity proxy: real opportunity_count if present, otherwise the
+    // server's covers this week (best blunt proxy). Used both for
+    // expected-sales estimate and for revenue influence.
+    const opportunityProxy = opportunityCount ?? (covers > 0 ? covers : null);
+
+    const expectedSales =
+      venueBaselineConversion != null && opportunityProxy != null && avgUnitPrice != null
+        ? // expected attaches ≈ baseline% × opportunity × price
+          (venueBaselineConversion / 100) * opportunityProxy * avgUnitPrice
+        : null;
+
+    const revenueInfluence =
+      venueBaselineConversion != null && opportunityProxy != null && avgUnitPrice != null
+        ? Math.round(
+            ((current - venueBaselineConversion) / 100) * opportunityProxy * avgUnitPrice,
+          )
+        : null;
+
+    const { score, breakdown } = performanceScore({
+      current,
+      target,
+      deltaVs4wk,
+      currentSales: sales,
+      expectedSales,
+      fourWeekValues,
+      opportunityCount: opportunityCount ?? (covers > 0 ? covers : null),
+    });
+
+    rows.push({
+      key: k,
+      label: labelFor(k),
+      denominatorType: categoryDenominator(k),
+      current,
+      prevWeek,
+      fourWeekAvg,
+      fourWeekValues,
+      target,
+      sales,
+      prevSales,
+      fourWeekAvgSales,
+      quantity,
+      quantitySource,
+      items: quantity,
+      rawRingPct: raw,
+      ringPct: clamped,
+      eliteTier,
+      deltaWoW,
+      deltaVs4wk,
+      statusLabel,
+      score,
+      scoreBreakdown: breakdown,
+      opportunityCount,
+      venueBaselineConversion,
+      expectedSales,
+      avgUnitPrice,
+      revenueInfluence,
+    });
+  }
+
+  // Totals & context
+  const sales = rows.reduce((s, r) => s + r.sales, 0);
+  const prevSales = rows.reduce((s, r) => s + r.prevSales, 0);
+  const fourWeekAvgSales = rows.reduce((s, r) => s + r.fourWeekAvgSales, 0);
+  const totalRevenueInfluence = rows.reduce(
+    (s, r) => s + (r.revenueInfluence ?? 0),
+    0,
+  );
+
+  const context: PerformanceContext =
+    (currentSrv?.context as PerformanceContext | undefined) ?? {};
+
+  return {
+    rows,
+    totals: {
+      sales,
+      prevSales,
+      fourWeekAvgSales,
+      salesDeltaPctWoW: prevSales > 0 ? ((sales - prevSales) / prevSales) * 100 : null,
+      salesDeltaPctVs4wk: fourWeekAvgSales > 0 ? ((sales - fourWeekAvgSales) / fourWeekAvgSales) * 100 : null,
+      totalRevenueInfluence,
+    },
+    context,
+  };
+}
+
+// -----------------------------------------------------------------------------
+// Small util — ISO date arithmetic without dragging in a date lib.
+// -----------------------------------------------------------------------------
+function isoOffsetDays(iso: string, days: number): string {
+  const [y, m, d] = iso.split("-").map(Number);
+  const dt = new Date(Date.UTC(y, (m || 1) - 1, d || 1));
+  dt.setUTCDate(dt.getUTCDate() + days);
+  return dt.toISOString().slice(0, 10);
+}
+
+// -----------------------------------------------------------------------------
+// Display helpers — keep visual tone decisions out of the pages.
+// -----------------------------------------------------------------------------
+
+export function statusTone(s: TrendStatus): string {
+  switch (s) {
+    case "Crushing": return "var(--brand-green)";
+    case "Strong":   return "var(--brand-green)";
+    case "Improving": return "var(--brand-orange)";
+    case "Focus":    return "var(--opportunity)";
+  }
+}
+
+/**
+ * Visual treatment cue for the ring when the server is OVER target.
+ * Pages translate this into glow / badge / colour intensity. Keeping
+ * the mapping centralised so manager + server views match.
+ */
+export function eliteVisual(tier: EliteTier): { glow: string; badge: string | null } {
+  switch (tier) {
+    case 3: return { glow: "0 0 24px color-mix(in oklab, var(--brand-green) 60%, transparent)", badge: "ELITE" };
+    case 2: return { glow: "0 0 16px color-mix(in oklab, var(--brand-green) 40%, transparent)", badge: "TOP" };
+    case 1: return { glow: "0 0 10px color-mix(in oklab, var(--brand-green) 30%, transparent)", badge: null };
+    default: return { glow: "none", badge: null };
+  }
+}
+
+/**
+ * Format the items line for the UI with explicit "Est." prefix when not
+ * a real POS count.
+ */
+export function formatItems(row: Pick<CategoryMetric, "quantity" | "quantitySource">): string {
+  if (row.quantitySource === "real") return `${row.quantity} sold`;
+  return `~${row.quantity} est.`;
+}
