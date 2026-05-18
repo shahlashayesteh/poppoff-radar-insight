@@ -299,7 +299,87 @@ function ServerMenu() {
     <ServerLayout>
       <div className="px-5 pt-6">
         <h1 className="font-display text-3xl font-extrabold tracking-tight">Coaching</h1>
-        <p className="text-sm text-muted-foreground mt-1">This week's pairings and priorities.</p>
+        <p className="text-sm text-muted-foreground mt-1">Tactics, scripts and pairings to win the floor this week.</p>
+
+        {/* This week's focus — driven by weakest categories */}
+        {weakCats.length > 0 && (
+          <div className="mt-5 rounded-2xl p-4"
+            style={{ background: "color-mix(in oklab, var(--brand-orange) 10%, white)", border: "1px solid color-mix(in oklab, var(--brand-orange) 30%, transparent)" }}>
+            <div className="inline-flex items-center gap-2 text-xs font-bold text-brand-orange">
+              <Target className="h-4 w-4" /> This week's focus
+            </div>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {weakCats.slice(0, 2).map((k) => {
+                const d = STAT_DISPLAY[k as StatKey];
+                if (!d) return null;
+                return (
+                  <span key={k} className="inline-flex items-center gap-1.5 rounded-xl bg-white border border-border px-3 py-1.5 text-sm font-semibold">
+                    <span>{d.emoji}</span> {d.label}
+                  </span>
+                );
+              })}
+            </div>
+            <p className="mt-3 text-xs text-foreground/70 leading-snug">
+              These categories created the biggest opportunity this week. Push them during service and your ranking moves fastest.
+            </p>
+          </div>
+        )}
+
+        {/* Quick win tactics per focus category */}
+        {weakCats.slice(0, 2).map((k) => {
+          const tips = TACTICS[k as StatKey];
+          const d = STAT_DISPLAY[k as StatKey];
+          if (!tips || !d) return null;
+          return (
+            <div key={`tac-${k}`} className="mt-6">
+              <div className="inline-flex items-center gap-2 text-xs font-bold text-brand-green mb-2">
+                <Zap className="h-4 w-4" /> 3 easy {d.label.toLowerCase()} wins this week
+              </div>
+              <div className="space-y-2">
+                {tips.map((t, i) => (
+                  <div key={i} className="rounded-2xl bg-white border border-border p-3 flex items-start gap-3">
+                    <div className="h-8 w-8 rounded-lg grid place-items-center text-sm font-bold shrink-0"
+                      style={{ background: "color-mix(in oklab, var(--brand-green) 12%, white)", color: "var(--brand-green)" }}>{i + 1}</div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-semibold text-sm leading-snug">{t.tactic}</div>
+                      <div className="text-xs text-muted-foreground mt-1 leading-snug">{t.detail}</div>
+                      <div className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-semibold text-brand-orange">
+                        <Clock className="h-3 w-3" /> {t.timing}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+
+        {/* Micro-scripts — exact wording */}
+        {weakCats.length > 0 && (
+          <div className="mt-6">
+            <div className="inline-flex items-center gap-2 text-xs font-bold text-brand-green mb-2">
+              <MessageSquareQuote className="h-4 w-4" /> Say this, not that
+            </div>
+            <div className="space-y-2">
+              {weakCats.slice(0, 2).flatMap((k) =>
+                (SCRIPTS[k as StatKey] || []).map((s, i) => (
+                  <div key={`${k}-${i}`} className="rounded-2xl bg-white border border-border p-3">
+                    <div className="text-[11px] uppercase tracking-wide text-muted-foreground font-bold">
+                      {STAT_DISPLAY[k as StatKey]?.emoji} {STAT_DISPLAY[k as StatKey]?.label}
+                    </div>
+                    <div className="mt-1.5 text-xs text-muted-foreground line-through">
+                      {s.weak}
+                    </div>
+                    <div className="mt-1 text-sm font-semibold text-brand-green leading-snug">
+                      💬 {s.strong}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+
 
         {items.length === 0 ? (
           <div className="mt-5 rounded-2xl bg-white border border-border p-5 text-sm text-muted-foreground">
