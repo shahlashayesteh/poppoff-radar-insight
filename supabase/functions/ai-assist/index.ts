@@ -69,11 +69,11 @@ async function callOpenAI(messages: any[], json: boolean): Promise<string> {
   if (!OPENAI_API_KEY) throw new Error("OPENAI_API_KEY not configured");
   const body: any = { model: "gpt-4o-mini", messages };
   if (json) body.response_format = { type: "json_object" };
-  const r = await fetchWithTimeout("https://api.openai.com/v1/chat/completions", {
+  const r = await fetchWithRetry("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${OPENAI_API_KEY}` },
     body: JSON.stringify(body),
-  });
+  }, 120000, 1);
   if (!r.ok) {
     const t = await r.text().catch(() => "");
     throw new Error(`OpenAI ${r.status}: ${t.slice(0, 500)}`);
