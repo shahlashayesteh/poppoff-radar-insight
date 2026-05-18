@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { getManagerVenue } from "@/lib/manager-venue";
 import { Brain, Sparkles, Wand2, ChevronRight, Plus, Trash2, FileText, Upload } from "lucide-react";
 import { toast } from "sonner";
+import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
 
 export const Route = createFileRoute("/manager/menu")({ component: MenuIntel });
 
@@ -25,6 +26,9 @@ function MenuIntel() {
   const [pairingProgress, setPairingProgress] = useState<{ done: number; total: number } | null>(null);
   const [pairingSearch, setPairingSearch] = useState("");
   const menuFilesRef = useRef<HTMLInputElement>(null);
+  const [pendingMenu, setPendingMenu] = useState<Menu | null>(null);
+  const [deletingMenu, setDeletingMenu] = useState(false);
+  const [confirmRegen, setConfirmRegen] = useState(false);
 
   const loadMenus = async (v: string) => {
     const { data } = await supabase.from("venue_menu").select("id, menu_text, parsed_items, uploaded_at").eq("venue_id", v).order("uploaded_at", { ascending: false }).limit(MAX_MENUS);
@@ -148,10 +152,15 @@ function MenuIntel() {
     }
   };
 
-  const removeMenu = async (id: string) => {
-    const { error } = await supabase.from("venue_menu").delete().eq("id", id);
+  const confirmRemoveMenu = async () => {
+    if (!pendingMenu) return;
+    setDeletingMenu(true);
+    const { error } = await supabase.from("venue_menu").delete().eq("id", pendingMenu.id);
+    setDeletingMenu(false);
     if (error) { toast.error(error.message); return; }
+    setPendingMenu(null);
     if (venueId) await loadMenus(venueId);
+    toast.success("Menu deleted");
   };
 
   const generatePairings = async () => {
