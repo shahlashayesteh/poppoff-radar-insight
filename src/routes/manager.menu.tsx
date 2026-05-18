@@ -284,7 +284,7 @@ function MenuIntel() {
                           <div className="text-xs text-muted-foreground">{itemCount} items · {new Date(m.uploaded_at).toLocaleDateString()}</div>
                         </div>
                       </div>
-                      <button onClick={() => removeMenu(m.id)} className="text-muted-foreground hover:text-foreground"><Trash2 className="h-4 w-4" /></button>
+                      <button onClick={() => setPendingMenu(m)} className="text-muted-foreground hover:text-foreground" aria-label="Delete menu"><Trash2 className="h-4 w-4" /></button>
                     </li>
                   );
                 })}
