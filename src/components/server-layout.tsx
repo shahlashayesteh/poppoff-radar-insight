@@ -1,11 +1,12 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Home, BarChart3, Target, Gift, User } from "lucide-react";
+import { Home, BarChart3, Target, Trophy, Gift, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Logo } from "./logo";
 
 const items = [
   { to: "/server", label: "Home", icon: Home },
   { to: "/server/stats", label: "Stats", icon: BarChart3 },
+  { to: "/server/leaderboard", label: "Ranks", icon: Trophy },
   { to: "/server/menu", label: "Coaching", icon: Target },
   { to: "/server/welcome", label: "Rewards", icon: Gift },
   { to: "/server/profile", label: "Profile", icon: User },
