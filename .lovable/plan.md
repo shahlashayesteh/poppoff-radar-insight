@@ -1,4 +1,37 @@
-# Performance Intelligence Engine
+# Performance Intelligence Engine — Motivation Layer
+
+Server-facing UI now speaks human performance language ("Up 14% on your usual",
+"Only 3 desserts to hit target", "You're #2 of 7"), backed by the same engine
+that powers manager analytics. The analytical numbers (pp, deltas, scores)
+stay internal — they drive scoring, ranking, and coaching, but never appear
+on a server screen.
+
+## Motivation helpers (`performance-engine.ts`)
+- `ragFromRing` / `ragColor` / `ragSoftBg` / `ragBorder` — strong red/amber/green
+  from target progress. Used everywhere on server screens.
+- `humanMomentum(row)` — sales vs 4wk avg → "Up 12% on your usual" / "Down 8%
+  on your usual" / "Right on your usual".
+- `humanTotalsMomentum(perf)` — same logic for weekly total.
+- `humanTargetCall(row)` — "Only 3 desserts to hit target" / "Beat target by
+  4 points" / "On target — hold the line".
+- `humanItemsDelta(row)` — "8 more cocktails than usual".
+- `itemsToTarget(row)` — opportunity-aware estimate of items needed.
+
+## Leaderboard
+- New SQL function `venue_weekly_leaderboard(venue_id, week_start)`
+  (SECURITY DEFINER, restricted to venue members / manager) returns each
+  server's weekly sales, prev week, 4-week avg, and per-category breakdown
+  without exposing raw rows.
+- `loadVenueLeaderboard()` + `categoryLeaderboard()` + `weeklyMovers()` +
+  `percentileRank()` in the engine.
+- New page `/server/leaderboard` — overall + per-category tabs, "Most
+  improved" + "Longest streak" highlights, current-server row highlighted.
+- Home page shows "You're #N of M" hero chip with a tap-through.
+
+# Pre-existing engine notes (still current)
+
+Central module: `src/lib/performance-engine.ts` — the single source of truth for every server-performance number (home, stats, manager view, AI coaching).
+
 
 Central module: `src/lib/performance-engine.ts` — the single source of truth for every server-performance number (home, stats, manager view, AI coaching).
 
