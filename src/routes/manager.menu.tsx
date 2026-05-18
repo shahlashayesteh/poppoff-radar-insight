@@ -213,7 +213,7 @@ function MenuIntel() {
       }
 
       if (failures > 0) toast.warning(`${chunks.length - failures}/${chunks.length} batches succeeded`);
-      else toast.success(`Pairings ready · ${collected.length} suggestions`);
+      else toast.success(`Pairings ready · sent to your team (${collected.length} suggestions)`);
       await loadPairings(venueId);
     } catch (e: any) {
       toast.error(e.message || "Pairing failed");
