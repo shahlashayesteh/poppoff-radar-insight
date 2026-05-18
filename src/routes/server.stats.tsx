@@ -92,11 +92,13 @@ function Page() {
             </div>
 
             {rows.map((r) => {
-              const rag = ragFromRing(r.ringPct, r.target > 0);
+              const baseRag = ragFromRing(r.ringPct, r.target > 0);
+              const mo = humanMomentum(r);
+              // Down% momentum forces red so declining stats never read amber.
+              const rag = mo?.rag === "red" ? "red" : baseRag;
               const tone = ragColor(rag);
               const elite = eliteVisual(r.eliteTier);
               const call = humanTargetCall(r);
-              const mo = humanMomentum(r);
               const itemsDelta = humanItemsDelta(r);
               return (
                 <div
