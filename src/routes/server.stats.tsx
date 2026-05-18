@@ -28,7 +28,7 @@ const LEGACY_CATS: { key: string; t: string; sales: string; cat: CategoryKey; la
   { key: "sparkling_conversion", t: "sparkling_target", sales: "sparkling_sales", cat: "sparkling", label: "Sparkling" },
 ];
 
-type Row = { label: string; conversion: number; target: number; items: number; prevItems: number };
+type Row = { label: string; conversion: number; prevConversion: number; target: number; items: number; prevItems: number; sales: number; prevSales: number };
 
 function Page() {
   const [stat, setStat] = useState<Stat | null>(null);
