@@ -169,6 +169,12 @@ function ManagerDashboard() {
       .eq("venue_id", v.id)
       .eq("week_start", visibleWeek);
     setAcks(Object.fromEntries((ak ?? []).map((r) => [r.user_id, true])));
+    if (ids.length) {
+      const vp = await loadVenuePerformance({ venueId: v.id, weekStart: visibleWeek, userIds: ids });
+      setVenuePerf(vp);
+    } else {
+      setVenuePerf(null);
+    }
   };
 
   useEffect(() => {
