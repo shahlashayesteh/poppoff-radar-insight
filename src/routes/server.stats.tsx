@@ -28,7 +28,7 @@ const LEGACY_CATS: { key: string; t: string; sales: string; cat: CategoryKey; la
   { key: "sparkling_conversion", t: "sparkling_target", sales: "sparkling_sales", cat: "sparkling", label: "Sparkling" },
 ];
 
-type Row = { label: string; conversion: number; target: number; items: number; prevItems: number };
+type Row = { label: string; conversion: number; prevConversion: number; target: number; items: number; prevItems: number; sales: number; prevSales: number };
 
 function Page() {
   const [stat, setStat] = useState<Stat | null>(null);
@@ -69,9 +69,12 @@ function Page() {
     return LEGACY_CATS.map((c) => ({
       label: c.label,
       conversion: Number(stat[c.key] ?? 0),
+      prevConversion: Number(prevStat?.[c.key] ?? 0),
       target: Number(target?.[c.t] ?? 0),
       items: estimateItemsSold(Number(stat[c.sales] ?? 0), c.cat, prices),
       prevItems: prevStat ? estimateItemsSold(Number(prevStat[c.sales] ?? 0), c.cat, prices) : 0,
+      sales: Number(stat[c.sales] ?? 0),
+      prevSales: Number(prevStat?.[c.sales] ?? 0),
     }));
   };
   const hasDynamicData =
@@ -84,15 +87,19 @@ function Page() {
       ? dynRows.map((r) => ({
           label: r.label,
           conversion: r.conversion,
+          prevConversion: r.prevConversion,
           target: r.target,
           items: r.items,
           prevItems: r.prevItems,
+          sales: r.sales,
+          prevSales: r.prevSales,
         }))
       : legacyRows();
 
   const totalItemsCurrent = rows.reduce((s, r) => s + r.items, 0);
-  const totalItemsPrev = rows.reduce((s, r) => s + r.prevItems, 0);
-  const totalDelta = pctDelta(totalItemsCurrent, totalItemsPrev);
+  const totalSalesCurrent = rows.reduce((s, r) => s + r.sales, 0);
+  const totalSalesPrev = rows.reduce((s, r) => s + r.prevSales, 0);
+  const totalDelta = pctDelta(totalSalesCurrent, totalSalesPrev);
 
   return (
     <ServerLayout>
@@ -119,7 +126,8 @@ function Page() {
             {rows.map((r) => {
               const colour = performanceColour(r.conversion, r.target);
               const tone = colour === "green" ? "var(--brand-green)" : colour === "amber" ? "var(--brand-orange)" : "var(--opportunity)";
-              const d = pctDelta(r.items, r.prevItems);
+              const hasPrev = r.prevConversion > 0 || r.conversion > 0;
+              const d = hasPrev ? r.conversion - r.prevConversion : null;
               return (
                 <div key={r.label} className="rounded-2xl bg-white border border-border p-4">
                   <div className="flex items-center justify-between">
@@ -128,7 +136,7 @@ function Page() {
                       {r.items} sold
                       {d !== null && (
                         <span className="ml-2 text-xs" style={{ color: d >= 0 ? "var(--brand-green)" : "var(--opportunity)" }}>
-                          {d >= 0 ? "↑" : "↓"} {Math.abs(d).toFixed(0)}%
+                          {d >= 0 ? "↑" : "↓"} {Math.abs(d).toFixed(1)}%
                         </span>
                       )}
                     </div>

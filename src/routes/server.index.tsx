@@ -161,6 +161,7 @@ function ServerDashboard() {
   type UniRow = {
     label: string;
     conversion: number;
+    prevConversion: number;
     target: number;
     items: number;
     prevItems: number;
@@ -169,12 +170,13 @@ function ServerDashboard() {
     if (!stat) return [];
     return LEGACY_CATS.map((c) => {
       const conv = Number((stat as any)[c.conv] ?? 0);
+      const prevConv = Number((prevStat as any)?.[c.conv] ?? 0);
       const tgt = Number((target as any)?.[c.t] ?? 0);
       const items = estimateItemsSold(Number((stat as any)[c.sales] ?? 0), c.key as CategoryKey, prices);
       const prevItems = prevStat
         ? estimateItemsSold(Number((prevStat as any)[c.sales] ?? 0), c.key as CategoryKey, prices)
         : 0;
-      return { label: c.label, conversion: conv, target: tgt, items, prevItems };
+      return { label: c.label, conversion: conv, prevConversion: prevConv, target: tgt, items, prevItems };
     });
   };
   // Only prefer dynamic rows when the venue actually has usable data for the
@@ -193,17 +195,27 @@ function ServerDashboard() {
     ? dynRows.map((r) => ({
         label: r.label,
         conversion: r.conversion,
+        prevConversion: r.prevConversion,
         target: r.target,
         items: r.items,
         prevItems: r.prevItems,
       }))
     : buildLegacyRows();
 
-  // Smashed card (still based on best wow positive delta across all categories).
+  // Conversion percentage-point delta vs previous week. Returns null when
+  // there is no previous-week signal at all (both 0). This is the
+  // source-of-truth metric used by coaching insights, so home + stats + the
+  // AI tips all speak the same language.
+  const convDelta = (r: { conversion: number; prevConversion: number }): number | null => {
+    if (!r.prevConversion && !r.conversion) return null;
+    return r.conversion - r.prevConversion;
+  };
+
+  // Smashed card (best week-over-week conversion gain in percentage points).
   let smashed: { label: string; delta: number } | null = null;
   if (stat && uniRows.length) {
     const positives = uniRows
-      .map((r) => ({ label: r.label, d: pctDelta(r.items, r.prevItems) }))
+      .map((r) => ({ label: r.label, d: convDelta(r) }))
       .filter((r) => r.d !== null && (r.d as number) > 0) as { label: string; d: number }[];
     if (positives.length) {
       const best = positives.reduce((a, b) => (b.d > a.d ? b : a));
@@ -217,6 +229,7 @@ function ServerDashboard() {
     label: string;
     role: RingRole;
     conversion: number;
+    prevConversion: number;
     target: number;
     items: number;
     prevItems: number;
@@ -250,11 +263,12 @@ function ServerDashboard() {
     };
 
     top3 = picks.map((p) => {
-      const d = pctDelta(p.items, p.prevItems);
+      const d = convDelta(p);
       return {
         label: cap(p.label),
         role: deltaBucket(d).role,
         conversion: p.conversion,
+        prevConversion: p.prevConversion,
         target: p.target,
         items: p.items,
         prevItems: p.prevItems,
@@ -262,12 +276,12 @@ function ServerDashboard() {
     });
     allGreen =
       top3.length === 3 &&
-      top3.every((t) => deltaBucket(pctDelta(t.items, t.prevItems)).tone === "var(--brand-green)");
+      top3.every((t) => deltaBucket(convDelta(t)).tone === "var(--brand-green)");
   }
 
   // Work-on list: red entries from Top 3 only.
   const workOnList = top3
-    .map((t) => ({ label: t.label, d: pctDelta(t.items, t.prevItems) }))
+    .map((t) => ({ label: t.label, d: convDelta(t) }))
     .filter((t) => deltaBucket(t.d).tone === "var(--opportunity)");
   const joinLabels = (xs: string[]) =>
     xs.length <= 1
@@ -293,7 +307,7 @@ function ServerDashboard() {
             top3.length > 0 ? (
               <div className="mt-4 grid grid-cols-3 gap-2">
                 {top3.map((c) => {
-                  const d = pctDelta(c.items, c.prevItems);
+                  const d = convDelta(c);
                   const bucket = deltaBucket(d);
                   const tone = bucket.tone;
                   const fillPct = bucket.fillPct;
@@ -304,7 +318,7 @@ function ServerDashboard() {
                       <Ring fillPct={fillPct} color={tone} displayValue={c.items} />
                       {d !== null ? (
                         <div className="mt-1 text-xs font-semibold" style={{ color: d >= 0 ? "var(--brand-green)" : "var(--opportunity)" }}>
-                          {d >= 0 ? "↑" : "↓"} {d >= 0 ? "+" : "-"}{Math.abs(d).toFixed(0)}%
+                          {d >= 0 ? "↑" : "↓"} {d >= 0 ? "+" : "-"}{Math.abs(d).toFixed(1)}%
                         </div>
                       ) : (
                         <div className="mt-1 text-xs text-muted-foreground">—</div>
@@ -336,7 +350,7 @@ function ServerDashboard() {
                 You smashed <span style={{ color: "var(--brand-green)" }}>{smashed.label}</span> this week!
               </div>
               <div className="mt-1 text-xs">
-                <span className="font-semibold" style={{ color: "var(--brand-green)" }}>+{smashed.delta.toFixed(0)}%</span>{" "}
+                <span className="font-semibold" style={{ color: "var(--brand-green)" }}>+{smashed.delta.toFixed(1)}%</span>{" "}
                 <span className="text-muted-foreground">vs last week</span>
               </div>
             </div>
@@ -361,7 +375,7 @@ function ServerDashboard() {
                 {workOnList.map((w) => (
                   <li key={w.label}>
                     <span className="font-semibold" style={{ color: "var(--opportunity)" }}>
-                      {w.label} {w.d === null ? "—" : `${w.d >= 0 ? "+" : ""}${w.d.toFixed(0)}%`}
+                      {w.label} {w.d === null ? "—" : `${w.d >= 0 ? "+" : ""}${w.d.toFixed(1)}%`}
                     </span>{" "}
                     <span className="text-muted-foreground">vs last week</span>
                   </li>
