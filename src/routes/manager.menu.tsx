@@ -4,6 +4,7 @@ import { ManagerLayout } from "@/components/manager-layout";
 import { supabase } from "@/integrations/supabase/client";
 import { getManagerVenue } from "@/lib/manager-venue";
 import { Brain, Sparkles, Wand2, ChevronRight, Plus, Trash2, FileText, Upload } from "lucide-react";
+import { getMondayOfWeek, toISODate } from "@/lib/week";
 import { toast } from "sonner";
 import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
 
