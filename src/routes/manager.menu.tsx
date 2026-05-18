@@ -63,6 +63,7 @@ function MenuIntel() {
       const items: ParsedItem[] = data?.items ?? [];
       toast.success(`Parsed ${items.length} item${items.length === 1 ? "" : "s"}`);
       setText(""); setLabel("");
+      await supabase.from("weekly_priorities").delete().eq("venue_id", venueId);
       await loadMenus(venueId);
     } catch (e: any) {
       toast.error(e.message || "AI parse failed");
@@ -143,6 +144,7 @@ function MenuIntel() {
         added += 1;
       }
       toast.success(`Menu saved · coaching refreshed for your team (${added})`);
+      await supabase.from("weekly_priorities").delete().eq("venue_id", venueId);
       await loadMenus(venueId);
     } catch (e: any) {
       toast.error(e.message || "Menu upload failed");
@@ -161,7 +163,8 @@ function MenuIntel() {
     setPendingMenu(null);
     if (venueId) {
       await loadMenus(venueId);
-      // Clear stale per-server coaching that referenced the deleted menu
+      // Clear stale per-server coaching + priorities that referenced the deleted menu
+      await supabase.from("weekly_priorities").delete().eq("venue_id", venueId);
       await supabase.functions.invoke("ai-assist", { body: { action: "invalidate_coaching", venueId } });
     }
     toast.success("Menu deleted · coaching refreshed");
@@ -218,7 +221,8 @@ function MenuIntel() {
 
       if (failures > 0) toast.warning(`${chunks.length - failures}/${chunks.length} batches succeeded`);
       else toast.success(`Pairings ready · sent to your team (${collected.length} suggestions)`);
-      // Wipe stale per-server coaching so every server regenerates against the new pairings
+      // Wipe stale per-server coaching + priorities so every server regenerates against the new pairings
+      await supabase.from("weekly_priorities").delete().eq("venue_id", venueId);
       await supabase.functions.invoke("ai-assist", { body: { action: "invalidate_coaching", venueId } });
       await loadPairings(venueId);
     } catch (e: any) {
