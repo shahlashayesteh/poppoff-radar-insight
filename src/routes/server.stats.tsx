@@ -126,7 +126,8 @@ function Page() {
             {rows.map((r) => {
               const colour = performanceColour(r.conversion, r.target);
               const tone = colour === "green" ? "var(--brand-green)" : colour === "amber" ? "var(--brand-orange)" : "var(--opportunity)";
-              const d = pctDelta(r.items, r.prevItems);
+              const hasPrev = r.prevConversion > 0 || r.conversion > 0;
+              const d = hasPrev ? r.conversion - r.prevConversion : null;
               return (
                 <div key={r.label} className="rounded-2xl bg-white border border-border p-4">
                   <div className="flex items-center justify-between">
@@ -135,7 +136,7 @@ function Page() {
                       {r.items} sold
                       {d !== null && (
                         <span className="ml-2 text-xs" style={{ color: d >= 0 ? "var(--brand-green)" : "var(--opportunity)" }}>
-                          {d >= 0 ? "↑" : "↓"} {Math.abs(d).toFixed(0)}%
+                          {d >= 0 ? "↑" : "↓"} {Math.abs(d).toFixed(1)}%
                         </span>
                       )}
                     </div>
