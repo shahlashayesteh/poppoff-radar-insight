@@ -4,15 +4,25 @@ import { ServerLayout } from "@/components/server-layout";
 import { supabase } from "@/integrations/supabase/client";
 import { useRoleGate } from "@/lib/auth-gate";
 import { claimServerCsvData, recordLogin } from "@/lib/server-data";
-import { Trophy, Flame, ArrowRight, TrendingDown, Sparkles } from "lucide-react";
+import { Trophy, Flame, ArrowRight, TrendingDown, Sparkles, Crown } from "lucide-react";
 import { getMondayOfWeek, toISODate, formatWeekRange, latestStatsWeek } from "@/lib/week";
 import {
   loadServerPerformance,
-  statusTone,
+  loadVenueLeaderboard,
+  ragFromRing,
+  ragColor,
+  ragSoftBg,
+  ragBorder,
   eliteVisual,
   formatItems,
+  humanMomentum,
+  humanTargetCall,
+  humanItemsDelta,
+  percentileRank,
   type CategoryMetric,
   type ServerPerformance,
+  type LeaderboardRow,
+  type Rag,
 } from "@/lib/performance-engine";
 
 export const Route = createFileRoute("/server/")({ component: ServerDashboard });
@@ -34,11 +44,19 @@ function Ring({ fillPct, color, displayValue, glow }: { fillPct: number; color: 
   );
 }
 
+function ragLabel(rag: Rag): string {
+  if (rag === "green") return "WINNING";
+  if (rag === "amber") return "CLOSE";
+  return "PUSH";
+}
+
 function ServerDashboard() {
   useRoleGate("server");
   const [name, setName] = useState("");
   const [hasStat, setHasStat] = useState(false);
   const [perf, setPerf] = useState<ServerPerformance | null>(null);
+  const [board, setBoard] = useState<LeaderboardRow[]>([]);
+  const [myRow, setMyRow] = useState<LeaderboardRow | null>(null);
   const [streak, setStreak] = useState(0);
   const [coaching, setCoaching] = useState<{ category: string; tip: string }[] | null>(null);
   const [coachLoading, setCoachLoading] = useState(false);
@@ -85,8 +103,13 @@ function ServerDashboard() {
       setHasStat(!!st);
       const { data: sk } = await supabase.from("server_streaks").select("current_streak").eq("user_id", u.user.id).eq("venue_id", v).maybeSingle();
       setStreak((sk as { current_streak?: number } | null)?.current_streak ?? 0);
-      const p = await loadServerPerformance({ venueId: v, userId: u.user.id, weekStart: visibleWeek });
+      const [p, lb] = await Promise.all([
+        loadServerPerformance({ venueId: v, userId: u.user.id, weekStart: visibleWeek }),
+        loadVenueLeaderboard({ venueId: v, weekStart: visibleWeek }),
+      ]);
       setPerf(p);
+      setBoard(lb);
+      setMyRow(lb.find((r) => r.user_id === u.user.id) ?? null);
       await supabase.from("server_stat_views").insert({ user_id: u.user.id, venue_id: v, week_start: visibleWeek });
       if (st) await fetchCoaching(v, u.user.id, visibleWeek);
     })();
@@ -116,8 +139,6 @@ function ServerDashboard() {
 
   const rows: CategoryMetric[] = perf?.rows ?? [];
 
-  // Pick the most commercially impactful winner — highest performance score
-  // among rows with positive 4wk (or WoW fallback) momentum.
   const smashed = (() => {
     if (!rows.length) return null;
     const winners = rows
@@ -125,29 +146,28 @@ function ServerDashboard() {
       .sort((a, b) => b.score - a.score);
     if (!winners.length) return null;
     const top = winners[0];
-    const delta = top.deltaVs4wk ?? top.deltaWoW ?? 0;
-    return { label: top.label, delta, basis: top.deltaVs4wk !== null ? "4wk avg" : "last week" };
+    return { row: top, momentum: humanMomentum(top), call: humanTargetCall(top) };
   })();
 
-  // Top 3 — ranked by performance score (mix of target progress, trend,
-  // commercial vs expected, and consistency). Falls back to ratio if no
-  // scores available (e.g. fresh venue).
   const top3: CategoryMetric[] = rows
     .filter((r) => r.target > 0 || r.items > 0)
     .slice()
     .sort((a, b) => b.score - a.score)
     .slice(0, 3);
 
-  // Work-on: low scorers below 60 OR clearly trending down.
   const workOn = rows
     .filter((r) => r.score < 60 || (r.deltaVs4wk !== null && r.deltaVs4wk < -1))
     .sort((a, b) => a.score - b.score)
     .slice(0, 3);
 
-  const allGreen = top3.length >= 3 && top3.every((r) => r.statusLabel === "Strong" || r.statusLabel === "Crushing");
+  const allGreen = top3.length >= 3 && top3.every((r) => ragFromRing(r.ringPct, r.target > 0) === "green");
 
   const joinLabels = (xs: string[]) =>
     xs.length <= 1 ? xs.join("") : xs.length === 2 ? `${xs[0]} and ${xs[1]}` : `${xs.slice(0, -1).join(", ")} and ${xs[xs.length - 1]}`;
+
+  const totalServers = board.length;
+  const myRank = myRow?.rank ?? null;
+  const pct = myRank ? percentileRank(myRank, totalServers) : null;
 
   return (
     <ServerLayout>
@@ -159,40 +179,73 @@ function ServerDashboard() {
         <div className="mt-3 text-xs text-muted-foreground">{formatWeekRange(displayWeekStart)}</div>
       </div>
 
-      <div className="px-5 mt-5">
+      {hasStat && myRank && totalServers > 1 && (
+        <div className="px-5 mt-5">
+          <Link
+            to="/server/leaderboard"
+            className="block rounded-3xl p-5 border-2 flex items-center gap-4"
+            style={{
+              borderColor: myRank === 1 ? "var(--brand-green)" : "color-mix(in oklab, var(--brand-orange) 35%, transparent)",
+              background: myRank === 1
+                ? "color-mix(in oklab, var(--brand-green) 10%, white)"
+                : "color-mix(in oklab, var(--brand-orange) 6%, white)",
+            }}
+          >
+            <div className="h-14 w-14 rounded-full grid place-items-center shrink-0"
+              style={{ background: myRank === 1 ? "var(--brand-green)" : "var(--brand-orange)", color: "white" }}>
+              {myRank === 1 ? <Crown className="h-7 w-7" /> : <span className="font-display text-2xl font-extrabold">#{myRank}</span>}
+            </div>
+            <div className="flex-1">
+              <div className="font-display text-xl font-extrabold leading-tight">
+                {myRank === 1 ? "You're #1 this week!" : `You're #${myRank} of ${totalServers}`}
+              </div>
+              <div className="mt-0.5 text-xs text-muted-foreground">
+                {pct !== null && pct >= 50 && myRank !== 1
+                  ? `Outperforming ${pct}% of the team`
+                  : myRank === 1
+                    ? "Hold the top spot"
+                    : `${myRank - 1} ${myRank - 1 === 1 ? "place" : "places"} from the top`}
+              </div>
+            </div>
+            <ArrowRight className="h-5 w-5 text-muted-foreground" />
+          </Link>
+        </div>
+      )}
+
+      <div className="px-5 mt-4">
         <div className="rounded-3xl bg-white border border-border p-5">
           <div className="font-semibold">Your Top 3</div>
           {hasStat ? (
             top3.length > 0 ? (
               <div className="mt-4 grid grid-cols-3 gap-2">
                 {top3.map((c) => {
-                  const tone = statusTone(c.statusLabel);
+                  const rag = ragFromRing(c.ringPct, c.target > 0);
+                  const tone = ragColor(rag);
                   const elite = eliteVisual(c.eliteTier);
-                  const d4 = c.deltaVs4wk;
+                  const mo = humanMomentum(c);
                   return (
                     <div key={c.key} className="flex flex-col items-center">
-                      <div className="text-[10px] font-semibold uppercase tracking-wider mb-1 flex items-center gap-1" style={{ color: tone }}>
-                        {c.statusLabel}
+                      <div className="text-[10px] font-extrabold uppercase tracking-wider mb-1 flex items-center gap-1" style={{ color: tone }}>
+                        {ragLabel(rag)}
                         {elite.badge && (
                           <span className="text-[8px] rounded-full px-1.5 py-0.5" style={{ background: "color-mix(in oklab, var(--brand-green) 14%, white)", color: "var(--brand-green)" }}>{elite.badge}</span>
                         )}
                       </div>
                       <div className="text-xs text-muted-foreground mb-2">{c.label}</div>
                       <Ring fillPct={c.ringPct} color={tone} displayValue={c.items} glow={elite.glow} />
-                      {d4 !== null ? (
-                        <div className="mt-1 text-xs font-semibold" style={{ color: d4 >= 0 ? "var(--brand-green)" : "var(--opportunity)" }}>
-                          {d4 >= 0 ? "↑" : "↓"} {Math.abs(d4).toFixed(1)}pp
+                      {mo ? (
+                        <div className="mt-2 text-[11px] font-semibold text-center leading-tight" style={{ color: ragColor(mo.rag) }}>
+                          {mo.text}
                         </div>
                       ) : (
-                        <div className="mt-1 text-xs text-muted-foreground">—</div>
+                        <div className="mt-2 text-[11px] text-muted-foreground">New category</div>
                       )}
-                      <div className="text-[10px] text-muted-foreground">vs 4wk avg</div>
                     </div>
                   );
                 })}
               </div>
             ) : (
-              <p className="mt-3 text-sm text-muted-foreground">Not enough category data yet — once a few categories have sales and targets we'll highlight your best, average, and focus area.</p>
+              <p className="mt-3 text-sm text-muted-foreground">Not enough category data yet — once a few categories have sales and targets we'll highlight your best.</p>
             )
           ) : (
             <p className="mt-3 text-sm text-muted-foreground">No stats for this week yet. Your manager will upload them after service.</p>
@@ -203,19 +256,18 @@ function ServerDashboard() {
       {hasStat && smashed && (
         <div className="px-5 mt-4">
           <div className="rounded-3xl border-2 p-5 flex items-center gap-4"
-            style={{
-              borderColor: `color-mix(in oklab, var(--brand-green) 40%, transparent)`,
-              background: `color-mix(in oklab, var(--brand-green) 8%, white)`,
-            }}>
+            style={{ borderColor: ragBorder("green"), background: ragSoftBg("green") }}>
             <Trophy className="h-12 w-12 shrink-0" style={{ color: "var(--brand-green)" }} />
             <div className="flex-1">
-              <div className="font-display text-lg font-bold leading-tight">
-                You smashed <span style={{ color: "var(--brand-green)" }}>{smashed.label}</span> this week!
+              <div className="font-display text-lg font-extrabold leading-tight">
+                You're crushing <span style={{ color: "var(--brand-green)" }}>{smashed.row.label}</span>
               </div>
-              <div className="mt-1 text-xs">
-                <span className="font-semibold" style={{ color: "var(--brand-green)" }}>+{smashed.delta.toFixed(1)}pp</span>{" "}
-                <span className="text-muted-foreground">vs {smashed.basis}</span>
+              <div className="mt-1 text-sm font-semibold" style={{ color: "var(--brand-green)" }}>
+                {smashed.momentum?.text ?? (smashed.call ?? "Keep going")}
               </div>
+              {smashed.call && smashed.momentum && (
+                <div className="text-xs text-muted-foreground mt-0.5">{smashed.call}</div>
+              )}
             </div>
             <div className="h-9 w-9 rounded-full text-white grid place-items-center text-sm" style={{ background: "var(--brand-green)" }}>✓</div>
           </div>
@@ -225,24 +277,21 @@ function ServerDashboard() {
       {hasStat && !allGreen && workOn.length > 0 && (
         <div className="px-5 mt-4">
           <div className="rounded-3xl border-2 p-5 flex items-start gap-4"
-            style={{
-              borderColor: `color-mix(in oklab, var(--opportunity) 40%, transparent)`,
-              background: `color-mix(in oklab, var(--opportunity) 8%, white)`,
-            }}>
+            style={{ borderColor: ragBorder("red"), background: ragSoftBg("red") }}>
             <TrendingDown className="h-12 w-12 shrink-0" style={{ color: "var(--opportunity)" }} />
             <div className="flex-1">
-              <div className="font-display text-lg font-bold leading-tight" style={{ color: "var(--opportunity)" }}>
-                Focus on {joinLabels(workOn.map((w) => w.label))} this week
+              <div className="font-display text-lg font-extrabold leading-tight" style={{ color: "var(--opportunity)" }}>
+                Push {joinLabels(workOn.map((w) => w.label))} tonight
               </div>
-              <ul className="mt-2 space-y-1 text-xs">
+              <ul className="mt-2 space-y-1.5 text-xs">
                 {workOn.map((w) => {
-                  const d = w.deltaVs4wk ?? w.deltaWoW;
+                  const call = humanTargetCall(w);
+                  const itemsDelta = humanItemsDelta(w);
+                  const headline = call ?? itemsDelta ?? humanMomentum(w)?.text ?? "Needs a push";
                   return (
-                    <li key={w.key}>
-                      <span className="font-semibold" style={{ color: "var(--opportunity)" }}>
-                        {w.label} {d === null ? "—" : `${d >= 0 ? "+" : ""}${d.toFixed(1)}pp`}
-                      </span>{" "}
-                      <span className="text-muted-foreground">vs {w.deltaVs4wk !== null ? "4wk avg" : "last week"} · {formatItems(w)}</span>
+                    <li key={w.key} className="leading-tight">
+                      <span className="font-bold" style={{ color: "var(--opportunity)" }}>{w.label}:</span>{" "}
+                      <span className="text-foreground/85 font-medium">{headline}</span>
                     </li>
                   );
                 })}
@@ -275,16 +324,24 @@ function ServerDashboard() {
         </div>
       )}
 
-      <div className="px-5 mt-4 mb-6">
-        <Link to="/server/progress" className="block rounded-3xl bg-white border border-border p-4 flex items-center gap-3">
+      <div className="px-5 mt-4 mb-6 grid grid-cols-2 gap-3">
+        <Link to="/server/leaderboard" className="rounded-3xl bg-white border border-border p-4 flex items-center gap-3">
+          <div className="h-10 w-10 rounded-full bg-brand-green/15 grid place-items-center"><Trophy className="h-5 w-5 text-brand-green" /></div>
+          <div className="flex-1">
+            <div className="text-sm font-semibold">Leaderboard</div>
+            <div className="text-xs text-muted-foreground">See the rankings</div>
+          </div>
+        </Link>
+        <Link to="/server/progress" className="rounded-3xl bg-white border border-border p-4 flex items-center gap-3">
           <div className="h-10 w-10 rounded-full bg-brand-orange/15 grid place-items-center"><Flame className="h-5 w-5 text-brand-orange" /></div>
           <div className="flex-1">
-            <div className="text-sm font-semibold">Current streak: {streak} week{streak === 1 ? "" : "s"} 🔥</div>
-            <div className="text-xs text-muted-foreground">View milestones & rewards</div>
+            <div className="text-sm font-semibold">{streak} week{streak === 1 ? "" : "s"} 🔥</div>
+            <div className="text-xs text-muted-foreground">Streak & rewards</div>
           </div>
-          <ArrowRight className="h-4 w-4 text-muted-foreground" />
         </Link>
       </div>
+      {/* formatItems kept for consistency with stats page imports */}
+      <span className="hidden">{formatItems({ quantity: 0, quantitySource: "real" })}</span>
     </ServerLayout>
   );
 }
