@@ -160,6 +160,7 @@ export type Database = {
           id: string
           metric_type: string
           net_sales: number
+          opportunity_count: number | null
           quantity: number
           sales: number
           user_id: string
@@ -173,6 +174,7 @@ export type Database = {
           id?: string
           metric_type?: string
           net_sales?: number
+          opportunity_count?: number | null
           quantity?: number
           sales?: number
           user_id: string
@@ -186,6 +188,7 @@ export type Database = {
           id?: string
           metric_type?: string
           net_sales?: number
+          opportunity_count?: number | null
           quantity?: number
           sales?: number
           user_id?: string
@@ -375,6 +378,7 @@ export type Database = {
         Row: {
           cocktail_conversion: number | null
           cocktail_sales: number
+          context: Json | null
           created_at: string
           dessert_conversion: number | null
           dessert_sales: number
@@ -397,6 +401,7 @@ export type Database = {
         Insert: {
           cocktail_conversion?: number | null
           cocktail_sales?: number
+          context?: Json | null
           created_at?: string
           dessert_conversion?: number | null
           dessert_sales?: number
@@ -419,6 +424,7 @@ export type Database = {
         Update: {
           cocktail_conversion?: number | null
           cocktail_sales?: number
+          context?: Json | null
           created_at?: string
           dessert_conversion?: number | null
           dessert_sales?: number
