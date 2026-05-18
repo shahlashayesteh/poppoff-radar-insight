@@ -4,6 +4,7 @@ import { ManagerLayout } from "@/components/manager-layout";
 import { supabase } from "@/integrations/supabase/client";
 import { getManagerVenue } from "@/lib/manager-venue";
 import { Brain, Sparkles, Wand2, ChevronRight, Plus, Trash2, FileText, Upload } from "lucide-react";
+import { getMondayOfWeek, toISODate } from "@/lib/week";
 import { toast } from "sonner";
 import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
 
@@ -40,6 +41,19 @@ function MenuIntel() {
     setPairings(((data ?? []) as unknown) as Pairing[]);
   };
 
+  // After a menu/pairing change, ask the AI for fresh "push this week" priorities
+  // so the server-facing /server/menu page does not go blank.
+  const regeneratePriorities = async (v: string) => {
+    const weekStart = toISODate(getMondayOfWeek());
+    try {
+      await supabase.functions.invoke("ai-assist", {
+        body: { action: "generate_priorities", venueId: v, payload: { weekStart } },
+      });
+    } catch (err) {
+      console.error("regeneratePriorities failed", err);
+    }
+  };
+
   useEffect(() => {
     (async () => {
       const venue = await getManagerVenue();
@@ -65,6 +79,7 @@ function MenuIntel() {
       setText(""); setLabel("");
       await supabase.from("weekly_priorities").delete().eq("venue_id", venueId);
       await loadMenus(venueId);
+      void regeneratePriorities(venueId);
     } catch (e: any) {
       toast.error(e.message || "AI parse failed");
     } finally {
@@ -146,6 +161,7 @@ function MenuIntel() {
       toast.success(`Menu saved · coaching refreshed for your team (${added})`);
       await supabase.from("weekly_priorities").delete().eq("venue_id", venueId);
       await loadMenus(venueId);
+      void regeneratePriorities(venueId);
     } catch (e: any) {
       toast.error(e.message || "Menu upload failed");
     } finally {
@@ -166,6 +182,7 @@ function MenuIntel() {
       // Clear stale per-server coaching + priorities that referenced the deleted menu
       await supabase.from("weekly_priorities").delete().eq("venue_id", venueId);
       await supabase.functions.invoke("ai-assist", { body: { action: "invalidate_coaching", venueId } });
+      void regeneratePriorities(venueId);
     }
     toast.success("Menu deleted · coaching refreshed");
   };
@@ -225,6 +242,7 @@ function MenuIntel() {
       await supabase.from("weekly_priorities").delete().eq("venue_id", venueId);
       await supabase.functions.invoke("ai-assist", { body: { action: "invalidate_coaching", venueId } });
       await loadPairings(venueId);
+      void regeneratePriorities(venueId);
     } catch (e: any) {
       toast.error(e.message || "Pairing failed");
     } finally {
