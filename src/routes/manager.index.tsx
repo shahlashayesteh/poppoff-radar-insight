@@ -23,10 +23,16 @@ import {
   getMondayOfWeek,
   toISODate,
   formatWeekRange,
-  performanceColour,
   performanceTone,
   latestStatsWeek,
 } from "@/lib/week";
+import {
+  loadVenuePerformance,
+  scoreTone,
+  scoreLabel,
+  statusTone,
+  type VenuePerformance,
+} from "@/lib/performance-engine";
 import { getManagerVenue } from "@/lib/manager-venue";
 import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
 import { toast } from "sonner";
@@ -113,6 +119,7 @@ function ManagerDashboard() {
   const [previewWeek, setPreviewWeek] = useState<string>("");
   const [previewConfidence, setPreviewConfidence] = useState<number>(1);
   const [previewNotes, setPreviewNotes] = useState<string>("");
+  const [venuePerf, setVenuePerf] = useState<VenuePerformance | null>(null);
   const weekStart = useMemo(() => toISODate(getMondayOfWeek()), []);
   const [displayWeekStart, setDisplayWeekStart] = useState<string>(weekStart);
 
@@ -162,6 +169,12 @@ function ManagerDashboard() {
       .eq("venue_id", v.id)
       .eq("week_start", visibleWeek);
     setAcks(Object.fromEntries((ak ?? []).map((r) => [r.user_id, true])));
+    if (ids.length) {
+      const vp = await loadVenuePerformance({ venueId: v.id, weekStart: visibleWeek, userIds: ids });
+      setVenuePerf(vp);
+    } else {
+      setVenuePerf(null);
+    }
   };
 
   useEffect(() => {
@@ -802,17 +815,20 @@ function ManagerDashboard() {
                           {s?.spend_per_cover ? `£${Number(s.spend_per_cover).toFixed(0)}` : "—"}
                         </td>
                         {cats.map((c) => {
-                          const actual = s ? Number(s[c.key] ?? 0) : 0;
-                          const target = t ? Number(t[c.tKey]) : 0;
                           if (!s)
                             return (
                               <td key={c.label} className="px-3 text-center text-muted-foreground">
                                 —
                               </td>
                             );
+                          // Source of truth: engine row for this user+label.
+                          const row = venuePerf?.byUser[m.id]?.perf.rows.find(
+                            (r) => r.label.toLowerCase() === c.label.toLowerCase(),
+                          );
+                          const tone = row ? statusTone(row.statusLabel) : "var(--brand-orange)";
                           return (
                             <td key={c.label} className="px-3 text-center">
-                              <Dot s={performanceColour(actual, target)} />
+                              <span className="inline-block h-3 w-3 rounded-full" style={{ background: tone }} />
                             </td>
                           );
                         })}

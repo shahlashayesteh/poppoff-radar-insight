@@ -3,26 +3,29 @@ import { useEffect, useState } from "react";
 import { ManagerLayout } from "@/components/manager-layout";
 import { supabase } from "@/integrations/supabase/client";
 import { getManagerVenue } from "@/lib/manager-venue";
-import { getMondayOfWeek, toISODate, formatWeekRange, performanceColour, latestStatsWeek } from "@/lib/week";
+import { getMondayOfWeek, toISODate, formatWeekRange, latestStatsWeek } from "@/lib/week";
+import {
+  loadServerPerformance,
+  overallScore,
+  statusTone,
+  scoreTone,
+  scoreLabel,
+  formatItems,
+  type ServerPerformance,
+} from "@/lib/performance-engine";
 import { Sparkles, Wand2 } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/manager/server/$id")({ component: ServerView });
 
-const cats = [
-  { key: "wine_conversion", t: "wine_target", label: "Wine" },
-  { key: "cocktail_conversion", t: "cocktail_target", label: "Cocktails" },
-  { key: "dessert_conversion", t: "dessert_target", label: "Desserts" },
-  { key: "sides_conversion", t: "sides_target", label: "Sides" },
-  { key: "spirits_conversion", t: "spirits_target", label: "Spirits" },
-  { key: "sparkling_conversion", t: "sparkling_target", label: "Sparkling" },
-];
+// Category list now comes entirely from the engine — no per-page constants.
 
 function ServerView() {
   const { id } = Route.useParams();
   const [name, setName] = useState("");
   const [stat, setStat] = useState<any>(null);
   const [target, setTarget] = useState<any>(null);
+  const [perf, setPerf] = useState<ServerPerformance | null>(null);
   const [streak, setStreak] = useState(0);
   const [viewed, setViewed] = useState(false);
   const [acked, setAcked] = useState(false);
@@ -75,9 +78,13 @@ function ServerView() {
       setAcked(!!ak);
       const { count: lc } = await supabase.from("server_logins").select("id", { count: "exact", head: true }).eq("user_id", id).eq("venue_id", v);
       setLogins(lc ?? 0);
+      const p = await loadServerPerformance({ venueId: v, userId: id, weekStart: visibleWeek });
+      setPerf(p);
       if (st) loadCoaching(v, visibleWeek, false);
     })();
   }, [id, weekStart]);
+
+  const overall = overallScore(perf);
 
   return (
     <ManagerLayout>
@@ -91,7 +98,14 @@ function ServerView() {
           </div>
         </div>
 
-        <div className="mt-8 grid md:grid-cols-3 gap-4">
+        <div className="mt-8 grid md:grid-cols-4 gap-4">
+          <div className="rounded-2xl bg-white border border-border p-5">
+            <div className="text-xs text-muted-foreground">Overall score</div>
+            <div className="font-display text-2xl font-extrabold mt-1" style={{ color: scoreTone(overall) }}>
+              {overall === null ? "—" : overall.toFixed(0)}
+            </div>
+            <div className="text-xs mt-1" style={{ color: scoreTone(overall) }}>{scoreLabel(overall)}</div>
+          </div>
           <div className="rounded-2xl bg-white border border-border p-5">
             <div className="text-xs text-muted-foreground">Spend per cover</div>
             <div className="font-display text-2xl font-extrabold mt-1">£{stat?.spend_per_cover ? Number(stat.spend_per_cover).toFixed(2) : "—"}</div>
@@ -109,27 +123,69 @@ function ServerView() {
           </div>
         </div>
 
+        {perf?.totals && (
+          <div className="mt-6 rounded-2xl bg-white border border-border p-5 flex flex-wrap gap-6 text-sm">
+            <div>
+              <div className="text-xs text-muted-foreground">Sales this week</div>
+              <div className="font-display text-lg font-bold">£{perf.totals.sales.toFixed(0)}</div>
+            </div>
+            <div>
+              <div className="text-xs text-muted-foreground">vs last week</div>
+              <div className="font-semibold" style={{ color: (perf.totals.salesDeltaPctWoW ?? 0) >= 0 ? "var(--brand-green)" : "var(--opportunity)" }}>
+                {perf.totals.salesDeltaPctWoW === null ? "—" : `${perf.totals.salesDeltaPctWoW >= 0 ? "+" : ""}${perf.totals.salesDeltaPctWoW.toFixed(1)}%`}
+              </div>
+            </div>
+            <div>
+              <div className="text-xs text-muted-foreground">vs 4wk avg</div>
+              <div className="font-semibold" style={{ color: (perf.totals.salesDeltaPctVs4wk ?? 0) >= 0 ? "var(--brand-green)" : "var(--opportunity)" }}>
+                {perf.totals.salesDeltaPctVs4wk === null ? "—" : `${perf.totals.salesDeltaPctVs4wk >= 0 ? "+" : ""}${perf.totals.salesDeltaPctVs4wk.toFixed(1)}%`}
+              </div>
+            </div>
+            <div>
+              <div className="text-xs text-muted-foreground">Revenue influence</div>
+              <div className="font-semibold" style={{ color: perf.totals.totalRevenueInfluence >= 0 ? "var(--brand-green)" : "var(--opportunity)" }}>
+                {perf.totals.totalRevenueInfluence >= 0 ? "+" : ""}£{perf.totals.totalRevenueInfluence.toFixed(0)}
+              </div>
+              <div className="text-[10px] text-muted-foreground">vs venue baseline</div>
+            </div>
+          </div>
+        )}
+
         <div className="mt-6 rounded-2xl bg-white border border-border p-6">
           <h2 className="font-display text-lg font-bold">Category breakdown</h2>
-          {!stat ? (
+          {!perf || perf.rows.length === 0 ? (
             <p className="mt-3 text-sm text-muted-foreground">No stats this week. Upload via the manager dashboard.</p>
           ) : (
             <div className="mt-4 space-y-3">
-              {cats.map((c) => {
-                const actual = Number(stat[c.key] ?? 0);
-                const tgt = Number(target?.[c.t] ?? 0);
-                const colour = performanceColour(actual, tgt);
-                const tone = colour === "green" ? "var(--brand-green)" : colour === "amber" ? "var(--brand-orange)" : "var(--opportunity)";
-                // Target-based ring fill (matches the server's own view).
-                const fillPct = tgt > 0 ? Math.max(0, Math.min(100, (actual / tgt) * 100)) : 0;
+              {perf.rows.map((r) => {
+                const tone = statusTone(r.statusLabel);
                 return (
-                  <div key={c.label} className="flex items-center gap-4">
+                  <div key={r.key} className="flex items-center gap-4">
                     <span className="inline-block h-3 w-3 rounded-full" style={{ background: tone }} />
-                    <div className="w-32 text-sm font-medium">{c.label}</div>
+                    <div className="w-32 text-sm font-medium">{r.label}</div>
                     <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
-                      <div className="h-full rounded-full" style={{ width: `${fillPct}%`, background: tone }} />
+                      <div className="h-full rounded-full" style={{ width: `${r.ringPct}%`, background: tone }} />
                     </div>
-                    <div className="w-24 text-right text-xs text-muted-foreground">{actual.toFixed(0)}% / {tgt}%</div>
+                    <div className="w-56 text-right text-xs">
+                      <div className="text-muted-foreground">{r.current.toFixed(0)}% / {r.target || "—"}% · {formatItems(r)}</div>
+                      <div className="mt-0.5 inline-flex gap-2 text-[11px]">
+                        {r.deltaWoW !== null && (
+                          <span style={{ color: r.deltaWoW >= 0 ? "var(--brand-green)" : "var(--opportunity)" }}>
+                            {r.deltaWoW >= 0 ? "↑" : "↓"}{Math.abs(r.deltaWoW).toFixed(1)}pp wk
+                          </span>
+                        )}
+                        {r.deltaVs4wk !== null && (
+                          <span style={{ color: r.deltaVs4wk >= 0 ? "var(--brand-green)" : "var(--opportunity)" }}>
+                            {r.deltaVs4wk >= 0 ? "↑" : "↓"}{Math.abs(r.deltaVs4wk).toFixed(1)}pp 4wk
+                          </span>
+                        )}
+                        {r.revenueInfluence !== null && (
+                          <span style={{ color: r.revenueInfluence >= 0 ? "var(--brand-green)" : "var(--opportunity)" }}>
+                            {r.revenueInfluence >= 0 ? "+" : ""}£{r.revenueInfluence} infl.
+                          </span>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 );
               })}
