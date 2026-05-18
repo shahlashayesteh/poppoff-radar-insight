@@ -3,30 +3,26 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ServerLayout } from "@/components/server-layout";
 import { supabase } from "@/integrations/supabase/client";
 import { useRoleGate } from "@/lib/auth-gate";
-import {
-  claimServerCsvData,
-  recordLogin,
-  pctDelta,
-  estimateItemsSold,
-  fetchVenueAvgPrices,
-  loadServerCategoryRows,
-  type CategoryKey,
-  type ServerCatRow,
-} from "@/lib/server-data";
+import { claimServerCsvData, recordLogin } from "@/lib/server-data";
 import { Trophy, Flame, ArrowRight, TrendingDown, Sparkles } from "lucide-react";
-import { getMondayOfWeek, toISODate, formatWeekRange, performanceColour, latestStatsWeek } from "@/lib/week";
+import { getMondayOfWeek, toISODate, formatWeekRange, latestStatsWeek } from "@/lib/week";
+import {
+  loadServerPerformance,
+  statusTone,
+  eliteVisual,
+  formatItems,
+  type CategoryMetric,
+  type ServerPerformance,
+} from "@/lib/performance-engine";
 
 export const Route = createFileRoute("/server/")({ component: ServerDashboard });
 
-type Stat = any;
-type Targets = any;
-
-function Ring({ fillPct, color, displayValue }: { fillPct: number; color: string; displayValue: string | number }) {
+function Ring({ fillPct, color, displayValue, glow }: { fillPct: number; color: string; displayValue: string | number; glow?: string }) {
   const r = 42;
   const c = 2 * Math.PI * r;
   const offset = c - (Math.max(0, Math.min(100, fillPct)) / 100) * c;
   return (
-    <div className="relative h-28 w-28">
+    <div className="relative h-28 w-28" style={{ filter: glow && glow !== "none" ? `drop-shadow(${glow})` : undefined }}>
       <svg viewBox="0 0 100 100" className="h-full w-full -rotate-90">
         <circle cx="50" cy="50" r={r} fill="none" stroke={`color-mix(in oklab, ${color} 18%, white)`} strokeWidth="9" />
         <circle cx="50" cy="50" r={r} fill="none" stroke={color} strokeWidth="9" strokeDasharray={c} strokeDashoffset={offset} strokeLinecap="round" />
@@ -38,24 +34,12 @@ function Ring({ fillPct, color, displayValue }: { fillPct: number; color: string
   );
 }
 
-const LEGACY_CATS = [
-  { key: "wine", label: "wine", conv: "wine_conversion", t: "wine_target", sales: "wine_sales" },
-  { key: "cocktail", label: "cocktails", conv: "cocktail_conversion", t: "cocktail_target", sales: "cocktail_sales" },
-  { key: "dessert", label: "desserts", conv: "dessert_conversion", t: "dessert_target", sales: "dessert_sales" },
-  { key: "sides", label: "sides", conv: "sides_conversion", t: "sides_target", sales: "sides_sales" },
-  { key: "spirits", label: "spirits", conv: "spirits_conversion", t: "spirits_target", sales: "spirits_sales" },
-  { key: "sparkling", label: "sparkling", conv: "sparkling_conversion", t: "sparkling_target", sales: "sparkling_sales" },
-] as const;
-
 function ServerDashboard() {
   useRoleGate("server");
   const [name, setName] = useState("");
-  const [stat, setStat] = useState<Stat | null>(null);
-  const [prevStat, setPrevStat] = useState<Stat | null>(null);
-  const [target, setTarget] = useState<Targets | null>(null);
+  const [hasStat, setHasStat] = useState(false);
+  const [perf, setPerf] = useState<ServerPerformance | null>(null);
   const [streak, setStreak] = useState(0);
-  const [prices, setPrices] = useState<Record<string, number>>({});
-  const [dynRows, setDynRows] = useState<ServerCatRow[]>([]);
   const [coaching, setCoaching] = useState<{ category: string; tip: string }[] | null>(null);
   const [coachLoading, setCoachLoading] = useState(false);
   const weekStart = toISODate(getMondayOfWeek());
@@ -97,25 +81,17 @@ function ServerDashboard() {
         weekStart,
       );
       setDisplayWeekStart(visibleWeek);
-      const { data: st } = await supabase.from("server_stats").select("*").eq("user_id", u.user.id).eq("venue_id", v).eq("week_start", visibleWeek).maybeSingle();
-      setStat(st);
-      const { data: prev } = await supabase.from("server_stats").select("*").eq("user_id", u.user.id).eq("venue_id", v).lt("week_start", visibleWeek).order("week_start", { ascending: false }).limit(1).maybeSingle();
-      setPrevStat(prev);
-      const { data: tg } = await supabase.from("server_targets").select("*").eq("user_id", u.user.id).eq("venue_id", v).maybeSingle();
-      setTarget(tg);
+      const { data: st } = await supabase.from("server_stats").select("id").eq("user_id", u.user.id).eq("venue_id", v).eq("week_start", visibleWeek).maybeSingle();
+      setHasStat(!!st);
       const { data: sk } = await supabase.from("server_streaks").select("current_streak").eq("user_id", u.user.id).eq("venue_id", v).maybeSingle();
-      setStreak((sk as any)?.current_streak ?? 0);
-      setPrices(await fetchVenueAvgPrices(v));
-      const rows = await loadServerCategoryRows(v, u.user.id, visibleWeek, prev?.week_start ?? null);
-      setDynRows(rows);
+      setStreak((sk as { current_streak?: number } | null)?.current_streak ?? 0);
+      const p = await loadServerPerformance({ venueId: v, userId: u.user.id, weekStart: visibleWeek });
+      setPerf(p);
       await supabase.from("server_stat_views").insert({ user_id: u.user.id, venue_id: v, week_start: visibleWeek });
-      if (st) {
-        await fetchCoaching(v, u.user.id, visibleWeek);
-      }
+      if (st) await fetchCoaching(v, u.user.id, visibleWeek);
     })();
   }, [weekStart, fetchCoaching]);
 
-  // Live refresh coaching when the manager uploads a new menu, regenerates pairings, or invalidates cache
   useEffect(() => {
     if (!venueId) return;
     const uId = userIdRef.current;
@@ -138,157 +114,40 @@ function ServerDashboard() {
     };
   }, [venueId, displayWeekStart, fetchCoaching]);
 
-  const toneFor = (actual: number, tgt: number) => {
-    const colour = performanceColour(actual, tgt);
-    return colour === "green" ? "var(--brand-green)" : colour === "amber" ? "var(--brand-orange)" : "var(--opportunity)";
-  };
+  const rows: CategoryMetric[] = perf?.rows ?? [];
 
-  // Delta-driven (week-over-week) bucket for ring colour, fill, role label.
-  type DeltaBucket = { tone: string; fillPct: number; role: "Crushing it" | "Could be better" | "Focus here" };
-  const deltaBucket = (d: number | null): DeltaBucket => {
-    if (d === null || d <= 0) {
-      return { tone: "var(--opportunity)", fillPct: Math.min(100, Math.abs(d ?? 0)), role: "Focus here" };
-    }
-    if (d >= 20) {
-      return { tone: "var(--brand-green)", fillPct: Math.min(100, d), role: "Crushing it" };
-    }
-    return { tone: "var(--brand-orange)", fillPct: Math.min(100, d), role: "Could be better" };
-  };
+  // Pick the most commercially impactful winner — highest performance score
+  // among rows with positive 4wk (or WoW fallback) momentum.
+  const smashed = (() => {
+    if (!rows.length) return null;
+    const winners = rows
+      .filter((r) => (r.deltaVs4wk ?? r.deltaWoW ?? 0) > 0)
+      .sort((a, b) => b.score - a.score);
+    if (!winners.length) return null;
+    const top = winners[0];
+    const delta = top.deltaVs4wk ?? top.deltaWoW ?? 0;
+    return { label: top.label, delta, basis: top.deltaVs4wk !== null ? "4wk avg" : "last week" };
+  })();
 
-  // Build a unified row list — prefer dynamic venue categories; fall back to
-  // legacy six columns on server_stats when the venue hasn't tracked any
-  // dynamic categories yet.
-  type UniRow = {
-    label: string;
-    conversion: number;
-    prevConversion: number;
-    target: number;
-    items: number;
-    prevItems: number;
-  };
-  const buildLegacyRows = (): UniRow[] => {
-    if (!stat) return [];
-    return LEGACY_CATS.map((c) => {
-      const conv = Number((stat as any)[c.conv] ?? 0);
-      const prevConv = Number((prevStat as any)?.[c.conv] ?? 0);
-      const tgt = Number((target as any)?.[c.t] ?? 0);
-      const items = estimateItemsSold(Number((stat as any)[c.sales] ?? 0), c.key as CategoryKey, prices);
-      const prevItems = prevStat
-        ? estimateItemsSold(Number((prevStat as any)[c.sales] ?? 0), c.key as CategoryKey, prices)
-        : 0;
-      return { label: c.label, conversion: conv, prevConversion: prevConv, target: tgt, items, prevItems };
-    });
-  };
-  // Only prefer dynamic rows when the venue actually has usable data for the
-  // visible week — at least one category with a real stat or target. Otherwise
-  // fall back to the legacy six-column path so existing venues keep rendering
-  // exactly as before.
-  // Dynamic path requires real per-category STATS for the visible week, not
-  // just targets. Targets alone (e.g. seeded sides=1) would leave every row
-  // with items=0 and the Top 3 filter would drop them all. When no category
-  // has any actual sales/items/conversion this week, fall back to the legacy
-  // six columns on server_stats.
-  const hasDynamicData =
-    dynRows.length > 0 &&
-    dynRows.some((r) => r.conversion > 0 || r.sales > 0 || r.items > 0);
-  const uniRows: UniRow[] = hasDynamicData
-    ? dynRows.map((r) => ({
-        label: r.label,
-        conversion: r.conversion,
-        prevConversion: r.prevConversion,
-        target: r.target,
-        items: r.items,
-        prevItems: r.prevItems,
-      }))
-    : buildLegacyRows();
+  // Top 3 — ranked by performance score (mix of target progress, trend,
+  // commercial vs expected, and consistency). Falls back to ratio if no
+  // scores available (e.g. fresh venue).
+  const top3: CategoryMetric[] = rows
+    .filter((r) => r.target > 0 || r.items > 0)
+    .slice()
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 3);
 
-  // Conversion percentage-point delta vs previous week. Returns null when
-  // there is no previous-week signal at all (both 0). This is the
-  // source-of-truth metric used by coaching insights, so home + stats + the
-  // AI tips all speak the same language.
-  const convDelta = (r: { conversion: number; prevConversion: number }): number | null => {
-    if (!r.prevConversion && !r.conversion) return null;
-    return r.conversion - r.prevConversion;
-  };
+  // Work-on: low scorers below 60 OR clearly trending down.
+  const workOn = rows
+    .filter((r) => r.score < 60 || (r.deltaVs4wk !== null && r.deltaVs4wk < -1))
+    .sort((a, b) => a.score - b.score)
+    .slice(0, 3);
 
-  // Smashed card (best week-over-week conversion gain in percentage points).
-  let smashed: { label: string; delta: number } | null = null;
-  if (stat && uniRows.length) {
-    const positives = uniRows
-      .map((r) => ({ label: r.label, d: convDelta(r) }))
-      .filter((r) => r.d !== null && (r.d as number) > 0) as { label: string; d: number }[];
-    if (positives.length) {
-      const best = positives.reduce((a, b) => (b.d > a.d ? b : a));
-      smashed = { label: best.label, delta: best.d };
-    }
-  }
+  const allGreen = top3.length >= 3 && top3.every((r) => r.statusLabel === "Strong" || r.statusLabel === "Crushing");
 
-  // Top 3 picker — works on the unified rows.
-  type RingRole = "Crushing it" | "Could be better" | "Focus here";
-  type Top3Item = {
-    label: string;
-    role: RingRole;
-    conversion: number;
-    prevConversion: number;
-    target: number;
-    items: number;
-    prevItems: number;
-  };
-  const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
-  let top3: Top3Item[] = [];
-  let allGreen = false;
-  if (stat && uniRows.length) {
-    const usable = uniRows
-      .map((r) => ({ ...r, ratio: r.target > 0 ? r.conversion / r.target : 0 }))
-      .filter((r) => r.target > 0 && r.items > 0)
-      .sort((a, b) => b.ratio - a.ratio);
-
-    const picks: UniRow[] = [];
-    if (usable.length >= 3) {
-      picks.push(usable[0]);
-      picks.push(usable[Math.floor(usable.length / 2)]);
-      picks.push(usable[usable.length - 1]);
-    } else if (usable.length === 2) {
-      picks.push(usable[0]);
-      picks.push(usable[1]);
-    } else if (usable.length === 1) {
-      picks.push(usable[0]);
-    }
-
-    const roleFromColour = (actual: number, tgt: number): RingRole => {
-      const col = performanceColour(actual, tgt);
-      if (col === "green") return "Crushing it";
-      if (col === "amber") return "Could be better";
-      return "Focus here";
-    };
-
-    top3 = picks.map((p) => {
-      const d = convDelta(p);
-      return {
-        label: cap(p.label),
-        role: deltaBucket(d).role,
-        conversion: p.conversion,
-        prevConversion: p.prevConversion,
-        target: p.target,
-        items: p.items,
-        prevItems: p.prevItems,
-      };
-    });
-    allGreen =
-      top3.length === 3 &&
-      top3.every((t) => deltaBucket(convDelta(t)).tone === "var(--brand-green)");
-  }
-
-  // Work-on list: red entries from Top 3 only.
-  const workOnList = top3
-    .map((t) => ({ label: t.label, d: convDelta(t) }))
-    .filter((t) => deltaBucket(t.d).tone === "var(--opportunity)");
   const joinLabels = (xs: string[]) =>
-    xs.length <= 1
-      ? xs.join("")
-      : xs.length === 2
-        ? `${xs[0]} and ${xs[1]}`
-        : `${xs.slice(0, -1).join(", ")} and ${xs[xs.length - 1]}`;
+    xs.length <= 1 ? xs.join("") : xs.length === 2 ? `${xs[0]} and ${xs[1]}` : `${xs.slice(0, -1).join(", ")} and ${xs[xs.length - 1]}`;
 
   return (
     <ServerLayout>
@@ -303,27 +162,31 @@ function ServerDashboard() {
       <div className="px-5 mt-5">
         <div className="rounded-3xl bg-white border border-border p-5">
           <div className="font-semibold">Your Top 3</div>
-          {stat ? (
+          {hasStat ? (
             top3.length > 0 ? (
               <div className="mt-4 grid grid-cols-3 gap-2">
                 {top3.map((c) => {
-                  const d = convDelta(c);
-                  const bucket = deltaBucket(d);
-                  const tone = bucket.tone;
-                  const fillPct = bucket.fillPct;
+                  const tone = statusTone(c.statusLabel);
+                  const elite = eliteVisual(c.eliteTier);
+                  const d4 = c.deltaVs4wk;
                   return (
-                    <div key={c.label} className="flex flex-col items-center">
-                      <div className="text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: tone }}>{c.role}</div>
+                    <div key={c.key} className="flex flex-col items-center">
+                      <div className="text-[10px] font-semibold uppercase tracking-wider mb-1 flex items-center gap-1" style={{ color: tone }}>
+                        {c.statusLabel}
+                        {elite.badge && (
+                          <span className="text-[8px] rounded-full px-1.5 py-0.5" style={{ background: "color-mix(in oklab, var(--brand-green) 14%, white)", color: "var(--brand-green)" }}>{elite.badge}</span>
+                        )}
+                      </div>
                       <div className="text-xs text-muted-foreground mb-2">{c.label}</div>
-                      <Ring fillPct={fillPct} color={tone} displayValue={c.items} />
-                      {d !== null ? (
-                        <div className="mt-1 text-xs font-semibold" style={{ color: d >= 0 ? "var(--brand-green)" : "var(--opportunity)" }}>
-                          {d >= 0 ? "↑" : "↓"} {d >= 0 ? "+" : "-"}{Math.abs(d).toFixed(1)}%
+                      <Ring fillPct={c.ringPct} color={tone} displayValue={c.items} glow={elite.glow} />
+                      {d4 !== null ? (
+                        <div className="mt-1 text-xs font-semibold" style={{ color: d4 >= 0 ? "var(--brand-green)" : "var(--opportunity)" }}>
+                          {d4 >= 0 ? "↑" : "↓"} {Math.abs(d4).toFixed(1)}pp
                         </div>
                       ) : (
                         <div className="mt-1 text-xs text-muted-foreground">—</div>
                       )}
-                      <div className="text-[10px] text-muted-foreground">vs last week</div>
+                      <div className="text-[10px] text-muted-foreground">vs 4wk avg</div>
                     </div>
                   );
                 })}
@@ -337,7 +200,7 @@ function ServerDashboard() {
         </div>
       </div>
 
-      {stat && smashed && (
+      {hasStat && smashed && (
         <div className="px-5 mt-4">
           <div className="rounded-3xl border-2 p-5 flex items-center gap-4"
             style={{
@@ -350,8 +213,8 @@ function ServerDashboard() {
                 You smashed <span style={{ color: "var(--brand-green)" }}>{smashed.label}</span> this week!
               </div>
               <div className="mt-1 text-xs">
-                <span className="font-semibold" style={{ color: "var(--brand-green)" }}>+{smashed.delta.toFixed(1)}%</span>{" "}
-                <span className="text-muted-foreground">vs last week</span>
+                <span className="font-semibold" style={{ color: "var(--brand-green)" }}>+{smashed.delta.toFixed(1)}pp</span>{" "}
+                <span className="text-muted-foreground">vs {smashed.basis}</span>
               </div>
             </div>
             <div className="h-9 w-9 rounded-full text-white grid place-items-center text-sm" style={{ background: "var(--brand-green)" }}>✓</div>
@@ -359,7 +222,7 @@ function ServerDashboard() {
         </div>
       )}
 
-      {stat && !allGreen && workOnList.length > 0 && (
+      {hasStat && !allGreen && workOn.length > 0 && (
         <div className="px-5 mt-4">
           <div className="rounded-3xl border-2 p-5 flex items-start gap-4"
             style={{
@@ -369,24 +232,27 @@ function ServerDashboard() {
             <TrendingDown className="h-12 w-12 shrink-0" style={{ color: "var(--opportunity)" }} />
             <div className="flex-1">
               <div className="font-display text-lg font-bold leading-tight" style={{ color: "var(--opportunity)" }}>
-                You need to work on {joinLabels(workOnList.map((w) => w.label))} this week!
+                Focus on {joinLabels(workOn.map((w) => w.label))} this week
               </div>
               <ul className="mt-2 space-y-1 text-xs">
-                {workOnList.map((w) => (
-                  <li key={w.label}>
-                    <span className="font-semibold" style={{ color: "var(--opportunity)" }}>
-                      {w.label} {w.d === null ? "—" : `${w.d >= 0 ? "+" : ""}${w.d.toFixed(1)}%`}
-                    </span>{" "}
-                    <span className="text-muted-foreground">vs last week</span>
-                  </li>
-                ))}
+                {workOn.map((w) => {
+                  const d = w.deltaVs4wk ?? w.deltaWoW;
+                  return (
+                    <li key={w.key}>
+                      <span className="font-semibold" style={{ color: "var(--opportunity)" }}>
+                        {w.label} {d === null ? "—" : `${d >= 0 ? "+" : ""}${d.toFixed(1)}pp`}
+                      </span>{" "}
+                      <span className="text-muted-foreground">vs {w.deltaVs4wk !== null ? "4wk avg" : "last week"} · {formatItems(w)}</span>
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           </div>
         </div>
       )}
 
-      {stat && (coachLoading || (coaching && coaching.length > 0)) && (
+      {hasStat && (coachLoading || (coaching && coaching.length > 0)) && (
         <div className="px-5 mt-4">
           <div className="rounded-3xl bg-white border border-border p-5">
             <div className="inline-flex items-center gap-2">
