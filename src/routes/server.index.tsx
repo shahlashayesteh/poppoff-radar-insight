@@ -22,13 +22,15 @@ import {
   nextWeekOpportunity,
   weeklyReflection,
   reflectionLine,
-  opportunityLine,
+  targetItems,
+  opportunityUpliftGBP,
   percentileRank,
   type CategoryMetric,
   type ServerPerformance,
   type LeaderboardRow,
   type Rag,
 } from "@/lib/performance-engine";
+
 
 export const Route = createFileRoute("/server/")({ component: ServerDashboard });
 
