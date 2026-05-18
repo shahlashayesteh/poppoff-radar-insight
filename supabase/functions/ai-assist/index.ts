@@ -394,7 +394,12 @@ Deno.serve(async (req) => {
       // Per-category fallback: prefer dynamic server_category_stats when present;
       // otherwise fall back to legacy server_stats.<cat>_conversion columns so
       // venues that only upload CSV legacy data still get real numbers.
-      const lines = cats.map((c) => {
+      // Deterministic per-category stat map — these are the ONLY numbers we
+      // will ever show the server. The AI never produces percentages; it only
+      // chooses a category and writes the action text.
+      type CatStat = { key: string; label: string; a: number; p: number; t: number; delta: number };
+      const catStats: CatStat[] = [];
+      for (const c of cats) {
         const hasDyn = !!curMap[c];
         let a = hasDyn ? Number(curMap[c]?.conversion ?? 0) : 0;
         let p = hasDyn ? Number(prevMap[c]?.conversion ?? 0) : 0;
@@ -404,18 +409,69 @@ Deno.serve(async (req) => {
           p = Number((prev as any)?.[`${c}_conversion`] ?? 0);
           t = Number((tg as any)?.[`${c}_target`] ?? 0);
         }
-        if (a === 0 && t === 0) return null;
-        const delta = p ? (a - p) : 0;
-        return `${labelFor(c)}: ${a.toFixed(1)}% (target ${t.toFixed(1)}%, ${delta >= 0 ? "+" : ""}${delta.toFixed(1)}% vs last week)`;
-      }).filter(Boolean).join("\n");
+        if (a === 0 && t === 0) continue;
+        catStats.push({ key: c, label: labelFor(c), a, p, t, delta: p ? a - p : 0 });
+      }
+      const statByLabel: Record<string, CatStat> = {};
+      const statByKey: Record<string, CatStat> = {};
+      for (const s of catStats) { statByLabel[s.label.toLowerCase()] = s; statByKey[s.key.toLowerCase()] = s; }
+
       const spc = Number((cur as any)?.spend_per_cover ?? 0);
       const spcTarget = Number((tg as any)?.spend_per_cover_target ?? 0);
-      const catList = cats.map(labelFor).concat(["general"]).join("|");
-      const sys = `You are a hospitality coach producing PERSONAL coaching tips for ONE specific server based on THEIR own weekly stats. Reply ONLY with JSON: {"suggestions":[{"category":string,"tip":string}]}. The "category" MUST be one of: ${catList}. RULES: (1) Return 3-4 tips. (2) PRIORITISE the 1-2 categories where this server is FURTHEST BELOW their target — those tips are mandatory. (3) Optionally include 1 tip celebrating a category they are above target on. (4) EVERY tip MUST cite the server's EXACT number(s) for that category from the data provided, copied VERBATIM with the same digits and decimal point — do NOT round, re-calculate, or invent values. If the data says "8.5%" you MUST write "8.5%", never "9%". (5) Tips MUST be actionable and reference a real menu item from the list when relevant. (6) Keep each tip to 1-2 short sentences. (7) NEVER mention a category whose numbers were not provided in the data below.`;
-      const usr = `This server's week (use these EXACT values, do not round):\nSpend per cover: £${spc.toFixed(2)} (target £${spcTarget.toFixed(2)})\n${lines}\nMenu items: ${menuItems.map((i: any) => i.name).filter(Boolean).slice(0, 40).join(", ") || "(none)"}`;
+
+      // Context for the AI — same numbers but explicitly labeled. The AI must
+      // NOT echo numbers back; it only picks the category + writes action text.
+      const lines = catStats.map((s) =>
+        `${s.label}: actual ${s.a.toFixed(1)}%, target ${s.t.toFixed(1)}%, vs last week ${s.delta >= 0 ? "+" : ""}${s.delta.toFixed(1)}%`,
+      ).join("\n");
+      const catList = catStats.map((s) => s.label).concat(["general"]).join("|");
+      const sys = `You are a hospitality coach producing PERSONAL coaching tips for ONE specific server. Reply ONLY with JSON: {"suggestions":[{"category":string,"tip":string}]}. RULES:
+(1) "category" MUST be EXACTLY one of these labels (case-sensitive): ${catList}.
+(2) Return 3-4 tips. PRIORITISE the 1-2 categories with the largest negative gap vs target (those tips are mandatory). Optionally include 1 celebrating a category above target.
+(3) "tip" is ACTION TEXT ONLY — what the server should DO or SAY this week. Keep it to 1-2 short sentences.
+(4) ABSOLUTE RULE: DO NOT include ANY numbers, percentages, currency amounts, decimals, or digit characters in "tip". No "%", no "£", no "$", no figures whatsoever. The app appends the exact stats automatically.
+(5) Reference real menu items from the list when relevant.
+(6) NEVER mention a category that is not listed above.`;
+      const usr = `This server's week:\nSpend per cover: actual £${spc.toFixed(2)}, target £${spcTarget.toFixed(2)}\n${lines}\nMenu items: ${menuItems.map((i: any) => i.name).filter(Boolean).slice(0, 40).join(", ") || "(none)"}`;
       const out = await callAI([{ role: "system", content: sys }, { role: "user", content: usr }], true);
-      let suggestions: any[] = [];
-      try { const o = JSON.parse(out); suggestions = o.suggestions ?? []; } catch {}
+      let aiSuggestions: any[] = [];
+      try { const o = JSON.parse(out); aiSuggestions = o.suggestions ?? []; } catch {}
+
+      // Strip any digits/percent/currency the AI may have leaked, then append
+      // the deterministic stat line built from the database values.
+      const stripNumbers = (s: string) => String(s || "")
+        .replace(/[£$€]\s*\d[\d,.]*/g, "")
+        .replace(/\d+(?:[.,]\d+)?\s*%/g, "")
+        .replace(/\b\d+(?:[.,]\d+)?\b/g, "")
+        .replace(/\s{2,}/g, " ")
+        .replace(/\s+([,.;:!?])/g, "$1")
+        .trim();
+
+      const suggestions = aiSuggestions
+        .map((s: any) => {
+          const rawCat = String(s?.category || "").trim();
+          const lc = rawCat.toLowerCase();
+          const match = statByLabel[lc] || statByKey[lc];
+          const action = stripNumbers(String(s?.tip || ""));
+          if (!action) return null;
+          if (!match) {
+            // "general" or unknown — return action with SPC context
+            return {
+              category: rawCat || "general",
+              tip: `${action} (Your spend per cover: £${spc.toFixed(2)} vs target £${spcTarget.toFixed(2)}.)`,
+            };
+          }
+          const deltaStr = match.p
+            ? `${match.delta >= 0 ? "+" : ""}${match.delta.toFixed(1)}% vs last week`
+            : "no prior week to compare";
+          return {
+            category: match.label,
+            tip: `${action} (You: ${match.a.toFixed(1)}% vs target ${match.t.toFixed(1)}%, ${deltaStr}.)`,
+          };
+        })
+        .filter(Boolean)
+        .slice(0, 4);
+
       await admin.from("server_coaching").upsert({
         venue_id: venueId, user_id: userId, week_start: weekStart, suggestions, generated_at: new Date().toISOString(),
       }, { onConflict: "user_id,venue_id,week_start" });

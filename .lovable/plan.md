@@ -1,29 +1,29 @@
 ## Plan
 
-1. **Remove manual seeding from Chloe’s venue**
-   - Delete the manually inserted current-week `weekly_priorities` rows for Chloe’s venue.
-   - Delete Chloe’s cached `server_coaching` row so it regenerates from the uploaded stats on the next load.
-   - Do not update any `server_stats`, targets, conversions, or menu data by hand.
+1. **Stop the AI from owning numbers**
+   - Change `server_coaching` so it builds the exact percentage strings from database rows and validates the AI output before saving.
+   - If the AI rewrites, rounds, or invents a percentage, replace the tip with a deterministic app-generated tip using the real stored values.
 
-2. **Make server coaching use the exact stored stat values**
-   - Update `ai-assist` so `server_coaching` builds coaching from the actual `server_stats` row when dynamic category stats are missing.
-   - Keep the raw values precise internally, and only round when writing human-readable coaching text.
-   - Add guardrails so the AI cannot invent category numbers: the prompt will receive a strict list of allowed stat lines and must cite only those values.
+2. **Use one shared stat parser for all coaching paths**
+   - Add/centralize helpers in `supabase/functions/ai-assist/index.ts` to:
+     - read dynamic category stats from `server_category_stats` when real rows exist,
+     - otherwise fall back to generated `server_stats.*_conversion` values,
+     - format percentages consistently from the stored numeric value, without manual edits.
+   - This will cover every server account, not just Chloe.
 
-3. **Stop auto-generating priorities from the wrong week**
-   - Change `manager.menu.tsx` so priority regeneration uses the latest uploaded stats week for the venue, not the real calendar week.
-   - If the venue has no stats yet, skip priority auto-generation rather than creating guessed push items.
+3. **Fix “what to push” priority percentages**
+   - Update `generate_priorities` so weak categories are calculated from the actual uploaded week’s stats and actual targets.
+   - Include dynamic category stats where available, and legacy six-column stats where not.
+   - Stop rounding team gap percentages to whole numbers in the data sent to the AI.
 
-4. **Make `/server/menu` personalize pairings from the same data source**
-   - Update the weak-category logic on `server.menu.tsx` to fall back to legacy `server_stats` categories when `server_category_stats` has no rows.
-   - This makes the “what to push” / pairing focus reflect the server’s latest uploaded stats instead of appearing blank or generic.
+4. **Fix menu-pairing focus percentages**
+   - Keep `/server/menu` choosing focus pairings from the server’s real weakest categories.
+   - Align its category ranking logic with the same source-of-truth rules as coaching: dynamic stats first only when they exist for that week, otherwise legacy generated conversions.
 
-5. **Deploy and verify**
-   - Deploy the `ai-assist` function after code changes.
-   - Verify with read-only database queries that Chloe’s visible week, cached coaching, priorities week, and menu page data all line up with uploaded stats.
+5. **Clear only stale generated coaching, not stats**
+   - Delete cached `server_coaching` rows so insights regenerate with the corrected parser.
+   - Do not manually change server stats, weekly priority values, menu pairings, or percentages.
 
-## Technical notes
-
-- Chloe’s uploaded latest row currently shows dessert conversion as `8.53788687299893276400`; the UI/coaching may display that as `8.5%` or `9%` depending rounding. I will not change that value.
-- The previous manually inserted priority rows will be removed, because they were not produced from Chloe’s uploaded week data.
-- No schema or RLS changes are needed.
+6. **Deploy and verify with real data**
+   - Deploy the updated `ai-assist` function.
+   - Verify against Chloe and a sample of other server accounts that displayed coaching percentages match the database-generated weekly stats exactly, e.g. Chloe dessert remains parsed from `160 / 1874 * 100 = 8.537886...`, formatted consistently by the app rather than manually changed.
