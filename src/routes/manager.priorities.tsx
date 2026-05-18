@@ -6,6 +6,7 @@ import { getManagerVenue } from "@/lib/manager-venue";
 import { Target, Plus, Trash2, CheckCircle2 } from "lucide-react";
 import { getMondayOfWeek, toISODate, formatWeekRange, latestStatsWeek } from "@/lib/week";
 import { toast } from "sonner";
+import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
 
 export const Route = createFileRoute("/manager/priorities")({ component: Priorities });
 
@@ -18,6 +19,8 @@ function Priorities() {
   const [category, setCategory] = useState("");
   const [flag, setFlag] = useState("push");
   const [weekStart, setWeekStart] = useState(toISODate(getMondayOfWeek()));
+  const [pendingDelete, setPendingDelete] = useState<Item | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const load = async (v: string, ws = weekStart) => {
     const { data } = await supabase.from("weekly_priorities").select("*").eq("venue_id", v).eq("week_start", ws).order("created_at", { ascending: true });
@@ -52,10 +55,15 @@ function Priorities() {
     toast.success("Priority added");
   };
 
-  const remove = async (id: string) => {
-    const { error } = await supabase.from("weekly_priorities").delete().eq("id", id);
+  const confirmRemove = async () => {
+    if (!pendingDelete) return;
+    setDeleting(true);
+    const { error } = await supabase.from("weekly_priorities").delete().eq("id", pendingDelete.id);
+    setDeleting(false);
     if (error) { toast.error(error.message); return; }
+    setPendingDelete(null);
     if (venueId) await load(venueId);
+    toast.success("Priority deleted");
   };
 
   return (
@@ -105,7 +113,7 @@ function Priorities() {
                 }}>{it.priority_flag}</span>
               </div>
               <div className="col-span-1 text-right">
-                <button onClick={() => remove(it.id)} className="text-muted-foreground hover:text-foreground"><Trash2 className="h-4 w-4" /></button>
+                <button onClick={() => setPendingDelete(it)} className="text-muted-foreground hover:text-foreground" aria-label="Delete priority"><Trash2 className="h-4 w-4" /></button>
               </div>
             </div>
           ))}
@@ -118,6 +126,14 @@ function Priorities() {
           </div>
         )}
       </div>
+      <ConfirmDeleteDialog
+        open={!!pendingDelete}
+        onOpenChange={(o) => { if (!o) setPendingDelete(null); }}
+        title={pendingDelete ? `Delete "${pendingDelete.item_name}"?` : "Delete priority?"}
+        description="Delete this weekly priority? Servers will no longer see it in their coaching. Your other priorities are not affected. This cannot be undone."
+        loading={deleting}
+        onConfirm={confirmRemove}
+      />
     </ManagerLayout>
   );
 }

@@ -28,6 +28,7 @@ import {
   latestStatsWeek,
 } from "@/lib/week";
 import { getManagerVenue } from "@/lib/manager-venue";
+import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/manager/")({ component: ManagerDashboard });
@@ -453,14 +454,12 @@ function ManagerDashboard() {
     }
   };
 
+  const [confirmDeleteAll, setConfirmDeleteAll] = useState(false);
+  const [deletingAll, setDeletingAll] = useState(false);
+
   const deleteAllUploads = async () => {
     if (!venue) return;
-    if (
-      !window.confirm(
-        "Delete ALL uploaded CSV stats for this venue? This removes every week of server stats, views, acks, coaching and priorities. This cannot be undone.",
-      )
-    )
-      return;
+    setDeletingAll(true);
     try {
       const { data, error } = await supabase.rpc("delete_csv_uploads", {
         _venue_id: venue.id,
@@ -470,10 +469,13 @@ function ManagerDashboard() {
       const result = data as { deleted_rows: number };
       toast.success(`Deleted ${result?.deleted_rows ?? 0} stat rows`);
       setUploadStatus("All uploaded CSV data deleted.");
+      setConfirmDeleteAll(false);
       await load();
     } catch (err) {
       const message = err instanceof Error ? err.message : "Delete failed";
       toast.error(message);
+    } finally {
+      setDeletingAll(false);
     }
   };
 
@@ -575,7 +577,7 @@ function ManagerDashboard() {
                 <Download className="h-4 w-4" /> Template
               </button>
               <button
-                onClick={deleteAllUploads}
+                onClick={() => setConfirmDeleteAll(true)}
                 disabled={uploading || !venue || stats.length === 0}
                 className="inline-flex items-center gap-2 rounded-xl border border-destructive/40 text-destructive px-4 py-2 text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:bg-destructive/5"
               >
@@ -869,6 +871,15 @@ function ManagerDashboard() {
           </Link>
         </div>
       </div>
+      <ConfirmDeleteDialog
+        open={confirmDeleteAll}
+        onOpenChange={setConfirmDeleteAll}
+        title="Delete all uploaded stats?"
+        description="This permanently deletes every week of server stats, category stats, views, acknowledgements, coaching, milestones, streaks and weekly priorities for this venue. It cannot be undone."
+        confirmLabel="Delete everything"
+        loading={deletingAll}
+        onConfirm={deleteAllUploads}
+      />
     </ManagerLayout>
   );
 }

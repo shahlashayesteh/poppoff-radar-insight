@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { getManagerVenue } from "@/lib/manager-venue";
 import { Brain, Sparkles, Wand2, ChevronRight, Plus, Trash2, FileText, Upload } from "lucide-react";
 import { toast } from "sonner";
+import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
 
 export const Route = createFileRoute("/manager/menu")({ component: MenuIntel });
 
@@ -25,6 +26,9 @@ function MenuIntel() {
   const [pairingProgress, setPairingProgress] = useState<{ done: number; total: number } | null>(null);
   const [pairingSearch, setPairingSearch] = useState("");
   const menuFilesRef = useRef<HTMLInputElement>(null);
+  const [pendingMenu, setPendingMenu] = useState<Menu | null>(null);
+  const [deletingMenu, setDeletingMenu] = useState(false);
+  const [confirmRegen, setConfirmRegen] = useState(false);
 
   const loadMenus = async (v: string) => {
     const { data } = await supabase.from("venue_menu").select("id, menu_text, parsed_items, uploaded_at").eq("venue_id", v).order("uploaded_at", { ascending: false }).limit(MAX_MENUS);
@@ -148,15 +152,28 @@ function MenuIntel() {
     }
   };
 
-  const removeMenu = async (id: string) => {
-    const { error } = await supabase.from("venue_menu").delete().eq("id", id);
+  const confirmRemoveMenu = async () => {
+    if (!pendingMenu) return;
+    setDeletingMenu(true);
+    const { error } = await supabase.from("venue_menu").delete().eq("id", pendingMenu.id);
+    setDeletingMenu(false);
     if (error) { toast.error(error.message); return; }
+    setPendingMenu(null);
     if (venueId) await loadMenus(venueId);
+    toast.success("Menu deleted");
+  };
+
+  const onGeneratePairingsClick = () => {
+    if (!venueId) return;
+    if (menus.length === 0) { toast.error("Upload at least one menu first"); return; }
+    if (pairings.length > 0) { setConfirmRegen(true); return; }
+    void generatePairings();
   };
 
   const generatePairings = async () => {
     if (!venueId) return;
     if (menus.length === 0) { toast.error("Upload at least one menu first"); return; }
+    setConfirmRegen(false);
     setPairingLoading(true);
     setPairingProgress({ done: 0, total: 0 });
     try {
@@ -255,7 +272,7 @@ function MenuIntel() {
           <div className="lg:col-span-7 rounded-2xl bg-white border border-border p-5">
             <div className="flex items-center justify-between mb-3">
               <h3 className="font-display font-bold">Your menus</h3>
-              <button onClick={generatePairings} disabled={pairingLoading || menus.length === 0} className="rounded-xl px-3 py-1.5 text-xs font-bold text-white inline-flex items-center gap-2 disabled:opacity-50" style={{ background: "var(--brand-orange)" }}>
+              <button onClick={onGeneratePairingsClick} disabled={pairingLoading || menus.length === 0} className="rounded-xl px-3 py-1.5 text-xs font-bold text-white inline-flex items-center gap-2 disabled:opacity-50" style={{ background: "var(--brand-orange)" }}>
                 <Wand2 className="h-3.5 w-3.5" /> {pairingLoading ? (pairingProgress && pairingProgress.total ? `Pairing ${pairingProgress.done}/${pairingProgress.total}…` : "Pairing…") : "Generate pairings"}
               </button>
             </div>
@@ -275,7 +292,7 @@ function MenuIntel() {
                           <div className="text-xs text-muted-foreground">{itemCount} items · {new Date(m.uploaded_at).toLocaleDateString()}</div>
                         </div>
                       </div>
-                      <button onClick={() => removeMenu(m.id)} className="text-muted-foreground hover:text-foreground"><Trash2 className="h-4 w-4" /></button>
+                      <button onClick={() => setPendingMenu(m)} className="text-muted-foreground hover:text-foreground" aria-label="Delete menu"><Trash2 className="h-4 w-4" /></button>
                     </li>
                   );
                 })}
@@ -455,6 +472,22 @@ function MenuIntel() {
           </Link>
         </div>
       </div>
+      <ConfirmDeleteDialog
+        open={!!pendingMenu}
+        onOpenChange={(o) => { if (!o) setPendingMenu(null); }}
+        title="Delete this menu?"
+        description="Only this menu file will be removed from the system. Your other menus, pairings, server stats and priorities are not affected. This cannot be undone."
+        loading={deletingMenu}
+        onConfirm={confirmRemoveMenu}
+      />
+      <ConfirmDeleteDialog
+        open={confirmRegen}
+        onOpenChange={setConfirmRegen}
+        title="Regenerate pairings?"
+        description="Regenerating will replace your current pairings with a new set. The old pairings will be discarded. Continue?"
+        confirmLabel="Regenerate"
+        onConfirm={() => { void generatePairings(); }}
+      />
     </ManagerLayout>
   );
 }
