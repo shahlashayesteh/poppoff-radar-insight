@@ -577,7 +577,7 @@ function ManagerDashboard() {
                 <Download className="h-4 w-4" /> Template
               </button>
               <button
-                onClick={deleteAllUploads}
+                onClick={() => setConfirmDeleteAll(true)}
                 disabled={uploading || !venue || stats.length === 0}
                 className="inline-flex items-center gap-2 rounded-xl border border-destructive/40 text-destructive px-4 py-2 text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:bg-destructive/5"
               >
@@ -871,6 +871,15 @@ function ManagerDashboard() {
           </Link>
         </div>
       </div>
+      <ConfirmDeleteDialog
+        open={confirmDeleteAll}
+        onOpenChange={setConfirmDeleteAll}
+        title="Delete all uploaded stats?"
+        description="This permanently deletes every week of server stats, category stats, views, acknowledgements, coaching, milestones, streaks and weekly priorities for this venue. It cannot be undone."
+        confirmLabel="Delete everything"
+        loading={deletingAll}
+        onConfirm={deleteAllUploads}
+      />
     </ManagerLayout>
   );
 }
