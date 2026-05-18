@@ -69,9 +69,12 @@ function Page() {
     return LEGACY_CATS.map((c) => ({
       label: c.label,
       conversion: Number(stat[c.key] ?? 0),
+      prevConversion: Number(prevStat?.[c.key] ?? 0),
       target: Number(target?.[c.t] ?? 0),
       items: estimateItemsSold(Number(stat[c.sales] ?? 0), c.cat, prices),
       prevItems: prevStat ? estimateItemsSold(Number(prevStat[c.sales] ?? 0), c.cat, prices) : 0,
+      sales: Number(stat[c.sales] ?? 0),
+      prevSales: Number(prevStat?.[c.sales] ?? 0),
     }));
   };
   const hasDynamicData =
@@ -84,15 +87,19 @@ function Page() {
       ? dynRows.map((r) => ({
           label: r.label,
           conversion: r.conversion,
+          prevConversion: r.prevConversion,
           target: r.target,
           items: r.items,
           prevItems: r.prevItems,
+          sales: r.sales,
+          prevSales: r.prevSales,
         }))
       : legacyRows();
 
   const totalItemsCurrent = rows.reduce((s, r) => s + r.items, 0);
-  const totalItemsPrev = rows.reduce((s, r) => s + r.prevItems, 0);
-  const totalDelta = pctDelta(totalItemsCurrent, totalItemsPrev);
+  const totalSalesCurrent = rows.reduce((s, r) => s + r.sales, 0);
+  const totalSalesPrev = rows.reduce((s, r) => s + r.prevSales, 0);
+  const totalDelta = pctDelta(totalSalesCurrent, totalSalesPrev);
 
   return (
     <ServerLayout>
