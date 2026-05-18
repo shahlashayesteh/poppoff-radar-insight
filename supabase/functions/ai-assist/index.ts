@@ -376,7 +376,7 @@ Deno.serve(async (req) => {
       const { data: prev } = await admin.from("server_stats").select("*").eq("venue_id", venueId).eq("user_id", userId).lt("week_start", weekStart).order("week_start", { ascending: false }).limit(1).maybeSingle();
       const { data: tg } = await admin.from("server_targets").select("*").eq("venue_id", venueId).eq("user_id", userId).maybeSingle();
       const { data: menus } = await admin.from("venue_menu").select("parsed_items").eq("venue_id", venueId).order("uploaded_at", { ascending: false }).limit(3);
-      const menuItems = (menus ?? []).flatMap((m: any) => (m.parsed_items ?? [])).slice(0, 60);
+      const menuItems = (menus ?? []).flatMap((m: any) => (m.parsed_items ?? [])).slice(0, 80);
       // Prefer dynamic venue categories; fall back to legacy six if none exist.
       const { data: vcRows } = await admin.from("venue_categories").select("key,label,sort_order").eq("venue_id", venueId).order("sort_order");
       const { data: curCats } = await admin.from("server_category_stats").select("category_key,conversion,metric_type,quantity").eq("venue_id", venueId).eq("user_id", userId).eq("week_start", weekStart);
@@ -384,6 +384,7 @@ Deno.serve(async (req) => {
         ? await admin.from("server_category_stats").select("category_key,conversion").eq("venue_id", venueId).eq("user_id", userId).eq("week_start", prev.week_start)
         : { data: [] as any[] };
       const { data: catTargets } = await admin.from("server_category_targets").select("category_key,target").eq("venue_id", venueId).eq("user_id", userId);
+      const { data: pairings } = await admin.from("venue_pairings").select("item,pair_with,category,why,priority").eq("venue_id", venueId).order("position").limit(200);
       const curMap = Object.fromEntries(((curCats ?? []) as any[]).map((r) => [r.category_key, r]));
       const prevMap = Object.fromEntries(((prevCats ?? []) as any[]).map((r) => [r.category_key, r]));
       const tgtMap = Object.fromEntries(((catTargets ?? []) as any[]).map((r) => [r.category_key, Number(r.target) || 0]));
@@ -391,12 +392,6 @@ Deno.serve(async (req) => {
       const LEGACY_SIX = new Set(["wine", "dessert", "cocktail", "sides", "spirits", "sparkling"]);
       const cats = dynCats.length ? dynCats.map((c) => c.key) : Array.from(LEGACY_SIX);
       const labelFor = (k: string) => dynCats.find((c) => c.key === k)?.label || k;
-      // Per-category fallback: prefer dynamic server_category_stats when present;
-      // otherwise fall back to legacy server_stats.<cat>_conversion columns so
-      // venues that only upload CSV legacy data still get real numbers.
-      // Deterministic per-category stat map — these are the ONLY numbers we
-      // will ever show the server. The AI never produces percentages; it only
-      // chooses a category and writes the action text.
       type CatStat = { key: string; label: string; a: number; p: number; t: number; delta: number };
       const catStats: CatStat[] = [];
       for (const c of cats) {
@@ -419,16 +414,14 @@ Deno.serve(async (req) => {
       const spc = Number((cur as any)?.spend_per_cover ?? 0);
       const spcTarget = Number((tg as any)?.spend_per_cover_target ?? 0);
 
-      // Context for the AI — same numbers but explicitly labeled. The AI must
-      // NOT echo numbers back; it only picks the category + writes action text.
       const lines = catStats.map((s) =>
         `${s.label}: actual ${s.a.toFixed(1)}%, target ${s.t.toFixed(1)}%, vs last week ${s.delta >= 0 ? "+" : ""}${s.delta.toFixed(1)}%`,
       ).join("\n");
       const catList = catStats.map((s) => s.label).concat(["general"]).join("|");
 
       // Priority categories the coaching MUST address:
-      //  - "biggest miss"   = largest negative momentum (vs last week)
-      //  - "what mattered most" = top movers by absolute momentum
+      //  - tip 1 = biggest miss (largest negative momentum / largest gap to target)
+      //  - tips 2 & 3 = the focus circles (top movers by absolute momentum)
       const sorted = [...catStats].sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta));
       const topMoversCats = sorted.slice(0, 3).map((s) => s.label);
       const decliners = [...catStats].filter((s) => s.delta < 0).sort((a, b) => a.delta - b.delta);
@@ -438,48 +431,88 @@ Deno.serve(async (req) => {
       const priorityList = Array.from(new Set([
         ...(biggestMiss ? [biggestMiss] : []),
         ...topMoversCats,
-      ])).slice(0, 4);
+      ])).slice(0, 3);
 
-      const sys = `You are an elite hospitality coach speaking to a server. Reply ONLY with JSON: {"suggestions":[{"category":string,"tip":string}]}. RULES:
-(1) "category" MUST be EXACTLY one of these labels (case-sensitive): ${catList}.
-(2) Return EXACTLY 3 tips. The categories MUST be chosen ONLY from this priority list (in this order of importance): ${priorityList.join(", ") || "(use the weakest categories)"}. The FIRST tip MUST address the biggest miss${biggestMiss ? ` (${biggestMiss})` : ""}. The other 2 MUST address the remaining priority categories above. Do NOT pick any category outside this priority list.
-(3) "tip" is a PUNCHY, IMMEDIATELY ACTIONABLE coaching line — what to DO or SAY on the floor next shift to fix that specific stat. MAX 20 WORDS. No fluff, no preamble, no trend commentary.
-(4) Imperative verb up front. Examples: "Push bourbon pairings earlier in the meal so guests have time to commit before mains land", "Suggest a dessert wine when clearing mains — frame it as a pairing, not an upsell".
-(5) ABSOLUTE: NO numbers, percentages, currency, decimals or digits. NO "trending", "consistently", "slightly off", "lagging", "we're". Just the action.
-(6) Reference real menu items from the list when relevant.
-(7) NEVER mention a category not listed in rule (1) or outside the priority list in rule (2).`;
-      const usr = `This server's week (you do NOT echo numbers — just choose category from the priority list + write a punchy coaching action under 20 words):\nBiggest miss: ${biggestMiss ?? "(none)"}\nWhat mattered most (top movers): ${topMoversCats.join(", ") || "(none)"}\nSpend per cover: actual £${spc.toFixed(2)}, target £${spcTarget.toFixed(2)}\n${lines}\nMenu items: ${menuItems.map((i: any) => i.name).filter(Boolean).slice(0, 40).join(", ") || "(none)"}`;
+      // Bucket menu items by category label so the AI can name specific dishes per category.
+      const itemsByCat: Record<string, string[]> = {};
+      for (const i of menuItems) {
+        const cat = String((i as any)?.category || "").toLowerCase().trim();
+        const name = String((i as any)?.name || "").trim();
+        if (!cat || !name) continue;
+        (itemsByCat[cat] ||= []).push(name);
+      }
+      const itemsCatalogue = Object.entries(itemsByCat)
+        .map(([c, arr]) => `- ${c}: ${arr.slice(0, 12).join(", ")}`)
+        .join("\n") || "(no menu uploaded)";
+
+      // Pairings filtered to the priority categories so each tip can cite a real pairing.
+      const priorityLC = priorityList.map((p) => p.toLowerCase());
+      const relevantPairings = (pairings ?? []).filter((p: any) => {
+        const cat = String(p?.category || "").toLowerCase();
+        const root = cat.split("_")[0];
+        return priorityLC.some((pc) => cat.includes(pc) || pc.includes(root));
+      }).slice(0, 40);
+      const pairingsBlock = relevantPairings
+        .map((p: any) => `- ${p.item} → ${p.pair_with} [${p.category}]${p.why ? " — " + p.why : ""}`)
+        .join("\n") || "(no pairings configured for these categories — improvise from the menu catalogue)";
+
+      const sys = `You are a Michelin-trained F&B director and senior sommelier writing pre-shift coaching for a server. You speak like an industry veteran, not a chatbot. Reply ONLY with JSON: {"suggestions":[{"category":string,"tip":string}]}.
+
+HARD RULES:
+(1) "category" MUST be EXACTLY one of (case-sensitive): ${catList}.
+(2) Return EXACTLY 3 tips, one per priority category in this order: ${priorityList.join(", ") || "(use the weakest categories)"}. Tip 1 MUST address the biggest miss${biggestMiss ? ` (${biggestMiss})` : ""}. Tips 2 and 3 address the remaining focus-circle categories.
+(3) Each tip MUST name at least one SPECIFIC menu item by name (from the catalogue below) AND, where a pairing exists in the pairings block, cite the SPECIFIC pairing partner (food dish or drink, exact name). Generic phrases like "upsell wine", "push desserts", "suggest a cocktail", "we're lagging", "remember to mention" — BANNED.
+(4) Each tip must contain a CONCRETE FLOOR TACTIC a senior server actually uses. Pick ONE per tip:
+    • a verbatim script line ("'A glass of the Picpoul drinks beautifully with the oysters' — say it as you set the cutlery"),
+    • a timing cue ("while clearing mains, before the table reaches for water"),
+    • a placement move ("drop the dessert menu open at the Sticky Toffee, don't ask if they want to see it"),
+    • a price anchor ("lead with the £14 negroni, not the £9 spritz — guests trade down, never up"),
+    • a bundling move ("offer two by the glass instead of pushing the bottle on a hesitant two-top").
+   NO motivational fluff, NO "remember to", NO "consistently", NO "make sure you".
+(5) Length: 18-32 words. Imperative voice. One sentence.
+(6) You MAY reference prices and item names exactly as they appear in the data. Do NOT invent items or pairings that aren't listed below.
+(7) NEVER cite percentages, "vs last week", or any stat number from the performance block.`;
+      const usr = `PRIORITY CATEGORIES (tip 1 = biggest miss, then focus circles): ${priorityList.join(" → ") || "(none)"}
+Biggest miss: ${biggestMiss ?? "(none)"}
+Focus circles (top movers this week): ${topMoversCats.join(", ") || "(none)"}
+Spend per cover context: actual £${spc.toFixed(2)}, target £${spcTarget.toFixed(2)}
+
+CATEGORY PERFORMANCE (context only — never quote these numbers back):
+${lines}
+
+MENU ITEMS BY CATEGORY (use these EXACT names):
+${itemsCatalogue}
+
+VENUE PAIRINGS for the priority categories (food ↔ drink/dessert — use these EXACT combinations where they apply):
+${pairingsBlock}
+
+Now write exactly 3 senior-restaurant-quality coaching tips, one per priority category, each naming a specific item + (where applicable) its pairing + a concrete floor tactic.`;
       const out = await callAI([{ role: "system", content: sys }, { role: "user", content: usr }], true);
       let aiSuggestions: any[] = [];
       try { const o = JSON.parse(out); aiSuggestions = o.suggestions ?? []; } catch {}
 
-      // Strip any digits/percent/currency the AI may have leaked. Do NOT
-      // append stats — the home page is for fast emotional understanding,
-      // not analyst readouts.
-      const stripNumbers = (s: string) => String(s || "")
-        .replace(/[£$€]\s*\d[\d,.]*/g, "")
+      // Strip ONLY percentages and stat phrasing — keep currency/item names
+      // so the tactic remains specific and restaurant-grade.
+      const stripStats = (s: string) => String(s || "")
         .replace(/\d+(?:[.,]\d+)?\s*%/g, "")
-        .replace(/\b\d+(?:[.,]\d+)?\b/g, "")
+        .replace(/\bvs\s+last\s+week\b/gi, "")
         .replace(/\s{2,}/g, " ")
         .replace(/\s+([,.;:!?])/g, "$1")
         .trim();
-      // Enforce the 20-word ceiling client-side as a safety net.
+      // Safety-net word cap (tips should be 18-32; allow a little slack).
       const capWords = (s: string, max: number) => {
         const words = s.split(/\s+/).filter(Boolean);
         if (words.length <= max) return s;
-        return words.slice(0, max).join(" ").replace(/[,;:]$/, "");
+        return words.slice(0, max).join(" ").replace(/[,;:]$/, "") + "…";
       };
-      const shorten = (s: string) => {
-        const first = s.split(/(?<=[.!?])\s+/)[0] || s;
-        return capWords(first.replace(/\.$/, "").trim(), 20);
-      };
+      const clean = (s: string) => capWords(stripStats(s), 36);
 
       const suggestions = aiSuggestions
         .map((s: any) => {
           const rawCat = String(s?.category || "").trim();
           const lc = rawCat.toLowerCase();
           const match = statByLabel[lc] || statByKey[lc];
-          const action = shorten(stripNumbers(String(s?.tip || "")));
+          const action = clean(String(s?.tip || ""));
           if (!action) return null;
           return {
             category: match ? match.label : (rawCat || "general"),
