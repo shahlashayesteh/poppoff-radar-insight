@@ -596,3 +596,135 @@ export function formatItems(row: Pick<CategoryMetric, "quantity" | "quantitySour
   if (row.quantitySource === "real") return `${row.quantity} sold`;
   return `~${row.quantity} est.`;
 }
+
+// -----------------------------------------------------------------------------
+// Server-level summary helpers — every manager surface should consume these so
+// the team table, server detail, ranking, and coaching all see the same number.
+// -----------------------------------------------------------------------------
+
+/**
+ * Overall server score (0..100). Weighted average of category scores using
+ * each category's expected sales as the weight (commercial weighting). Falls
+ * back to current sales, then equal-weight, when expected sales is unknown.
+ *
+ * This is the single number used for ranking, "Top performer" highlights,
+ * and team-table coloring.
+ */
+export function overallScore(perf: ServerPerformance | null | undefined): number | null {
+  const rows = perf?.rows ?? [];
+  if (!rows.length) return null;
+  let sum = 0;
+  let wsum = 0;
+  for (const r of rows) {
+    const w = (r.expectedSales && r.expectedSales > 0)
+      ? r.expectedSales
+      : (r.sales > 0 ? r.sales : 1);
+    sum += r.score * w;
+    wsum += w;
+  }
+  if (wsum <= 0) return null;
+  return Math.round((sum / wsum) * 10) / 10;
+}
+
+/** Highest-scoring category with positive 4wk-or-WoW momentum. */
+export function bestCategory(perf: ServerPerformance | null | undefined): CategoryMetric | null {
+  const rows = perf?.rows ?? [];
+  const winners = rows
+    .filter((r) => (r.deltaVs4wk ?? r.deltaWoW ?? 0) > 0)
+    .sort((a, b) => b.score - a.score);
+  return winners[0] ?? null;
+}
+
+/** Lowest-scoring category, or the one trending down most vs 4wk. */
+export function focusCategory(perf: ServerPerformance | null | undefined): CategoryMetric | null {
+  const rows = perf?.rows ?? [];
+  if (!rows.length) return null;
+  const sorted = rows.slice().sort((a, b) => a.score - b.score);
+  return sorted[0];
+}
+
+/**
+ * Aggregate venue performance — runs the engine for every server in the
+ * venue (in parallel) so the team table, leaderboard, and overview cards
+ * read from the exact same numbers as the server-facing pages.
+ */
+export interface VenueServerEntry {
+  userId: string;
+  perf: ServerPerformance;
+  overall: number | null;
+}
+
+export interface VenuePerformance {
+  servers: VenueServerEntry[];
+  byUser: Record<string, VenueServerEntry>;
+  ranked: VenueServerEntry[];      // highest overall first
+  totals: {
+    sales: number;
+    prevSales: number;
+    fourWeekAvgSales: number;
+    salesDeltaPctWoW: number | null;
+    salesDeltaPctVs4wk: number | null;
+    totalRevenueInfluence: number;
+    avgOverall: number | null;
+  };
+}
+
+export async function loadVenuePerformance(args: {
+  venueId: string;
+  weekStart: string;
+  userIds: string[];
+}): Promise<VenuePerformance> {
+  const { venueId, weekStart, userIds } = args;
+  const entries = await Promise.all(
+    userIds.map(async (uid) => {
+      const perf = await loadServerPerformance({ venueId, userId: uid, weekStart });
+      return { userId: uid, perf, overall: overallScore(perf) };
+    }),
+  );
+
+  const byUser = Object.fromEntries(entries.map((e) => [e.userId, e]));
+  const ranked = entries.slice().sort(
+    (a, b) => (b.overall ?? -1) - (a.overall ?? -1),
+  );
+
+  const sales = entries.reduce((s, e) => s + e.perf.totals.sales, 0);
+  const prevSales = entries.reduce((s, e) => s + e.perf.totals.prevSales, 0);
+  const fourWeekAvgSales = entries.reduce((s, e) => s + e.perf.totals.fourWeekAvgSales, 0);
+  const totalRevenueInfluence = entries.reduce(
+    (s, e) => s + e.perf.totals.totalRevenueInfluence,
+    0,
+  );
+  const overalls = entries.map((e) => e.overall).filter((n): n is number => n !== null);
+  const avgOverall = overalls.length ? Math.round((overalls.reduce((a, b) => a + b, 0) / overalls.length) * 10) / 10 : null;
+
+  return {
+    servers: entries,
+    byUser,
+    ranked,
+    totals: {
+      sales,
+      prevSales,
+      fourWeekAvgSales,
+      salesDeltaPctWoW: prevSales > 0 ? ((sales - prevSales) / prevSales) * 100 : null,
+      salesDeltaPctVs4wk: fourWeekAvgSales > 0 ? ((sales - fourWeekAvgSales) / fourWeekAvgSales) * 100 : null,
+      totalRevenueInfluence,
+      avgOverall,
+    },
+  };
+}
+
+/** Lightweight visual tone from an overall score 0..100. */
+export function scoreTone(score: number | null): string {
+  if (score === null) return "var(--brand-orange)";
+  if (score >= 75) return "var(--brand-green)";
+  if (score >= 55) return "var(--brand-orange)";
+  return "var(--opportunity)";
+}
+
+export function scoreLabel(score: number | null): TrendStatus {
+  if (score === null) return "Focus";
+  if (score >= 85) return "Crushing";
+  if (score >= 70) return "Strong";
+  if (score >= 55) return "Improving";
+  return "Focus";
+}
