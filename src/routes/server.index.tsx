@@ -112,6 +112,18 @@ function ServerDashboard() {
     return colour === "green" ? "var(--brand-green)" : colour === "amber" ? "var(--brand-orange)" : "var(--opportunity)";
   };
 
+  // Delta-driven (week-over-week) bucket for ring colour, fill, role label.
+  type DeltaBucket = { tone: string; fillPct: number; role: "Crushing it" | "Could be better" | "Focus here" };
+  const deltaBucket = (d: number | null): DeltaBucket => {
+    if (d === null || d <= 0) {
+      return { tone: "var(--opportunity)", fillPct: Math.min(100, Math.abs(d ?? 0)), role: "Focus here" };
+    }
+    if (d >= 20) {
+      return { tone: "var(--brand-green)", fillPct: Math.min(100, d), role: "Crushing it" };
+    }
+    return { tone: "var(--brand-orange)", fillPct: Math.min(100, d), role: "Could be better" };
+  };
+
   // Build a unified row list — prefer dynamic venue categories; fall back to
   // legacy six columns on server_stats when the venue hasn't tracked any
   // dynamic categories yet.
