@@ -115,15 +115,13 @@ function Page() {
         const row = currentPerf.rows.find((r) => r.key.toLowerCase().includes(key));
         return row ? ragFromRing(row.ringPct, row.target > 0) === "green" : false;
       };
-      const everHitCat = async (key: string): Promise<boolean> => {
-        // any historical week where ringPct >= 90 for this category
-        return perfList.some((p) =>
+      const everHitCat = (key: string): boolean =>
+        perfList.some((p) =>
           p.rows.some((r) => r.key.toLowerCase().includes(key) && r.target > 0 && r.ringPct >= 90),
         );
-      };
-      const dessertHit = await everHitCat("dessert");
-      const wineHit = await everHitCat("wine");
-      const cocktailHit = await everHitCat("cocktail");
+      const dessertHit = everHitCat("dessert");
+      const wineHit = everHitCat("wine");
+      const cocktailHit = everHitCat("cocktail");
 
       const list: Milestone[] = [
         { key: "first_week", label: "First week logged", done: weeks.length >= 1 || storedSet.has("first_week_complete") },
