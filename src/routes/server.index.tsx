@@ -314,9 +314,9 @@ function ServerDashboard() {
         </div>
       )}
 
-      {stat && !allGreen && workOn && (
+      {stat && !allGreen && workOnList.length > 0 && (
         <div className="px-5 mt-4">
-          <div className="rounded-3xl border-2 p-5 flex items-center gap-4"
+          <div className="rounded-3xl border-2 p-5 flex items-start gap-4"
             style={{
               borderColor: `color-mix(in oklab, var(--opportunity) 40%, transparent)`,
               background: `color-mix(in oklab, var(--opportunity) 8%, white)`,
@@ -324,16 +324,18 @@ function ServerDashboard() {
             <TrendingDown className="h-12 w-12 shrink-0" style={{ color: "var(--opportunity)" }} />
             <div className="flex-1">
               <div className="font-display text-lg font-bold leading-tight" style={{ color: "var(--opportunity)" }}>
-                You need to work on {workOn.label} this week!
+                You need to work on {joinLabels(workOnList.map((w) => w.label))} this week!
               </div>
-              {workOn.delta !== null && (
-                <div className="mt-1 text-xs">
-                  <span className="font-semibold" style={{ color: "var(--opportunity)" }}>
-                    {workOn.delta >= 0 ? "+" : ""}{workOn.delta.toFixed(0)}%
-                  </span>{" "}
-                  <span className="text-muted-foreground">vs last week</span>
-                </div>
-              )}
+              <ul className="mt-2 space-y-1 text-xs">
+                {workOnList.map((w) => (
+                  <li key={w.label}>
+                    <span className="font-semibold" style={{ color: "var(--opportunity)" }}>
+                      {w.label} {w.d === null ? "—" : `${w.d >= 0 ? "+" : ""}${w.d.toFixed(0)}%`}
+                    </span>{" "}
+                    <span className="text-muted-foreground">vs last week</span>
+                  </li>
+                ))}
+              </ul>
             </div>
           </div>
         </div>
