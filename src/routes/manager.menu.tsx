@@ -272,7 +272,7 @@ function MenuIntel() {
           <div className="lg:col-span-7 rounded-2xl bg-white border border-border p-5">
             <div className="flex items-center justify-between mb-3">
               <h3 className="font-display font-bold">Your menus</h3>
-              <button onClick={generatePairings} disabled={pairingLoading || menus.length === 0} className="rounded-xl px-3 py-1.5 text-xs font-bold text-white inline-flex items-center gap-2 disabled:opacity-50" style={{ background: "var(--brand-orange)" }}>
+              <button onClick={onGeneratePairingsClick} disabled={pairingLoading || menus.length === 0} className="rounded-xl px-3 py-1.5 text-xs font-bold text-white inline-flex items-center gap-2 disabled:opacity-50" style={{ background: "var(--brand-orange)" }}>
                 <Wand2 className="h-3.5 w-3.5" /> {pairingLoading ? (pairingProgress && pairingProgress.total ? `Pairing ${pairingProgress.done}/${pairingProgress.total}…` : "Pairing…") : "Generate pairings"}
               </button>
             </div>
