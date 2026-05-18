@@ -26,7 +26,7 @@ export function ServerLayout({ children }: { children: React.ReactNode }) {
       </header>
       <div className="mx-auto max-w-xl pb-24">{children}</div>
       <nav className="fixed bottom-0 inset-x-0 z-30 bg-white border-t border-border">
-        <div className="mx-auto max-w-xl grid grid-cols-5">
+        <div className="mx-auto max-w-xl grid grid-cols-6">
           {items.map((it) => {
             const target = prefix(it.to);
             const active = path === target;
