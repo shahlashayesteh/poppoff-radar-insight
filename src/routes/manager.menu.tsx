@@ -142,7 +142,7 @@ function MenuIntel() {
         if (error) throw error;
         added += 1;
       }
-      toast.success(`Uploaded ${added} menu${added === 1 ? "" : "s"}`);
+      toast.success(`Menu saved · coaching refreshed for your team (${added})`);
       await loadMenus(venueId);
     } catch (e: any) {
       toast.error(e.message || "Menu upload failed");
@@ -159,8 +159,12 @@ function MenuIntel() {
     setDeletingMenu(false);
     if (error) { toast.error(error.message); return; }
     setPendingMenu(null);
-    if (venueId) await loadMenus(venueId);
-    toast.success("Menu deleted");
+    if (venueId) {
+      await loadMenus(venueId);
+      // Clear stale per-server coaching that referenced the deleted menu
+      await supabase.functions.invoke("ai-assist", { body: { action: "invalidate_coaching", venueId } });
+    }
+    toast.success("Menu deleted · coaching refreshed");
   };
 
   const onGeneratePairingsClick = () => {
