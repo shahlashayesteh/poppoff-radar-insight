@@ -296,10 +296,13 @@ function ServerDashboard() {
             top3.length > 0 ? (
               <div className="mt-4 grid grid-cols-3 gap-2">
                 {top3.map((c) => {
-                  const rag = ragFromRing(c.ringPct, c.target > 0);
+                  const baseRag = ragFromRing(c.ringPct, c.target > 0);
+                  const mo = humanMomentum(c);
+                  // Any category trending down forces a red treatment so
+                  // declining stats never appear as orange/amber.
+                  const rag: Rag = mo?.rag === "red" ? "red" : baseRag;
                   const tone = ragColor(rag);
                   const elite = eliteVisual(c.eliteTier);
-                  const mo = humanMomentum(c);
                   const call = humanTargetCall(c);
                   return (
                     <div key={c.key} className="flex flex-col items-center">
