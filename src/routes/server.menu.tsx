@@ -260,6 +260,9 @@ function ServerMenu() {
     const cat = p.category || "other";
     const emoji = CAT_EMOJI[cat] || "✨";
     const label = CAT_LABEL[cat] || "Pairing";
+    const statKey = pairingToStatKey(p.category) as StatKey | null;
+    const timing = focus && statKey ? PAIRING_TIMING[statKey] : null;
+    const wording = focus ? `"Our ${p.pair_with} works beautifully with the ${p.item}."` : null;
     return (
       <div key={p.id} className="rounded-2xl bg-white border border-border p-3 flex items-start gap-3">
         <div className="h-12 w-12 rounded-xl grid place-items-center text-2xl shrink-0"
