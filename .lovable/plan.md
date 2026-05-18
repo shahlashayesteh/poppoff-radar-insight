@@ -1,48 +1,65 @@
-## Goal
+## What's actually broken
 
-When a manager regenerates pairings in **Menu Intelligence**, every server in that restaurant should see the new pairings on their **Coaching** page automatically — personalised to their own weakest categories — without having to refresh or wait for next week.
+`server_coaching` (the table that backs the "Your coaching this week" block on the server Home page) is **cached per `(user_id, venue_id, week_start)`** by the `ai-assist` edge function. Once a tip set is written for the current week, every subsequent visit returns the cached row — even after the manager uploads a new menu or regenerates pairings. That is why Chloe Williams still sees coaching tips referencing the previous menu items and 0% / £46.85 numbers from the old upload.
 
-## What's broken today
+Pairings on the server **Coaching** page already update live (we wired `venue_pairings` realtime last turn). The remaining gap is the **AI coaching tips** on server Home, plus a small live-refresh on menu changes.
 
-- Pairings are written to `venue_pairings` correctly (venue‑wide, RLS already lets members read).
-- `src/routes/server.menu.tsx` only reads `weekly_priorities`. It never reads `venue_pairings`.
-- Result: managers regenerate pairings, nothing changes for servers. They only see "priorities" the manager manually pinned.
+## Fix (no schema changes, no new RLS, no destructive edits)
 
-The data is already going to "all server accounts" (it's a single venue‑scoped table). The missing piece is **surfacing it** on the server side and **refreshing it live**.
+### 1. Invalidate stale coaching at the source (edge function)
 
-## Changes (frontend only — no DB / RLS changes needed)
+In `supabase/functions/ai-assist/index.ts`, after the admin client successfully:
 
-### 1. `src/routes/server.menu.tsx` — show pairings
+- **`parse_menu`** inserts a new `venue_menu` row, **or**
+- a manager regenerates pairings — specifically once at the start of the regen flow (the existing `list_food_items` action is the natural hook since `generatePairings` always calls it first), **or**
+- a manager deletes a menu (covered by adding the same wipe to a new `invalidate_coaching` action that `manager.menu.tsx` calls after `venue_menu.delete`)
 
-Add a new "Suggested pairings for you" section below the weekly priorities block.
+…run:
 
-- Fetch `venue_pairings` for the server's venue on mount (ordered by `position`).
-- Group by `item` (food item) and show 1–3 suggested `pair_with` rows underneath, including `why` and the wine/cocktail/etc. `category` chip already supported in the manager view.
-- **Personalisation** (the "personal coaching and insights they need" part): use the server's own `server_category_stats` from the latest week vs. their `server_category_targets` to identify their **2 weakest categories**. Pairings whose `category` matches one of those weak categories get pinned to the top and labelled "Focus for you — boost your {category}". Everything else falls below under "All pairings".
-- Filter input to search by item/drink (mirrors the manager‑side search behaviour).
-- Empty state: "Your manager hasn't generated pairings yet."
-
-### 2. Live refresh when the manager regenerates
-
-Subscribe to Postgres changes on `venue_pairings` filtered by the server's `venue_id`. On any insert/delete, re‑run the pairings fetch. This makes the new set appear within seconds of the manager finishing — no reload, no waiting for next week.
-
-Also re‑fetch when the tab regains focus, as a fallback for browsers that drop the realtime socket.
-
-Requires one tiny migration step (publication only, no schema change):
-
-```sql
-ALTER PUBLICATION supabase_realtime ADD TABLE public.venue_pairings;
+```ts
+await admin.from("server_coaching").delete().eq("venue_id", venueId);
 ```
 
-### 3. Manager side — no behaviour change
+This wipes the cache for **every server in that venue**. Their next page load (or the live-refresh below) regenerates fresh tips that reference the new menu items and current stats. No schema/RLS change needed because the wipe runs under the service-role admin client inside the edge function.
 
-`generatePairings` in `src/routes/manager.menu.tsx` already wipes + reinserts venue‑wide rows, so every server who is a member of that venue automatically sees the new set once (1) is wired up. No extra "broadcast" step needed.
+### 2. Client trigger after manager deletes a menu
 
-A small toast tweak after success: "Pairings ready · sent to your team" so the manager knows it reached servers.
+In `src/routes/manager.menu.tsx`, after the existing `await supabase.from("venue_menu").delete()` succeeds in `confirmRemoveMenu`, call the new `invalidate_coaching` action so removing a menu also clears stale tips.
+
+### 3. Live refresh on the server Home page
+
+In `src/routes/server.index.tsx`, add a small effect (mirrors the pattern we already use on `server.menu.tsx` for pairings):
+
+- Subscribe to `postgres_changes` on `venue_menu` and `server_coaching` filtered by `venue_id=eq.${venueId}`.
+- On any insert/update/delete, re-invoke `ai-assist` `server_coaching` for the current `(userId, venueId, weekStart)` and re-render the tips block.
+- Also re-fetch on `window` focus as a fallback for dropped sockets.
+
+This is the same realtime pattern already approved and shipped for `venue_pairings`.
+
+### 4. One-line migration: publish `venue_menu` for realtime
+
+```sql
+ALTER PUBLICATION supabase_realtime ADD TABLE public.venue_menu;
+```
+
+`server_coaching` is already inserted/updated by the edge function using the admin role, which is fine for realtime once added:
+
+```sql
+ALTER PUBLICATION supabase_realtime ADD TABLE public.server_coaching;
+```
+
+No table structure, no RLS, no triggers change.
+
+### 5. Manager UX polish
+
+After a successful menu upload in `manager.menu.tsx`, swap the existing toast to: **"Menu saved · coaching refreshed for your team"**. After regen pairings, keep the existing "Pairings ready · sent to your team" toast.
 
 ## Out of scope
 
-- No changes to the AI/parse pipeline or the manager‑side pairing UI/logic.
-- No changes to `weekly_priorities`, streaks, milestones, or stats.
-- No new RLS policies — `Servers read venue pairings` already exists.
-- No per‑server pairing rows — pairings stay venue‑wide; personalisation is purely a client‑side ranking based on each server's own stats.
+- No changes to streaks, milestones, stats, weekly priorities, or CSV pipeline.
+- No bulk pre-generation of coaching for every server up-front — invalidation + on-demand regeneration is cheaper and produces identical results the moment each server opens the app (and instantly via realtime if they're already on screen).
+- No changes to `parse_menu` parsing logic, pairing generation logic, or AI prompts.
+
+## Result
+
+The moment the manager finishes uploading a new menu or regenerating pairings, every server's cached coaching is dropped. Any server with the app open re-fetches within ~1s via realtime; any server who opens the app later gets fresh, menu-aware tips on first load. Chloe Williams will stop seeing the old WOK FIRED ANGRY BIRD / YUZU LEMON DROP / £46.85 tips after the next upload or regen.

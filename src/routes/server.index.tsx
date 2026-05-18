@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ServerLayout } from "@/components/server-layout";
 import { supabase } from "@/integrations/supabase/client";
 import { useRoleGate } from "@/lib/auth-gate";
@@ -60,52 +60,79 @@ function ServerDashboard() {
   const [coachLoading, setCoachLoading] = useState(false);
   const weekStart = toISODate(getMondayOfWeek());
   const [displayWeekStart, setDisplayWeekStart] = useState<string>(weekStart);
+  const [venueId, setVenueId] = useState<string | null>(null);
+  const userIdRef = useRef<string | null>(null);
+
+  const fetchCoaching = useCallback(async (vId: string, uId: string, week: string) => {
+    setCoachLoading(true);
+    try {
+      const { data: cd, error: cErr } = await supabase.functions.invoke("ai-assist", {
+        body: { action: "server_coaching", venueId: vId, payload: { userId: uId, weekStart: week } },
+      });
+      if (cErr) throw cErr;
+      setCoaching(Array.isArray(cd?.suggestions) ? cd.suggestions : []);
+    } catch {
+      setCoaching([]);
+    } finally {
+      setCoachLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     (async () => {
       const { data: u } = await supabase.auth.getUser();
       if (!u.user) return;
+      userIdRef.current = u.user.id;
       const { data: prof } = await supabase.from("profiles").select("full_name").eq("id", u.user.id).maybeSingle();
       const fn = prof?.full_name || "";
       setName(fn.split(" ")[0] || "there");
       await claimServerCsvData();
       await recordLogin();
       const { data: vm } = await supabase.from("venue_members").select("venue_id").eq("user_id", u.user.id).limit(1);
-      const venueId = vm?.[0]?.venue_id;
-      if (!venueId) return;
+      const v = vm?.[0]?.venue_id;
+      if (!v) return;
+      setVenueId(v);
       const visibleWeek = await latestStatsWeek(
-        supabase.from("server_stats").select("week_start, created_at").eq("user_id", u.user.id).eq("venue_id", venueId).order("created_at", { ascending: false }).order("week_start", { ascending: false }).limit(1),
+        supabase.from("server_stats").select("week_start, created_at").eq("user_id", u.user.id).eq("venue_id", v).order("created_at", { ascending: false }).order("week_start", { ascending: false }).limit(1),
         weekStart,
       );
       setDisplayWeekStart(visibleWeek);
-      const { data: st } = await supabase.from("server_stats").select("*").eq("user_id", u.user.id).eq("venue_id", venueId).eq("week_start", visibleWeek).maybeSingle();
+      const { data: st } = await supabase.from("server_stats").select("*").eq("user_id", u.user.id).eq("venue_id", v).eq("week_start", visibleWeek).maybeSingle();
       setStat(st);
-      const { data: prev } = await supabase.from("server_stats").select("*").eq("user_id", u.user.id).eq("venue_id", venueId).lt("week_start", visibleWeek).order("week_start", { ascending: false }).limit(1).maybeSingle();
+      const { data: prev } = await supabase.from("server_stats").select("*").eq("user_id", u.user.id).eq("venue_id", v).lt("week_start", visibleWeek).order("week_start", { ascending: false }).limit(1).maybeSingle();
       setPrevStat(prev);
-      const { data: tg } = await supabase.from("server_targets").select("*").eq("user_id", u.user.id).eq("venue_id", venueId).maybeSingle();
+      const { data: tg } = await supabase.from("server_targets").select("*").eq("user_id", u.user.id).eq("venue_id", v).maybeSingle();
       setTarget(tg);
-      const { data: sk } = await supabase.from("server_streaks").select("current_streak").eq("user_id", u.user.id).eq("venue_id", venueId).maybeSingle();
+      const { data: sk } = await supabase.from("server_streaks").select("current_streak").eq("user_id", u.user.id).eq("venue_id", v).maybeSingle();
       setStreak((sk as any)?.current_streak ?? 0);
-      setPrices(await fetchVenueAvgPrices(venueId));
-      const rows = await loadServerCategoryRows(venueId, u.user.id, visibleWeek, prev?.week_start ?? null);
+      setPrices(await fetchVenueAvgPrices(v));
+      const rows = await loadServerCategoryRows(v, u.user.id, visibleWeek, prev?.week_start ?? null);
       setDynRows(rows);
-      await supabase.from("server_stat_views").insert({ user_id: u.user.id, venue_id: venueId, week_start: visibleWeek });
+      await supabase.from("server_stat_views").insert({ user_id: u.user.id, venue_id: v, week_start: visibleWeek });
       if (st) {
-        setCoachLoading(true);
-        try {
-          const { data: cd, error: cErr } = await supabase.functions.invoke("ai-assist", {
-            body: { action: "server_coaching", venueId, payload: { userId: u.user.id, weekStart: visibleWeek } },
-          });
-          if (cErr) throw cErr;
-          setCoaching(Array.isArray(cd?.suggestions) ? cd.suggestions : []);
-        } catch {
-          setCoaching([]);
-        } finally {
-          setCoachLoading(false);
-        }
+        await fetchCoaching(v, u.user.id, visibleWeek);
       }
     })();
-  }, [weekStart]);
+  }, [weekStart, fetchCoaching]);
+
+  // Live refresh coaching when the manager uploads a new menu or invalidates cache
+  useEffect(() => {
+    if (!venueId) return;
+    const uId = userIdRef.current;
+    if (!uId) return;
+    const refresh = () => { void fetchCoaching(venueId, uId, displayWeekStart); };
+    const channel = supabase
+      .channel(`coaching:${venueId}:${uId}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "venue_menu", filter: `venue_id=eq.${venueId}` }, refresh)
+      .on("postgres_changes", { event: "DELETE", schema: "public", table: "server_coaching", filter: `venue_id=eq.${venueId}` }, refresh)
+      .subscribe();
+    const onFocus = () => refresh();
+    window.addEventListener("focus", onFocus);
+    return () => {
+      supabase.removeChannel(channel);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, [venueId, displayWeekStart, fetchCoaching]);
 
   const toneFor = (actual: number, tgt: number) => {
     const colour = performanceColour(actual, tgt);
