@@ -472,6 +472,22 @@ function MenuIntel() {
           </Link>
         </div>
       </div>
+      <ConfirmDeleteDialog
+        open={!!pendingMenu}
+        onOpenChange={(o) => { if (!o) setPendingMenu(null); }}
+        title="Delete this menu?"
+        description="Only this menu file will be removed from the system. Your other menus, pairings, server stats and priorities are not affected. This cannot be undone."
+        loading={deletingMenu}
+        onConfirm={confirmRemoveMenu}
+      />
+      <ConfirmDeleteDialog
+        open={confirmRegen}
+        onOpenChange={setConfirmRegen}
+        title="Regenerate pairings?"
+        description="Regenerating will replace your current pairings with a new set. The old pairings will be discarded. Continue?"
+        confirmLabel="Regenerate"
+        onConfirm={() => { void generatePairings(); }}
+      />
     </ManagerLayout>
   );
 }
