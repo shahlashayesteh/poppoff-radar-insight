@@ -63,6 +63,7 @@ function MenuIntel() {
       const items: ParsedItem[] = data?.items ?? [];
       toast.success(`Parsed ${items.length} item${items.length === 1 ? "" : "s"}`);
       setText(""); setLabel("");
+      await supabase.from("weekly_priorities").delete().eq("venue_id", venueId);
       await loadMenus(venueId);
     } catch (e: any) {
       toast.error(e.message || "AI parse failed");
