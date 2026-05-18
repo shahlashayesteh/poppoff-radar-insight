@@ -307,7 +307,7 @@ function ServerDashboard() {
             top3.length > 0 ? (
               <div className="mt-4 grid grid-cols-3 gap-2">
                 {top3.map((c) => {
-                  const d = pctDelta(c.items, c.prevItems);
+                  const d = convDelta(c);
                   const bucket = deltaBucket(d);
                   const tone = bucket.tone;
                   const fillPct = bucket.fillPct;
@@ -318,7 +318,7 @@ function ServerDashboard() {
                       <Ring fillPct={fillPct} color={tone} displayValue={c.items} />
                       {d !== null ? (
                         <div className="mt-1 text-xs font-semibold" style={{ color: d >= 0 ? "var(--brand-green)" : "var(--opportunity)" }}>
-                          {d >= 0 ? "↑" : "↓"} {d >= 0 ? "+" : "-"}{Math.abs(d).toFixed(0)}%
+                          {d >= 0 ? "↑" : "↓"} {d >= 0 ? "+" : "-"}{Math.abs(d).toFixed(1)}%
                         </div>
                       ) : (
                         <div className="mt-1 text-xs text-muted-foreground">—</div>
