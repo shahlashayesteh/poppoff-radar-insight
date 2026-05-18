@@ -7,7 +7,6 @@ import {
   loadServerPerformance,
   loadVenueLeaderboard,
   ragFromRing,
-  type ServerPerformance,
 } from "@/lib/performance-engine";
 import { getMondayOfWeek, toISODate, latestStatsWeek } from "@/lib/week";
 
