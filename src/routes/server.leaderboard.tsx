@@ -80,8 +80,8 @@ function Page() {
 
   const tabs = [{ key: "overall", label: "Overall" }, ...cats.map((c) => ({ key: c.key, label: c.label }))];
   const activeCat = cats.find((c) => c.key === activeTab) ?? null;
-  const catBoard = activeCat ? categoryLeaderboard(board, activeCat.key, 10) : [];
-  const overallBoard = board.slice(0, 10);
+  const catBoard = activeCat ? categoryLeaderboard(board, activeCat.key, 999) : [];
+  const overallBoard = board;
 
   return (
     <ServerLayout>
