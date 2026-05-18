@@ -31,6 +31,7 @@ function Page() {
   const [board, setBoard] = useState<LeaderboardRow[]>([]);
   const [cats, setCats] = useState<CatDef[]>([]);
   const [streaks, setStreaks] = useState<Streak[]>([]);
+  const [prices, setPrices] = useState<Record<string, number>>({});
   const [myId, setMyId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string>("overall");
   const weekStart = toISODate(getMondayOfWeek());
