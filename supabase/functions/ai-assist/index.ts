@@ -354,7 +354,19 @@ Deno.serve(async (req) => {
       if (!effectiveForce) {
         const { data: cached } = await admin.from("server_coaching").select("suggestions, generated_at").eq("user_id", userId).eq("venue_id", venueId).eq("week_start", weekStart).maybeSingle();
         if (cached?.suggestions && Array.isArray(cached.suggestions) && (cached.suggestions as any[]).length > 0) {
-          return Response.json({ ok: true, suggestions: cached.suggestions, cached: true }, { headers: cors });
+          // Only reuse the cache if it was generated AFTER the latest menu upload AND the latest pairings.
+          // Otherwise the tips reference stale menu items and must be regenerated.
+          const [{ data: latestMenu }, { data: latestPairing }] = await Promise.all([
+            admin.from("venue_menu").select("uploaded_at").eq("venue_id", venueId).order("uploaded_at", { ascending: false }).limit(1).maybeSingle(),
+            admin.from("venue_pairings").select("generated_at").eq("venue_id", venueId).order("generated_at", { ascending: false }).limit(1).maybeSingle(),
+          ]);
+          const cachedAt = new Date(cached.generated_at).getTime();
+          const menuAt = latestMenu?.uploaded_at ? new Date(latestMenu.uploaded_at).getTime() : 0;
+          const pairAt = latestPairing?.generated_at ? new Date(latestPairing.generated_at).getTime() : 0;
+          if (cachedAt >= menuAt && cachedAt >= pairAt) {
+            return Response.json({ ok: true, suggestions: cached.suggestions, cached: true }, { headers: cors });
+          }
+          console.log("[ai-assist] coaching cache stale (menu/pairings newer) — regenerating");
         }
       }
       const { data: cur } = await admin.from("server_stats").select("*").eq("venue_id", venueId).eq("user_id", userId).eq("week_start", weekStart).maybeSingle();
