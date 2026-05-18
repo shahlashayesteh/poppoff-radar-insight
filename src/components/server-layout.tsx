@@ -1,11 +1,12 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Home, BarChart3, Target, Gift, User } from "lucide-react";
+import { Home, BarChart3, Target, Trophy, Gift, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Logo } from "./logo";
 
 const items = [
   { to: "/server", label: "Home", icon: Home },
   { to: "/server/stats", label: "Stats", icon: BarChart3 },
+  { to: "/server/leaderboard", label: "Ranks", icon: Trophy },
   { to: "/server/menu", label: "Coaching", icon: Target },
   { to: "/server/welcome", label: "Rewards", icon: Gift },
   { to: "/server/profile", label: "Profile", icon: User },
@@ -25,7 +26,7 @@ export function ServerLayout({ children }: { children: React.ReactNode }) {
       </header>
       <div className="mx-auto max-w-xl pb-24">{children}</div>
       <nav className="fixed bottom-0 inset-x-0 z-30 bg-white border-t border-border">
-        <div className="mx-auto max-w-xl grid grid-cols-5">
+        <div className="mx-auto max-w-xl grid grid-cols-6">
           {items.map((it) => {
             const target = prefix(it.to);
             const active = path === target;
