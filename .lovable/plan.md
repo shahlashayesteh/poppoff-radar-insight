@@ -1,29 +1,53 @@
-## Plan
+# Performance Intelligence Engine
 
-1. **Stop the AI from owning numbers**
-   - Change `server_coaching` so it builds the exact percentage strings from database rows and validates the AI output before saving.
-   - If the AI rewrites, rounds, or invents a percentage, replace the tip with a deterministic app-generated tip using the real stored values.
+Central module: `src/lib/performance-engine.ts` — the single source of truth for every server-performance number (home, stats, manager view, AI coaching).
 
-2. **Use one shared stat parser for all coaching paths**
-   - Add/centralize helpers in `supabase/functions/ai-assist/index.ts` to:
-     - read dynamic category stats from `server_category_stats` when real rows exist,
-     - otherwise fall back to generated `server_stats.*_conversion` values,
-     - format percentages consistently from the stored numeric value, without manual edits.
-   - This will cover every server account, not just Chloe.
+## What it does
 
-3. **Fix “what to push” priority percentages**
-   - Update `generate_priorities` so weak categories are calculated from the actual uploaded week’s stats and actual targets.
-   - Include dynamic category stats where available, and legacy six-column stats where not.
-   - Stop rounding team gap percentages to whole numbers in the data sent to the AI.
+- **Target-based rings** — `ringPct = clamp(current / target, 0, 100)`. Elite over-target tiers (1: 100–120%, 2: 120–150%, 3: 150%+) drive subtle glow + badge so top performers keep progressing past completion.
+- **4-week rolling avg** as the primary behavioural benchmark. WoW remains as secondary signal. Status labels: Focus / Improving / Strong / Crushing, derived from `deltaVs4wk` (fallback WoW only when no history).
+- **Category-aware denominator metadata** (`eligible_covers`, `adult_bev_opportunities`, `eligible_tables`, etc.) — labelled now, recomputable from a real `opportunity_count` later without page changes.
+- **Quantity confidence** — `real` (POS qty), `estimated` (sales ÷ menu avg), `fallback` (default price). UI prefixes "~ est." when not real, never presents estimates as fact.
+- **Blended performance score** (0–100):
+  - 35% target achievement
+  - 30% trend vs 4wk avg
+  - 25% commercial impact, **normalised vs expected category sales** (baseline conversion × opportunity × avg price) so dessert outperformance isn't outweighed by average wine just because wine has higher £.
+  - 10% consistency — **neutral 0.5 when sample < 3 weeks or opportunity < 20**, so peak/difficult shifts aren't punished.
+- **Revenue Influence** — `(current − venueBaseline) / 100 × opportunity × avgPrice`. Foundation for "who actually moves £" rather than "who sold most".
+- **Fairness / context foundation** — `server_stats.context jsonb` and `server_category_stats.opportunity_count` columns added. Engine threads them through; UI ignores when null. Future section/daypart/booking weighting plugs in here.
 
-4. **Fix menu-pairing focus percentages**
-   - Keep `/server/menu` choosing focus pairings from the server’s real weakest categories.
-   - Align its category ranking logic with the same source-of-truth rules as coaching: dynamic stats first only when they exist for that week, otherwise legacy generated conversions.
+## Database migration
 
-5. **Clear only stale generated coaching, not stats**
-   - Delete cached `server_coaching` rows so insights regenerate with the corrected parser.
-   - Do not manually change server stats, weekly priority values, menu pairings, or percentages.
+- `server_category_stats.opportunity_count numeric` (nullable)
+- `server_stats.context jsonb` (nullable)
 
-6. **Deploy and verify with real data**
-   - Deploy the updated `ai-assist` function.
-   - Verify against Chloe and a sample of other server accounts that displayed coaching percentages match the database-generated weekly stats exactly, e.g. Chloe dessert remains parsed from `160 / 1874 * 100 = 8.537886...`, formatted consistently by the app rather than manually changed.
+Both nullable, so historical data + every existing read continues to render unchanged.
+
+## Pages wired to the engine
+
+- `src/routes/server.index.tsx` — Top 3 + Smashed + Work-on driven by `performanceScore`. Rings use target-based fill + elite tiers. Deltas show "vs 4wk avg" (primary).
+- `src/routes/server.stats.tsx` — bars use `ringPct`. Each row shows both "Xpp wk" and "Xpp 4wk" plus status label. Items line uses `formatItems()` ("123 sold" vs "~123 est."). Top tile shows real £ delta WoW + 4wk.
+- `src/routes/manager.server.$id.tsx` — category breakdown bars now use the same target-based fill so manager + server views match exactly.
+
+## AI coaching upgrade (`supabase/functions/ai-assist/index.ts → server_coaching`)
+
+System prompt rewritten:
+- Lead with trend/feel, not data-science phrasing.
+- Ban "pp", "delta", "percentage points", "vs average", "conversion rate".
+- Frame dips gently when 4-week trend is healthy.
+- Sound like a floor manager, not a BI dashboard.
+
+Deterministic stat block (built from DB, not AI) still appended verbatim to each tip so numbers are always exact.
+
+## Out of scope (intentionally — foundations only)
+
+- Demo routes (`src/routes/demo.*`) untouched.
+- Section/daypart/booking-type UI inputs — schema ready, no UI yet.
+- Backfill of historical `opportunity_count`.
+- Leaderboards / predictive coaching / peak-hour weighting — engine ready, screens future work.
+
+## Verification checklist
+
+- Same conversion, delta, status label, ring fill on home / stats / manager-server / coaching for the same server+week.
+- Chloe's dessert: ring fills to `current/target`; "vs 4wk avg" replaces volatile WoW noise; items label shows "~N est." when no real POS qty.
+- No file under `src/routes/demo.` modified.

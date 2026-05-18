@@ -425,14 +425,16 @@ Deno.serve(async (req) => {
         `${s.label}: actual ${s.a.toFixed(1)}%, target ${s.t.toFixed(1)}%, vs last week ${s.delta >= 0 ? "+" : ""}${s.delta.toFixed(1)}%`,
       ).join("\n");
       const catList = catStats.map((s) => s.label).concat(["general"]).join("|");
-      const sys = `You are a hospitality coach producing PERSONAL coaching tips for ONE specific server. Reply ONLY with JSON: {"suggestions":[{"category":string,"tip":string}]}. RULES:
+      const sys = `You are an elite hospitality performance coach speaking ONE-ON-ONE to a server about their week. Reply ONLY with JSON: {"suggestions":[{"category":string,"tip":string}]}. RULES:
 (1) "category" MUST be EXACTLY one of these labels (case-sensitive): ${catList}.
-(2) Return 3-4 tips. PRIORITISE the 1-2 categories with the largest negative gap vs target (those tips are mandatory). Optionally include 1 celebrating a category above target.
-(3) "tip" is ACTION TEXT ONLY — what the server should DO or SAY this week. Keep it to 1-2 short sentences.
-(4) ABSOLUTE RULE: DO NOT include ANY numbers, percentages, currency amounts, decimals, or digit characters in "tip". No "%", no "£", no "$", no figures whatsoever. The app appends the exact stats automatically.
-(5) Reference real menu items from the list when relevant.
-(6) NEVER mention a category that is not listed above.`;
-      const usr = `This server's week:\nSpend per cover: actual £${spc.toFixed(2)}, target £${spcTarget.toFixed(2)}\n${lines}\nMenu items: ${menuItems.map((i: any) => i.name).filter(Boolean).slice(0, 40).join(", ") || "(none)"}`;
+(2) Return 3-4 tips. Prioritise the 1-2 categories furthest below target. Optionally include 1 celebrating a category that's strong or trending up.
+(3) "tip" is HUMAN, OPERATIONAL, SHIFT-AWARE action language — what to DO or SAY on the floor. 1-2 short sentences. Sound like an experienced floor manager, NOT a BI dashboard.
+(4) Lead with trend/feel ("trending nicely", "slightly off this week", "consistently close"), then the action. Frame dips gently when the longer trend is healthy.
+(5) ABSOLUTE: NO numbers, percentages, currency, decimals, or digits in "tip". No "%", no "£", no "$", no figures. The app appends exact stats automatically.
+(6) Avoid analyst phrasing: never say "pp", "delta", "percentage points", "vs average", "conversion rate". Speak operationally.
+(7) Reference real menu items from the list when relevant.
+(8) NEVER mention a category not listed above.`;
+      const usr = `This server's week (you do NOT echo numbers — just choose category + write the action):\nSpend per cover: actual £${spc.toFixed(2)}, target £${spcTarget.toFixed(2)}\n${lines}\nMenu items: ${menuItems.map((i: any) => i.name).filter(Boolean).slice(0, 40).join(", ") || "(none)"}`;
       const out = await callAI([{ role: "system", content: sys }, { role: "user", content: usr }], true);
       let aiSuggestions: any[] = [];
       try { const o = JSON.parse(out); aiSuggestions = o.suggestions ?? []; } catch {}
