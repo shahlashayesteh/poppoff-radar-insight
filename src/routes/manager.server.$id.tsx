@@ -98,16 +98,6 @@ function ServerView() {
           </div>
         </div>
 
-        <div className="mt-8 grid md:grid-cols-3 gap-4">
-          <div className="rounded-2xl bg-white border border-border p-5">
-            <div className="text-xs text-muted-foreground">Spend per cover</div>
-            <div className="font-display text-2xl font-extrabold mt-1">£{stat?.spend_per_cover ? Number(stat.spend_per_cover).toFixed(2) : "—"}</div>
-            <div className="text-xs text-muted-foreground mt-1">Target £{target?.spend_per_cover_target ?? "—"}</div>
-          </div>
-          <div className="rounded-2xl bg-white border border-border p-5">
-            <div className="text-xs text-muted-foreground">Streak</div>
-            <div className="font-display text-2xl font-extrabold mt-1">{streak} week{streak === 1 ? "" : "s"}</div>
-          </div>
         <div className="mt-8 grid md:grid-cols-4 gap-4">
           <div className="rounded-2xl bg-white border border-border p-5">
             <div className="text-xs text-muted-foreground">Overall score</div>
