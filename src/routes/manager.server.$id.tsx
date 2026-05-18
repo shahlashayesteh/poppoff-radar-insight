@@ -78,9 +78,13 @@ function ServerView() {
       setAcked(!!ak);
       const { count: lc } = await supabase.from("server_logins").select("id", { count: "exact", head: true }).eq("user_id", id).eq("venue_id", v);
       setLogins(lc ?? 0);
+      const p = await loadServerPerformance({ venueId: v, userId: id, weekStart: visibleWeek });
+      setPerf(p);
       if (st) loadCoaching(v, visibleWeek, false);
     })();
   }, [id, weekStart]);
+
+  const overall = overallScore(perf);
 
   return (
     <ManagerLayout>
