@@ -112,6 +112,18 @@ function ServerDashboard() {
     return colour === "green" ? "var(--brand-green)" : colour === "amber" ? "var(--brand-orange)" : "var(--opportunity)";
   };
 
+  // Delta-driven (week-over-week) bucket for ring colour, fill, role label.
+  type DeltaBucket = { tone: string; fillPct: number; role: "Crushing it" | "Could be better" | "Focus here" };
+  const deltaBucket = (d: number | null): DeltaBucket => {
+    if (d === null || d <= 0) {
+      return { tone: "var(--opportunity)", fillPct: Math.min(100, Math.abs(d ?? 0)), role: "Focus here" };
+    }
+    if (d >= 20) {
+      return { tone: "var(--brand-green)", fillPct: Math.min(100, d), role: "Crushing it" };
+    }
+    return { tone: "var(--brand-orange)", fillPct: Math.min(100, d), role: "Could be better" };
+  };
+
   // Build a unified row list — prefer dynamic venue categories; fall back to
   // legacy six columns on server_stats when the venue hasn't tracked any
   // dynamic categories yet.
@@ -156,33 +168,15 @@ function ServerDashboard() {
       }))
     : buildLegacyRows();
 
-  // Smashed / work-on cards
+  // Smashed card (still based on best wow positive delta across all categories).
   let smashed: { label: string; delta: number } | null = null;
-  let workOn: { label: string; delta: number | null } | null = null;
   if (stat && uniRows.length) {
-    const enriched = uniRows.map((r) => {
-      const d = pctDelta(r.items, r.prevItems);
-      const ratio = r.target > 0 ? r.conversion / r.target : 1;
-      return { ...r, d, ratio };
-    });
-    const positives = enriched.filter((r) => r.d !== null && (r.d as number) > 0) as (typeof enriched[number] & { d: number })[];
+    const positives = uniRows
+      .map((r) => ({ label: r.label, d: pctDelta(r.items, r.prevItems) }))
+      .filter((r) => r.d !== null && (r.d as number) > 0) as { label: string; d: number }[];
     if (positives.length) {
       const best = positives.reduce((a, b) => (b.d > a.d ? b : a));
       smashed = { label: best.label, delta: best.d };
-    }
-    const withDelta = enriched.filter((r) => r.d !== null) as (typeof enriched[number] & { d: number })[];
-    if (withDelta.length) {
-      const allPositive = withDelta.every((r) => r.d >= 0);
-      if (allPositive) {
-        const worstByRatio = enriched.reduce((a, b) => (b.ratio < a.ratio ? b : a));
-        workOn = { label: worstByRatio.label, delta: worstByRatio.d };
-      } else {
-        const worst = withDelta.reduce((a, b) => (b.d < a.d ? b : a));
-        workOn = { label: worst.label, delta: worst.d };
-      }
-    } else {
-      const worstByRatio = enriched.reduce((a, b) => (b.ratio < a.ratio ? b : a));
-      workOn = { label: worstByRatio.label, delta: null };
     }
   }
 
@@ -224,17 +218,32 @@ function ServerDashboard() {
       return "Focus here";
     };
 
-    allGreen = picks.length === 3 && picks.every((p) => performanceColour(p.conversion, p.target) === "green");
-
-    top3 = picks.map((p) => ({
-      label: cap(p.label),
-      role: roleFromColour(p.conversion, p.target),
-      conversion: p.conversion,
-      target: p.target,
-      items: p.items,
-      prevItems: p.prevItems,
-    }));
+    top3 = picks.map((p) => {
+      const d = pctDelta(p.items, p.prevItems);
+      return {
+        label: cap(p.label),
+        role: deltaBucket(d).role,
+        conversion: p.conversion,
+        target: p.target,
+        items: p.items,
+        prevItems: p.prevItems,
+      };
+    });
+    allGreen =
+      top3.length === 3 &&
+      top3.every((t) => deltaBucket(pctDelta(t.items, t.prevItems)).tone === "var(--brand-green)");
   }
+
+  // Work-on list: red entries from Top 3 only.
+  const workOnList = top3
+    .map((t) => ({ label: t.label, d: pctDelta(t.items, t.prevItems) }))
+    .filter((t) => deltaBucket(t.d).tone === "var(--opportunity)");
+  const joinLabels = (xs: string[]) =>
+    xs.length <= 1
+      ? xs.join("")
+      : xs.length === 2
+        ? `${xs[0]} and ${xs[1]}`
+        : `${xs.slice(0, -1).join(", ")} and ${xs[xs.length - 1]}`;
 
   return (
     <ServerLayout>
@@ -253,9 +262,10 @@ function ServerDashboard() {
             top3.length > 0 ? (
               <div className="mt-4 grid grid-cols-3 gap-2">
                 {top3.map((c) => {
-                  const tone = toneFor(c.conversion, c.target);
-                  const fillPct = c.target > 0 ? (c.conversion / c.target) * 100 : c.conversion;
                   const d = pctDelta(c.items, c.prevItems);
+                  const bucket = deltaBucket(d);
+                  const tone = bucket.tone;
+                  const fillPct = bucket.fillPct;
                   return (
                     <div key={c.label} className="flex flex-col items-center">
                       <div className="text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: tone }}>{c.role}</div>
@@ -304,9 +314,9 @@ function ServerDashboard() {
         </div>
       )}
 
-      {stat && !allGreen && workOn && (
+      {stat && !allGreen && workOnList.length > 0 && (
         <div className="px-5 mt-4">
-          <div className="rounded-3xl border-2 p-5 flex items-center gap-4"
+          <div className="rounded-3xl border-2 p-5 flex items-start gap-4"
             style={{
               borderColor: `color-mix(in oklab, var(--opportunity) 40%, transparent)`,
               background: `color-mix(in oklab, var(--opportunity) 8%, white)`,
@@ -314,16 +324,18 @@ function ServerDashboard() {
             <TrendingDown className="h-12 w-12 shrink-0" style={{ color: "var(--opportunity)" }} />
             <div className="flex-1">
               <div className="font-display text-lg font-bold leading-tight" style={{ color: "var(--opportunity)" }}>
-                You need to work on {workOn.label} this week!
+                You need to work on {joinLabels(workOnList.map((w) => w.label))} this week!
               </div>
-              {workOn.delta !== null && (
-                <div className="mt-1 text-xs">
-                  <span className="font-semibold" style={{ color: "var(--opportunity)" }}>
-                    {workOn.delta >= 0 ? "+" : ""}{workOn.delta.toFixed(0)}%
-                  </span>{" "}
-                  <span className="text-muted-foreground">vs last week</span>
-                </div>
-              )}
+              <ul className="mt-2 space-y-1 text-xs">
+                {workOnList.map((w) => (
+                  <li key={w.label}>
+                    <span className="font-semibold" style={{ color: "var(--opportunity)" }}>
+                      {w.label} {w.d === null ? "—" : `${w.d >= 0 ? "+" : ""}${w.d.toFixed(0)}%`}
+                    </span>{" "}
+                    <span className="text-muted-foreground">vs last week</span>
+                  </li>
+                ))}
+              </ul>
             </div>
           </div>
         </div>
