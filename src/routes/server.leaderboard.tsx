@@ -245,7 +245,7 @@ function Page() {
         </div>
 
         <p className="mt-4 mb-8 text-[11px] text-muted-foreground text-center">
-          Leaderboard based on this week's sales. Updates as managers upload data.
+          Live ranking — automatically updated from your venue's sales data each week.
         </p>
       </div>
     </ServerLayout>
