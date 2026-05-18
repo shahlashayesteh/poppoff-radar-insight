@@ -218,17 +218,32 @@ function ServerDashboard() {
       return "Focus here";
     };
 
-    allGreen = picks.length === 3 && picks.every((p) => performanceColour(p.conversion, p.target) === "green");
-
-    top3 = picks.map((p) => ({
-      label: cap(p.label),
-      role: roleFromColour(p.conversion, p.target),
-      conversion: p.conversion,
-      target: p.target,
-      items: p.items,
-      prevItems: p.prevItems,
-    }));
+    top3 = picks.map((p) => {
+      const d = pctDelta(p.items, p.prevItems);
+      return {
+        label: cap(p.label),
+        role: deltaBucket(d).role,
+        conversion: p.conversion,
+        target: p.target,
+        items: p.items,
+        prevItems: p.prevItems,
+      };
+    });
+    allGreen =
+      top3.length === 3 &&
+      top3.every((t) => deltaBucket(pctDelta(t.items, t.prevItems)).tone === "var(--brand-green)");
   }
+
+  // Work-on list: red entries from Top 3 only.
+  const workOnList = top3
+    .map((t) => ({ label: t.label, d: pctDelta(t.items, t.prevItems) }))
+    .filter((t) => deltaBucket(t.d).tone === "var(--opportunity)");
+  const joinLabels = (xs: string[]) =>
+    xs.length <= 1
+      ? xs.join("")
+      : xs.length === 2
+        ? `${xs[0]} and ${xs[1]}`
+        : `${xs.slice(0, -1).join(", ")} and ${xs[xs.length - 1]}`;
 
   return (
     <ServerLayout>
