@@ -351,32 +351,67 @@ export const listRecentBatches = createServerFn({ method: "GET" })
   });
 
 // ---------- weekly scorecard ----------
+//
+// All metrics are derived from totals across worked shifts (not averages of averages).
+//   weekly_rpc           = total_gross_sales / total_covers_served
+//   weekly_base_lls      = total_gross_sales / total_labor_cost
+//   weekly_adjusted_lls  = total_gross_sales / total_adjusted_labor_cost
+//                          where total_adjusted_labor_cost = Σ(labor_cost × opportunity_factor)
+// The DB column `shifts.final_lls` stores Adjusted LLS (Base LLS ÷ Opportunity Factor)
+// — the legacy column name is kept for migration safety only. The API surfaces this
+// as `adjusted_lls`; "Final LLS" is never exposed.
+
+export type ScorecardDaily = { dow: number; adjusted_lls: number | null; shifts: number };
 
 export type ScorecardServer = {
   serverId: string;
   serverName: string;
-  daily: Array<{ dow: number; avg: number | null; count: number }>;
-  shifts: number;
-  weeklyAvg: number | null;
-  fourWeekAvg: number | null;
+  daily: ScorecardDaily[];
+  shifts_worked: number;
+  weekly_rpc: number | null;
+  weekly_base_lls: number | null;
+  weekly_adjusted_lls: number | null;
+  venue_benchmark: number | null;
+  performance_gap: number | null;
+  rag_status: "green" | "amber" | "red" | "none";
+  operator_meaning: string;
   lowSample: boolean;
-  wowTrendPct: number | null;
 };
 
 export type ScorecardResult = {
   weekStart: string;
   thresholds: { green: number; amber: number };
   servers: ScorecardServer[];
-  venueAvg: number | null;
-  venuePrevAvg: number | null;
-  venueTrendPct: number | null;
+  venue_benchmark: number | null;
+  venue_benchmark_prev: number | null;
+  venue_benchmark_trend_pct: number | null;
   toReview: Array<{ serverId: string; serverName: string; reasons: string[] }>;
 };
 
-function avg(values: number[]): number | null {
-  const v = values.filter((x) => x != null && Number.isFinite(x));
-  if (!v.length) return null;
-  return v.reduce((a, b) => a + b, 0) / v.length;
+function safeDiv(num: number, den: number): number | null {
+  if (!Number.isFinite(num) || !Number.isFinite(den) || den <= 0) return null;
+  return num / den;
+}
+
+function ragFromGap(gap: number | null): "green" | "amber" | "red" | "none" {
+  if (gap == null || !Number.isFinite(gap)) return "none";
+  if (gap >= 0.10) return "green";
+  if (gap <= -0.10) return "red";
+  return "amber";
+}
+
+function formatGapPct(gap: number | null): string {
+  if (gap == null) return "—";
+  const pct = gap * 100;
+  const sign = pct >= 0 ? "+" : "−";
+  return `${sign}${Math.abs(pct).toFixed(1)}%`;
+}
+
+function operatorMeaningFor(rag: "green" | "amber" | "red" | "none", gap: number | null): string {
+  if (rag === "none" || gap == null) return "Not enough data to compare with venue benchmark";
+  if (rag === "green") return `Outperforming venue benchmark by ${formatGapPct(gap).replace("+", "")}`;
+  if (rag === "red") return `Below venue benchmark by ${formatGapPct(gap).replace("−", "")}`;
+  return "Tracking with venue benchmark";
 }
 
 export const getWeeklyScorecard = createServerFn({ method: "POST" })
@@ -392,14 +427,11 @@ export const getWeeklyScorecard = createServerFn({ method: "POST" })
     const wsDate = new Date(ws + "T00:00:00");
     const weekEnd = new Date(wsDate);
     weekEnd.setDate(weekEnd.getDate() + 7);
-    const prev4Start = new Date(wsDate);
-    prev4Start.setDate(prev4Start.getDate() - 28);
     const prevWeekStart = new Date(wsDate);
     prevWeekStart.setDate(prevWeekStart.getDate() - 7);
 
     const iso = (d: Date) => d.toISOString().slice(0, 10);
 
-    // Pull thresholds
     const { data: vs } = await supabase
       .from("venue_settings")
       .select("lls_green_threshold, lls_amber_threshold")
@@ -410,95 +442,129 @@ export const getWeeklyScorecard = createServerFn({ method: "POST" })
       amber: Number(vs?.lls_amber_threshold ?? 10.0),
     };
 
-    // Pull shifts for current week + 4 prior weeks (for rolling avg + WoW)
+    // Pull current + prior week (prior week only powers the venue benchmark WoW trend).
     const { data: shifts, error } = await supabase
       .from("shifts")
-      .select("server_id, server_name, shift_date, day_of_week, final_lls")
+      .select("server_id, server_name, shift_date, day_of_week, gross_sales, covers_served, labor_cost, opportunity_factor")
       .eq("venue_id", venueId)
-      .gte("shift_date", iso(prev4Start))
+      .gte("shift_date", iso(prevWeekStart))
       .lt("shift_date", iso(weekEnd));
     if (error) throw new Error(error.message);
 
-    type Row = { server_id: string; server_name: string; shift_date: string; day_of_week: number; final_lls: number | null };
+    type Row = {
+      server_id: string; server_name: string; shift_date: string; day_of_week: number;
+      gross_sales: number | null; covers_served: number | null; labor_cost: number | null;
+      opportunity_factor: number | null;
+    };
     const all = (shifts ?? []) as Row[];
     const inCurrent = (d: string) => d >= ws && d < iso(weekEnd);
     const inPrev = (d: string) => d >= iso(prevWeekStart) && d < ws;
-    const in4wk = (d: string) => d >= iso(prev4Start) && d < ws;
 
-    // Group by server
+    // A shift counts as "worked" only when both sales and labor are present.
+    const worked = (r: Row) =>
+      r.gross_sales != null && Number(r.gross_sales) > 0 &&
+      r.labor_cost != null && Number(r.labor_cost) > 0;
+
+    type Totals = { gross: number; covers: number; labor: number; adjLabor: number; shifts: number };
+    const emptyTotals = (): Totals => ({ gross: 0, covers: 0, labor: 0, adjLabor: 0, shifts: 0 });
+    const accumulate = (t: Totals, r: Row) => {
+      const of = r.opportunity_factor != null && Number(r.opportunity_factor) > 0 ? Number(r.opportunity_factor) : 1.0;
+      t.gross += Number(r.gross_sales);
+      t.covers += Number(r.covers_served ?? 0);
+      t.labor += Number(r.labor_cost);
+      t.adjLabor += Number(r.labor_cost) * of;
+      t.shifts += 1;
+    };
+
+    // v1 benchmark method: venue-wide weekly Adjusted LLS for the same week.
+    // Stable and simple by design. This will later evolve into a venue-specific
+    // historical benchmark segmented by daypart, section, reservation density,
+    // covers, spend environment, and service intensity. Do NOT add new tables
+    // for that here.
+    const venueCur = emptyTotals();
+    const venuePrev = emptyTotals();
+    for (const r of all) {
+      if (!worked(r)) continue;
+      if (inCurrent(r.shift_date)) accumulate(venueCur, r);
+      else if (inPrev(r.shift_date)) accumulate(venuePrev, r);
+    }
+    const venue_benchmark = safeDiv(venueCur.gross, venueCur.adjLabor);
+    const venue_benchmark_prev = safeDiv(venuePrev.gross, venuePrev.adjLabor);
+    const venue_benchmark_trend_pct =
+      venue_benchmark != null && venue_benchmark_prev != null && venue_benchmark_prev > 0
+        ? ((venue_benchmark - venue_benchmark_prev) / venue_benchmark_prev) * 100
+        : null;
+
+    // Group current-week worked rows by server
     const byServer = new Map<string, { name: string; rows: Row[] }>();
     for (const r of all) {
+      if (!inCurrent(r.shift_date) || !worked(r)) continue;
       if (!byServer.has(r.server_id)) byServer.set(r.server_id, { name: r.server_name, rows: [] });
       byServer.get(r.server_id)!.rows.push(r);
     }
 
     const servers: ScorecardServer[] = [];
     for (const [serverId, { name, rows }] of byServer) {
-      const cur = rows.filter((r) => inCurrent(r.shift_date) && r.final_lls != null);
-      if (cur.length === 0) continue;
-
-      const daily: ScorecardServer["daily"] = [];
+      const daily: ScorecardDaily[] = [];
       for (let dow = 0; dow < 7; dow++) {
-        const dayRows = cur.filter((r) => r.day_of_week === dow);
-        daily.push({
-          dow,
-          avg: dayRows.length ? avg(dayRows.map((r) => Number(r.final_lls))) : null,
-          count: dayRows.length,
-        });
+        const dayRows = rows.filter((r) => r.day_of_week === dow);
+        if (!dayRows.length) {
+          daily.push({ dow, adjusted_lls: null, shifts: 0 });
+          continue;
+        }
+        const t = emptyTotals();
+        dayRows.forEach((r) => accumulate(t, r));
+        daily.push({ dow, adjusted_lls: safeDiv(t.gross, t.adjLabor), shifts: t.shifts });
       }
-      const weeklyAvg = avg(cur.map((r) => Number(r.final_lls)));
-      const fourWeek = rows.filter((r) => in4wk(r.shift_date) && r.final_lls != null);
-      const fourWeekAvg = fourWeek.length ? avg(fourWeek.map((r) => Number(r.final_lls))) : null;
-      const prevWeek = rows.filter((r) => inPrev(r.shift_date) && r.final_lls != null);
-      const prevAvg = prevWeek.length ? avg(prevWeek.map((r) => Number(r.final_lls))) : null;
-      const wowTrendPct =
-        prevAvg != null && prevAvg > 0 && weeklyAvg != null
-          ? ((weeklyAvg - prevAvg) / prevAvg) * 100
+
+      const t = emptyTotals();
+      rows.forEach((r) => accumulate(t, r));
+      const weekly_rpc = safeDiv(t.gross, t.covers);
+      const weekly_base_lls = safeDiv(t.gross, t.labor);
+      const weekly_adjusted_lls = safeDiv(t.gross, t.adjLabor);
+
+      const performance_gap =
+        weekly_adjusted_lls != null && venue_benchmark != null && venue_benchmark > 0
+          ? weekly_adjusted_lls / venue_benchmark - 1
           : null;
+      const rag_status = ragFromGap(performance_gap);
 
       servers.push({
         serverId,
         serverName: name,
         daily,
-        shifts: cur.length,
-        weeklyAvg,
-        fourWeekAvg,
-        lowSample: cur.length < 3,
-        wowTrendPct,
+        shifts_worked: t.shifts,
+        weekly_rpc,
+        weekly_base_lls,
+        weekly_adjusted_lls,
+        venue_benchmark,
+        performance_gap,
+        rag_status,
+        operator_meaning: operatorMeaningFor(rag_status, performance_gap),
+        lowSample: t.shifts < 3,
       });
     }
 
-    // Venue avg
-    const curAll = all.filter((r) => inCurrent(r.shift_date) && r.final_lls != null);
-    const prevAll = all.filter((r) => inPrev(r.shift_date) && r.final_lls != null);
-    const venueAvg = curAll.length ? avg(curAll.map((r) => Number(r.final_lls))) : null;
-    const venuePrevAvg = prevAll.length ? avg(prevAll.map((r) => Number(r.final_lls))) : null;
-    const venueTrendPct =
-      venuePrevAvg != null && venuePrevAvg > 0 && venueAvg != null
-        ? ((venueAvg - venuePrevAvg) / venuePrevAvg) * 100
-        : null;
-
-    // To review: drop >15% WoW, OR red band, OR >5 shifts & weeklyAvg < amber
     const toReview: ScorecardResult["toReview"] = [];
     for (const s of servers) {
       if (s.lowSample) continue;
       const reasons: string[] = [];
-      if (s.wowTrendPct != null && s.wowTrendPct < -15) reasons.push(`Down ${Math.round(Math.abs(s.wowTrendPct))}% vs last week`);
-      if (s.weeklyAvg != null && s.weeklyAvg < thresholds.amber) reasons.push("Below amber");
-      if (s.shifts > 5 && s.weeklyAvg != null && s.weeklyAvg < thresholds.green) reasons.push("Heavy week, sub-target");
+      if (s.rag_status === "red") reasons.push(`Below venue benchmark (${formatGapPct(s.performance_gap)})`);
+      if (s.shifts_worked > 5 && s.rag_status === "amber" && (s.performance_gap ?? 0) < 0) {
+        reasons.push("Heavy week, tracking below benchmark");
+      }
       if (reasons.length) toReview.push({ serverId: s.serverId, serverName: s.serverName, reasons });
     }
 
-    // Sort servers by weeklyAvg desc
-    servers.sort((a, b) => (b.weeklyAvg ?? -1) - (a.weeklyAvg ?? -1));
+    servers.sort((a, b) => (b.weekly_adjusted_lls ?? -Infinity) - (a.weekly_adjusted_lls ?? -Infinity));
 
     return {
       weekStart: ws,
       thresholds,
       servers,
-      venueAvg,
-      venuePrevAvg,
-      venueTrendPct,
+      venue_benchmark,
+      venue_benchmark_prev,
+      venue_benchmark_trend_pct,
       toReview,
     };
   });
