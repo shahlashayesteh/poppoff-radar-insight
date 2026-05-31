@@ -1,88 +1,73 @@
-# Server Homepage Redesign — Motivation-First Dashboard
+# Labor Leverage Score (LLS) — Engine + Manager Dashboard
 
 ## Scope
 
-Refine **`src/routes/server.index.tsx`** only. No changes to `performance-engine.ts`, leaderboard logic, or stats schema — all new sections derive from data the engine already returns (`CategoryMetric`, `LeaderboardRow`, `itemsToTarget`, `humanMomentum`, `humanTargetCall`). Minor tweaks to a couple of motivation helpers if a phrasing is missing, but no engine math changes.
+Manager-only LLS feature for Popp Off. POS-agnostic CSV/XLSX ingestion, per-venue Opportunity Factor grid, weekly scorecard. No visual changes outside the four permitted exceptions (router, nav, `venue_settings` extension, `settings.tsx` thresholds).
 
-## New Homepage Order
+## Formulas (corrected)
 
-1. Greeting + "Stats just dropped 🎉" + week range *(keep)*
-2. Rank card *(keep, tighten copy)*
-3. **Top 3 performance circles** — restyled as strong RAG barometers
-4. **Weekly Win card** ("You're crushing X") *(keep, sharpen)*
-5. **Weekly Focus card** ("Push X and Y this week") *(keep, sharpen)*
-6. **Tonight's Push** — NEW: 3–4 concrete actionable goals
-7. **Leaderboard Pulse** — NEW: small competitive teaser
-8. Coaching preview *(keep, moved lower)*
-9. Streak / Leaderboard quick links *(keep)*
+- `rpc = gross_sales / covers_served`
+- `base_lls = gross_sales / labor_cost`
+- `final_lls = (base_lls × rpc) / opportunity_factor`
 
-## Section Details
+All three values are stored per shift. Division-by-zero guarded (null when denominator is 0).
 
-### Top 3 circles — stronger RAG barometers
+## Database (single migration)
 
-- Increase ring stroke width and saturation. Green/amber/red now use full brand tokens, not pastels:
-  - Green: `var(--brand-green)` solid stroke + soft halo when `eliteTier ≥ 1`
-  - Amber: `var(--brand-orange)` solid
-  - Red: `var(--opportunity)` solid + subtle pulse animation when `ringPct < 50`
-- Track (unfilled) becomes much lighter (`8%` mix instead of `18%`) so the fill reads instantly.
-- Label band above each circle: **WINNING / CLOSE / FOCUS** (rename `PUSH` → `FOCUS` to match brief), in the matching RAG color, bolder.
-- Sub-line under circle keeps `humanMomentum()` text but adds a second micro-line with `humanTargetCall()` when present (e.g. "Only 1 more dessert to hit target"). Two lines max.
-- Use `ragFromRing()` already in engine — no new math.
+- `shifts` — `shift_id`, `venue_id`, `server_id` (text, synthetic hash when missing), `server_name`, `shift_date`, `shift_start_time`, `shift_end_time`, `daypart`, `day_of_week`, `covers_served`, `gross_sales`, `labor_cost`, `rpc`, `base_lls`, `opportunity_factor`, `final_lls`, `sales_batch_id`, `labor_batch_id`, `created_at`, `updated_at`. Unique `(venue_id, server_id, shift_date, shift_start_time)`.
+- `shift_import_batches` — `id`, `venue_id`, `source_type` ('sales'|'labor'), `filename`, `row_count`, `status`, `created_at`, `created_by`. For audit + rollback.
+- `venue_column_mappings` — `venue_id`, `source_type`, `mapping` (jsonb). Unique `(venue_id, source_type)`.
+- `venue_opportunity_factors` — `venue_id`, `day_of_week` (0–6), `daypart` (5 buckets), `factor` numeric clamped 0.7–1.4. Unique `(venue_id, day_of_week, daypart)`. Fully scoped per venue.
+- Extend `venue_settings` with `lls_green_threshold numeric default 13.0`, `lls_amber_threshold numeric default 10.0`.
+- Postgres functions:
+  - `calculate_lls_for_shift(shift_id)` — applies the three formulas above.
+  - `recalculate_lls_for_week(venue_id, week_start)` — re-runs OF lookup + final_lls only, never touches historical weeks.
+- RLS: managers full CRUD on their venue rows via `is_venue_manager(venue_id)`; servers NO access. GRANTs to `authenticated` and `service_role`.
 
-### Weekly Win card
+## Server functions (`src/lib/lls.functions.ts`)
 
-- Keep the green "You're crushing X" layout.
-- Always show **both** lines now (currently the target line only appears when momentum exists):
-  - Line 1: momentum (`Up 21% on your usual`)
-  - Line 2: target call (`Only 1 more dessert to hit target`)
-- If at target → "Beat target by N — keep flying".
+All `.middleware([requireSupabaseAuth])`, manager-only checks inside handler.
 
-### Weekly Focus card
+- `parseUploadHeaders({ file, sourceType })` — CSV/TSV via PapaParse, XLSX via `xlsx` package. Returns headers + sample rows.
+- `importShifts({ sourceType, mapping, rows })` — validates required fields, two-pass merge: sales rows + labor rows joined on `(server_id, shift_date, shift_start_time)`. Row-level error list. On success, runs `calculate_lls_for_shift` for the batch.
+- `rollbackBatch({ batchId })` — deletes batch contribution.
+- `saveColumnMapping` / `getColumnMapping` — per venue, per source.
+- `getOpportunityFactors({ venueId })` / `updateOpportunityFactor({ venueId, dow, daypart, factor })` — clamps 0.7–1.4 server-side. After update, calls `recalculate_lls_for_week` for the currently displayed week only.
+- `getWeeklyScorecard({ venueId, weekStart })` — per server: daily LLS Mon–Sun (color band), shift count, weekly avg, 4-week rolling avg (low-sample flag if `shifts < 3`), WoW trend %, venue weekly avg + trend, "servers to review" list.
 
-- Keep red/amber layout but auto-pick tone: red if any focus row has `ringPct < 50`, otherwise amber.
-- Each bullet: `Wine: 2 more to hit target` / `Cocktails: 3 more to go green` (the "go green" phrasing fires when `ringPct` is between 65–89 and adding `itemsToTarget()` items would push past the 90% green threshold).
+## Manager dashboard (`src/routes/manager.lls.tsx`)
 
-### Tonight's Push — NEW
+New route under existing manager layout. Follows existing manager page visual language. No reuse of server-facing tokens.
 
-Card titled **"Tonight's Push"** with a lightning/target icon. Generates up to 4 prioritized goals from existing data:
+Sections:
+1. Week picker (ISO Mon start via `src/lib/week.ts`).
+2. Upload card — two drag-drop zones (Sales, Labor), column-mapping modal on first upload, saved mapping auto-applied on subsequent uploads with "Edit mapping" link. Per-batch rollback in recent imports list.
+3. Weekly scorecard table — Server | Mon–Sun | Shifts | Avg. Color bands from venue thresholds. Subtle "low sample" indicator when `shifts < 3`. Stronger band shade on Avg column.
+4. Venue summary strip — weekly avg + WoW trend.
+5. "Servers to review" list with reason chips.
+6. Opportunity Factor editor — 7×5 grid, inputs clamped 0.7–1.4, persistent notice: *"Changes apply to this week's shifts only. Past weeks keep their original scores."*
 
-1. **Target-proximity wins** — for any category where `itemsToTarget() ≤ 5`: "Sell N more {category} to hit target".
-2. **Go-green nudges** — for amber categories where adding `itemsToTarget()` crosses into green: "Sell N more {category} to turn it green".
-3. **Streak protection** — if `streak > 0` and the current best category is at risk: "Sell 1 more {category} to keep your streak alive".
-4. **Rank chase** — if not #1, compute item gap to the person directly above using `LeaderboardRow.current_by_category` totals: "Move up 1 rank by beating {Name} — N items to catch them".
+## Permitted exceptions (no visual changes elsewhere)
 
-Sorted by impact (target proximity first, then rank chase). Cap at 4 bullets. Each bullet has a colored dot (green/amber/orange) and bold action verb.
+1. Route tree — auto-registered by TanStack file router.
+2. `src/components/manager-layout.tsx` — add nav item: `{ to: "/manager/lls", label: "Labor Leverage", icon: Gauge }`.
+3. `venue_settings` migration — two threshold columns.
+4. `src/routes/settings.tsx` — ONLY add two threshold input fields (green, amber) + minimal save wiring. No restyle, no rearrange, no other edits.
 
-### Leaderboard Pulse — NEW
+## Dependencies
 
-Small card (not full leaderboard). Shows:
+- `xlsx` (SheetJS) for XLSX/XLS parsing.
+- PapaParse for CSV (verify presence in `src/lib/csv.ts` first; add if missing).
 
-- **"Next to catch"** — server one rank above with item gap: `Chloe — 4 items ahead`
-- **"Watch out"** — server one rank below with item gap: `Ahmed — 2 items behind`
+## Out of scope (deferred to v2)
 
-Edge cases: if #1 → only show "Watch out". If last → only show "Next to catch". Item totals come from summing quantities in `LeaderboardRow.current_by_category` (same logic already in `server.leaderboard.tsx`'s `itemsForRow`), so extract that helper into a small local function or inline it.
+Section quality weighting, ML opportunity factors, server-facing LLS, cross-venue benchmarking, multi-week trends beyond WoW, native POS API integrations.
 
-Whole card is a `<Link to="/server/leaderboard">` to drive engagement.
+## Build order
 
-### Coaching preview
-
-- Move below Leaderboard Pulse. No content change.
-
-## Color Psychology Tweaks
-
-- Bump card borders from `35%` mix → `50%` mix for stronger emotional read.
-- Green soft-bg mix from `10%` → `14%`; red/amber soft-bg from `6%` → `12%`.
-- All applied via the existing `ragSoftBg`/`ragBorder` helpers — bump the percentages in those two functions in `performance-engine.ts` (one-line change each, shared by all surfaces — confirm no manager surface regression by visual check).
-
-## Technical Notes
-
-- No new dependencies, no DB changes, no new RPCs.
-- All new sections gated on `hasStat` like existing cards.
-- Item-gap math for Pulse + rank-chase Push goal reuses the same `current_by_category` summation logic already proven in `server.leaderboard.tsx` — lift into a tiny `itemsTotal(row)` helper inside `server.index.tsx` (or co-locate next to `loadVenueLeaderboard` in the engine if you want it shared).
-- Rename ring label `"PUSH"` → `"FOCUS"` in `ragLabel()` to match the user's spec.
-- Coaching section keeps its existing realtime subscription.
-
-## Out of Scope
-
-- Stats page, leaderboard page, manager views, performance engine math, schema, RPC.
-- Any new analytics events or persistence.
+1. Migration (DB schema + RLS + GRANTs + Postgres functions with correct formulas).
+2. `lls.functions.ts` (parse, import, OF CRUD, scorecard).
+3. `manager.lls.tsx` route + sub-components (upload, mapping modal, scorecard, OF editor).
+4. Nav item in `manager-layout.tsx`.
+5. Two threshold fields in `settings.tsx`.
+6. Verify build, sanity-check with sample CSV.

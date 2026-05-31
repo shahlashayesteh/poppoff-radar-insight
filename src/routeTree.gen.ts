@@ -37,6 +37,7 @@ import { Route as ManagerTeamRouteImport } from './routes/manager.team'
 import { Route as ManagerReportsRouteImport } from './routes/manager.reports'
 import { Route as ManagerPrioritiesRouteImport } from './routes/manager.priorities'
 import { Route as ManagerMenuRouteImport } from './routes/manager.menu'
+import { Route as ManagerLlsRouteImport } from './routes/manager.lls'
 import { Route as ManagerCoachingRouteImport } from './routes/manager.coaching'
 import { Route as EmailUnsubscribeRouteImport } from './routes/email/unsubscribe'
 import { Route as DemoServerScorecardRouteImport } from './routes/demo.server-scorecard'
@@ -211,6 +212,11 @@ const ManagerMenuRoute = ManagerMenuRouteImport.update({
   path: '/manager/menu',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ManagerLlsRoute = ManagerLlsRouteImport.update({
+  id: '/manager/lls',
+  path: '/manager/lls',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ManagerCoachingRoute = ManagerCoachingRouteImport.update({
   id: '/manager/coaching',
   path: '/manager/coaching',
@@ -378,6 +384,7 @@ export interface FileRoutesByFullPath {
   '/demo/server-scorecard': typeof DemoServerScorecardRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/manager/coaching': typeof ManagerCoachingRoute
+  '/manager/lls': typeof ManagerLlsRoute
   '/manager/menu': typeof ManagerMenuRoute
   '/manager/priorities': typeof ManagerPrioritiesRoute
   '/manager/reports': typeof ManagerReportsRoute
@@ -436,6 +443,7 @@ export interface FileRoutesByTo {
   '/demo/server-scorecard': typeof DemoServerScorecardRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/manager/coaching': typeof ManagerCoachingRoute
+  '/manager/lls': typeof ManagerLlsRoute
   '/manager/menu': typeof ManagerMenuRoute
   '/manager/priorities': typeof ManagerPrioritiesRoute
   '/manager/reports': typeof ManagerReportsRoute
@@ -495,6 +503,7 @@ export interface FileRoutesById {
   '/demo/server-scorecard': typeof DemoServerScorecardRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/manager/coaching': typeof ManagerCoachingRoute
+  '/manager/lls': typeof ManagerLlsRoute
   '/manager/menu': typeof ManagerMenuRoute
   '/manager/priorities': typeof ManagerPrioritiesRoute
   '/manager/reports': typeof ManagerReportsRoute
@@ -555,6 +564,7 @@ export interface FileRouteTypes {
     | '/demo/server-scorecard'
     | '/email/unsubscribe'
     | '/manager/coaching'
+    | '/manager/lls'
     | '/manager/menu'
     | '/manager/priorities'
     | '/manager/reports'
@@ -613,6 +623,7 @@ export interface FileRouteTypes {
     | '/demo/server-scorecard'
     | '/email/unsubscribe'
     | '/manager/coaching'
+    | '/manager/lls'
     | '/manager/menu'
     | '/manager/priorities'
     | '/manager/reports'
@@ -671,6 +682,7 @@ export interface FileRouteTypes {
     | '/demo/server-scorecard'
     | '/email/unsubscribe'
     | '/manager/coaching'
+    | '/manager/lls'
     | '/manager/menu'
     | '/manager/priorities'
     | '/manager/reports'
@@ -730,6 +742,7 @@ export interface RootRouteChildren {
   DemoServerScorecardRoute: typeof DemoServerScorecardRoute
   EmailUnsubscribeRoute: typeof EmailUnsubscribeRoute
   ManagerCoachingRoute: typeof ManagerCoachingRoute
+  ManagerLlsRoute: typeof ManagerLlsRoute
   ManagerMenuRoute: typeof ManagerMenuRoute
   ManagerPrioritiesRoute: typeof ManagerPrioritiesRoute
   ManagerReportsRoute: typeof ManagerReportsRoute
@@ -962,6 +975,13 @@ declare module '@tanstack/react-router' {
       path: '/manager/menu'
       fullPath: '/manager/menu'
       preLoaderRoute: typeof ManagerMenuRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/manager/lls': {
+      id: '/manager/lls'
+      path: '/manager/lls'
+      fullPath: '/manager/lls'
+      preLoaderRoute: typeof ManagerLlsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/manager/coaching': {
@@ -1197,6 +1217,7 @@ const rootRouteChildren: RootRouteChildren = {
   DemoServerScorecardRoute: DemoServerScorecardRoute,
   EmailUnsubscribeRoute: EmailUnsubscribeRoute,
   ManagerCoachingRoute: ManagerCoachingRoute,
+  ManagerLlsRoute: ManagerLlsRoute,
   ManagerMenuRoute: ManagerMenuRoute,
   ManagerPrioritiesRoute: ManagerPrioritiesRoute,
   ManagerReportsRoute: ManagerReportsRoute,
@@ -1235,13 +1256,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

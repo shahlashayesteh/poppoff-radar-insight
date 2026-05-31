@@ -548,6 +548,141 @@ export type Database = {
           },
         ]
       }
+      shift_import_batches: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          error_message: string | null
+          filename: string | null
+          id: string
+          row_count: number
+          source_type: string
+          status: string
+          venue_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          error_message?: string | null
+          filename?: string | null
+          id?: string
+          row_count?: number
+          source_type: string
+          status?: string
+          venue_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          error_message?: string | null
+          filename?: string | null
+          id?: string
+          row_count?: number
+          source_type?: string
+          status?: string
+          venue_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shift_import_batches_venue_id_fkey"
+            columns: ["venue_id"]
+            isOneToOne: false
+            referencedRelation: "venues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shifts: {
+        Row: {
+          base_lls: number | null
+          covers_served: number | null
+          created_at: string
+          day_of_week: number
+          daypart: string
+          final_lls: number | null
+          gross_sales: number | null
+          labor_batch_id: string | null
+          labor_cost: number | null
+          opportunity_factor: number | null
+          rpc: number | null
+          sales_batch_id: string | null
+          server_id: string
+          server_name: string | null
+          shift_date: string
+          shift_end_time: string | null
+          shift_id: string
+          shift_start_time: string | null
+          updated_at: string
+          venue_id: string
+        }
+        Insert: {
+          base_lls?: number | null
+          covers_served?: number | null
+          created_at?: string
+          day_of_week: number
+          daypart: string
+          final_lls?: number | null
+          gross_sales?: number | null
+          labor_batch_id?: string | null
+          labor_cost?: number | null
+          opportunity_factor?: number | null
+          rpc?: number | null
+          sales_batch_id?: string | null
+          server_id: string
+          server_name?: string | null
+          shift_date: string
+          shift_end_time?: string | null
+          shift_id?: string
+          shift_start_time?: string | null
+          updated_at?: string
+          venue_id: string
+        }
+        Update: {
+          base_lls?: number | null
+          covers_served?: number | null
+          created_at?: string
+          day_of_week?: number
+          daypart?: string
+          final_lls?: number | null
+          gross_sales?: number | null
+          labor_batch_id?: string | null
+          labor_cost?: number | null
+          opportunity_factor?: number | null
+          rpc?: number | null
+          sales_batch_id?: string | null
+          server_id?: string
+          server_name?: string | null
+          shift_date?: string
+          shift_end_time?: string | null
+          shift_id?: string
+          shift_start_time?: string | null
+          updated_at?: string
+          venue_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shifts_labor_batch_id_fkey"
+            columns: ["labor_batch_id"]
+            isOneToOne: false
+            referencedRelation: "shift_import_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shifts_sales_batch_id_fkey"
+            columns: ["sales_batch_id"]
+            isOneToOne: false
+            referencedRelation: "shift_import_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shifts_venue_id_fkey"
+            columns: ["venue_id"]
+            isOneToOne: false
+            referencedRelation: "venues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subscriptions: {
         Row: {
           cancel_at_period_end: boolean | null
@@ -679,6 +814,41 @@ export type Database = {
           },
         ]
       }
+      venue_column_mappings: {
+        Row: {
+          created_at: string
+          id: string
+          mapping: Json
+          source_type: string
+          updated_at: string
+          venue_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          mapping?: Json
+          source_type: string
+          updated_at?: string
+          venue_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          mapping?: Json
+          source_type?: string
+          updated_at?: string
+          venue_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "venue_column_mappings_venue_id_fkey"
+            columns: ["venue_id"]
+            isOneToOne: false
+            referencedRelation: "venues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       venue_members: {
         Row: {
           id: string
@@ -743,6 +913,44 @@ export type Database = {
           },
         ]
       }
+      venue_opportunity_factors: {
+        Row: {
+          created_at: string
+          day_of_week: number
+          daypart: string
+          factor: number
+          id: string
+          updated_at: string
+          venue_id: string
+        }
+        Insert: {
+          created_at?: string
+          day_of_week: number
+          daypart: string
+          factor?: number
+          id?: string
+          updated_at?: string
+          venue_id: string
+        }
+        Update: {
+          created_at?: string
+          day_of_week?: number
+          daypart?: string
+          factor?: number
+          id?: string
+          updated_at?: string
+          venue_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "venue_opportunity_factors_venue_id_fkey"
+            columns: ["venue_id"]
+            isOneToOne: false
+            referencedRelation: "venues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       venue_pairings: {
         Row: {
           category: string
@@ -790,6 +998,8 @@ export type Database = {
           green_threshold: number
           head_office_aggregated_only: boolean
           id: string
+          lls_amber_threshold: number
+          lls_green_threshold: number
           managers_see_estimated_uplift: boolean
           premium_mains_on: boolean
           send_weekly_push_notifications: boolean
@@ -807,6 +1017,8 @@ export type Database = {
           green_threshold?: number
           head_office_aggregated_only?: boolean
           id?: string
+          lls_amber_threshold?: number
+          lls_green_threshold?: number
           managers_see_estimated_uplift?: boolean
           premium_mains_on?: boolean
           send_weekly_push_notifications?: boolean
@@ -824,6 +1036,8 @@ export type Database = {
           green_threshold?: number
           head_office_aggregated_only?: boolean
           id?: string
+          lls_amber_threshold?: number
+          lls_green_threshold?: number
           managers_see_estimated_uplift?: boolean
           premium_mains_on?: boolean
           send_weekly_push_notifications?: boolean
@@ -911,6 +1125,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      calculate_lls_for_shift: {
+        Args: { p_shift_id: string }
+        Returns: undefined
+      }
       calculate_performance_colour: {
         Args: { actual: number; target: number }
         Returns: string
@@ -993,6 +1211,10 @@ export type Database = {
           msg_id: number
           read_ct: number
         }[]
+      }
+      recalculate_lls_for_week: {
+        Args: { p_venue_id: string; p_week_start: string }
+        Returns: number
       }
       recompute_ai_targets: { Args: { _venue_id: string }; Returns: undefined }
       record_login: { Args: never; Returns: undefined }

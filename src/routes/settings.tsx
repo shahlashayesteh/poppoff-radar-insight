@@ -17,6 +17,8 @@ function SettingsPage() {
   const [coverCapacity, setCoverCapacity] = useState<number | "">("");
   const [green, setGreen] = useState(80);
   const [amber, setAmber] = useState(55);
+  const [llsGreen, setLlsGreen] = useState<number>(13.0);
+  const [llsAmber, setLlsAmber] = useState<number>(10.0);
   const [toggles, setToggles] = useState({
     servers_see_percentages_only: true,
     managers_see_estimated_uplift: true,
@@ -38,6 +40,9 @@ function SettingsPage() {
         setCoverCapacity(vset.cover_capacity ?? "");
         setGreen(Number(vset.green_threshold));
         setAmber(Number(vset.amber_threshold));
+        const anyVset = vset as any;
+        if (anyVset.lls_green_threshold != null) setLlsGreen(Number(anyVset.lls_green_threshold));
+        if (anyVset.lls_amber_threshold != null) setLlsAmber(Number(anyVset.lls_amber_threshold));
         setToggles({
           servers_see_percentages_only: vset.servers_see_percentages_only,
           managers_see_estimated_uplift: vset.managers_see_estimated_uplift,
@@ -56,8 +61,10 @@ function SettingsPage() {
     await supabase.from("venues").update({ name: venueName }).eq("id", venueId);
     const { error } = await supabase.from("venue_settings").upsert({
       venue_id: venueId, cuisine: cuisine || null, cover_capacity: coverCapacity === "" ? null : Number(coverCapacity),
-      green_threshold: green, amber_threshold: amber, ...toggles,
-    }, { onConflict: "venue_id" });
+      green_threshold: green, amber_threshold: amber,
+      lls_green_threshold: llsGreen, lls_amber_threshold: llsAmber,
+      ...toggles,
+    } as any, { onConflict: "venue_id" });
     if (error) { toast.error(error.message); return; }
     toast.success("Settings saved");
   };
@@ -92,6 +99,16 @@ function SettingsPage() {
             <div><Label className="text-xs text-muted-foreground">Amber ≥ (%)</Label><Input type="number" value={amber} disabled className="mt-1" /></div>
             <p className="text-xs text-muted-foreground">Below amber is treated as an opportunity (red).</p>
           </div>
+        </div>
+
+        <div className="mt-6 rounded-2xl bg-white border border-border p-6 space-y-3">
+          <h2 className="font-display text-lg font-bold">Labor Leverage thresholds</h2>
+          <p className="text-xs text-muted-foreground">Used by the Labor Leverage scorecard to colour-band each shift's LLS.</p>
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div><Label className="text-xs text-muted-foreground">Green ≥</Label><Input type="number" step="0.1" value={llsGreen} onChange={(e) => setLlsGreen(Number(e.target.value))} className="mt-1" /></div>
+            <div><Label className="text-xs text-muted-foreground">Amber ≥</Label><Input type="number" step="0.1" value={llsAmber} onChange={(e) => setLlsAmber(Number(e.target.value))} className="mt-1" /></div>
+          </div>
+          <p className="text-xs text-muted-foreground">Below amber is treated as an opportunity (red).</p>
         </div>
 
         <div className="mt-6 rounded-2xl bg-white border border-border p-6">

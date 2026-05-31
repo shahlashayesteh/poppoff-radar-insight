@@ -8,6 +8,7 @@ import {
   CalendarCheck,
   Target,
   FileBarChart,
+  Gauge,
   Settings as SettingsIcon,
   LogOut,
   HelpCircle,
@@ -32,6 +33,7 @@ const items: NavItem[] = [
   { to: "/manager/menu", label: "Menu Intelligence", icon: BookOpen },
   { to: "/manager/priorities", label: "Weekly Priorities", icon: CalendarCheck },
   { to: "/manager/coaching", label: "Coaching", icon: Target },
+  { to: "/manager/lls", label: "Labor Leverage", icon: Gauge },
   { to: "/manager/reports", label: "Reports", icon: FileBarChart },
   { to: "/settings", label: "Settings", icon: SettingsIcon },
 ];
