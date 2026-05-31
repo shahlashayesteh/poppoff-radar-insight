@@ -127,6 +127,13 @@ function llsBand(value: number | null, thresholds: { green: number; amber: numbe
   return "red";
 }
 
+function formatGap(gap: number | null): string {
+  if (gap == null) return "—";
+  const pct = gap * 100;
+  const sign = pct >= 0 ? "+" : "−";
+  return `${sign}${Math.abs(pct).toFixed(1)}%`;
+}
+
 function bandBg(band: string, strong = false): string {
   if (band === "green") return strong ? "bg-brand-green/25 text-brand-green" : "bg-brand-green/10 text-brand-green";
   if (band === "amber") return strong ? "bg-brand-orange/25 text-brand-orange" : "bg-brand-orange/10 text-brand-orange";
