@@ -1,73 +1,78 @@
-# Labor Leverage Score (LLS) — Engine + Manager Dashboard
+# LLS v2 — Surgical Formula Correction
 
-## Scope
+Scope-locked. Touch only the calculation engine, weekly aggregation, benchmark/RAG logic, and labels. No route, upload, RLS, or schema changes beyond the function rewrite + one column comment.
 
-Manager-only LLS feature for Popp Off. POS-agnostic CSV/XLSX ingestion, per-venue Opportunity Factor grid, weekly scorecard. No visual changes outside the four permitted exceptions (router, nav, `venue_settings` extension, `settings.tsx` thresholds).
+## Naming policy
 
-## Formulas (corrected)
+- DB column `shifts.final_lls` stays (migration safety).
+- All user-facing strings, response field names, tooltips, headers, and code comments call it **Adjusted LLS**. "Final LLS" must not appear anywhere user-visible after this change.
+- Server response renames the field to `adjusted_lls` so the dashboard never sees `final_lls`.
 
-- `rpc = gross_sales / covers_served`
-- `base_lls = gross_sales / labor_cost`
-- `final_lls = (base_lls × rpc) / opportunity_factor`
+## 1. Migration — `calculate_lls_for_shift` rewrite
 
-All three values are stored per shift. Division-by-zero guarded (null when denominator is 0).
+- `rpc = gross_sales / covers_served` (guarded)
+- `base_lls = gross_sales / labor_cost` (guarded)
+- `adjusted_lls = base_lls / opportunity_factor` (OF defaults to 1.0; guarded)
+- Persist `rpc`, `base_lls`, `opportunity_factor`, and write `adjusted_lls` into `shifts.final_lls`.
+- `COMMENT ON COLUMN public.shifts.final_lls IS 'Adjusted LLS (kept under legacy name for migration safety)'`.
+- `recalculate_lls_for_week` unchanged.
+- Hard guard: no `base_lls * rpc` / `base_lls × rpc` / `(base_lls * rpc) / opportunity_factor` anywhere in SQL or TS.
 
-## Database (single migration)
+## 2. `src/lib/lls.functions.ts` — `getWeeklyScorecard` rewrite
 
-- `shifts` — `shift_id`, `venue_id`, `server_id` (text, synthetic hash when missing), `server_name`, `shift_date`, `shift_start_time`, `shift_end_time`, `daypart`, `day_of_week`, `covers_served`, `gross_sales`, `labor_cost`, `rpc`, `base_lls`, `opportunity_factor`, `final_lls`, `sales_batch_id`, `labor_batch_id`, `created_at`, `updated_at`. Unique `(venue_id, server_id, shift_date, shift_start_time)`.
-- `shift_import_batches` — `id`, `venue_id`, `source_type` ('sales'|'labor'), `filename`, `row_count`, `status`, `created_at`, `created_by`. For audit + rollback.
-- `venue_column_mappings` — `venue_id`, `source_type`, `mapping` (jsonb). Unique `(venue_id, source_type)`.
-- `venue_opportunity_factors` — `venue_id`, `day_of_week` (0–6), `daypart` (5 buckets), `factor` numeric clamped 0.7–1.4. Unique `(venue_id, day_of_week, daypart)`. Fully scoped per venue.
-- Extend `venue_settings` with `lls_green_threshold numeric default 13.0`, `lls_amber_threshold numeric default 10.0`.
-- Postgres functions:
-  - `calculate_lls_for_shift(shift_id)` — applies the three formulas above.
-  - `recalculate_lls_for_week(venue_id, week_start)` — re-runs OF lookup + final_lls only, never touches historical weeks.
-- RLS: managers full CRUD on their venue rows via `is_venue_manager(venue_id)`; servers NO access. GRANTs to `authenticated` and `service_role`.
+Same signature, same callers. Aggregation only — no other helpers touched.
 
-## Server functions (`src/lib/lls.functions.ts`)
+Per server (Mon–Sun, worked shifts only):
+- `daily[dow].adjusted_lls` — totals method scoped to that day; null when no shift.
+- Totals: `total_gross_sales`, `total_covers_served`, `total_labor_cost`, `total_adjusted_labor_cost = Σ(labor_cost × opportunity_factor)`.
+- `weekly_rpc = total_gross_sales / total_covers_served`
+- `weekly_base_lls = total_gross_sales / total_labor_cost`
+- `weekly_adjusted_lls = total_gross_sales / total_adjusted_labor_cost`
+- `shifts_worked`
 
-All `.middleware([requireSupabaseAuth])`, manager-only checks inside handler.
+Venue benchmark + gap:
+- `venue_benchmark` = venue-wide `weekly_adjusted_lls` for the same week (same totals method across all servers' shifts).
+- Code comment above the benchmark computation:
+  > v1 benchmark method: venue-wide weekly adjusted LLS for the same week. Stable and simple by design. This will later evolve into a venue-specific historical benchmark segmented by daypart, section, reservation density, covers, spend environment, and service intensity. Do NOT add new tables for that here.
+- `performance_gap = weekly_adjusted_lls / venue_benchmark - 1` (null if benchmark missing/zero).
+- `rag_status`: `green` if gap ≥ +0.10, `red` if gap ≤ −0.10, else `amber`.
+- `operator_meaning`: short string from RAG + gap (e.g. "Outperforming venue benchmark by 11.1%", "Tracking with venue benchmark", "Below venue benchmark by 12.4%").
 
-- `parseUploadHeaders({ file, sourceType })` — CSV/TSV via PapaParse, XLSX via `xlsx` package. Returns headers + sample rows.
-- `importShifts({ sourceType, mapping, rows })` — validates required fields, two-pass merge: sales rows + labor rows joined on `(server_id, shift_date, shift_start_time)`. Row-level error list. On success, runs `calculate_lls_for_shift` for the batch.
-- `rollbackBatch({ batchId })` — deletes batch contribution.
-- `saveColumnMapping` / `getColumnMapping` — per venue, per source.
-- `getOpportunityFactors({ venueId })` / `updateOpportunityFactor({ venueId, dow, daypart, factor })` — clamps 0.7–1.4 server-side. After update, calls `recalculate_lls_for_week` for the currently displayed week only.
-- `getWeeklyScorecard({ venueId, weekStart })` — per server: daily LLS Mon–Sun (color band), shift count, weekly avg, 4-week rolling avg (low-sample flag if `shifts < 3`), WoW trend %, venue weekly avg + trend, "servers to review" list.
+Existing `lowSample` / "servers to review" outputs kept; switch their threshold comparison to `rag_status`. `lls_green_threshold` / `lls_amber_threshold` columns left in place, unused by LLS dashboard.
 
-## Manager dashboard (`src/routes/manager.lls.tsx`)
+## 3. `src/routes/manager.lls.tsx` — labels + columns only
 
-New route under existing manager layout. Follows existing manager page visual language. No reuse of server-facing tokens.
+No layout/style changes. Edits:
 
-Sections:
-1. Week picker (ISO Mon start via `src/lib/week.ts`).
-2. Upload card — two drag-drop zones (Sales, Labor), column-mapping modal on first upload, saved mapping auto-applied on subsequent uploads with "Edit mapping" link. Per-batch rollback in recent imports list.
-3. Weekly scorecard table — Server | Mon–Sun | Shifts | Avg. Color bands from venue thresholds. Subtle "low sample" indicator when `shifts < 3`. Stronger band shade on Avg column.
-4. Venue summary strip — weekly avg + WoW trend.
-5. "Servers to review" list with reason chips.
-6. Opportunity Factor editor — 7×5 grid, inputs clamped 0.7–1.4, persistent notice: *"Changes apply to this week's shifts only. Past weeks keep their original scores."*
+- Table columns: Server | Mon–Sun daily Adjusted LLS (— when not worked) | Shifts | Weekly RPC | Weekly Base LLS | Weekly Adjusted LLS | Venue Benchmark | Performance Gap | Operator Meaning.
+- Row color band driven by `rag_status`.
+- Performance Gap formatted `+11.1%` / `−8.4%`.
+- Tooltips:
+  - RPC — "Gross Sales ÷ Covers Served. Shows how well each server monetises each guest."
+  - Base LLS — "Gross Sales ÷ Labor Cost. Shows sales generated for every £1 of labor."
+  - Adjusted LLS — "Base LLS ÷ Opportunity Factor. Shows labor return after shift conditions are considered."
+  - Performance Gap — "Adjusted LLS compared with the venue benchmark for this shift type."
+- OF editor helper text: "Opportunity Factors are venue-specific. A Saturday afternoon can be quiet in one venue and one of the strongest shifts of the week in another. PoppOff benchmarks each server against what this venue normally expects from that type of shift."
+- Venue summary strip shows `venue_benchmark` and its WoW trend.
+- Purge every remaining "Final LLS" string in this file.
 
-## Permitted exceptions (no visual changes elsewhere)
+## 4. Sanity tests (must pass before done)
 
-1. Route tree — auto-registered by TanStack file router.
-2. `src/components/manager-layout.tsx` — add nav item: `{ to: "/manager/lls", label: "Labor Leverage", icon: Gauge }`.
-3. `venue_settings` migration — two threshold columns.
-4. `src/routes/settings.tsx` — ONLY add two threshold input fields (green, amber) + minimal save wiring. No restyle, no rearrange, no other edits.
+Run via `read_query` after migration deploys:
 
-## Dependencies
+- Shift `gross_sales=1350, covers=30, labor=75, OF=1.2` → `rpc=45, base_lls=18, adjusted_lls=15`.
+- Week totals `gross=6750, covers=150, labor=375, adj_labor=450` → `weekly_rpc=45, weekly_base_lls=18, weekly_adjusted_lls=15`.
+- With `venue_benchmark=13.5` → `performance_gap ≈ 0.1111`, displayed `+11.1%`, RAG `green`.
 
-- `xlsx` (SheetJS) for XLSX/XLS parsing.
-- PapaParse for CSV (verify presence in `src/lib/csv.ts` first; add if missing).
+Grep guard: zero occurrences of `base_lls * rpc`, `base_lls × rpc`, `final_lls = (base_lls` in `src/` and `supabase/migrations/`. Zero occurrences of the user-facing string "Final LLS" in `src/`.
 
-## Out of scope (deferred to v2)
+## Out of scope
 
-Section quality weighting, ML opportunity factors, server-facing LLS, cross-venue benchmarking, multi-week trends beyond WoW, native POS API integrations.
+Route structure, nav, upload zones, mapping modal, import/rollback, RLS, OF grid editor UI, `settings.tsx` threshold inputs, server-facing surfaces, threshold columns, new tables.
 
 ## Build order
 
-1. Migration (DB schema + RLS + GRANTs + Postgres functions with correct formulas).
-2. `lls.functions.ts` (parse, import, OF CRUD, scorecard).
-3. `manager.lls.tsx` route + sub-components (upload, mapping modal, scorecard, OF editor).
-4. Nav item in `manager-layout.tsx`.
-5. Two threshold fields in `settings.tsx`.
-6. Verify build, sanity-check with sample CSV.
+1. Migration — rewrite `calculate_lls_for_shift`; add column comment.
+2. `src/lib/lls.functions.ts` — rewrite `getWeeklyScorecard` aggregation, add benchmark/gap/RAG/operator_meaning, rename outgoing field to `adjusted_lls`, add v1-benchmark comment.
+3. `src/routes/manager.lls.tsx` — relabel columns, add Benchmark / Gap / Operator Meaning cells, swap row coloring to `rag_status`, update OF helper + tooltips, purge "Final LLS".
+4. Sanity tests via `read_query` + grep guard.
