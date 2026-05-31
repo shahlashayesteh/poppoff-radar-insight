@@ -204,11 +204,13 @@ export const importShifts = createServerFn({ method: "POST" })
       const r = data.rows[i];
       try {
         const serverId = (r.server_id?.trim() || hashServerId(r.server_name)).slice(0, 200);
-        const startTime = r.shift_start_time || null;
+        // Normalize start time so unique key works (NULL breaks uniqueness)
+        const startTime = (r.shift_start_time && r.shift_start_time.length >= 5)
+          ? r.shift_start_time
+          : "00:00:00";
         const daypart = dayPartFromTime(startTime);
         const dow = dayOfWeekISO(r.shift_date);
 
-        // Upsert (merge): if labor source, only set labor_cost; if sales, set covers + gross_sales
         const baseRow: any = {
           venue_id: venueId,
           server_id: serverId,
@@ -234,7 +236,6 @@ export const importShifts = createServerFn({ method: "POST" })
           .eq("venue_id", venueId)
           .eq("server_id", serverId)
           .eq("shift_date", r.shift_date)
-          .is("shift_start_time", startTime === null ? null : undefined)
           .eq("shift_start_time", startTime)
           .maybeSingle();
 
@@ -257,7 +258,6 @@ export const importShifts = createServerFn({ method: "POST" })
         }
 
         touchedKeys.add(shiftId);
-        // Track week start for recalc
         const d = new Date(r.shift_date + "T00:00:00");
         const day = d.getDay();
         const diff = day === 0 ? -6 : 1 - day;
