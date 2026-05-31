@@ -40,6 +40,9 @@ function SettingsPage() {
         setCoverCapacity(vset.cover_capacity ?? "");
         setGreen(Number(vset.green_threshold));
         setAmber(Number(vset.amber_threshold));
+        const anyVset = vset as any;
+        if (anyVset.lls_green_threshold != null) setLlsGreen(Number(anyVset.lls_green_threshold));
+        if (anyVset.lls_amber_threshold != null) setLlsAmber(Number(anyVset.lls_amber_threshold));
         setToggles({
           servers_see_percentages_only: vset.servers_see_percentages_only,
           managers_see_estimated_uplift: vset.managers_see_estimated_uplift,
