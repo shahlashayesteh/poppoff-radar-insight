@@ -455,7 +455,7 @@ function LlsPage() {
         <div className="mt-6 rounded-2xl bg-white border border-border p-6">
           <h2 className="font-display text-lg font-bold">Opportunity Factor grid</h2>
           <p className="mt-1 text-xs text-muted-foreground">
-            Adjust expected demand per day × daypart. Range 0.7–1.4.
+            Opportunity Factors are venue-specific. A Saturday afternoon can be quiet in one venue and one of the strongest shifts of the week in another. PoppOff benchmarks each server against what this venue normally expects from that type of shift. Range 0.7–1.4.
           </p>
           <p className="mt-2 text-xs rounded-md bg-muted/60 p-2 text-muted-foreground">
             Changes apply to this week's shifts only. Past weeks keep their original scores.
