@@ -362,7 +362,24 @@ function LlsPage() {
                       <th key={d} className="text-center py-2 px-1.5 w-14">{d}</th>
                     ))}
                     <th className="text-right py-2 px-2">Shifts</th>
-                    <th className="text-right py-2 pl-3">Avg</th>
+                    <th
+                      className="text-right py-2 px-2"
+                      title="Gross Sales ÷ Covers Served. Shows how well each server monetises each guest."
+                    >RPC</th>
+                    <th
+                      className="text-right py-2 px-2"
+                      title="Gross Sales ÷ Labor Cost. Shows sales generated for every £1 of labor."
+                    >Base LLS</th>
+                    <th
+                      className="text-right py-2 px-2"
+                      title="Base LLS ÷ Opportunity Factor. Shows labor return after shift conditions are considered."
+                    >Adjusted LLS</th>
+                    <th className="text-right py-2 px-2">Benchmark</th>
+                    <th
+                      className="text-right py-2 px-2"
+                      title="Adjusted LLS compared with the venue benchmark for this shift type."
+                    >Gap</th>
+                    <th className="text-left py-2 pl-3">Operator meaning</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -374,22 +391,26 @@ function LlsPage() {
                           <span className="ml-2 text-[10px] uppercase text-muted-foreground" title="Fewer than 3 shifts">low sample</span>
                         )}
                       </td>
-                      {s.daily.map((day, i) => {
-                        const band = llsBand(day.avg, scorecard.thresholds);
-                        return (
-                          <td key={i} className="text-center py-1 px-1">
-                            <div className={`mx-auto rounded-md px-1.5 py-1 text-xs font-semibold ${bandBg(band)}`}>
-                              {day.avg != null ? day.avg.toFixed(1) : "·"}
-                            </div>
-                          </td>
-                        );
-                      })}
-                      <td className="text-right py-2 px-2 text-muted-foreground">{s.shifts}</td>
-                      <td className="text-right py-2 pl-3">
-                        <div className={`inline-block rounded-md px-2 py-1 font-bold ${bandBg(llsBand(s.weeklyAvg, scorecard.thresholds), true)}`}>
-                          {s.weeklyAvg != null ? s.weeklyAvg.toFixed(2) : "—"}
+                      {s.daily.map((day, i) => (
+                        <td key={i} className="text-center py-1 px-1">
+                          <div className="mx-auto rounded-md px-1.5 py-1 text-xs font-semibold text-muted-foreground">
+                            {day.adjusted_lls != null ? day.adjusted_lls.toFixed(1) : "—"}
+                          </div>
+                        </td>
+                      ))}
+                      <td className="text-right py-2 px-2 text-muted-foreground">{s.shifts_worked}</td>
+                      <td className="text-right py-2 px-2">{s.weekly_rpc != null ? s.weekly_rpc.toFixed(2) : "—"}</td>
+                      <td className="text-right py-2 px-2">{s.weekly_base_lls != null ? s.weekly_base_lls.toFixed(2) : "—"}</td>
+                      <td className="text-right py-2 px-2">
+                        <div className={`inline-block rounded-md px-2 py-1 font-bold ${bandBg(s.rag_status, true)}`}>
+                          {s.weekly_adjusted_lls != null ? s.weekly_adjusted_lls.toFixed(2) : "—"}
                         </div>
                       </td>
+                      <td className="text-right py-2 px-2 text-muted-foreground">
+                        {s.venue_benchmark != null ? s.venue_benchmark.toFixed(2) : "—"}
+                      </td>
+                      <td className="text-right py-2 px-2 font-semibold">{formatGap(s.performance_gap)}</td>
+                      <td className="py-2 pl-3 text-xs text-muted-foreground">{s.operator_meaning}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -399,6 +420,7 @@ function LlsPage() {
             <p className="mt-4 text-sm text-muted-foreground">No shifts yet for this week. Import sales and labor data to begin.</p>
           )}
         </div>
+
 
         {/* Servers to review */}
         {scorecard && scorecard.toReview.length > 0 && (
