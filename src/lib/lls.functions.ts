@@ -359,7 +359,7 @@ export const listRecentBatches = createServerFn({ method: "GET" })
 //                          where total_adjusted_labor_cost = Σ(labor_cost × opportunity_factor)
 // The DB column `shifts.final_lls` stores Adjusted LLS (Base LLS ÷ Opportunity Factor)
 // — the legacy column name is kept for migration safety only. The API surfaces this
-// as `adjusted_lls`; "Final LLS" is never exposed.
+// as `adjusted_lls`; the legacy label is never surfaced to users.
 
 export type ScorecardDaily = { dow: number; adjusted_lls: number | null; shifts: number };
 
