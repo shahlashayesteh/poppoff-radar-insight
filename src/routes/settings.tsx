@@ -17,6 +17,8 @@ function SettingsPage() {
   const [coverCapacity, setCoverCapacity] = useState<number | "">("");
   const [green, setGreen] = useState(80);
   const [amber, setAmber] = useState(55);
+  const [llsGreen, setLlsGreen] = useState<number>(13.0);
+  const [llsAmber, setLlsAmber] = useState<number>(10.0);
   const [toggles, setToggles] = useState({
     servers_see_percentages_only: true,
     managers_see_estimated_uplift: true,
