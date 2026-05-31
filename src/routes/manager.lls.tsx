@@ -294,14 +294,13 @@ function LlsPage() {
         {/* Venue summary */}
         <div className="mt-6 grid sm:grid-cols-3 gap-4">
           <SummaryCard
-            label="Venue weekly avg LLS"
-            value={scorecard?.venueAvg != null ? scorecard.venueAvg.toFixed(2) : "—"}
-            band={scorecard?.venueAvg != null ? llsBand(scorecard.venueAvg, scorecard.thresholds) : "none"}
+            label="Venue benchmark (Adjusted LLS)"
+            value={scorecard?.venue_benchmark != null ? scorecard.venue_benchmark.toFixed(2) : "—"}
           />
           <SummaryCard
-            label="WoW trend"
-            value={scorecard?.venueTrendPct != null ? `${scorecard.venueTrendPct > 0 ? "+" : ""}${scorecard.venueTrendPct.toFixed(1)}%` : "—"}
-            trend={scorecard?.venueTrendPct ?? null}
+            label="Benchmark WoW trend"
+            value={scorecard?.venue_benchmark_trend_pct != null ? `${scorecard.venue_benchmark_trend_pct > 0 ? "+" : ""}${scorecard.venue_benchmark_trend_pct.toFixed(1)}%` : "—"}
+            trend={scorecard?.venue_benchmark_trend_pct ?? null}
           />
           <SummaryCard
             label="Servers tracked"
