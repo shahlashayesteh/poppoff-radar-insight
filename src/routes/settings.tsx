@@ -101,6 +101,16 @@ function SettingsPage() {
           </div>
         </div>
 
+        <div className="mt-6 rounded-2xl bg-white border border-border p-6 space-y-3">
+          <h2 className="font-display text-lg font-bold">Labor Leverage thresholds</h2>
+          <p className="text-xs text-muted-foreground">Used by the Labor Leverage scorecard to colour-band each shift's LLS.</p>
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div><Label className="text-xs text-muted-foreground">Green ≥</Label><Input type="number" step="0.1" value={llsGreen} onChange={(e) => setLlsGreen(Number(e.target.value))} className="mt-1" /></div>
+            <div><Label className="text-xs text-muted-foreground">Amber ≥</Label><Input type="number" step="0.1" value={llsAmber} onChange={(e) => setLlsAmber(Number(e.target.value))} className="mt-1" /></div>
+          </div>
+          <p className="text-xs text-muted-foreground">Below amber is treated as an opportunity (red).</p>
+        </div>
+
         <div className="mt-6 rounded-2xl bg-white border border-border p-6">
           <h2 className="font-display text-lg font-bold">Visibility & permissions</h2>
           <div className="mt-4 divide-y divide-border">
