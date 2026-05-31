@@ -61,8 +61,10 @@ function SettingsPage() {
     await supabase.from("venues").update({ name: venueName }).eq("id", venueId);
     const { error } = await supabase.from("venue_settings").upsert({
       venue_id: venueId, cuisine: cuisine || null, cover_capacity: coverCapacity === "" ? null : Number(coverCapacity),
-      green_threshold: green, amber_threshold: amber, ...toggles,
-    }, { onConflict: "venue_id" });
+      green_threshold: green, amber_threshold: amber,
+      lls_green_threshold: llsGreen, lls_amber_threshold: llsAmber,
+      ...toggles,
+    } as any, { onConflict: "venue_id" });
     if (error) { toast.error(error.message); return; }
     toast.success("Settings saved");
   };
