@@ -319,8 +319,9 @@ export const suggestOpportunityFactors = createServerFn({ method: "GET" })
     const worked = (rows ?? []).filter(
       (r: any) => r.gross_sales != null && Number(r.gross_sales) > 0,
     );
-    if (worked.length < 20) {
-      return { enoughData: false as const };
+    const totalCompleted = worked.length;
+    if (totalCompleted < 20) {
+      return { enoughData: false as const, totalCompleted };
     }
 
     const buckets = new Map<string, { sum: number; n: number }>();
@@ -336,25 +337,36 @@ export const suggestOpportunityFactors = createServerFn({ method: "GET" })
       totalN += 1;
     }
     const venueAvg = totalSum / totalN;
-    if (!(venueAvg > 0)) return { enoughData: false as const };
+    if (!(venueAvg > 0)) return { enoughData: false as const, totalCompleted };
 
     const round05 = (v: number) => Math.round(v * 20) / 20;
     const clamp = (v: number) => Math.min(1.4, Math.max(0.75, v));
+
+    // Confidence weight shrinks raw factors toward 1.0 when overall sample is thin.
+    const confidenceWeight =
+      totalCompleted >= 200 ? 1.0 :
+      totalCompleted >= 100 ? 0.75 :
+      totalCompleted >= 50 ? 0.5 :
+      0.25;
+    const lowConfidence = totalCompleted < 50;
 
     const suggestions: Record<number, Record<Daypart, number>> = {};
     for (let dow = 0; dow < 7; dow++) {
       suggestions[dow] = {} as Record<Daypart, number>;
       for (const dp of DAYPARTS) {
         const b = buckets.get(`${dow}|${dp}`);
-        if (!b || b.n < 2) {
+        // Per-bucket sample floor: <5 shifts → stay at 1.00 (no aggressive value).
+        if (!b || b.n < 5) {
           suggestions[dow][dp] = 1.0;
         } else {
-          const avg = b.sum / b.n;
-          suggestions[dow][dp] = round05(clamp(avg / venueAvg));
+          const raw = (b.sum / b.n) / venueAvg;
+          const smoothed = 1 + (raw - 1) * confidenceWeight;
+          suggestions[dow][dp] = round05(clamp(smoothed));
         }
       }
     }
-    return { enoughData: true as const, suggestions };
+    return { enoughData: true as const, suggestions, totalCompleted, lowConfidence };
+
   });
 
 export const rollbackBatch = createServerFn({ method: "POST" })
