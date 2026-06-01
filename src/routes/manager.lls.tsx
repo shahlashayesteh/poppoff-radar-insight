@@ -28,6 +28,7 @@ import {
   getWeeklyScorecard,
   getOpportunityFactors,
   updateOpportunityFactor,
+  suggestOpportunityFactors,
   getColumnMapping,
   saveColumnMapping,
   listRecentBatches,
@@ -35,7 +36,7 @@ import {
   type ScorecardResult,
   type Daypart,
 } from "@/lib/lls.functions";
-import { Upload, ChevronLeft, ChevronRight, AlertTriangle, TrendingUp, TrendingDown, Trash2, Gauge } from "lucide-react";
+import { Upload, ChevronLeft, ChevronRight, AlertTriangle, TrendingUp, TrendingDown, Trash2, Gauge, Sparkles } from "lucide-react";
 
 export const Route = createFileRoute("/manager/lls")({ component: LlsPage });
 
