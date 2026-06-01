@@ -273,6 +273,30 @@ function LlsPage() {
     }
   };
 
+  const generateSuggestedFactors = async () => {
+    setLoading(true);
+    try {
+      const res = await suggestOF();
+      if (!res.enoughData) {
+        toast.info("Not enough historical data yet. Start with 1.0 and refine after more uploads.");
+        return;
+      }
+      setGrid(res.suggestions);
+      for (let dow = 0; dow < 7; dow++) {
+        for (const dp of DAYPARTS) {
+          const f = res.suggestions[dow][dp];
+          await updateOF({ data: { dayOfWeek: dow, daypart: dp, factor: f, weekStart } });
+        }
+      }
+      toast.success("Suggested factors applied. Edit any cell to fine-tune.");
+      await refresh();
+    } catch (e: any) {
+      toast.error(e?.message ?? "Failed to generate suggestions");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const prevWk = () => setWeekStart(toISODate(previousMonday(new Date(weekStart + "T00:00:00"))));
   const nextWk = () => {
     const d = new Date(weekStart + "T00:00:00");
