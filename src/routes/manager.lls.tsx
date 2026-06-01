@@ -202,31 +202,73 @@ function LlsPage() {
       toast.error("Could not read file headers");
       return;
     }
-    setPendingFile(parsed);
-    // Load saved mapping if exists
+    const fieldsRO = source === "sales" ? SALES_FIELDS : LABOR_FIELDS;
+    const fields = [...fieldsRO];
+    const { mapping: auto, ambiguous } = autoMap(parsed.headers, fields);
+
+    // Saved per-venue mapping wins over auto if its headers still exist.
+    let saved: Record<string, string> = {};
     try {
-      const saved = await loadMapping({ data: { sourceType: source } });
-      const auto = autoMap(parsed.headers, source === "sales" ? [...SALES_FIELDS] : [...LABOR_FIELDS]);
-      setMapping({ ...auto, ...saved.mapping });
+      const r = await loadMapping({ data: { sourceType: source } });
+      for (const [k, v] of Object.entries(r.mapping ?? {})) {
+        if (typeof v === "string" && parsed.headers.includes(v)) saved[k] = v;
+      }
     } catch {
-      setMapping(autoMap(parsed.headers, source === "sales" ? [...SALES_FIELDS] : [...LABOR_FIELDS]));
+      /* no saved mapping */
     }
-    setMappingOpen(true);
+
+    const merged: Record<string, string> = { ...auto, ...saved };
+    // Saved choices override ambiguity for that field.
+    for (const k of Object.keys(saved)) ambiguous.delete(k);
+
+    const autoSet = new Set<string>([...Object.keys(auto), ...Object.keys(saved)]);
+
+    // Figure out which required fields still need confirmation.
+    const requiredKeys = fields.filter((f) => f.required).map((f) => f.key as string);
+    const needs = new Set<string>();
+    for (const k of requiredKeys) {
+      if (!merged[k] || ambiguous.has(k)) needs.add(k);
+    }
+    // Labor: labor_cost can be derived from hours_worked × hourly_rate.
+    if (
+      source === "labor" &&
+      needs.has("labor_cost") &&
+      merged.hours_worked &&
+      merged.hourly_rate &&
+      !ambiguous.has("hours_worked") &&
+      !ambiguous.has("hourly_rate")
+    ) {
+      needs.delete("labor_cost");
+    }
+
+    setPendingFile(parsed);
+    setMapping(merged);
+    setAutoDetected(autoSet);
+    setNeedsConfirm(needs);
+
+    if (needs.size === 0) {
+      const isSavedExact =
+        Object.keys(saved).length > 0 && requiredKeys.every((k) => saved[k] && saved[k] === merged[k]);
+      await runImport(parsed, source, merged, {
+        toastMessage: isSavedExact
+          ? "Saved column mapping applied."
+          : "Columns detected automatically. Importing file.",
+      });
+    } else {
+      setMappingOpen(true);
+    }
   };
 
-  const confirmImport = async () => {
-    if (!pendingFile) return;
-    const required = fieldsForSource.filter((f) => f.required);
-    for (const f of required) {
-      if (!mapping[f.key]) {
-        toast.error(`Map a column for "${f.label}"`);
-        return;
-      }
-    }
+  const runImport = async (
+    file: ParsedFile,
+    source: "sales" | "labor",
+    map: Record<string, string>,
+    opts: { toastMessage?: string } = {},
+  ) => {
     // Build rows
-    const rows = pendingFile.rows
+    const rows = file.rows
       .map((r) => {
-        const get = (k: string) => (mapping[k] ? r[mapping[k]] : null);
+        const get = (k: string) => (map[k] ? r[map[k]] : null);
         const date = normalizeDate(get("shift_date"));
         const name = String(get("server_name") ?? "").trim();
         if (!date || !name) return null;
@@ -236,11 +278,17 @@ function LlsPage() {
           shift_start_time: normalizeTime(get("shift_start_time")) ?? undefined,
           shift_end_time: normalizeTime(get("shift_end_time")) ?? undefined,
         };
-        if (pendingSource === "sales") {
+        if (source === "sales") {
           row.covers_served = normalizeNumber(get("covers_served"));
           row.gross_sales = normalizeNumber(get("gross_sales"));
         } else {
-          row.labor_cost = normalizeNumber(get("labor_cost"));
+          let laborCost = normalizeNumber(get("labor_cost"));
+          if (laborCost == null) {
+            const hrs = normalizeNumber(get("hours_worked"));
+            const rate = normalizeNumber(get("hourly_rate"));
+            if (hrs != null && rate != null) laborCost = hrs * rate;
+          }
+          row.labor_cost = laborCost;
         }
         return row;
       })
@@ -252,18 +300,46 @@ function LlsPage() {
     }
     setLoading(true);
     try {
-      await persistMapping({ data: { sourceType: pendingSource, mapping } });
+      await persistMapping({ data: { sourceType: source, mapping: map } });
       const res = await doImport({
-        data: { sourceType: pendingSource, filename: pendingFile.filename, rows },
+        data: { sourceType: source, filename: file.filename, rows },
       });
-      toast.success(`Imported ${res.imported} shifts${res.errors.length ? ` (${res.errors.length} errors)` : ""}`);
+      const base = opts.toastMessage
+        ? `${opts.toastMessage} Imported ${res.imported} shifts`
+        : `Imported ${res.imported} shifts`;
+      toast.success(`${base}${res.errors.length ? ` (${res.errors.length} errors)` : ""}`);
       setMappingOpen(false);
       setPendingFile(null);
+      setNeedsConfirm(new Set());
+      setAutoDetected(new Set());
       await refresh();
     } catch (e: any) {
       toast.error(e?.message ?? "Import failed");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const confirmImport = async () => {
+    if (!pendingFile) return;
+    const required = fieldsForSource.filter((f) => f.required);
+    for (const f of required) {
+      if (!mapping[f.key]) {
+        // Labor cost can be derived from hours × rate.
+        if (
+          pendingSource === "labor" &&
+          f.key === "labor_cost" &&
+          mapping.hours_worked &&
+          mapping.hourly_rate
+        ) {
+          continue;
+        }
+        toast.error(`Map a column for "${f.label}"`);
+        return;
+      }
+    }
+    await runImport(pendingFile, pendingSource, mapping);
+  };
     }
   };
 
