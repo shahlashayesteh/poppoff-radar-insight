@@ -62,6 +62,8 @@ const LABOR_FIELDS = [
   { key: "hourly_rate", label: "Hourly rate", required: false },
   { key: "shift_start_time", label: "Shift start time", required: false },
   { key: "shift_end_time", label: "Shift end time", required: false },
+  { key: "daypart", label: "Daypart", required: false },
+
 ] as const;
 
 type ParsedFile = { headers: string[]; rows: Record<string, any>[]; filename: string };
