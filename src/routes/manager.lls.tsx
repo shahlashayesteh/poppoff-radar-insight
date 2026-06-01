@@ -45,20 +45,23 @@ const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 // Required mapping targets per source type
 const SALES_FIELDS = [
-  { key: "server_name", label: "Server name", required: true },
+  { key: "server_name", label: "Server name or ID", required: true },
   { key: "shift_date", label: "Shift date", required: true },
-  { key: "shift_start_time", label: "Shift start time", required: false },
-  { key: "shift_end_time", label: "Shift end time", required: false },
   { key: "covers_served", label: "Covers served", required: true },
   { key: "gross_sales", label: "Gross sales", required: true },
+  { key: "daypart", label: "Daypart", required: false },
+  { key: "shift_start_time", label: "Shift start time", required: false },
+  { key: "shift_end_time", label: "Shift end time", required: false },
 ] as const;
 
 const LABOR_FIELDS = [
-  { key: "server_name", label: "Server name", required: true },
+  { key: "server_name", label: "Server name or ID", required: true },
   { key: "shift_date", label: "Shift date", required: true },
+  { key: "labor_cost", label: "Labor cost", required: true },
+  { key: "hours_worked", label: "Hours worked", required: false },
+  { key: "hourly_rate", label: "Hourly rate", required: false },
   { key: "shift_start_time", label: "Shift start time", required: false },
   { key: "shift_end_time", label: "Shift end time", required: false },
-  { key: "labor_cost", label: "Labor cost", required: true },
 ] as const;
 
 type ParsedFile = { headers: string[]; rows: Record<string, any>[]; filename: string };
@@ -153,6 +156,8 @@ function LlsPage() {
   const [pendingFile, setPendingFile] = useState<ParsedFile | null>(null);
   const [pendingSource, setPendingSource] = useState<"sales" | "labor">("sales");
   const [mapping, setMapping] = useState<Record<string, string>>({});
+  const [autoDetected, setAutoDetected] = useState<Set<string>>(new Set());
+  const [needsConfirm, setNeedsConfirm] = useState<Set<string>>(new Set());
   const [mappingOpen, setMappingOpen] = useState(false);
 
   const fetchScorecard = useServerFn(getWeeklyScorecard);
@@ -197,31 +202,73 @@ function LlsPage() {
       toast.error("Could not read file headers");
       return;
     }
-    setPendingFile(parsed);
-    // Load saved mapping if exists
+    const fieldsRO = source === "sales" ? SALES_FIELDS : LABOR_FIELDS;
+    const fields = [...fieldsRO];
+    const { mapping: auto, ambiguous } = autoMap(parsed.headers, fields);
+
+    // Saved per-venue mapping wins over auto if its headers still exist.
+    let saved: Record<string, string> = {};
     try {
-      const saved = await loadMapping({ data: { sourceType: source } });
-      const auto = autoMap(parsed.headers, source === "sales" ? [...SALES_FIELDS] : [...LABOR_FIELDS]);
-      setMapping({ ...auto, ...saved.mapping });
+      const r = await loadMapping({ data: { sourceType: source } });
+      for (const [k, v] of Object.entries(r.mapping ?? {})) {
+        if (typeof v === "string" && parsed.headers.includes(v)) saved[k] = v;
+      }
     } catch {
-      setMapping(autoMap(parsed.headers, source === "sales" ? [...SALES_FIELDS] : [...LABOR_FIELDS]));
+      /* no saved mapping */
     }
-    setMappingOpen(true);
+
+    const merged: Record<string, string> = { ...auto, ...saved };
+    // Saved choices override ambiguity for that field.
+    for (const k of Object.keys(saved)) ambiguous.delete(k);
+
+    const autoSet = new Set<string>([...Object.keys(auto), ...Object.keys(saved)]);
+
+    // Figure out which required fields still need confirmation.
+    const requiredKeys = fields.filter((f) => f.required).map((f) => f.key as string);
+    const needs = new Set<string>();
+    for (const k of requiredKeys) {
+      if (!merged[k] || ambiguous.has(k)) needs.add(k);
+    }
+    // Labor: labor_cost can be derived from hours_worked × hourly_rate.
+    if (
+      source === "labor" &&
+      needs.has("labor_cost") &&
+      merged.hours_worked &&
+      merged.hourly_rate &&
+      !ambiguous.has("hours_worked") &&
+      !ambiguous.has("hourly_rate")
+    ) {
+      needs.delete("labor_cost");
+    }
+
+    setPendingFile(parsed);
+    setMapping(merged);
+    setAutoDetected(autoSet);
+    setNeedsConfirm(needs);
+
+    if (needs.size === 0) {
+      const isSavedExact =
+        Object.keys(saved).length > 0 && requiredKeys.every((k) => saved[k] && saved[k] === merged[k]);
+      await runImport(parsed, source, merged, {
+        toastMessage: isSavedExact
+          ? "Saved column mapping applied."
+          : "Columns detected automatically. Importing file.",
+      });
+    } else {
+      setMappingOpen(true);
+    }
   };
 
-  const confirmImport = async () => {
-    if (!pendingFile) return;
-    const required = fieldsForSource.filter((f) => f.required);
-    for (const f of required) {
-      if (!mapping[f.key]) {
-        toast.error(`Map a column for "${f.label}"`);
-        return;
-      }
-    }
+  const runImport = async (
+    file: ParsedFile,
+    source: "sales" | "labor",
+    map: Record<string, string>,
+    opts: { toastMessage?: string } = {},
+  ) => {
     // Build rows
-    const rows = pendingFile.rows
+    const rows = file.rows
       .map((r) => {
-        const get = (k: string) => (mapping[k] ? r[mapping[k]] : null);
+        const get = (k: string) => (map[k] ? r[map[k]] : null);
         const date = normalizeDate(get("shift_date"));
         const name = String(get("server_name") ?? "").trim();
         if (!date || !name) return null;
@@ -231,11 +278,17 @@ function LlsPage() {
           shift_start_time: normalizeTime(get("shift_start_time")) ?? undefined,
           shift_end_time: normalizeTime(get("shift_end_time")) ?? undefined,
         };
-        if (pendingSource === "sales") {
+        if (source === "sales") {
           row.covers_served = normalizeNumber(get("covers_served"));
           row.gross_sales = normalizeNumber(get("gross_sales"));
         } else {
-          row.labor_cost = normalizeNumber(get("labor_cost"));
+          let laborCost = normalizeNumber(get("labor_cost"));
+          if (laborCost == null) {
+            const hrs = normalizeNumber(get("hours_worked"));
+            const rate = normalizeNumber(get("hourly_rate"));
+            if (hrs != null && rate != null) laborCost = hrs * rate;
+          }
+          row.labor_cost = laborCost;
         }
         return row;
       })
@@ -247,13 +300,18 @@ function LlsPage() {
     }
     setLoading(true);
     try {
-      await persistMapping({ data: { sourceType: pendingSource, mapping } });
+      await persistMapping({ data: { sourceType: source, mapping: map } });
       const res = await doImport({
-        data: { sourceType: pendingSource, filename: pendingFile.filename, rows },
+        data: { sourceType: source, filename: file.filename, rows },
       });
-      toast.success(`Imported ${res.imported} shifts${res.errors.length ? ` (${res.errors.length} errors)` : ""}`);
+      const base = opts.toastMessage
+        ? `${opts.toastMessage} Imported ${res.imported} shifts`
+        : `Imported ${res.imported} shifts`;
+      toast.success(`${base}${res.errors.length ? ` (${res.errors.length} errors)` : ""}`);
       setMappingOpen(false);
       setPendingFile(null);
+      setNeedsConfirm(new Set());
+      setAutoDetected(new Set());
       await refresh();
     } catch (e: any) {
       toast.error(e?.message ?? "Import failed");
@@ -261,6 +319,28 @@ function LlsPage() {
       setLoading(false);
     }
   };
+
+  const confirmImport = async () => {
+    if (!pendingFile) return;
+    const required = fieldsForSource.filter((f) => f.required);
+    for (const f of required) {
+      if (!mapping[f.key]) {
+        // Labor cost can be derived from hours × rate.
+        if (
+          pendingSource === "labor" &&
+          f.key === "labor_cost" &&
+          mapping.hours_worked &&
+          mapping.hourly_rate
+        ) {
+          continue;
+        }
+        toast.error(`Map a column for "${f.label}"`);
+        return;
+      }
+    }
+    await runImport(pendingFile, pendingSource, mapping);
+  };
+
 
   const setOF = async (dow: number, dp: Daypart, value: number) => {
     const clamped = Math.min(1.4, Math.max(0.7, value));
@@ -565,40 +645,84 @@ function LlsPage() {
         </div>
       </div>
 
-      {/* Column mapping modal */}
+      {/* Column mapping modal — only opens when at least one required field
+          is missing or ambiguous. Auto-detected fields are listed read-only
+          so the manager can see what was inferred. */}
       <Dialog open={mappingOpen} onOpenChange={setMappingOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Map your columns</DialogTitle>
+            <DialogTitle>Confirm file columns</DialogTitle>
           </DialogHeader>
           {pendingFile && (
             <div className="space-y-3">
               <p className="text-xs text-muted-foreground">
+                {autoDetected.size > 0
+                  ? "PoppOff has detected most columns automatically. Confirm any missing fields so this file can be imported. You only need to do this when the export format is new or unclear."
+                  : "We couldn't confidently detect this file's column names. Please match the required fields once. PoppOff will remember this mapping for future uploads."}
+              </p>
+              <p className="text-xs text-muted-foreground">
                 File: <span className="font-mono">{pendingFile.filename}</span> · {pendingFile.rows.length} rows · {pendingSource} upload
               </p>
-              <div className="grid sm:grid-cols-2 gap-3">
-                {fieldsForSource.map((f) => (
-                  <div key={f.key}>
-                    <Label className="text-xs">
-                      {f.label} {f.required && <span className="text-[color:var(--opportunity)]">*</span>}
-                    </Label>
-                    <Select
-                      value={mapping[f.key] ?? ""}
-                      onValueChange={(v) => setMapping((m) => ({ ...m, [f.key]: v === "__none__" ? "" : v }))}
-                    >
-                      <SelectTrigger className="mt-1">
-                        <SelectValue placeholder="— select column —" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="__none__">— none —</SelectItem>
-                        {pendingFile.headers.map((h) => (
-                          <SelectItem key={h} value={h}>{h}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+              {needsConfirm.size > 0 && (
+                <div>
+                  <div className="text-xs uppercase tracking-wide text-muted-foreground mb-2">Needs your confirmation</div>
+                  <div className="grid sm:grid-cols-2 gap-3">
+                    {fieldsForSource
+                      .filter((f) => needsConfirm.has(f.key))
+                      .map((f) => (
+                        <div key={f.key}>
+                          <Label className="text-xs">
+                            {f.label} {f.required && <span className="text-[color:var(--opportunity)]">*</span>}
+                          </Label>
+                          <Select
+                            value={mapping[f.key] ?? ""}
+                            onValueChange={(v) => setMapping((m) => ({ ...m, [f.key]: v === "__none__" ? "" : v }))}
+                          >
+                            <SelectTrigger className="mt-1">
+                              <SelectValue placeholder="— select column —" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="__none__">— none —</SelectItem>
+                              {pendingFile.headers.map((h) => (
+                                <SelectItem key={h} value={h}>{h}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      ))}
                   </div>
-                ))}
-              </div>
+                </div>
+              )}
+              {autoDetected.size > 0 && (
+                <details className="text-xs">
+                  <summary className="cursor-pointer text-muted-foreground hover:text-foreground">
+                    Auto-detected columns ({autoDetected.size}) — click to review or edit
+                  </summary>
+                  <div className="grid sm:grid-cols-2 gap-3 mt-2">
+                    {fieldsForSource
+                      .filter((f) => autoDetected.has(f.key) && !needsConfirm.has(f.key))
+                      .map((f) => (
+                        <div key={f.key}>
+                          <Label className="text-xs">{f.label}</Label>
+                          <Select
+                            value={mapping[f.key] ?? ""}
+                            onValueChange={(v) => setMapping((m) => ({ ...m, [f.key]: v === "__none__" ? "" : v }))}
+                          >
+                            <SelectTrigger className="mt-1">
+                              <SelectValue placeholder="— select column —" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="__none__">— none —</SelectItem>
+                              {pendingFile.headers.map((h) => (
+                                <SelectItem key={h} value={h}>{h}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      ))}
+                  </div>
+                </details>
+              )}
             </div>
           )}
           <DialogFooter>
@@ -607,6 +731,7 @@ function LlsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
     </ManagerLayout>
   );
 }
@@ -660,26 +785,71 @@ function UploadZone({ label, sublabel, onFile }: { label: string; sublabel: stri
   );
 }
 
-// Heuristic auto-mapping
-function autoMap(headers: string[], fields: ReadonlyArray<{ key: string; label: string }>): Record<string, string> {
-  const result: Record<string, string> = {};
+// Heuristic auto-mapping with ambiguity detection.
+// Returns the best header per field plus a set of fields where multiple
+// headers tied at the highest-confidence (lowest-priority) match — those
+// must be confirmed by the manager rather than guessed silently.
+function autoMap(
+  headers: string[],
+  fields: ReadonlyArray<{ key: string }>,
+): { mapping: Record<string, string>; ambiguous: Set<string> } {
   const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
-  const headerMap = new Map(headers.map((h) => [norm(h), h]));
-  const synonyms: Record<string, string[]> = {
-    server_name: ["server", "servername", "name", "employee", "employeename", "staff", "waiter", "soldby"],
-    shift_date: ["date", "shiftdate", "businessdate", "tradingdate", "day"],
-    shift_start_time: ["start", "starttime", "shiftstart", "clockin", "in"],
-    shift_end_time: ["end", "endtime", "shiftend", "clockout", "out"],
-    covers_served: ["covers", "guests", "pax", "customers", "coverscount"],
-    gross_sales: ["sales", "totalsales", "grosssales", "netsales", "revenue", "total"],
-    labor_cost: ["labor", "labour", "laborcost", "labourcost", "wagecost", "wages", "payroll", "cost"],
+  // Priority order matters: earlier entries are stronger matches.
+  const SYN: Record<string, string[]> = {
+    server_name: [
+      "servername", "server", "employeename", "employee", "staffname", "staff",
+      "waitername", "waiter", "teammembername", "teammember", "username", "user",
+      "operator", "cashier", "soldby", "name",
+    ],
+    shift_date: [
+      "businessdate", "shiftdate", "tradingdate", "transactiondate", "orderdate",
+      "saledate", "servicedate", "date", "day",
+    ],
+    daypart: ["daypart", "mealperiod", "serviceperiod", "service", "period", "session"],
+    covers_served: [
+      "coversserved", "coverscount", "coverstotal", "guestsserved", "guestcount",
+      "covers", "guests", "pax", "customers",
+    ],
+    gross_sales: [
+      "grosssales", "grossrevenue", "grosstotal", "totalsales", "salestotal",
+      "sales", "revenue", "amount", "total", "netsales",
+    ],
+    shift_start_time: [
+      "shiftstart", "clockin", "starttime", "intime", "timein", "start",
+    ],
+    shift_end_time: [
+      "shiftend", "clockout", "endtime", "outtime", "timeout", "end",
+    ],
+    labor_cost: [
+      "laborcost", "labourcost", "wagecost", "payrollcost", "staffcost",
+      "employeecost", "totalpay", "wages", "pay", "cost",
+    ],
+    hours_worked: [
+      "hoursworked", "paidhours", "shifthours", "totalhours", "workedhours", "hours",
+    ],
+    hourly_rate: ["hourlyrate", "wagerate", "hourlypay", "payrate", "rate"],
   };
+
+  const mapping: Record<string, string> = {};
+  const ambiguous = new Set<string>();
   for (const f of fields) {
-    const candidates = [f.key, ...(synonyms[f.key] ?? [])];
-    for (const c of candidates) {
-      const hit = headerMap.get(norm(c));
-      if (hit) { result[f.key] = hit; break; }
+    const syns = SYN[f.key] ?? [f.key.replace(/_/g, "")];
+    let best: { header: string; prio: number } | null = null;
+    let tied = false;
+    for (const h of headers) {
+      const prio = syns.indexOf(norm(h));
+      if (prio === -1) continue;
+      if (!best || prio < best.prio) {
+        best = { header: h, prio };
+        tied = false;
+      } else if (prio === best.prio) {
+        tied = true;
+      }
+    }
+    if (best) {
+      mapping[f.key] = best.header;
+      if (tied) ambiguous.add(f.key);
     }
   }
-  return result;
+  return { mapping, ambiguous };
 }
