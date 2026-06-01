@@ -576,7 +576,7 @@ function LlsPage() {
   );
 }
 
-function SummaryCard({ label, value, band, trend }: { label: string; value: string; band?: string; trend?: number | null }) {
+function SummaryCard({ label, value, band, trend, helper }: { label: string; value: string; band?: string; trend?: number | null; helper?: string }) {
   return (
     <div className="rounded-2xl bg-white border border-border p-5">
       <div className="text-xs uppercase tracking-wide text-muted-foreground">{label}</div>
@@ -588,6 +588,7 @@ function SummaryCard({ label, value, band, trend }: { label: string; value: stri
             : <TrendingDown className="h-4 w-4 text-[color:var(--opportunity)]" />
         )}
       </div>
+      {helper && <div className="mt-2 text-xs text-muted-foreground">{helper}</div>}
     </div>
   );
 }
