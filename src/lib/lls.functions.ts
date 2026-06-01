@@ -177,11 +177,13 @@ const ShiftRowInput = z.object({
   shift_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   shift_start_time: z.string().optional().nullable(),
   shift_end_time: z.string().optional().nullable(),
+  daypart: z.string().optional().nullable(),
   covers_served: z.number().optional().nullable(),
   gross_sales: z.number().optional().nullable(),
   labor_cost: z.number().optional().nullable(),
 });
 type ShiftRowInput = z.infer<typeof ShiftRowInput>;
+
 
 export const importShifts = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
