@@ -281,6 +281,62 @@ export const importShifts = createServerFn({ method: "POST" })
     };
   });
 
+// ---------- suggest opportunity factors from venue history ----------
+
+export const suggestOpportunityFactors = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabase, userId } = context;
+    const venueId = await getManagerVenueId(supabase, userId);
+
+    const { data: rows, error } = await supabase
+      .from("shifts")
+      .select("day_of_week, daypart, gross_sales")
+      .eq("venue_id", venueId)
+      .not("gross_sales", "is", null);
+    if (error) throw new Error(error.message);
+
+    const worked = (rows ?? []).filter(
+      (r: any) => r.gross_sales != null && Number(r.gross_sales) > 0,
+    );
+    if (worked.length < 20) {
+      return { enoughData: false as const };
+    }
+
+    const buckets = new Map<string, { sum: number; n: number }>();
+    let totalSum = 0;
+    let totalN = 0;
+    for (const r of worked as any[]) {
+      const key = `${r.day_of_week}|${r.daypart}`;
+      const b = buckets.get(key) ?? { sum: 0, n: 0 };
+      b.sum += Number(r.gross_sales);
+      b.n += 1;
+      buckets.set(key, b);
+      totalSum += Number(r.gross_sales);
+      totalN += 1;
+    }
+    const venueAvg = totalSum / totalN;
+    if (!(venueAvg > 0)) return { enoughData: false as const };
+
+    const round05 = (v: number) => Math.round(v * 20) / 20;
+    const clamp = (v: number) => Math.min(1.4, Math.max(0.75, v));
+
+    const suggestions: Record<number, Record<Daypart, number>> = {};
+    for (let dow = 0; dow < 7; dow++) {
+      suggestions[dow] = {} as Record<Daypart, number>;
+      for (const dp of DAYPARTS) {
+        const b = buckets.get(`${dow}|${dp}`);
+        if (!b || b.n < 2) {
+          suggestions[dow][dp] = 1.0;
+        } else {
+          const avg = b.sum / b.n;
+          suggestions[dow][dp] = round05(clamp(avg / venueAvg));
+        }
+      }
+    }
+    return { enoughData: true as const, suggestions };
+  });
+
 export const rollbackBatch = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { batchId: string }) => z.object({ batchId: z.string().uuid() }).parse(d))
