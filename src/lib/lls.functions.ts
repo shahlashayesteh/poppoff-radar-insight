@@ -37,6 +37,22 @@ function dayPartFromTime(time: string | null | undefined): Daypart {
   return "late";
 }
 
+// Map common uploaded daypart spellings to the canonical set.
+// Returns null when the value is missing/blank/unrecognized so callers can
+// fall back to time-based inference.
+function normalizeDaypart(raw: unknown): Daypart | null {
+  if (raw == null) return null;
+  const s = String(raw).trim().toLowerCase().replace(/[^a-z]/g, "");
+  if (!s) return null;
+  if (s === "breakfast") return "breakfast";
+  if (s === "brunch") return "brunch";
+  if (s === "lunch") return "lunch";
+  if (s === "dinner" || s === "evening") return "dinner";
+  if (s === "late" || s === "latenight") return "late";
+  return null;
+}
+
+
 function hashServerId(name: string): string {
   // Deterministic synthetic id from name (no crypto needed)
   const n = name.trim().toLowerCase().replace(/\s+/g, "_");
