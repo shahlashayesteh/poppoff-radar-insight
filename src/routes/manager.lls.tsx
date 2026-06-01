@@ -455,6 +455,11 @@ function LlsPage() {
           ) : (
             <p className="mt-4 text-sm text-muted-foreground">No shifts yet for this week. Import sales and labor data to begin.</p>
           )}
+          <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-xs text-muted-foreground">
+            <span className="flex items-center gap-1.5"><span className={`inline-block w-2.5 h-2.5 rounded-sm ${bandBg("green", true).split(" ")[0]}`} /> Strong LLS: 10%+ above benchmark</span>
+            <span className="flex items-center gap-1.5"><span className={`inline-block w-2.5 h-2.5 rounded-sm ${bandBg("amber", true).split(" ")[0]}`} /> Average LLS: within ±10% of benchmark</span>
+            <span className="flex items-center gap-1.5"><span className={`inline-block w-2.5 h-2.5 rounded-sm ${bandBg("red", true).split(" ")[0]}`} /> Weak LLS: 10%+ below benchmark</span>
+          </div>
         </div>
 
 
