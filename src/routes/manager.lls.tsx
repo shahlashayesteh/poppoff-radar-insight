@@ -314,7 +314,7 @@ function LlsPage() {
               <Gauge className="h-8 w-8" /> Labor Leverage Score
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              Per-shift sales productivity vs labor cost. Manager-only view.
+              Compare server LLS against the venue benchmark using sales, covers, labor cost, and shift opportunity.
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -327,17 +327,20 @@ function LlsPage() {
         {/* Venue summary */}
         <div className="mt-6 grid sm:grid-cols-3 gap-4">
           <SummaryCard
-            label="Venue benchmark (Adjusted LLS)"
-            value={scorecard?.venue_benchmark != null ? scorecard.venue_benchmark.toFixed(2) : "—"}
+            label="Venue Benchmark"
+            value={scorecard?.venue_benchmark != null ? `${scorecard.venue_benchmark.toFixed(2)}x weekly LLS` : "—"}
+            helper="Venue weekly LLS used as the benchmark for this scorecard."
           />
           <SummaryCard
-            label="Benchmark WoW trend"
+            label="Benchmark WoW Trend"
             value={scorecard?.venue_benchmark_trend_pct != null ? `${scorecard.venue_benchmark_trend_pct > 0 ? "+" : ""}${scorecard.venue_benchmark_trend_pct.toFixed(1)}%` : "—"}
             trend={scorecard?.venue_benchmark_trend_pct ?? null}
+            helper="How the venue benchmark changed versus last week."
           />
           <SummaryCard
-            label="Servers tracked"
+            label="Servers Tracked"
             value={String(scorecard?.servers.length ?? 0)}
+            helper="Servers with both sales and labor data this week."
           />
         </div>
 
