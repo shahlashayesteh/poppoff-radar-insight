@@ -340,8 +340,7 @@ function LlsPage() {
     }
     await runImport(pendingFile, pendingSource, mapping);
   };
-    }
-  };
+
 
   const setOF = async (dow: number, dp: Daypart, value: number) => {
     const clamped = Math.min(1.4, Math.max(0.7, value));
