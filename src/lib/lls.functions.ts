@@ -226,7 +226,9 @@ export const importShifts = createServerFn({ method: "POST" })
         const startTime = (r.shift_start_time && r.shift_start_time.length >= 5)
           ? r.shift_start_time
           : "00:00:00";
-        const daypart = dayPartFromTime(startTime);
+        // Uploaded Daypart is the source of truth; time-based inference is fallback only.
+        const daypart = normalizeDaypart(r.daypart) ?? dayPartFromTime(startTime);
+
         const dow = dayOfWeekISO(r.shift_date);
 
         const baseRow: any = {
