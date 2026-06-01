@@ -279,7 +279,9 @@ function LlsPage() {
           shift_date: date,
           shift_start_time: normalizeTime(get("shift_start_time")) ?? undefined,
           shift_end_time: normalizeTime(get("shift_end_time")) ?? undefined,
+          daypart: (() => { const v = get("daypart"); return v == null ? undefined : String(v); })(),
         };
+
         if (source === "sales") {
           row.covers_served = normalizeNumber(get("covers_served"));
           row.gross_sales = normalizeNumber(get("gross_sales"));
