@@ -487,11 +487,41 @@ function LlsPage() {
 
         {/* Opportunity Factor editor */}
         <div className="mt-6 rounded-2xl bg-white border border-border p-6">
-          <h2 className="font-display text-lg font-bold">Opportunity Factor grid</h2>
-          <p className="mt-1 text-xs text-muted-foreground">
+          <div className="flex items-start justify-between gap-3 flex-wrap">
+            <h2 className="font-display text-lg font-bold">Opportunity Factor grid</h2>
+            <Button variant="outline" size="sm" onClick={generateSuggestedFactors} disabled={loading}>
+              <Sparkles className="h-4 w-4 mr-1.5" /> Generate suggested factors from venue data
+            </Button>
+          </div>
+          <p className="mt-2 text-xs text-muted-foreground">
             Opportunity Factors are venue-specific. A Saturday afternoon can be quiet in one venue and one of the strongest shifts of the week in another. PoppOff benchmarks each server against what this venue normally expects from that type of shift. Range 0.7–1.4.
           </p>
-          <p className="mt-2 text-xs rounded-md bg-muted/60 p-2 text-muted-foreground">
+          <div className="mt-3 rounded-md bg-muted/60 p-3 text-xs text-muted-foreground space-y-1">
+            <div className="font-semibold text-foreground">How to use this</div>
+            <div>1.0 means normal opportunity for this venue.</div>
+            <div>Below 1.0 means the shift usually has lower sales opportunity.</div>
+            <div>Above 1.0 means the shift usually has stronger sales opportunity.</div>
+            <div className="pt-1">Start with 1.0 if unsure. Refine the factors after uploading historical venue data.</div>
+          </div>
+          <div className="mt-3 grid sm:grid-cols-2 gap-2 text-xs text-muted-foreground">
+            <div className="rounded-md border border-border p-2">
+              <div className="font-semibold text-foreground">Low opportunity: 0.75 to 0.90</div>
+              <div>Quiet shift, low covers, weaker spend environment</div>
+            </div>
+            <div className="rounded-md border border-border p-2">
+              <div className="font-semibold text-foreground">Normal opportunity: 0.95 to 1.05</div>
+              <div>Typical trading conditions</div>
+            </div>
+            <div className="rounded-md border border-border p-2">
+              <div className="font-semibold text-foreground">Strong opportunity: 1.10 to 1.25</div>
+              <div>Busy shift, strong reservations, good spend environment</div>
+            </div>
+            <div className="rounded-md border border-border p-2">
+              <div className="font-semibold text-foreground">Peak opportunity: 1.30 to 1.40</div>
+              <div>Premium section, high demand, high covers, strong spend environment</div>
+            </div>
+          </div>
+          <p className="mt-3 text-xs rounded-md bg-muted/60 p-2 text-muted-foreground">
             Changes apply to this week's shifts only. Past weeks keep their original scores.
           </p>
           {grid && (
