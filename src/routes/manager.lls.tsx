@@ -362,7 +362,9 @@ function LlsPage() {
     try {
       const res = await suggestOF();
       if (!res.enoughData) {
-        toast.info("Not enough historical data yet. Start with 1.0 and refine after more uploads.");
+        toast.info(
+          `Suggested factors need at least 20 completed historical shifts. This venue currently has ${res.totalCompleted ?? 0} completed shifts. Start with 1.0 and refine after more uploads.`,
+        );
         return;
       }
       setGrid(res.suggestions);
@@ -372,8 +374,13 @@ function LlsPage() {
           await updateOF({ data: { dayOfWeek: dow, daypart: dp, factor: f, weekStart } });
         }
       }
-      toast.success("Suggested factors applied. Edit any cell to fine-tune.");
+      if (res.lowConfidence) {
+        toast.success("Suggested factors generated with low confidence because this venue has limited historical data. Review before applying.");
+      } else {
+        toast.success("Suggested factors generated from venue trading patterns.");
+      }
       await refresh();
+
     } catch (e: any) {
       toast.error(e?.message ?? "Failed to generate suggestions");
     } finally {
