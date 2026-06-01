@@ -156,6 +156,8 @@ function LlsPage() {
   const [pendingFile, setPendingFile] = useState<ParsedFile | null>(null);
   const [pendingSource, setPendingSource] = useState<"sales" | "labor">("sales");
   const [mapping, setMapping] = useState<Record<string, string>>({});
+  const [autoDetected, setAutoDetected] = useState<Set<string>>(new Set());
+  const [needsConfirm, setNeedsConfirm] = useState<Set<string>>(new Set());
   const [mappingOpen, setMappingOpen] = useState(false);
 
   const fetchScorecard = useServerFn(getWeeklyScorecard);
