@@ -62,6 +62,8 @@ const LABOR_FIELDS = [
   { key: "hourly_rate", label: "Hourly rate", required: false },
   { key: "shift_start_time", label: "Shift start time", required: false },
   { key: "shift_end_time", label: "Shift end time", required: false },
+  { key: "daypart", label: "Daypart", required: false },
+
 ] as const;
 
 type ParsedFile = { headers: string[]; rows: Record<string, any>[]; filename: string };
@@ -277,7 +279,9 @@ function LlsPage() {
           shift_date: date,
           shift_start_time: normalizeTime(get("shift_start_time")) ?? undefined,
           shift_end_time: normalizeTime(get("shift_end_time")) ?? undefined,
+          daypart: (() => { const v = get("daypart"); return v == null ? undefined : String(v); })(),
         };
+
         if (source === "sales") {
           row.covers_served = normalizeNumber(get("covers_served"));
           row.gross_sales = normalizeNumber(get("gross_sales"));
@@ -358,7 +362,9 @@ function LlsPage() {
     try {
       const res = await suggestOF();
       if (!res.enoughData) {
-        toast.info("Not enough historical data yet. Start with 1.0 and refine after more uploads.");
+        toast.info(
+          `Suggested factors need at least 20 completed historical shifts. This venue currently has ${res.totalCompleted ?? 0} completed shifts. Start with 1.0 and refine after more uploads.`,
+        );
         return;
       }
       setGrid(res.suggestions);
@@ -368,8 +374,13 @@ function LlsPage() {
           await updateOF({ data: { dayOfWeek: dow, daypart: dp, factor: f, weekStart } });
         }
       }
-      toast.success("Suggested factors applied. Edit any cell to fine-tune.");
+      if (res.lowConfidence) {
+        toast.success("Suggested factors generated with low confidence because this venue has limited historical data. Review before applying.");
+      } else {
+        toast.success("Suggested factors generated from venue trading patterns.");
+      }
       await refresh();
+
     } catch (e: any) {
       toast.error(e?.message ?? "Failed to generate suggestions");
     } finally {

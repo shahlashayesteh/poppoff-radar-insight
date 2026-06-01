@@ -37,6 +37,22 @@ function dayPartFromTime(time: string | null | undefined): Daypart {
   return "late";
 }
 
+// Map common uploaded daypart spellings to the canonical set.
+// Returns null when the value is missing/blank/unrecognized so callers can
+// fall back to time-based inference.
+function normalizeDaypart(raw: unknown): Daypart | null {
+  if (raw == null) return null;
+  const s = String(raw).trim().toLowerCase().replace(/[^a-z]/g, "");
+  if (!s) return null;
+  if (s === "breakfast") return "breakfast";
+  if (s === "brunch") return "brunch";
+  if (s === "lunch") return "lunch";
+  if (s === "dinner" || s === "evening") return "dinner";
+  if (s === "late" || s === "latenight") return "late";
+  return null;
+}
+
+
 function hashServerId(name: string): string {
   // Deterministic synthetic id from name (no crypto needed)
   const n = name.trim().toLowerCase().replace(/\s+/g, "_");
@@ -161,11 +177,13 @@ const ShiftRowInput = z.object({
   shift_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   shift_start_time: z.string().optional().nullable(),
   shift_end_time: z.string().optional().nullable(),
+  daypart: z.string().optional().nullable(),
   covers_served: z.number().optional().nullable(),
   gross_sales: z.number().optional().nullable(),
   labor_cost: z.number().optional().nullable(),
 });
 type ShiftRowInput = z.infer<typeof ShiftRowInput>;
+
 
 export const importShifts = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -208,7 +226,9 @@ export const importShifts = createServerFn({ method: "POST" })
         const startTime = (r.shift_start_time && r.shift_start_time.length >= 5)
           ? r.shift_start_time
           : "00:00:00";
-        const daypart = dayPartFromTime(startTime);
+        // Uploaded Daypart is the source of truth; time-based inference is fallback only.
+        const daypart = normalizeDaypart(r.daypart) ?? dayPartFromTime(startTime);
+
         const dow = dayOfWeekISO(r.shift_date);
 
         const baseRow: any = {
@@ -299,8 +319,9 @@ export const suggestOpportunityFactors = createServerFn({ method: "GET" })
     const worked = (rows ?? []).filter(
       (r: any) => r.gross_sales != null && Number(r.gross_sales) > 0,
     );
-    if (worked.length < 20) {
-      return { enoughData: false as const };
+    const totalCompleted = worked.length;
+    if (totalCompleted < 20) {
+      return { enoughData: false as const, totalCompleted };
     }
 
     const buckets = new Map<string, { sum: number; n: number }>();
@@ -316,25 +337,36 @@ export const suggestOpportunityFactors = createServerFn({ method: "GET" })
       totalN += 1;
     }
     const venueAvg = totalSum / totalN;
-    if (!(venueAvg > 0)) return { enoughData: false as const };
+    if (!(venueAvg > 0)) return { enoughData: false as const, totalCompleted };
 
     const round05 = (v: number) => Math.round(v * 20) / 20;
     const clamp = (v: number) => Math.min(1.4, Math.max(0.75, v));
+
+    // Confidence weight shrinks raw factors toward 1.0 when overall sample is thin.
+    const confidenceWeight =
+      totalCompleted >= 200 ? 1.0 :
+      totalCompleted >= 100 ? 0.75 :
+      totalCompleted >= 50 ? 0.5 :
+      0.25;
+    const lowConfidence = totalCompleted < 50;
 
     const suggestions: Record<number, Record<Daypart, number>> = {};
     for (let dow = 0; dow < 7; dow++) {
       suggestions[dow] = {} as Record<Daypart, number>;
       for (const dp of DAYPARTS) {
         const b = buckets.get(`${dow}|${dp}`);
-        if (!b || b.n < 2) {
+        // Per-bucket sample floor: <5 shifts → stay at 1.00 (no aggressive value).
+        if (!b || b.n < 5) {
           suggestions[dow][dp] = 1.0;
         } else {
-          const avg = b.sum / b.n;
-          suggestions[dow][dp] = round05(clamp(avg / venueAvg));
+          const raw = (b.sum / b.n) / venueAvg;
+          const smoothed = 1 + (raw - 1) * confidenceWeight;
+          suggestions[dow][dp] = round05(clamp(smoothed));
         }
       }
     }
-    return { enoughData: true as const, suggestions };
+    return { enoughData: true as const, suggestions, totalCompleted, lowConfidence };
+
   });
 
 export const rollbackBatch = createServerFn({ method: "POST" })
