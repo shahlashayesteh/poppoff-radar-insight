@@ -349,8 +349,8 @@ function LlsPage() {
           <h2 className="font-display text-lg font-bold flex items-center gap-2"><Upload className="h-4 w-4" /> Import shift data</h2>
           <p className="mt-1 text-xs text-muted-foreground">CSV or XLSX from any POS or back-office system. Upload sales and labor separately — they merge by server + date + start time.</p>
           <div className="mt-4 grid sm:grid-cols-2 gap-4">
-            <UploadZone label="Sales export" sublabel="Server, date, covers, gross sales" onFile={(f) => openUpload("sales", f)} />
-            <UploadZone label="Labor export" sublabel="Server, date, labor cost" onFile={(f) => openUpload("labor", f)} />
+            <UploadZone label="Sales export" sublabel="Required: server name or ID, shift date, daypart, covers served, gross sales" onFile={(f) => openUpload("sales", f)} />
+            <UploadZone label="Labor export" sublabel="Required: server name or ID, shift date, start time, end time or hours worked, labor cost" onFile={(f) => openUpload("labor", f)} />
           </div>
           {batches.length > 0 && (
             <div className="mt-4 border-t border-border pt-4">
