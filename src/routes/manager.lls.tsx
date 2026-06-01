@@ -400,20 +400,20 @@ function LlsPage() {
                     <th className="text-right py-2 px-2">Shifts</th>
                     <th
                       className="text-right py-2 px-2"
-                      title="Gross Sales ÷ Covers Served. Shows how well each server monetises each guest."
-                    >RPC</th>
+                      title="Total Weekly Gross Sales ÷ Total Weekly Covers Served. Shows how well each server monetises each guest."
+                    >Weekly RPC</th>
                     <th
                       className="text-right py-2 px-2"
-                      title="Gross Sales ÷ Labor Cost. Shows sales generated for every £1 of labor."
+                      title="Total Weekly Gross Sales ÷ Total Weekly Labor Cost. Shows sales generated for every £1 of labor."
                     >Base LLS</th>
                     <th
                       className="text-right py-2 px-2"
-                      title="Base LLS ÷ Opportunity Factor. Shows labor return after shift conditions are considered."
-                    >Adjusted LLS</th>
-                    <th className="text-right py-2 px-2">Benchmark</th>
+                      title="Total Weekly Gross Sales ÷ Total Weekly Adjusted Labor Cost (labor cost × opportunity factor)."
+                    >LLS</th>
+                    <th className="text-right py-2 px-2">Venue Benchmark</th>
                     <th
                       className="text-right py-2 px-2"
-                      title="Adjusted LLS compared with the venue benchmark for this shift type."
+                      title="LLS ÷ Venue Benchmark − 1. How far the server is above or below the venue benchmark."
                     >Gap</th>
                     <th className="text-left py-2 pl-3">Operator meaning</th>
                   </tr>
