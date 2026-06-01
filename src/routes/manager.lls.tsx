@@ -45,20 +45,23 @@ const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 // Required mapping targets per source type
 const SALES_FIELDS = [
-  { key: "server_name", label: "Server name", required: true },
+  { key: "server_name", label: "Server name or ID", required: true },
   { key: "shift_date", label: "Shift date", required: true },
-  { key: "shift_start_time", label: "Shift start time", required: false },
-  { key: "shift_end_time", label: "Shift end time", required: false },
   { key: "covers_served", label: "Covers served", required: true },
   { key: "gross_sales", label: "Gross sales", required: true },
+  { key: "daypart", label: "Daypart", required: false },
+  { key: "shift_start_time", label: "Shift start time", required: false },
+  { key: "shift_end_time", label: "Shift end time", required: false },
 ] as const;
 
 const LABOR_FIELDS = [
-  { key: "server_name", label: "Server name", required: true },
+  { key: "server_name", label: "Server name or ID", required: true },
   { key: "shift_date", label: "Shift date", required: true },
+  { key: "labor_cost", label: "Labor cost", required: true },
+  { key: "hours_worked", label: "Hours worked", required: false },
+  { key: "hourly_rate", label: "Hourly rate", required: false },
   { key: "shift_start_time", label: "Shift start time", required: false },
   { key: "shift_end_time", label: "Shift end time", required: false },
-  { key: "labor_cost", label: "Labor cost", required: true },
 ] as const;
 
 type ParsedFile = { headers: string[]; rows: Record<string, any>[]; filename: string };
