@@ -158,6 +158,7 @@ function LlsPage() {
   const fetchScorecard = useServerFn(getWeeklyScorecard);
   const fetchOF = useServerFn(getOpportunityFactors);
   const updateOF = useServerFn(updateOpportunityFactor);
+  const suggestOF = useServerFn(suggestOpportunityFactors);
   const doImport = useServerFn(importShifts);
   const loadMapping = useServerFn(getColumnMapping);
   const persistMapping = useServerFn(saveColumnMapping);
