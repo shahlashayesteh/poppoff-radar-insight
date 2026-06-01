@@ -645,40 +645,84 @@ function LlsPage() {
         </div>
       </div>
 
-      {/* Column mapping modal */}
+      {/* Column mapping modal — only opens when at least one required field
+          is missing or ambiguous. Auto-detected fields are listed read-only
+          so the manager can see what was inferred. */}
       <Dialog open={mappingOpen} onOpenChange={setMappingOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Map your columns</DialogTitle>
+            <DialogTitle>Confirm file columns</DialogTitle>
           </DialogHeader>
           {pendingFile && (
             <div className="space-y-3">
               <p className="text-xs text-muted-foreground">
+                {autoDetected.size > 0
+                  ? "PoppOff has detected most columns automatically. Confirm any missing fields so this file can be imported. You only need to do this when the export format is new or unclear."
+                  : "We couldn't confidently detect this file's column names. Please match the required fields once. PoppOff will remember this mapping for future uploads."}
+              </p>
+              <p className="text-xs text-muted-foreground">
                 File: <span className="font-mono">{pendingFile.filename}</span> · {pendingFile.rows.length} rows · {pendingSource} upload
               </p>
-              <div className="grid sm:grid-cols-2 gap-3">
-                {fieldsForSource.map((f) => (
-                  <div key={f.key}>
-                    <Label className="text-xs">
-                      {f.label} {f.required && <span className="text-[color:var(--opportunity)]">*</span>}
-                    </Label>
-                    <Select
-                      value={mapping[f.key] ?? ""}
-                      onValueChange={(v) => setMapping((m) => ({ ...m, [f.key]: v === "__none__" ? "" : v }))}
-                    >
-                      <SelectTrigger className="mt-1">
-                        <SelectValue placeholder="— select column —" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="__none__">— none —</SelectItem>
-                        {pendingFile.headers.map((h) => (
-                          <SelectItem key={h} value={h}>{h}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+              {needsConfirm.size > 0 && (
+                <div>
+                  <div className="text-xs uppercase tracking-wide text-muted-foreground mb-2">Needs your confirmation</div>
+                  <div className="grid sm:grid-cols-2 gap-3">
+                    {fieldsForSource
+                      .filter((f) => needsConfirm.has(f.key))
+                      .map((f) => (
+                        <div key={f.key}>
+                          <Label className="text-xs">
+                            {f.label} {f.required && <span className="text-[color:var(--opportunity)]">*</span>}
+                          </Label>
+                          <Select
+                            value={mapping[f.key] ?? ""}
+                            onValueChange={(v) => setMapping((m) => ({ ...m, [f.key]: v === "__none__" ? "" : v }))}
+                          >
+                            <SelectTrigger className="mt-1">
+                              <SelectValue placeholder="— select column —" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="__none__">— none —</SelectItem>
+                              {pendingFile.headers.map((h) => (
+                                <SelectItem key={h} value={h}>{h}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      ))}
                   </div>
-                ))}
-              </div>
+                </div>
+              )}
+              {autoDetected.size > 0 && (
+                <details className="text-xs">
+                  <summary className="cursor-pointer text-muted-foreground hover:text-foreground">
+                    Auto-detected columns ({autoDetected.size}) — click to review or edit
+                  </summary>
+                  <div className="grid sm:grid-cols-2 gap-3 mt-2">
+                    {fieldsForSource
+                      .filter((f) => autoDetected.has(f.key) && !needsConfirm.has(f.key))
+                      .map((f) => (
+                        <div key={f.key}>
+                          <Label className="text-xs">{f.label}</Label>
+                          <Select
+                            value={mapping[f.key] ?? ""}
+                            onValueChange={(v) => setMapping((m) => ({ ...m, [f.key]: v === "__none__" ? "" : v }))}
+                          >
+                            <SelectTrigger className="mt-1">
+                              <SelectValue placeholder="— select column —" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="__none__">— none —</SelectItem>
+                              {pendingFile.headers.map((h) => (
+                                <SelectItem key={h} value={h}>{h}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      ))}
+                  </div>
+                </details>
+              )}
             </div>
           )}
           <DialogFooter>
@@ -687,6 +731,7 @@ function LlsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
     </ManagerLayout>
   );
 }
