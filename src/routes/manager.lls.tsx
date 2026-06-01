@@ -28,6 +28,7 @@ import {
   getWeeklyScorecard,
   getOpportunityFactors,
   updateOpportunityFactor,
+  suggestOpportunityFactors,
   getColumnMapping,
   saveColumnMapping,
   listRecentBatches,
@@ -35,7 +36,7 @@ import {
   type ScorecardResult,
   type Daypart,
 } from "@/lib/lls.functions";
-import { Upload, ChevronLeft, ChevronRight, AlertTriangle, TrendingUp, TrendingDown, Trash2, Gauge } from "lucide-react";
+import { Upload, ChevronLeft, ChevronRight, AlertTriangle, TrendingUp, TrendingDown, Trash2, Gauge, Sparkles } from "lucide-react";
 
 export const Route = createFileRoute("/manager/lls")({ component: LlsPage });
 
@@ -157,6 +158,7 @@ function LlsPage() {
   const fetchScorecard = useServerFn(getWeeklyScorecard);
   const fetchOF = useServerFn(getOpportunityFactors);
   const updateOF = useServerFn(updateOpportunityFactor);
+  const suggestOF = useServerFn(suggestOpportunityFactors);
   const doImport = useServerFn(importShifts);
   const loadMapping = useServerFn(getColumnMapping);
   const persistMapping = useServerFn(saveColumnMapping);
@@ -271,6 +273,30 @@ function LlsPage() {
     }
   };
 
+  const generateSuggestedFactors = async () => {
+    setLoading(true);
+    try {
+      const res = await suggestOF();
+      if (!res.enoughData) {
+        toast.info("Not enough historical data yet. Start with 1.0 and refine after more uploads.");
+        return;
+      }
+      setGrid(res.suggestions);
+      for (let dow = 0; dow < 7; dow++) {
+        for (const dp of DAYPARTS) {
+          const f = res.suggestions[dow][dp];
+          await updateOF({ data: { dayOfWeek: dow, daypart: dp, factor: f, weekStart } });
+        }
+      }
+      toast.success("Suggested factors applied. Edit any cell to fine-tune.");
+      await refresh();
+    } catch (e: any) {
+      toast.error(e?.message ?? "Failed to generate suggestions");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const prevWk = () => setWeekStart(toISODate(previousMonday(new Date(weekStart + "T00:00:00"))));
   const nextWk = () => {
     const d = new Date(weekStart + "T00:00:00");
@@ -288,7 +314,7 @@ function LlsPage() {
               <Gauge className="h-8 w-8" /> Labor Leverage Score
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              Per-shift sales productivity vs labor cost. Manager-only view.
+              Compare server LLS against the venue benchmark using sales, covers, labor cost, and shift opportunity.
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -301,17 +327,20 @@ function LlsPage() {
         {/* Venue summary */}
         <div className="mt-6 grid sm:grid-cols-3 gap-4">
           <SummaryCard
-            label="Venue benchmark (Adjusted LLS)"
-            value={scorecard?.venue_benchmark != null ? scorecard.venue_benchmark.toFixed(2) : "—"}
+            label="Venue Benchmark"
+            value={scorecard?.venue_benchmark != null ? `${scorecard.venue_benchmark.toFixed(2)}x weekly LLS` : "—"}
+            helper="Venue weekly LLS used as the benchmark for this scorecard."
           />
           <SummaryCard
-            label="Benchmark WoW trend"
+            label="Benchmark WoW Trend"
             value={scorecard?.venue_benchmark_trend_pct != null ? `${scorecard.venue_benchmark_trend_pct > 0 ? "+" : ""}${scorecard.venue_benchmark_trend_pct.toFixed(1)}%` : "—"}
             trend={scorecard?.venue_benchmark_trend_pct ?? null}
+            helper="How the venue benchmark changed versus last week."
           />
           <SummaryCard
-            label="Servers tracked"
+            label="Servers Tracked"
             value={String(scorecard?.servers.length ?? 0)}
+            helper="Servers with both sales and labor data this week."
           />
         </div>
 
@@ -320,8 +349,8 @@ function LlsPage() {
           <h2 className="font-display text-lg font-bold flex items-center gap-2"><Upload className="h-4 w-4" /> Import shift data</h2>
           <p className="mt-1 text-xs text-muted-foreground">CSV or XLSX from any POS or back-office system. Upload sales and labor separately — they merge by server + date + start time.</p>
           <div className="mt-4 grid sm:grid-cols-2 gap-4">
-            <UploadZone label="Sales export" sublabel="Server, date, covers, gross sales" onFile={(f) => openUpload("sales", f)} />
-            <UploadZone label="Labor export" sublabel="Server, date, labor cost" onFile={(f) => openUpload("labor", f)} />
+            <UploadZone label="Sales export" sublabel="Required: server name or ID, shift date, daypart, covers served, gross sales" onFile={(f) => openUpload("sales", f)} />
+            <UploadZone label="Labor export" sublabel="Required: server name or ID, shift date, start time, end time or hours worked, labor cost" onFile={(f) => openUpload("labor", f)} />
           </div>
           {batches.length > 0 && (
             <div className="mt-4 border-t border-border pt-4">
@@ -371,20 +400,20 @@ function LlsPage() {
                     <th className="text-right py-2 px-2">Shifts</th>
                     <th
                       className="text-right py-2 px-2"
-                      title="Gross Sales ÷ Covers Served. Shows how well each server monetises each guest."
-                    >RPC</th>
+                      title="Total Weekly Gross Sales ÷ Total Weekly Covers Served. Shows how well each server monetises each guest."
+                    >Weekly RPC</th>
                     <th
                       className="text-right py-2 px-2"
-                      title="Gross Sales ÷ Labor Cost. Shows sales generated for every £1 of labor."
+                      title="Total Weekly Gross Sales ÷ Total Weekly Labor Cost. Shows sales generated for every £1 of labor."
                     >Base LLS</th>
                     <th
                       className="text-right py-2 px-2"
-                      title="Base LLS ÷ Opportunity Factor. Shows labor return after shift conditions are considered."
-                    >Adjusted LLS</th>
-                    <th className="text-right py-2 px-2">Benchmark</th>
+                      title="Total Weekly Gross Sales ÷ Total Weekly Adjusted Labor Cost (labor cost × opportunity factor)."
+                    >LLS</th>
+                    <th className="text-right py-2 px-2">Venue Benchmark</th>
                     <th
                       className="text-right py-2 px-2"
-                      title="Adjusted LLS compared with the venue benchmark for this shift type."
+                      title="LLS ÷ Venue Benchmark − 1. How far the server is above or below the venue benchmark."
                     >Gap</th>
                     <th className="text-left py-2 pl-3">Operator meaning</th>
                   </tr>
@@ -426,6 +455,11 @@ function LlsPage() {
           ) : (
             <p className="mt-4 text-sm text-muted-foreground">No shifts yet for this week. Import sales and labor data to begin.</p>
           )}
+          <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-xs text-muted-foreground">
+            <span className="flex items-center gap-1.5"><span className={`inline-block w-2.5 h-2.5 rounded-sm ${bandBg("green", true).split(" ")[0]}`} /> Strong LLS: 10%+ above benchmark</span>
+            <span className="flex items-center gap-1.5"><span className={`inline-block w-2.5 h-2.5 rounded-sm ${bandBg("amber", true).split(" ")[0]}`} /> Average LLS: within ±10% of benchmark</span>
+            <span className="flex items-center gap-1.5"><span className={`inline-block w-2.5 h-2.5 rounded-sm ${bandBg("red", true).split(" ")[0]}`} /> Weak LLS: 10%+ below benchmark</span>
+          </div>
         </div>
 
 
@@ -453,11 +487,41 @@ function LlsPage() {
 
         {/* Opportunity Factor editor */}
         <div className="mt-6 rounded-2xl bg-white border border-border p-6">
-          <h2 className="font-display text-lg font-bold">Opportunity Factor grid</h2>
-          <p className="mt-1 text-xs text-muted-foreground">
+          <div className="flex items-start justify-between gap-3 flex-wrap">
+            <h2 className="font-display text-lg font-bold">Opportunity Factor grid</h2>
+            <Button variant="outline" size="sm" onClick={generateSuggestedFactors} disabled={loading}>
+              <Sparkles className="h-4 w-4 mr-1.5" /> Generate suggested factors from venue data
+            </Button>
+          </div>
+          <p className="mt-2 text-xs text-muted-foreground">
             Opportunity Factors are venue-specific. A Saturday afternoon can be quiet in one venue and one of the strongest shifts of the week in another. PoppOff benchmarks each server against what this venue normally expects from that type of shift. Range 0.7–1.4.
           </p>
-          <p className="mt-2 text-xs rounded-md bg-muted/60 p-2 text-muted-foreground">
+          <div className="mt-3 rounded-md bg-muted/60 p-3 text-xs text-muted-foreground space-y-1">
+            <div className="font-semibold text-foreground">How to use this</div>
+            <div>1.0 means normal opportunity for this venue.</div>
+            <div>Below 1.0 means the shift usually has lower sales opportunity.</div>
+            <div>Above 1.0 means the shift usually has stronger sales opportunity.</div>
+            <div className="pt-1">Start with 1.0 if unsure. Refine the factors after uploading historical venue data.</div>
+          </div>
+          <div className="mt-3 grid sm:grid-cols-2 gap-2 text-xs text-muted-foreground">
+            <div className="rounded-md border border-border p-2">
+              <div className="font-semibold text-foreground">Low opportunity: 0.75 to 0.90</div>
+              <div>Quiet shift, low covers, weaker spend environment</div>
+            </div>
+            <div className="rounded-md border border-border p-2">
+              <div className="font-semibold text-foreground">Normal opportunity: 0.95 to 1.05</div>
+              <div>Typical trading conditions</div>
+            </div>
+            <div className="rounded-md border border-border p-2">
+              <div className="font-semibold text-foreground">Strong opportunity: 1.10 to 1.25</div>
+              <div>Busy shift, strong reservations, good spend environment</div>
+            </div>
+            <div className="rounded-md border border-border p-2">
+              <div className="font-semibold text-foreground">Peak opportunity: 1.30 to 1.40</div>
+              <div>Premium section, high demand, high covers, strong spend environment</div>
+            </div>
+          </div>
+          <p className="mt-3 text-xs rounded-md bg-muted/60 p-2 text-muted-foreground">
             Changes apply to this week's shifts only. Past weeks keep their original scores.
           </p>
           {grid && (
@@ -547,7 +611,7 @@ function LlsPage() {
   );
 }
 
-function SummaryCard({ label, value, band, trend }: { label: string; value: string; band?: string; trend?: number | null }) {
+function SummaryCard({ label, value, band, trend, helper }: { label: string; value: string; band?: string; trend?: number | null; helper?: string }) {
   return (
     <div className="rounded-2xl bg-white border border-border p-5">
       <div className="text-xs uppercase tracking-wide text-muted-foreground">{label}</div>
@@ -559,6 +623,7 @@ function SummaryCard({ label, value, band, trend }: { label: string; value: stri
             : <TrendingDown className="h-4 w-4 text-[color:var(--opportunity)]" />
         )}
       </div>
+      {helper && <div className="mt-2 text-xs text-muted-foreground">{helper}</div>}
     </div>
   );
 }
