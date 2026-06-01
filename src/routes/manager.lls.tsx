@@ -663,26 +663,71 @@ function UploadZone({ label, sublabel, onFile }: { label: string; sublabel: stri
   );
 }
 
-// Heuristic auto-mapping
-function autoMap(headers: string[], fields: ReadonlyArray<{ key: string; label: string }>): Record<string, string> {
-  const result: Record<string, string> = {};
+// Heuristic auto-mapping with ambiguity detection.
+// Returns the best header per field plus a set of fields where multiple
+// headers tied at the highest-confidence (lowest-priority) match — those
+// must be confirmed by the manager rather than guessed silently.
+function autoMap(
+  headers: string[],
+  fields: ReadonlyArray<{ key: string }>,
+): { mapping: Record<string, string>; ambiguous: Set<string> } {
   const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
-  const headerMap = new Map(headers.map((h) => [norm(h), h]));
-  const synonyms: Record<string, string[]> = {
-    server_name: ["server", "servername", "name", "employee", "employeename", "staff", "waiter", "soldby"],
-    shift_date: ["date", "shiftdate", "businessdate", "tradingdate", "day"],
-    shift_start_time: ["start", "starttime", "shiftstart", "clockin", "in"],
-    shift_end_time: ["end", "endtime", "shiftend", "clockout", "out"],
-    covers_served: ["covers", "guests", "pax", "customers", "coverscount"],
-    gross_sales: ["sales", "totalsales", "grosssales", "netsales", "revenue", "total"],
-    labor_cost: ["labor", "labour", "laborcost", "labourcost", "wagecost", "wages", "payroll", "cost"],
+  // Priority order matters: earlier entries are stronger matches.
+  const SYN: Record<string, string[]> = {
+    server_name: [
+      "servername", "server", "employeename", "employee", "staffname", "staff",
+      "waitername", "waiter", "teammembername", "teammember", "username", "user",
+      "operator", "cashier", "soldby", "name",
+    ],
+    shift_date: [
+      "businessdate", "shiftdate", "tradingdate", "transactiondate", "orderdate",
+      "saledate", "servicedate", "date", "day",
+    ],
+    daypart: ["daypart", "mealperiod", "serviceperiod", "service", "period", "session"],
+    covers_served: [
+      "coversserved", "coverscount", "coverstotal", "guestsserved", "guestcount",
+      "covers", "guests", "pax", "customers",
+    ],
+    gross_sales: [
+      "grosssales", "grossrevenue", "grosstotal", "totalsales", "salestotal",
+      "sales", "revenue", "amount", "total", "netsales",
+    ],
+    shift_start_time: [
+      "shiftstart", "clockin", "starttime", "intime", "timein", "start",
+    ],
+    shift_end_time: [
+      "shiftend", "clockout", "endtime", "outtime", "timeout", "end",
+    ],
+    labor_cost: [
+      "laborcost", "labourcost", "wagecost", "payrollcost", "staffcost",
+      "employeecost", "totalpay", "wages", "pay", "cost",
+    ],
+    hours_worked: [
+      "hoursworked", "paidhours", "shifthours", "totalhours", "workedhours", "hours",
+    ],
+    hourly_rate: ["hourlyrate", "wagerate", "hourlypay", "payrate", "rate"],
   };
+
+  const mapping: Record<string, string> = {};
+  const ambiguous = new Set<string>();
   for (const f of fields) {
-    const candidates = [f.key, ...(synonyms[f.key] ?? [])];
-    for (const c of candidates) {
-      const hit = headerMap.get(norm(c));
-      if (hit) { result[f.key] = hit; break; }
+    const syns = SYN[f.key] ?? [f.key.replace(/_/g, "")];
+    let best: { header: string; prio: number } | null = null;
+    let tied = false;
+    for (const h of headers) {
+      const prio = syns.indexOf(norm(h));
+      if (prio === -1) continue;
+      if (!best || prio < best.prio) {
+        best = { header: h, prio };
+        tied = false;
+      } else if (prio === best.prio) {
+        tied = true;
+      }
+    }
+    if (best) {
+      mapping[f.key] = best.header;
+      if (tied) ambiguous.add(f.key);
     }
   }
-  return result;
+  return { mapping, ambiguous };
 }
