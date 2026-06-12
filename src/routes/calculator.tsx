@@ -14,7 +14,7 @@ export const Route = createFileRoute("/calculator")({
         content:
           "Find out how many pounds of revenue every pound of floor labour produces. Twenty seconds, five sliders, your score on the band.",
       },
-      { property: "og:title", content: "Labor Leverage Score Calculator | PoppOff" },
+      { property: "og:title", content: "Floor Leverage Check | PoppOff" },
       {
         property: "og:description",
         content:
