@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/calculator")({
   head: () => ({
     meta: [
-      { title: "Labor Leverage Score Calculator | PoppOff" },
+      { title: "Floor Leverage Check | PoppOff" },
       {
         name: "description",
         content:
