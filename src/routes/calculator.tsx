@@ -143,11 +143,11 @@ function CalculatorPage() {
     <main className="min-h-screen bg-background text-foreground">
       <div className="mx-auto max-w-[1060px] px-6 pb-20 pt-12">
         <p className="mb-4 font-mono text-xs uppercase tracking-[0.18em] text-brand-orange">
-          PoppOff · Labor Leverage Score™
+          PoppOff · Floor Leverage Check™
         </p>
-        <h1 className="max-w-[14ch] font-display text-[clamp(38px,6vw,68px)] font-extrabold uppercase leading-[0.98] tracking-tight">
-          What is your floor's{" "}
-          <span className="text-brand-orange">Labor Leverage Score?</span>
+        <h1 className="max-w-[18ch] font-display text-[clamp(38px,6vw,68px)] font-extrabold uppercase leading-[0.98] tracking-tight">
+          How hard is your floor's{" "}
+          <span className="text-brand-orange">labour working?</span>
         </h1>
         <p className="mt-5 max-w-[48ch] text-base leading-relaxed text-muted-foreground">
           Most operators manage labour as a cost. The best ones measure it as leverage:
