@@ -300,7 +300,7 @@ function CalculatorPage() {
 
               <div className="py-2 text-center">
                 <p className="mb-1.5 text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-                  Labor Leverage Score
+                  Floor Leverage Check
                 </p>
                 <div
                   key={`stamp-${tick}`}
