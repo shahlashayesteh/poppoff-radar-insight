@@ -133,6 +133,7 @@ function Landing() {
             <Link to="/signin" className="rounded-xl px-3 py-2 text-sm font-semibold border border-border hover:border-foreground">Sign in</Link>
             <Link to="/signup" className="rounded-xl px-3 py-2 text-sm font-bold text-white" style={{ background: "var(--brand-green)" }}>Sign up</Link>
             <Link to="/login" className="rounded-xl px-3 py-2 text-sm font-bold text-white hidden sm:inline-flex" style={{ background: "var(--brand-orange)" }}>See Demo</Link>
+            <Link to="/calculator" className="rounded-xl px-3 py-2 text-sm font-bold border-2 border-foreground hidden sm:inline-flex">Floor check</Link>
           </div>
         </div>
       </header>
