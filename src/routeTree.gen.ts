@@ -23,6 +23,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as JoinRouteImport } from './routes/join'
 import { Route as HospitalityPerformanceSoftwareRouteImport } from './routes/hospitality-performance-software'
 import { Route as ContactRouteImport } from './routes/contact'
+import { Route as CalculatorRouteImport } from './routes/calculator'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ServerIndexRouteImport } from './routes/server.index'
 import { Route as ManagerIndexRouteImport } from './routes/manager.index'
@@ -140,6 +141,11 @@ const HospitalityPerformanceSoftwareRoute =
 const ContactRoute = ContactRouteImport.update({
   id: '/contact',
   path: '/contact',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CalculatorRoute = CalculatorRouteImport.update({
+  id: '/calculator',
+  path: '/calculator',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -364,6 +370,7 @@ const ApiPublicPaymentsWebhookRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/calculator': typeof CalculatorRoute
   '/contact': typeof ContactRoute
   '/hospitality-performance-software': typeof HospitalityPerformanceSoftwareRoute
   '/join': typeof JoinRoute
@@ -423,6 +430,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/calculator': typeof CalculatorRoute
   '/contact': typeof ContactRoute
   '/hospitality-performance-software': typeof HospitalityPerformanceSoftwareRoute
   '/join': typeof JoinRoute
@@ -483,6 +491,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/calculator': typeof CalculatorRoute
   '/contact': typeof ContactRoute
   '/hospitality-performance-software': typeof HospitalityPerformanceSoftwareRoute
   '/join': typeof JoinRoute
@@ -544,6 +553,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/calculator'
     | '/contact'
     | '/hospitality-performance-software'
     | '/join'
@@ -603,6 +613,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/calculator'
     | '/contact'
     | '/hospitality-performance-software'
     | '/join'
@@ -662,6 +673,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/calculator'
     | '/contact'
     | '/hospitality-performance-software'
     | '/join'
@@ -722,6 +734,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  CalculatorRoute: typeof CalculatorRoute
   ContactRoute: typeof ContactRoute
   HospitalityPerformanceSoftwareRoute: typeof HospitalityPerformanceSoftwareRoute
   JoinRoute: typeof JoinRoute
@@ -877,6 +890,13 @@ declare module '@tanstack/react-router' {
       path: '/contact'
       fullPath: '/contact'
       preLoaderRoute: typeof ContactRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/calculator': {
+      id: '/calculator'
+      path: '/calculator'
+      fullPath: '/calculator'
+      preLoaderRoute: typeof CalculatorRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -1196,6 +1216,7 @@ const SignupRouteWithChildren =
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  CalculatorRoute: CalculatorRoute,
   ContactRoute: ContactRoute,
   HospitalityPerformanceSoftwareRoute: HospitalityPerformanceSoftwareRoute,
   JoinRoute: JoinRoute,
