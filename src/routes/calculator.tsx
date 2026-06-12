@@ -8,13 +8,13 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/calculator")({
   head: () => ({
     meta: [
-      { title: "Labor Leverage Score Calculator | PoppOff" },
+      { title: "Floor Leverage Check | PoppOff" },
       {
         name: "description",
         content:
           "Find out how many pounds of revenue every pound of floor labour produces. Twenty seconds, five sliders, your score on the band.",
       },
-      { property: "og:title", content: "Labor Leverage Score Calculator | PoppOff" },
+      { property: "og:title", content: "Floor Leverage Check | PoppOff" },
       {
         property: "og:description",
         content:
@@ -143,11 +143,11 @@ function CalculatorPage() {
     <main className="min-h-screen bg-background text-foreground">
       <div className="mx-auto max-w-[1060px] px-6 pb-20 pt-12">
         <p className="mb-4 font-mono text-xs uppercase tracking-[0.18em] text-brand-orange">
-          PoppOff · Labor Leverage Score™
+          PoppOff · Floor Leverage Check™
         </p>
-        <h1 className="max-w-[14ch] font-display text-[clamp(38px,6vw,68px)] font-extrabold uppercase leading-[0.98] tracking-tight">
-          What is your floor's{" "}
-          <span className="text-brand-orange">Labor Leverage Score?</span>
+        <h1 className="max-w-[18ch] font-display text-[clamp(38px,6vw,68px)] font-extrabold uppercase leading-[0.98] tracking-tight">
+          How hard is your floor's{" "}
+          <span className="text-brand-orange">labour working?</span>
         </h1>
         <p className="mt-5 max-w-[48ch] text-base leading-relaxed text-muted-foreground">
           Most operators manage labour as a cost. The best ones measure it as leverage:
@@ -244,16 +244,18 @@ function CalculatorPage() {
               <strong className="font-semibold text-foreground">
                 How the score works.
               </strong>{" "}
-              Your Labor Leverage Score is the revenue your serving team produces for
-              every pound it costs. Green is 13.0x and above, amber is 10.0 to 12.9x,
+              This is the quick check: venue-level, five inputs, directional. Your full
+              Labor Leverage Score™ is calculated per server, weighted by revenue
+              per cover and adjusted by your venue's Opportunity Factor, and it
+              needs your POS data: that is what PoppOff measures, server by server,
+              every week. Green is 13.0x and above, amber is 10.0 to 12.9x,
               red is below 10.0x. The unrealised revenue figure assumes your strongest
               server drives 12 to 20% higher spend per cover than the team average,
               mostly through wine, desserts and upsells, and that the rest of the team
               closes{" "}
               <strong className="font-semibold text-foreground">half</strong> that gap.
               Every assumption is shown, and your real numbers come from your own POS
-              data: that is what PoppOff measures, server by server, every week. The
-              full thinking is in{" "}
+              data. The full thinking is in{" "}
               <a
                 href={ARTICLE_URL}
                 target="_blank"
@@ -298,7 +300,7 @@ function CalculatorPage() {
 
               <div className="py-2 text-center">
                 <p className="mb-1.5 text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-                  Labor Leverage Score
+                  Floor Leverage Check
                 </p>
                 <div
                   key={`stamp-${tick}`}
