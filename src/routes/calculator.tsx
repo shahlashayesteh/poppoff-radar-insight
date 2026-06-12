@@ -244,16 +244,18 @@ function CalculatorPage() {
               <strong className="font-semibold text-foreground">
                 How the score works.
               </strong>{" "}
-              Your Labor Leverage Score is the revenue your serving team produces for
-              every pound it costs. Green is 13.0x and above, amber is 10.0 to 12.9x,
+              This is the quick check: venue-level, five inputs, directional. Your full
+              Labor Leverage Score™ is calculated per server, weighted by revenue
+              per cover and adjusted by your venue's Opportunity Factor, and it
+              needs your POS data: that is what PoppOff measures, server by server,
+              every week. Green is 13.0x and above, amber is 10.0 to 12.9x,
               red is below 10.0x. The unrealised revenue figure assumes your strongest
               server drives 12 to 20% higher spend per cover than the team average,
               mostly through wine, desserts and upsells, and that the rest of the team
               closes{" "}
               <strong className="font-semibold text-foreground">half</strong> that gap.
               Every assumption is shown, and your real numbers come from your own POS
-              data: that is what PoppOff measures, server by server, every week. The
-              full thinking is in{" "}
+              data. The full thinking is in{" "}
               <a
                 href={ARTICLE_URL}
                 target="_blank"
