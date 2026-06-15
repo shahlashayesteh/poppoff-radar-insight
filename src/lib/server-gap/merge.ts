@@ -23,9 +23,9 @@ export type NormalisedLabourRow = {
   key: string;
   display: string;
   date: string;
-  startMin: number | null;
+  startMin: number;
   endMin: number | null;
-  hours: number | null;
+  hours: number;
   labourCost: number | null;
   raw: ParsedRow;
 };
