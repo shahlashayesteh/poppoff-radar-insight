@@ -98,7 +98,7 @@ function CalculatorPage() {
   const [rate, setRate] = useState(12.5);
   const [hours, setHours] = useState(25);
   const [onCost, setOnCost] = useState(0.15);
-  const [spread, setSpread] = useState(0.12);
+  
   const [tick, setTick] = useState(0);
 
   const currency = market === "UK" ? "£" : "$";
@@ -122,7 +122,7 @@ function CalculatorPage() {
 
   useEffect(() => {
     setTick((t) => t + 1);
-  }, [covers, spend, servers, rate, hours, spread, onCost, market]);
+  }, [covers, spend, servers, rate, hours, onCost, market]);
 
   return (
     <main className="min-h-screen bg-background text-foreground">
@@ -135,9 +135,12 @@ function CalculatorPage() {
           <span className="text-brand-orange">labour working?</span>
         </h1>
         <p className="mt-5 max-w-[48ch] text-base leading-relaxed text-muted-foreground">
-          Most operators manage labour as a cost. The best ones measure it as leverage:
-          how many pounds of revenue every pound of floor labour produces. Five numbers
-          you already know off by heart, twenty seconds, your score on the band.
+          Most operators manage labour as a cost. The best ones measure it as leverage:{" "}
+          {market === "UK"
+            ? "how many pounds of revenue every pound of floor labour produces"
+            : "how many dollars of revenue every dollar of floor labour produces"}
+          . Five numbers you already know off by heart, twenty seconds, and see exactly
+          where your floor stands.
         </p>
 
         <div className="mt-14 grid items-start gap-10 lg:grid-cols-[1fr_400px] lg:gap-14">
@@ -207,7 +210,7 @@ function CalculatorPage() {
               id="rate"
               label="Average server hourly rate"
               output={money2(currency, rate)}
-              hint="Base wage before NI, pension and tronc."
+              hint={market === "UK" ? "Base wage before NI, pension and tronc." : "Base wage before payroll taxes and benefits."}
               min={10}
               max={20}
               step={0.25}
@@ -262,42 +265,18 @@ function CalculatorPage() {
               </ToggleGroup>
             </div>
             <p className="mt-2 max-w-[62ch] text-xs text-muted-foreground">
-              Employer on-costs on top of base wage. UK: National Insurance, pension,
-              holiday pay (~15%). US: FICA, unemployment, workers' comp (~12%). Adjust
-              to match your payroll.
+              {market === "UK"
+                ? "Employer on-costs on top of base wage: National Insurance, pension and holiday pay (~15%). Adjust to match your payroll."
+                : "Employer on-costs on top of base wage: FICA, unemployment and workers' comp (~12%). Adjust to match your payroll."}
             </p>
 
-            <div
-              className="mt-7 flex flex-wrap items-center gap-2.5"
-              role="group"
-              aria-label="Performance spread assumption"
-            >
-              <span className="mr-1 font-mono text-xs uppercase tracking-[0.14em] text-muted-foreground">
-                Spread between best and average server
-              </span>
-              <ToggleGroup
-                type="single"
-                value={String(spread)}
-                onValueChange={(v) => {
-                  if (!v) return;
-                  setSpread(parseFloat(v));
-                }}
-                variant="outline"
-              >
-                <ToggleGroupItem value="0.12" className="rounded-full px-4">
-                  Conservative · 12%
-                </ToggleGroupItem>
-                <ToggleGroupItem value="0.20" className="rounded-full px-4">
-                  Typical · 20%
-                </ToggleGroupItem>
-              </ToggleGroup>
-            </div>
+
 
             <p className="mt-12 max-w-[62ch] text-sm leading-relaxed text-muted-foreground">
               <strong className="font-semibold text-foreground">
                 How the score works.
               </strong>{" "}
-              This is the quick check: venue-level, five inputs, directional. Your full
+              This is the quick check: venue-level, a few quick numbers, directional. Your full
               Labor Leverage Score™ is calculated per server, weighted by revenue
               per cover and adjusted by your venue's Opportunity Factor, and it
               needs your POS data: that is what PoppOff measures, server by server,
@@ -307,9 +286,9 @@ function CalculatorPage() {
               and the rest of the floor closes{" "}
               <strong className="font-semibold text-foreground">half</strong> that gap;
               it is a directional estimate, and your own POS gives the exact figure.
-              Benchmarks differ by market: UK total labour runs 30–35%, US
-              front-of-house 8–12% in tipped-wage states and higher where servers earn
-              full minimum wage. The full thinking is in{" "}
+              Benchmarks differ by market: UK total labour runs 30–35% of revenue; US
+              front-of-house runs 8–12% of sales in tipped-wage states and 14–16% in
+              no-tip-credit states like California and Washington. The full thinking is in{" "}
               <a
                 href={ARTICLE_URL}
                 target="_blank"
@@ -340,10 +319,6 @@ function CalculatorPage() {
               <ReceiptLine
                 label="Floor labour, fully loaded (est.)"
                 value={money0(currency, labour)}
-              />
-              <ReceiptLine
-                label="Best vs avg spread"
-                value={Math.round(spread * 100) + "%"}
               />
               <hr className="my-4 border-t border-dashed border-border" />
 
