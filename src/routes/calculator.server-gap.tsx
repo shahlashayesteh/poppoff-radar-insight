@@ -48,9 +48,22 @@ const money2 = (c: string, n: number) => `${c}${nf2.format(n)}`;
 
 type UploadKind = "sales" | "labour";
 
-const REQUIRED_SALES = ["server_name or server_id", "shift_date", "net_sales or gross_sales"];
-const PREFERRED_SALES = ["shift_start", "shift_end"];
-const REQUIRED_LABOUR = ["server_name or server_id", "shift_date", "shift_start", "shift_end or hours"];
+type FieldReq = { label: string; aliases: string[] };
+const REQUIRED_SALES: FieldReq[] = [
+  { label: "server name or ID", aliases: ["server_name", "server_id"] },
+  { label: "shift date", aliases: ["shift_date"] },
+  { label: "net or gross sales", aliases: ["net_sales", "gross_sales"] },
+];
+const PREFERRED_SALES: FieldReq[] = [
+  { label: "shift start time", aliases: ["shift_start"] },
+  { label: "shift end time", aliases: ["shift_end"] },
+];
+const REQUIRED_LABOUR: FieldReq[] = [
+  { label: "server name or ID", aliases: ["server_name", "server_id"] },
+  { label: "shift date", aliases: ["shift_date"] },
+  { label: "shift start time", aliases: ["shift_start"] },
+  { label: "shift end or hours", aliases: ["shift_end", "hours"] },
+];
 
 function ServerGapPage() {
   const [salesFile, setSalesFile] = useState<{ name: string; result: ParseResult } | null>(null);
