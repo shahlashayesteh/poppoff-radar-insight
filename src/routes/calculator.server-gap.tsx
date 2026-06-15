@@ -21,6 +21,12 @@ import {
 } from "@/lib/server-gap/calc";
 import { buildWarnings } from "@/lib/server-gap/warnings";
 import { computeConfidence } from "@/lib/server-gap/confidence";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 
 const META_DESCRIPTION =
   "See the real revenue gap between your servers. Upload your POS sales and labour exports — processed in your browser, never sent to our servers. Ranks by opportunity-adjusted revenue per hour.";
