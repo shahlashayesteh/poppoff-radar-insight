@@ -1,78 +1,59 @@
-# LLS v2 — Surgical Formula Correction
+# Calculator overhaul — market toggle, on-cost, range-based upside, no band
 
-Scope-locked. Touch only the calculation engine, weekly aggregation, benchmark/RAG logic, and labels. No route, upload, RLS, or schema changes beyond the function rewrite + one column comment.
+## Files changed
+- `src/routes/calculator.tsx` (only)
 
-## Naming policy
+## Protected files touched
+None. (No edits to `src/integrations/supabase/*`, `.env`, `routeTree.gen.ts`, `src/router.tsx`, `src/routes/__root.tsx`, home, auth, signin, or any `/demo` routes.)
 
-- DB column `shifts.final_lls` stays (migration safety).
-- All user-facing strings, response field names, tooltips, headers, and code comments call it **Adjusted LLS**. "Final LLS" must not appear anywhere user-visible after this change.
-- Server response renames the field to `adjusted_lls` so the dashboard never sees `final_lls`.
+## Scope (supersedes the earlier on-cost-only plan)
 
-## 1. Migration — `calculate_lls_for_shift` rewrite
+### State (top of `CalculatorPage`)
+- `market: 'UK'|'US'` — default `'UK'`.
+- `onCost: number` — default `0.15`.
+- Effect on `market` change: set `onCost` to `0.15` (UK) or `0.12` (US); user can override afterward.
+- `currency = market === 'UK' ? '£' : '$'`.
+- Replace `gbp0`/`gbp2` formatters with currency-agnostic helpers that prefix `{currency}` — numbers are not converted, only the symbol changes.
 
-- `rpc = gross_sales / covers_served` (guarded)
-- `base_lls = gross_sales / labor_cost` (guarded)
-- `adjusted_lls = base_lls / opportunity_factor` (OF defaults to 1.0; guarded)
-- Persist `rpc`, `base_lls`, `opportunity_factor`, and write `adjusted_lls` into `shifts.final_lls`.
-- `COMMENT ON COLUMN public.shifts.final_lls IS 'Adjusted LLS (kept under legacy name for migration safety)'`.
-- `recalculate_lls_for_week` unchanged.
-- Hard guard: no `base_lls * rpc` / `base_lls × rpc` / `(base_lls * rpc) / opportunity_factor` anywhere in SQL or TS.
+### New inputs (in this order on the page)
+1. **Market toggle** — placed above the first existing input (Covers/week). `ToggleGroup` styled like the spread toggle; options `UK (£)` / `US ($)`; eyebrow label "Market". `onValueChange` ignores empty values.
+2. **Employer on-costs toggle** — placed directly below "Average hours per server, per week" and above the spread toggle. Eyebrow "Employer on-costs". Options: `Off · 0%` (`"0"`), `Low · 10%` (`"0.10"`), `Standard` (value = market default, `"0.15"` UK / `"0.12"` US), `High · 20%` (`"0.20"`). Empty-value guard.
+3. Helper text under it: "Employer on-costs on top of base wage. UK: National Insurance, pension, holiday pay (~15%). US: FICA, unemployment, workers' comp (~12%). Adjust to match your payroll."
 
-## 2. `src/lib/lls.functions.ts` — `getWeeklyScorecard` rewrite
+### Calculation
+- `labour = servers * rate * hours * (1 + onCost)`.
+- `floorLabourPct = (labour / weeklyRev) * 100`.
+- Range-based upside, independent of spread toggle position:
+  - `perCoverGap(s) = spend * s`
+  - `coversFromRest = covers * (servers - 1) / servers`
+  - `weeklyUpside(s) = (spend * s / 2) * coversFromRest`
+  - `annualUpside(s) = weeklyUpside(s) * 52`
+  - `upsidePctOfRev(s) = weeklyUpside(s) / weeklyRev * 100`
+  - Evaluate at `s = 0.12` (low) and `s = 0.20` (high).
+- Remove `bandFor`, `band`, `stampToneClass`, `gapLabel`, `gapValue`, and the old single-spread `upliftPct/weekly/annual` derivation.
+- Add `onCost`, `market` to the `useEffect` dependency list that bumps `tick`.
 
-Same signature, same callers. Aggregation only — no other helpers touched.
+### Output panel restructure (replaces band + gap-to-green + "left on the table")
+In order, inside the receipt card:
+1. Receipt lines: Weekly revenue; **"Floor labour, fully loaded (est.)"** (renamed); Servers as % of revenue; Best-vs-avg spread (unchanged label, keeps toggle context).
+2. **Headline — per-cover gap**: "Your strongest server runs about {currency}{perCoverGap(0.12) 2dp} to {currency}{perCoverGap(0.20) 2dp} higher spend per cover than your team average."
+3. **Potential upside (range)**: "If the rest of your floor closed half that gap, that's roughly {currency}{annualUpside(0.12) 0dp} to {currency}{annualUpside(0.20) 0dp} a year — about {upsidePctOfRev(0.12) 1dp}% to {upsidePctOfRev(0.20) 1dp}% of revenue." Labelled "Potential upside" (not "left on the table").
+4. **Floor labour as % of revenue**: "Floor labour, fully loaded: {currency}{labour 0dp}/week — {floorLabourPct 1dp}% of revenue."
+5. **Market-aware benchmark line** directly under (4):
+   - UK: "UK hospitality labour typically runs 30–35% of revenue; front-of-house runs higher than the US because servers earn full minimum wage, not a tipped rate."
+   - US: "Full-service front-of-house labour commonly runs 8–12% of sales in tipped-wage states. In no-tip-credit states (CA, WA, OR, NV and others) servers earn full minimum wage, so floor labour runs higher — often 14–16%. Yours is {floorLabourPct 1dp}%."
+6. **US-only guard line** (render only when `market === 'US'`): "In tipped-wage states, low cash wages make floor labour % look lean — tips are customer-funded, so read this alongside total server earnings."
+7. **Shared directional line**: "Directional — your own P&L tells the real story. Every assumption here is shown."
+8. **Demoted leverage**: one small supporting line, no colour band: "Leverage: {lls 1dp}x revenue per {currency}1 of floor labour."
 
-Per server (Mon–Sun, worked shifts only):
-- `daily[dow].adjusted_lls` — totals method scoped to that day; null when no shift.
-- Totals: `total_gross_sales`, `total_covers_served`, `total_labor_cost`, `total_adjusted_labor_cost = Σ(labor_cost × opportunity_factor)`.
-- `weekly_rpc = total_gross_sales / total_covers_served`
-- `weekly_base_lls = total_gross_sales / total_labor_cost`
-- `weekly_adjusted_lls = total_gross_sales / total_adjusted_labor_cost`
-- `shifts_worked`
+Removed entirely: red/amber/green stamp, band name, "gap to green" line, "Left on the table / year" headline figure, per-server-per-year line tied to it.
 
-Venue benchmark + gap:
-- `venue_benchmark` = venue-wide `weekly_adjusted_lls` for the same week (same totals method across all servers' shifts).
-- Code comment above the benchmark computation:
-  > v1 benchmark method: venue-wide weekly adjusted LLS for the same week. Stable and simple by design. This will later evolve into a venue-specific historical benchmark segmented by daypart, section, reservation density, covers, spend environment, and service intensity. Do NOT add new tables for that here.
-- `performance_gap = weekly_adjusted_lls / venue_benchmark - 1` (null if benchmark missing/zero).
-- `rag_status`: `green` if gap ≥ +0.10, `red` if gap ≤ −0.10, else `amber`.
-- `operator_meaning`: short string from RAG + gap (e.g. "Outperforming venue benchmark by 11.1%", "Tracking with venue benchmark", "Below venue benchmark by 12.4%").
+### Methodology box copy
+Replace the band-thresholds explanation with: "Labour is shown fully loaded — base wage plus employer on-costs — so figures reflect true cost, not gross pay. The upside estimate assumes your strongest server lifts spend per cover by 12–20% and the rest of the floor closes half that gap; it is a directional estimate, and your own POS gives the exact figure. Benchmarks differ by market: UK total labour runs 30–35%, US front-of-house 8–12% in tipped-wage states and higher where servers earn full minimum wage."
 
-Existing `lowSample` / "servers to review" outputs kept; switch their threshold comparison to `rag_status`. `lls_green_threshold` / `lls_amber_threshold` columns left in place, unused by LLS dashboard.
+Keep the surrounding paragraph (quick-check intro, half-the-gap reference, article link).
 
-## 3. `src/routes/manager.lls.tsx` — labels + columns only
+### Unchanged
+Spread toggle (still rendered, now contextual — the upside range no longer depends on its position), signup CTA → `/signup`, article link, H1, eyebrow, SEO meta/head, layout, route registration, header nav, slider hints, currency hint text (only symbol swaps).
 
-No layout/style changes. Edits:
-
-- Table columns: Server | Mon–Sun daily Adjusted LLS (— when not worked) | Shifts | Weekly RPC | Weekly Base LLS | Weekly Adjusted LLS | Venue Benchmark | Performance Gap | Operator Meaning.
-- Row color band driven by `rag_status`.
-- Performance Gap formatted `+11.1%` / `−8.4%`.
-- Tooltips:
-  - RPC — "Gross Sales ÷ Covers Served. Shows how well each server monetises each guest."
-  - Base LLS — "Gross Sales ÷ Labor Cost. Shows sales generated for every £1 of labor."
-  - Adjusted LLS — "Base LLS ÷ Opportunity Factor. Shows labor return after shift conditions are considered."
-  - Performance Gap — "Adjusted LLS compared with the venue benchmark for this shift type."
-- OF editor helper text: "Opportunity Factors are venue-specific. A Saturday afternoon can be quiet in one venue and one of the strongest shifts of the week in another. PoppOff benchmarks each server against what this venue normally expects from that type of shift."
-- Venue summary strip shows `venue_benchmark` and its WoW trend.
-- Purge every remaining "Final LLS" string in this file.
-
-## 4. Sanity tests (must pass before done)
-
-Run via `read_query` after migration deploys:
-
-- Shift `gross_sales=1350, covers=30, labor=75, OF=1.2` → `rpc=45, base_lls=18, adjusted_lls=15`.
-- Week totals `gross=6750, covers=150, labor=375, adj_labor=450` → `weekly_rpc=45, weekly_base_lls=18, weekly_adjusted_lls=15`.
-- With `venue_benchmark=13.5` → `performance_gap ≈ 0.1111`, displayed `+11.1%`, RAG `green`.
-
-Grep guard: zero occurrences of `base_lls * rpc`, `base_lls × rpc`, `final_lls = (base_lls` in `src/` and `supabase/migrations/`. Zero occurrences of the user-facing string "Final LLS" in `src/`.
-
-## Out of scope
-
-Route structure, nav, upload zones, mapping modal, import/rollback, RLS, OF grid editor UI, `settings.tsx` threshold inputs, server-facing surfaces, threshold columns, new tables.
-
-## Build order
-
-1. Migration — rewrite `calculate_lls_for_shift`; add column comment.
-2. `src/lib/lls.functions.ts` — rewrite `getWeeklyScorecard` aggregation, add benchmark/gap/RAG/operator_meaning, rename outgoing field to `adjusted_lls`, add v1-benchmark comment.
-3. `src/routes/manager.lls.tsx` — relabel columns, add Benchmark / Gap / Operator Meaning cells, swap row coloring to `rag_status`, update OF helper + tooltips, purge "Final LLS".
-4. Sanity tests via `read_query` + grep guard.
+Awaiting approval.

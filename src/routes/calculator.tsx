@@ -29,27 +29,18 @@ export const Route = createFileRoute("/calculator")({
 
 const ARTICLE_URL = "https://www.linkedin.com/pulse/labor-cost-trap-shahla-shayesteh-nlrpf/";
 
-const gbp0 = new Intl.NumberFormat("en-GB", {
-  style: "currency",
-  currency: "GBP",
-  maximumFractionDigits: 0,
+const nf0 = new Intl.NumberFormat("en-GB", { maximumFractionDigits: 0 });
+const nf1 = new Intl.NumberFormat("en-GB", {
+  minimumFractionDigits: 1,
+  maximumFractionDigits: 1,
 });
-const gbp2 = new Intl.NumberFormat("en-GB", {
-  style: "currency",
-  currency: "GBP",
+const nf2 = new Intl.NumberFormat("en-GB", {
   minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
 });
 
-type Band = {
-  name: "Green" | "Amber" | "Red";
-  tone: "green" | "amber" | "red";
-};
-
-function bandFor(lls: number): Band {
-  if (lls >= 13) return { name: "Green", tone: "green" };
-  if (lls >= 10) return { name: "Amber", tone: "amber" };
-  return { name: "Red", tone: "red" };
-}
+const money0 = (currency: string, n: number) => `${currency}${nf0.format(Math.round(n))}`;
+const money2 = (currency: string, n: number) => `${currency}${nf2.format(n)}`;
 
 function Field({
   id,
@@ -75,12 +66,7 @@ function Field({
   isFirst?: boolean;
 }) {
   return (
-    <div
-      className={cn(
-        "border-b border-border py-6",
-        isFirst && "border-t",
-      )}
-    >
+    <div className={cn("border-b border-border py-6", isFirst && "border-t")}>
       <div className="mb-4 flex items-baseline justify-between">
         <label
           htmlFor={id}
@@ -109,35 +95,38 @@ function Field({
 }
 
 function CalculatorPage() {
+  const [market, setMarket] = useState<"UK" | "US">("UK");
   const [covers, setCovers] = useState(800);
   const [spend, setSpend] = useState(42);
   const [servers, setServers] = useState(10);
   const [rate, setRate] = useState(12.5);
   const [hours, setHours] = useState(25);
+  const [onCost, setOnCost] = useState(0.15);
   const [spread, setSpread] = useState(0.12);
   const [tick, setTick] = useState(0);
 
-  const labour = servers * rate * hours;
+  const currency = market === "UK" ? "£" : "$";
+
+  // When market changes, reset on-cost to that market's default. User can still override after.
+  useEffect(() => {
+    setOnCost(market === "UK" ? 0.15 : 0.12);
+  }, [market]);
+
+  const labour = servers * rate * hours * (1 + onCost);
   const weeklyRev = covers * spend;
   const lls = labour > 0 ? weeklyRev / labour : 0;
-  const band = bandFor(lls);
-  const upliftPct = 0.5 * spread * ((servers - 1) / servers);
-  const weekly = weeklyRev * upliftPct;
-  const annual = weekly * 52;
+  const floorLabourPct = weeklyRev > 0 ? (labour / weeklyRev) * 100 : 0;
+
+  const coversFromRest = servers > 0 ? covers * ((servers - 1) / servers) : 0;
+  const perCoverGap = (s: number) => spend * s;
+  const weeklyUpside = (s: number) => (spend * s) / 2 * coversFromRest;
+  const annualUpside = (s: number) => weeklyUpside(s) * 52;
+  const upsidePctOfRev = (s: number) =>
+    weeklyRev > 0 ? (weeklyUpside(s) / weeklyRev) * 100 : 0;
 
   useEffect(() => {
     setTick((t) => t + 1);
-  }, [covers, spend, servers, rate, hours, spread]);
-
-  const stampToneClass =
-    band.tone === "green"
-      ? "border-success text-success"
-      : band.tone === "amber"
-        ? "border-warning text-warning"
-        : "border-opportunity text-opportunity";
-
-  const gapLabel = lls >= 13 ? "Above green line by" : "Gap to green (13.0x)";
-  const gapValue = gbp0.format(Math.abs(lls - 13) * labour) + "/wk";
+  }, [covers, spend, servers, rate, hours, spread, onCost, market]);
 
   return (
     <main className="min-h-screen bg-background text-foreground">
@@ -157,6 +146,33 @@ function CalculatorPage() {
 
         <div className="mt-14 grid items-start gap-10 lg:grid-cols-[1fr_400px] lg:gap-14">
           <div>
+            {/* Market toggle */}
+            <div
+              className="flex flex-wrap items-center gap-2.5 pb-2"
+              role="group"
+              aria-label="Market"
+            >
+              <span className="mr-1 font-mono text-xs uppercase tracking-[0.14em] text-muted-foreground">
+                Market
+              </span>
+              <ToggleGroup
+                type="single"
+                value={market}
+                onValueChange={(v) => {
+                  if (!v) return;
+                  setMarket(v as "UK" | "US");
+                }}
+                variant="outline"
+              >
+                <ToggleGroupItem value="UK" className="rounded-full px-4">
+                  UK (£)
+                </ToggleGroupItem>
+                <ToggleGroupItem value="US" className="rounded-full px-4">
+                  US ($)
+                </ToggleGroupItem>
+              </ToggleGroup>
+            </div>
+
             <Field
               isFirst
               id="covers"
@@ -172,7 +188,7 @@ function CalculatorPage() {
             <Field
               id="spend"
               label="Average spend per cover"
-              output={gbp0.format(spend)}
+              output={money0(currency, spend)}
               hint="Food and drink, before service."
               min={15}
               max={150}
@@ -194,7 +210,7 @@ function CalculatorPage() {
             <Field
               id="rate"
               label="Average server hourly rate"
-              output={gbp2.format(rate)}
+              output={money2(currency, rate)}
               hint="Base wage before NI, pension and tronc."
               min={10}
               max={20}
@@ -213,6 +229,47 @@ function CalculatorPage() {
               value={hours}
               onChange={setHours}
             />
+
+            {/* On-cost toggle */}
+            <div
+              className="mt-7 flex flex-wrap items-center gap-2.5"
+              role="group"
+              aria-label="Employer on-costs"
+            >
+              <span className="mr-1 font-mono text-xs uppercase tracking-[0.14em] text-muted-foreground">
+                Employer on-costs
+              </span>
+              <ToggleGroup
+                type="single"
+                value={String(onCost)}
+                onValueChange={(v) => {
+                  if (!v) return;
+                  setOnCost(parseFloat(v));
+                }}
+                variant="outline"
+              >
+                <ToggleGroupItem value="0" className="rounded-full px-4">
+                  Off · 0%
+                </ToggleGroupItem>
+                <ToggleGroupItem value="0.10" className="rounded-full px-4">
+                  Low · 10%
+                </ToggleGroupItem>
+                <ToggleGroupItem
+                  value={market === "UK" ? "0.15" : "0.12"}
+                  className="rounded-full px-4"
+                >
+                  Standard · {market === "UK" ? "15%" : "12%"}
+                </ToggleGroupItem>
+                <ToggleGroupItem value="0.20" className="rounded-full px-4">
+                  High · 20%
+                </ToggleGroupItem>
+              </ToggleGroup>
+            </div>
+            <p className="mt-2 max-w-[62ch] text-xs text-muted-foreground">
+              Employer on-costs on top of base wage. UK: National Insurance, pension,
+              holiday pay (~15%). US: FICA, unemployment, workers' comp (~12%). Adjust
+              to match your payroll.
+            </p>
 
             <div
               className="mt-7 flex flex-wrap items-center gap-2.5"
@@ -248,14 +305,15 @@ function CalculatorPage() {
               Labor Leverage Score™ is calculated per server, weighted by revenue
               per cover and adjusted by your venue's Opportunity Factor, and it
               needs your POS data: that is what PoppOff measures, server by server,
-              every week. Green is 13.0x and above, amber is 10.0 to 12.9x,
-              red is below 10.0x. The unrealised revenue figure assumes your strongest
-              server drives 12 to 20% higher spend per cover than the team average,
-              mostly through wine, desserts and upsells, and that the rest of the team
-              closes{" "}
-              <strong className="font-semibold text-foreground">half</strong> that gap.
-              Every assumption is shown, and your real numbers come from your own POS
-              data. The full thinking is in{" "}
+              every week. Labour is shown fully loaded — base wage plus employer
+              on-costs — so figures reflect true cost, not gross pay. The upside
+              estimate assumes your strongest server lifts spend per cover by 12–20%
+              and the rest of the floor closes{" "}
+              <strong className="font-semibold text-foreground">half</strong> that gap;
+              it is a directional estimate, and your own POS gives the exact figure.
+              Benchmarks differ by market: UK total labour runs 30–35%, US
+              front-of-house 8–12% in tipped-wage states and higher where servers earn
+              full minimum wage. The full thinking is in{" "}
               <a
                 href={ARTICLE_URL}
                 target="_blank"
@@ -282,8 +340,11 @@ function CalculatorPage() {
                 </div>
               </div>
               <hr className="my-4 border-t border-dashed border-border" />
-              <ReceiptLine label="Weekly revenue" value={gbp0.format(weeklyRev)} />
-              <ReceiptLine label="Server labour (est.)" value={gbp0.format(labour)} />
+              <ReceiptLine label="Weekly revenue" value={money0(currency, weeklyRev)} />
+              <ReceiptLine
+                label="Floor labour, fully loaded (est.)"
+                value={money0(currency, labour)}
+              />
               <ReceiptLine
                 label="Servers as % of revenue"
                 value={
@@ -298,42 +359,66 @@ function CalculatorPage() {
               />
               <hr className="my-4 border-t border-dashed border-border" />
 
-              <div className="py-2 text-center">
+              <div key={`headline-${tick}`} className="py-1 animate-in zoom-in-95 duration-150">
                 <p className="mb-1.5 text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-                  Floor Leverage Check
+                  Per-cover gap
                 </p>
-                <div
-                  key={`stamp-${tick}`}
-                  className={cn(
-                    "inline-block -rotate-[7deg] rounded-md border-[3px] px-5 py-2 animate-in zoom-in-95 duration-150",
-                    stampToneClass,
-                  )}
-                >
-                  <div className="font-display text-[clamp(34px,4.5vw,44px)] leading-none tracking-[0.02em]">
-                    {lls.toFixed(1)}x
-                  </div>
-                  <div className="mt-1 text-[11px] font-bold uppercase tracking-[0.26em]">
-                    {band.name}
-                  </div>
-                </div>
+                <p className="text-[13px] leading-relaxed text-foreground">
+                  Your strongest server runs about{" "}
+                  <strong className="font-bold">
+                    {money2(currency, perCoverGap(0.12))} to{" "}
+                    {money2(currency, perCoverGap(0.20))}
+                  </strong>{" "}
+                  higher spend per cover than your team average.
+                </p>
               </div>
 
-              <ReceiptLine label={gapLabel} value={gapValue} />
               <hr className="my-4 border-t border-dashed border-border" />
 
-              <p className="mt-1 text-center text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-                Left on the table / year
+              <div key={`upside-${tick}`} className="py-1 animate-in zoom-in-95 duration-150">
+                <p className="mb-1.5 text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+                  Potential upside
+                </p>
+                <p className="text-[13px] leading-relaxed text-foreground">
+                  If the rest of your floor closed half that gap, that's roughly{" "}
+                  <strong className="font-bold text-brand-orange">
+                    {money0(currency, annualUpside(0.12))} to{" "}
+                    {money0(currency, annualUpside(0.20))} a year
+                  </strong>{" "}
+                  — about {nf1.format(upsidePctOfRev(0.12))}% to{" "}
+                  {nf1.format(upsidePctOfRev(0.20))}% of revenue.
+                </p>
+              </div>
+
+              <hr className="my-4 border-t border-dashed border-border" />
+
+              <p className="text-[13px] leading-relaxed text-foreground">
+                Floor labour, fully loaded:{" "}
+                <strong className="font-bold">
+                  {money0(currency, labour)}/week — {nf1.format(floorLabourPct)}% of
+                  revenue.
+                </strong>
               </p>
-              <p
-                key={`total-${tick}`}
-                className="mt-1.5 text-center font-display text-[clamp(34px,4.5vw,44px)] leading-tight text-brand-orange animate-in zoom-in-95 duration-150"
-              >
-                {gbp0.format(annual)}
+              <p className="mt-2 text-[11.5px] leading-relaxed text-muted-foreground">
+                {market === "UK"
+                  ? "UK hospitality labour typically runs 30–35% of revenue; front-of-house runs higher than the US because servers earn full minimum wage, not a tipped rate."
+                  : `Full-service front-of-house labour commonly runs 8–12% of sales in tipped-wage states. In no-tip-credit states (CA, WA, OR, NV and others) servers earn full minimum wage, so floor labour runs higher — often 14–16%. Yours is ${nf1.format(floorLabourPct)}%.`}
               </p>
-              <p className="mt-1.5 text-center text-xs text-muted-foreground">
-                that is {gbp0.format(servers > 0 ? annual / servers : 0)} per server,
-                per year
+              {market === "US" && (
+                <p className="mt-2 text-[11.5px] leading-relaxed text-muted-foreground">
+                  In tipped-wage states, low cash wages make floor labour % look lean —
+                  tips are customer-funded, so read this alongside total server
+                  earnings.
+                </p>
+              )}
+              <p className="mt-2 text-[11.5px] leading-relaxed text-muted-foreground">
+                Directional — your own P&amp;L tells the real story. Every assumption
+                here is shown.
               </p>
+              <p className="mt-3 text-[11.5px] leading-relaxed text-muted-foreground">
+                Leverage: {nf1.format(lls)}x revenue per {currency}1 of floor labour.
+              </p>
+
               <hr className="my-4 border-t border-dashed border-border" />
 
               <Button asChild size="lg" className="w-full">
