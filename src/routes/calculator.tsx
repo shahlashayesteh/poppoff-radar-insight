@@ -284,9 +284,11 @@ function CalculatorPage() {
               and the rest of the floor closes{" "}
               <strong className="font-semibold text-foreground">half</strong> that gap;
               it is a directional estimate, and your own POS gives the exact figure.
-              Benchmarks differ by market: UK total labour runs 30–35% of revenue; US
-              front-of-house runs 8–12% of sales in tipped-wage states and 14–16% in
-              no-tip-credit states like California and Washington. The full thinking is in{" "}
+              Benchmarks differ by market and by what's measured: UK total hospitality
+              labour runs 30–35% of revenue, with front-of-house a portion of that; US
+              front-of-house specifically runs 8–12% of sales in tipped-wage states and
+              14–16% in no-tip-credit states like California and Washington. The full
+              thinking is in{" "}
               <a
                 href={ARTICLE_URL}
                 target="_blank"
