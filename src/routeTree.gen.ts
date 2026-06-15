@@ -27,6 +27,7 @@ import { Route as CalculatorRouteImport } from './routes/calculator'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ServerIndexRouteImport } from './routes/server.index'
 import { Route as ManagerIndexRouteImport } from './routes/manager.index'
+import { Route as CalculatorIndexRouteImport } from './routes/calculator.index'
 import { Route as SignupManagerRouteImport } from './routes/signup.manager'
 import { Route as ServerWelcomeRouteImport } from './routes/server.welcome'
 import { Route as ServerStatsRouteImport } from './routes/server.stats'
@@ -163,6 +164,11 @@ const ManagerIndexRoute = ManagerIndexRouteImport.update({
   id: '/manager/',
   path: '/manager/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const CalculatorIndexRoute = CalculatorIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => CalculatorRoute,
 } as any)
 const SignupManagerRoute = SignupManagerRouteImport.update({
   id: '/manager',
@@ -410,6 +416,7 @@ export interface FileRoutesByFullPath {
   '/server/stats': typeof ServerStatsRoute
   '/server/welcome': typeof ServerWelcomeRoute
   '/signup/manager': typeof SignupManagerRoute
+  '/calculator/': typeof CalculatorIndexRoute
   '/manager/': typeof ManagerIndexRoute
   '/server/': typeof ServerIndexRoute
   '/api/public/contact': typeof ApiPublicContactRoute
@@ -437,7 +444,6 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/calculator': typeof CalculatorRouteWithChildren
   '/contact': typeof ContactRoute
   '/hospitality-performance-software': typeof HospitalityPerformanceSoftwareRoute
   '/join': typeof JoinRoute
@@ -471,6 +477,7 @@ export interface FileRoutesByTo {
   '/server/stats': typeof ServerStatsRoute
   '/server/welcome': typeof ServerWelcomeRoute
   '/signup/manager': typeof SignupManagerRoute
+  '/calculator': typeof CalculatorIndexRoute
   '/manager': typeof ManagerIndexRoute
   '/server': typeof ServerIndexRoute
   '/api/public/contact': typeof ApiPublicContactRoute
@@ -533,6 +540,7 @@ export interface FileRoutesById {
   '/server/stats': typeof ServerStatsRoute
   '/server/welcome': typeof ServerWelcomeRoute
   '/signup/manager': typeof SignupManagerRoute
+  '/calculator/': typeof CalculatorIndexRoute
   '/manager/': typeof ManagerIndexRoute
   '/server/': typeof ServerIndexRoute
   '/api/public/contact': typeof ApiPublicContactRoute
@@ -596,6 +604,7 @@ export interface FileRouteTypes {
     | '/server/stats'
     | '/server/welcome'
     | '/signup/manager'
+    | '/calculator/'
     | '/manager/'
     | '/server/'
     | '/api/public/contact'
@@ -623,7 +632,6 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/calculator'
     | '/contact'
     | '/hospitality-performance-software'
     | '/join'
@@ -657,6 +665,7 @@ export interface FileRouteTypes {
     | '/server/stats'
     | '/server/welcome'
     | '/signup/manager'
+    | '/calculator'
     | '/manager'
     | '/server'
     | '/api/public/contact'
@@ -718,6 +727,7 @@ export interface FileRouteTypes {
     | '/server/stats'
     | '/server/welcome'
     | '/signup/manager'
+    | '/calculator/'
     | '/manager/'
     | '/server/'
     | '/api/public/contact'
@@ -931,6 +941,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/manager/'
       preLoaderRoute: typeof ManagerIndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/calculator/': {
+      id: '/calculator/'
+      path: '/'
+      fullPath: '/calculator/'
+      preLoaderRoute: typeof CalculatorIndexRouteImport
+      parentRoute: typeof CalculatorRoute
     }
     '/signup/manager': {
       id: '/signup/manager'
@@ -1224,10 +1241,12 @@ declare module '@tanstack/react-router' {
 
 interface CalculatorRouteChildren {
   CalculatorServerGapRoute: typeof CalculatorServerGapRoute
+  CalculatorIndexRoute: typeof CalculatorIndexRoute
 }
 
 const CalculatorRouteChildren: CalculatorRouteChildren = {
   CalculatorServerGapRoute: CalculatorServerGapRoute,
+  CalculatorIndexRoute: CalculatorIndexRoute,
 }
 
 const CalculatorRouteWithChildren = CalculatorRoute._addFileChildren(
@@ -1308,13 +1327,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
