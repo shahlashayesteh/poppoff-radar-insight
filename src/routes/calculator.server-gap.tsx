@@ -144,11 +144,7 @@ function ServerGapPage() {
   }, [salesFile, labourFile, effectiveBasis, period]);
 
   return (
-    <main className="min-h-screen bg-background text-foreground">
-      <div className="mx-auto max-w-[1100px] px-6 pb-24 pt-12">
-        <p className="mb-4 font-mono text-xs uppercase tracking-[0.18em] text-brand-orange">
-          PoppOff · Tool 2
-        </p>
+    <div className="mx-auto max-w-[1100px] px-6 pb-24 pt-10">
         <h1 className="max-w-[20ch] font-display text-[clamp(34px,5.5vw,60px)] font-extrabold uppercase leading-[0.98] tracking-tight">
           See the real <span className="text-brand-orange">revenue gap</span> between your servers.
         </h1>
