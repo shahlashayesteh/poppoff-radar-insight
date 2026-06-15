@@ -1,4 +1,4 @@
-# Calculator overhaul — market toggle, on-cost, range-based upside, no band
+# Calculator copy sweep — market-aware text, remove inert spread toggle
 
 ## Files changed
 - `src/routes/calculator.tsx` (only)
@@ -6,54 +6,52 @@
 ## Protected files touched
 None. (No edits to `src/integrations/supabase/*`, `.env`, `routeTree.gen.ts`, `src/router.tsx`, `src/routes/__root.tsx`, home, auth, signin, or any `/demo` routes.)
 
-## Scope (supersedes the earlier on-cost-only plan)
+## Scope (copy + one inert-control removal only — no calculation changes)
 
-### State (top of `CalculatorPage`)
-- `market: 'UK'|'US'` — default `'UK'`.
-- `onCost: number` — default `0.15`.
-- Effect on `market` change: set `onCost` to `0.15` (UK) or `0.12` (US); user can override afterward.
-- `currency = market === 'UK' ? '£' : '$'`.
-- Replace `gbp0`/`gbp2` formatters with currency-agnostic helpers that prefix `{currency}` — numbers are not converted, only the symbol changes.
+### 1. Hourly rate field helper (market-aware)
+- UK: "Base wage before NI, pension and tronc."
+- US: "Base wage before payroll taxes and benefits."
+- Implementation: pass a market-aware string to the `hint` prop on the `rate` `Field`.
 
-### New inputs (in this order on the page)
-1. **Market toggle** — placed above the first existing input (Covers/week). `ToggleGroup` styled like the spread toggle; options `UK (£)` / `US ($)`; eyebrow label "Market". `onValueChange` ignores empty values.
-2. **Employer on-costs toggle** — placed directly below "Average hours per server, per week" and above the spread toggle. Eyebrow "Employer on-costs". Options: `Off · 0%` (`"0"`), `Low · 10%` (`"0.10"`), `Standard` (value = market default, `"0.15"` UK / `"0.12"` US), `High · 20%` (`"0.20"`). Empty-value guard.
-3. Helper text under it: "Employer on-costs on top of base wage. UK: National Insurance, pension, holiday pay (~15%). US: FICA, unemployment, workers' comp (~12%). Adjust to match your payroll."
+### 2. Sweep other field/slider helper text for UK-only terms
+Audit current helpers:
+- `covers` — "All services combined, one venue." → neutral, keep.
+- `spend` — "Food and drink, before service." → neutral, keep.
+- `servers` — "Everyone who takes orders, full and part time." → neutral, keep.
+- `rate` — handled in (1).
+- `hours` — "Rough average across full and part time." → neutral, keep.
 
-### Calculation
-- `labour = servers * rate * hours * (1 + onCost)`.
-- `floorLabourPct = (labour / weeklyRev) * 100`.
-- Range-based upside, independent of spread toggle position:
-  - `perCoverGap(s) = spend * s`
-  - `coversFromRest = covers * (servers - 1) / servers`
-  - `weeklyUpside(s) = (spend * s / 2) * coversFromRest`
-  - `annualUpside(s) = weeklyUpside(s) * 52`
-  - `upsidePctOfRev(s) = weeklyUpside(s) / weeklyRev * 100`
-  - Evaluate at `s = 0.12` (low) and `s = 0.20` (high).
-- Remove `bandFor`, `band`, `stampToneClass`, `gapLabel`, `gapValue`, and the old single-spread `upliftPct/weekly/annual` derivation.
-- Add `onCost`, `market` to the `useEffect` dependency list that bumps `tick`.
+No other UK-only payroll terms or hardcoded "pound/pounds/£" words found in helpers. No changes beyond (1).
 
-### Output panel restructure (replaces band + gap-to-green + "left on the table")
-In order, inside the receipt card:
-1. Receipt lines: Weekly revenue; **"Floor labour, fully loaded (est.)"** (renamed); Servers as % of revenue; Best-vs-avg spread (unchanged label, keeps toggle context).
-2. **Headline — per-cover gap**: "Your strongest server runs about {currency}{perCoverGap(0.12) 2dp} to {currency}{perCoverGap(0.20) 2dp} higher spend per cover than your team average."
-3. **Potential upside (range)**: "If the rest of your floor closed half that gap, that's roughly {currency}{annualUpside(0.12) 0dp} to {currency}{annualUpside(0.20) 0dp} a year — about {upsidePctOfRev(0.12) 1dp}% to {upsidePctOfRev(0.20) 1dp}% of revenue." Labelled "Potential upside" (not "left on the table").
-4. **Floor labour as % of revenue**: "Floor labour, fully loaded: {currency}{labour 0dp}/week — {floorLabourPct 1dp}% of revenue."
-5. **Market-aware benchmark line** directly under (4):
-   - UK: "UK hospitality labour typically runs 30–35% of revenue; front-of-house runs higher than the US because servers earn full minimum wage, not a tipped rate."
-   - US: "Full-service front-of-house labour commonly runs 8–12% of sales in tipped-wage states. In no-tip-credit states (CA, WA, OR, NV and others) servers earn full minimum wage, so floor labour runs higher — often 14–16%. Yours is {floorLabourPct 1dp}%."
-6. **US-only guard line** (render only when `market === 'US'`): "In tipped-wage states, low cash wages make floor labour % look lean — tips are customer-funded, so read this alongside total server earnings."
-7. **Shared directional line**: "Directional — your own P&L tells the real story. Every assumption here is shown."
-8. **Demoted leverage**: one small supporting line, no colour band: "Leverage: {lls 1dp}x revenue per {currency}1 of floor labour."
+### 3. On-cost helper text (market-aware, single line)
+Replace the current combined sentence with one of:
+- UK: "Employer on-costs on top of base wage: National Insurance, pension and holiday pay (~15%). Adjust to match your payroll."
+- US: "Employer on-costs on top of base wage: FICA, unemployment and workers' comp (~12%). Adjust to match your payroll."
 
-Removed entirely: red/amber/green stamp, band name, "gap to green" line, "Left on the table / year" headline figure, per-server-per-year line tied to it.
+### 4. Intro paragraph (under H1)
+Rewrite the second sentence to be market-aware and drop the band reference:
+- UK: "Most operators manage labour as a cost. The best ones measure it as leverage: how many pounds of revenue every pound of floor labour produces. Five numbers you already know off by heart, twenty seconds, and see exactly where your floor stands."
+- US: same but "how many dollars of revenue every dollar of floor labour produces".
 
-### Methodology box copy
-Replace the band-thresholds explanation with: "Labour is shown fully loaded — base wage plus employer on-costs — so figures reflect true cost, not gross pay. The upside estimate assumes your strongest server lifts spend per cover by 12–20% and the rest of the floor closes half that gap; it is a directional estimate, and your own POS gives the exact figure. Benchmarks differ by market: UK total labour runs 30–35%, US front-of-house 8–12% in tipped-wage states and higher where servers earn full minimum wage."
+### 5. SEO meta + social tags
+In `head()`, replace `description`, `og:description`, and `twitter:description` (add the twitter one if missing) with the single shared string:
 
-Keep the surrounding paragraph (quick-check intro, half-the-gap reference, article link).
+"See how hard your restaurant's floor labour is working — and the upside if your whole team performed like your best server. Twenty seconds, no login. Works for UK and US venues."
 
-### Unchanged
-Spread toggle (still rendered, now contextual — the upside range no longer depends on its position), signup CTA → `/signup`, article link, H1, eyebrow, SEO meta/head, layout, route registration, header nav, slider hints, currency hint text (only symbol swaps).
+Title, canonical, `og:url`, `og:title` unchanged. No image tags touched.
+
+### 6. Methodology box ("How the score works")
+- "venue-level, five inputs, directional" → "venue-level, a few quick numbers, directional".
+- Replace the benchmark sentence ending "…and higher where servers earn full minimum wage." with:
+  "Benchmarks differ by market: UK total labour runs 30–35% of revenue; US front-of-house runs 8–12% of sales in tipped-wage states and 14–16% in no-tip-credit states like California and Washington."
+
+### 7. Remove the inert spread toggle
+- Delete the entire "Spread between best and average server" `ToggleGroup` block (label + Conservative/Typical buttons).
+- Delete the `Best vs avg spread` `ReceiptLine` from the receipt panel.
+- Remove the `spread` state and its entry in the `tick` `useEffect` dependency list.
+- Audit: `spread` is referenced only by (a) the toggle, (b) the receipt line, (c) the `useEffect` deps. The upside range uses hardcoded `0.12`/`0.20`, not `spread`. Safe to remove with no logic change.
+
+## Keep unchanged
+All calculation logic, market toggle, on-cost toggle, per-cover headline, potential-upside range, floor-labour-% line, US guard line, signup CTA, article link, layout, route registration, header nav, H1, eyebrow, title tag, canonical.
 
 Awaiting approval.

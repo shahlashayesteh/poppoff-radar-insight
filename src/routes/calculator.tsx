@@ -5,21 +5,17 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
+const META_DESCRIPTION =
+  "See how hard your restaurant's floor labour is working — and the upside if your whole team performed like your best server. Twenty seconds, no login. Works for UK and US venues.";
+
 export const Route = createFileRoute("/calculator")({
   head: () => ({
     meta: [
       { title: "Floor Leverage Check | PoppOff" },
-      {
-        name: "description",
-        content:
-          "Find out how many pounds of revenue every pound of floor labour produces. Twenty seconds, five sliders, your score on the band.",
-      },
+      { name: "description", content: META_DESCRIPTION },
       { property: "og:title", content: "Floor Leverage Check | PoppOff" },
-      {
-        property: "og:description",
-        content:
-          "Find out how many pounds of revenue every pound of floor labour produces. Twenty seconds, five sliders, your score on the band.",
-      },
+      { property: "og:description", content: META_DESCRIPTION },
+      { name: "twitter:description", content: META_DESCRIPTION },
       { property: "og:url", content: "https://poppoffstats.com/calculator" },
     ],
     links: [{ rel: "canonical", href: "https://poppoffstats.com/calculator" }],
