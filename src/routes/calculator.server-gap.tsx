@@ -553,10 +553,6 @@ function UploadCard(props: {
     </div>
   );
 }
-      </div>
-    </div>
-  );
-}
 
 function MergePreview({
   shifts,
