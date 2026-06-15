@@ -21,6 +21,12 @@ import {
 } from "@/lib/server-gap/calc";
 import { buildWarnings } from "@/lib/server-gap/warnings";
 import { computeConfidence } from "@/lib/server-gap/confidence";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 
 const META_DESCRIPTION =
   "See the real revenue gap between your servers. Upload your POS sales and labour exports — processed in your browser, never sent to our servers. Ranks by opportunity-adjusted revenue per hour.";
@@ -183,6 +189,79 @@ function ServerGapPage() {
             <ToggleGroupItem value="$" className="rounded-full px-4">US ($)</ToggleGroupItem>
           </ToggleGroup>
         </div>
+
+        {/* How this works — explainer */}
+        <Accordion type="single" collapsible className="mt-8 rounded-md border border-border bg-card px-5">
+          <AccordionItem value="how" className="border-b-0">
+            <AccordionTrigger className="py-4 text-left text-sm font-semibold hover:no-underline">
+              How this works — matching, opportunity, results.
+            </AccordionTrigger>
+            <AccordionContent className="pb-5">
+              <div className="space-y-6 text-sm leading-relaxed text-muted-foreground">
+                <div>
+                  <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-foreground">
+                    1. What you upload (and why two files)
+                  </p>
+                  <ul className="mt-2 list-disc space-y-1 pl-5">
+                    <li><strong className="text-foreground">Sales export</strong> — per-server, per-shift sales rows (server, date, net or gross sales; optionally shift start/end).</li>
+                    <li><strong className="text-foreground">Labour export</strong> — per-server shift rows (server, date, shift start, shift end or hours).</li>
+                    <li>Two files because almost no POS exports both together. Templates for each are linked inside the upload cards below.</li>
+                  </ul>
+                </div>
+
+                <div>
+                  <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-foreground">
+                    2. How the two files are matched
+                  </p>
+                  <ul className="mt-2 list-disc space-y-1 pl-5">
+                    <li>Join key: server identity (ID preferred, name fallback, case- and punctuation-normalised) plus shift date.</li>
+                    <li>If a sales row has a start time, it's paired with the overlapping labour shift.</li>
+                    <li>No start time + exactly one labour shift that day → auto-matched.</li>
+                    <li>No start time + multiple labour shifts → flagged <strong className="text-foreground">Ambiguous</strong> and excluded from the calculation. Never guessed.</li>
+                    <li>Unmatched rows on either side are surfaced in the warnings list.</li>
+                  </ul>
+                </div>
+
+                <div>
+                  <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-foreground">
+                    3. How shift opportunity is determined (you don't upload it)
+                  </p>
+                  <p className="mt-2">
+                    Opportunity is inferred from the <strong className="text-foreground">actual start and end times</strong> of each labour shift. Daypart labels in your file are never used for calculation.
+                  </p>
+                  <p className="mt-2">
+                    Each hour of the shift is scored against a day-of-week × hour-of-day grid, then averaged across the shift to produce one <strong className="text-foreground">Opportunity Factor</strong>:
+                  </p>
+                  <ul className="mt-2 list-disc space-y-1 pl-5">
+                    <li><strong className="text-foreground">Low</strong> 0.75–0.90 — off-peak hours</li>
+                    <li><strong className="text-foreground">Normal</strong> 0.95–1.05 — average trading hours</li>
+                    <li><strong className="text-foreground">Strong</strong> 1.10–1.25 — busy lunch/dinner windows</li>
+                    <li><strong className="text-foreground">Peak</strong> 1.30–1.40 — Fri/Sat dinner-style windows</li>
+                  </ul>
+                  <p className="mt-2">
+                    Adjusted hours = hours × factor. A server who worked Friday dinner is held to a higher bar than one who worked Tuesday lunch. Same band language as the Labor Leverage Score on the manager dashboard, so the two tools speak the same language.
+                  </p>
+                </div>
+
+                <div>
+                  <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-foreground">
+                    4. What you'll see after both files are uploaded
+                  </p>
+                  <ol className="mt-2 list-decimal space-y-1 pl-5">
+                    <li><strong className="text-foreground">Confidence score</strong> (High / Medium / Low) plus any warnings — unmatched rows, ambiguous shifts, missing start times.</li>
+                    <li><strong className="text-foreground">Ranking table</strong> — every server ordered by opportunity-adjusted revenue per hour vs the team's weighted benchmark.</li>
+                    <li><strong className="text-foreground">Top vs bottom gap</strong> — the £/$ difference per adjusted hour between your best and weakest performer.</li>
+                    <li><strong className="text-foreground">Recoverable revenue</strong> — what lifting the bottom half toward the benchmark would project weekly, monthly, and annually.</li>
+                  </ol>
+                </div>
+
+                <p className="text-xs italic">
+                  All of this is computed in your browser. No row of your data leaves this page.
+                </p>
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
 
         {/* Upload cards */}
         <div className="mt-6 grid gap-5 md:grid-cols-2">
@@ -400,9 +479,17 @@ function ServerGapPage() {
         )}
 
         {!analysis && !parseError && (
-          <p className="mt-10 text-sm text-muted-foreground">
-            Upload both files to see results. Nothing is sent to our servers.
-          </p>
+          <section className="mt-10 rounded-md border border-dashed border-border bg-card/50 p-5">
+            <p className="text-sm leading-relaxed text-muted-foreground">
+              Upload both exports above. You'll then see a <strong className="text-foreground">confidence score</strong>,
+              a <strong className="text-foreground">server ranking</strong> by opportunity-adjusted revenue per hour,
+              the <strong className="text-foreground">top-vs-bottom gap</strong>, and projected{" "}
+              <strong className="text-foreground">recoverable revenue</strong> — without any data leaving your browser.
+            </p>
+            <p className="mt-3 text-xs text-muted-foreground">
+              Not sure how it works? Open <em>"How this works"</em> above.
+            </p>
+          </section>
         )}
       </div>
   );
