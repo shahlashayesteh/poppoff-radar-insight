@@ -135,12 +135,10 @@ function CalculatorPage() {
           <span className="text-brand-orange">labour working?</span>
         </h1>
         <p className="mt-5 max-w-[48ch] text-base leading-relaxed text-muted-foreground">
-          Most operators manage labour as a cost. The best ones measure it as leverage:{" "}
-          {market === "UK"
-            ? "how many pounds of revenue every pound of floor labour produces"
-            : "how many dollars of revenue every dollar of floor labour produces"}
-          . Five numbers you already know off by heart, twenty seconds, and see exactly
-          where your floor stands.
+          Most operators manage labour as a cost. The best ones see what it produces:
+          the revenue gap between their strongest and average server, and what closing
+          it is worth. A few numbers you already know, twenty seconds, and you'll see
+          the upside hiding in your own floor.
         </p>
 
         <div className="mt-14 grid items-start gap-10 lg:grid-cols-[1fr_400px] lg:gap-14">
