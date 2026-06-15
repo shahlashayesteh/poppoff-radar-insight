@@ -272,7 +272,7 @@ function CalculatorPage() {
 
             <p className="mt-12 max-w-[62ch] text-sm leading-relaxed text-muted-foreground">
               <strong className="font-semibold text-foreground">
-                How the score works.
+                How this works.
               </strong>{" "}
               This is the quick check: venue-level, a few quick numbers, directional. Your full
               Labor Leverage Score™ is calculated per server, weighted by revenue
