@@ -1,68 +1,56 @@
-# Fix Tool 2 link + add tab switcher at top of /calculator
+# Tool 2 — surface how it works
 
-## Root cause of the broken link
+The calculation already runs end-to-end (matching → opportunity inference → ranking → recoverable revenue). The page just doesn't tell users that before they upload, so it looks like "nothing happens." This plan adds the explanation, mirrors the LLS page's framing for opportunity, and improves the empty state. **No calculation logic changes. No new files. Still 100% client-side.**
 
-`src/routes/calculator.tsx` is currently a leaf page — it renders its full body directly. The child route `src/routes/calculator.server-gap.tsx` is correctly registered at `/calculator/server-gap`, but because the parent route has no `<Outlet />`, the child has nowhere to mount. Clicking the link matches the child route but renders nothing visible, so it looks like the link is dead.
+## 1. New collapsible "How this works" panel
 
-This is the documented TanStack "parent without Outlet" pitfall. The fix is to promote `/calculator` into a true layout route.
+Insert directly **above the Upload cards** in `src/routes/calculator.server-gap.tsx` (after the Currency selector, before the `grid md:grid-cols-2` upload block). Built with the existing shadcn `Accordion` primitive — no new dependencies.
 
-## What changes
+Four sections, in this order:
 
-### File operations
-1. **Rename** `src/routes/calculator.tsx` → `src/routes/calculator.index.tsx`
-   - Inside, update `createFileRoute("/calculator")` → `createFileRoute("/calculator/")`
-   - Remove the bottom "Try Tool 2: Server Revenue Gap Calculator →" footer block (now replaced by the tabs at the top)
-   - Everything else (sliders, receipt, copy) stays identical
-2. **Create new** `src/routes/calculator.tsx` as a thin layout:
-   - `createFileRoute("/calculator")` with `component: CalculatorLayout`
-   - Renders the shared page chrome: small PoppOff eyebrow, a **tab switcher** with two `<Link>`s, then `<Outlet />`
-   - Tabs:
-     - **Quick Check** → `to="/calculator"` (Tool 1 — the slider tool)
-     - **Upload POS Data** → `to="/calculator/server-gap"` (Tool 2)
-   - Active tab styling via `activeProps` + `activeOptions={{ exact: true }}` on the Quick Check link so it doesn't stay active on the child route
-   - Tabs use the existing `ToggleGroup` component for visual consistency with the market/on-cost toggles already on the page
-3. **Edit** `src/routes/calculator.server-gap.tsx`
-   - Remove the duplicate page-level eyebrow / "Back to Floor Leverage Check" link if present (the layout now owns the header)
-   - No logic changes — calculation, parsing, privacy block, confidence pill all stay
-4. `src/routeTree.gen.ts` regenerates automatically — no manual edit
+**1. What you upload (and why two files)**
+- Sales export: per-server, per-shift sales rows (server, date, net or gross sales; optionally shift start/end).
+- Labour export: per-server shift rows (server, date, shift start, shift end or hours).
+- Two files because almost no POS exports both together. Download buttons for both templates live in each Upload card below.
 
-### Head/SEO
-- Each leaf route keeps its own `head()` (title, description, og, canonical). The layout route does **not** define `head()`, so leaf metadata wins per page. `/calculator` keeps the Floor Leverage Check meta; `/calculator/server-gap` keeps the Server Revenue Gap meta.
+**2. How the two files are matched**
+- Join key: server identity (ID preferred, name fallback, case/punctuation-normalised) + shift date.
+- Multiple shifts in a day:
+  - Sales row has a start time → pair with the overlapping labour shift.
+  - No start time + exactly one labour shift that day → auto-match.
+  - No start time + multiple labour shifts → flagged **Ambiguous** and **excluded** from the calculation (never guessed).
+- Unmatched rows on either side are reported in the warnings list.
 
-### Visual layout
-```text
-┌──────────────────────────────────────────────────────┐
-│ PoppOff · Floor Leverage Check™      (eyebrow)       │
-│                                                      │
-│   [ Quick Check ]  [ Upload POS Data ]   (tabs)      │
-│                                                      │
-│   <Outlet />                                         │
-│     - / calculator       → slider tool               │
-│     - / calculator / server-gap → upload tool        │
-└──────────────────────────────────────────────────────┘
-```
+**3. How shift opportunity is determined (you don't upload it)**
+Mirror the LLS framing from `src/routes/manager.lls.tsx` and the bands in `src/lib/server-gap/opportunity.ts`:
+> Opportunity is inferred from the **actual start and end times** of each labour shift. Daypart labels in your file are never used for calculation.
+>
+> Each hour of the shift is scored against a day-of-week × hour grid, then averaged across the shift to produce one **Opportunity Factor**:
+> - **Low** 0.75–0.90 — off-peak hours
+> - **Normal** 0.95–1.05 — average trading hours
+> - **Strong** 1.10–1.25 — busy lunch/dinner windows
+> - **Peak** 1.30–1.40 — Fri/Sat dinner-style windows
+>
+> Adjusted hours = hours × factor. A server who worked Friday dinner is held to a higher bar than a server who worked Tuesday lunch.
 
-The eyebrow + tabs sit above whatever the child renders. Page-specific headlines (h1, intro paragraph) stay inside each leaf route, so each page keeps its own focused hero.
+(Same band labels and numeric ranges as the LLS reference page, so the two tools speak the same language.)
 
-## What does NOT change
+**4. What you'll see after both files are uploaded**
+A numbered list previewing the sections that render below:
+1. **Confidence score** (High / Medium / Low) + any warnings (unmatched rows, ambiguous shifts, missing start times).
+2. **Ranking table** — every server ordered by opportunity-adjusted revenue per hour vs the team weighted benchmark.
+3. **Top vs bottom gap** — the £/$ difference per adjusted hour between your best and weakest performer.
+4. **Recoverable revenue** — what lifting the bottom half toward the benchmark would project weekly / monthly / annually.
 
-- No changes to Tool 2's logic, calculation contract, parsing libs, templates, or privacy block
-- No changes to bundle splitting — TanStack still code-splits per route, so the heavy `xlsx` / `papaparse` only loads when the user opens the Upload POS Data tab
-- No protected files touched (no edits to `src/integrations/supabase/*`, `.env`, `src/router.tsx`, etc.)
-- No backend, no auth, no server functions
-- Existing copy, sliders, receipt panel, market toggle, on-cost toggle, hint text — all preserved verbatim
+Closing line inside the panel: *"All of this is computed in your browser. No row of your data leaves this page."*
 
-## Verification after build
+Default state: **closed**. Header label: **"How this works — matching, opportunity, results."**
 
-1. Load `/calculator` → slider tool renders, "Quick Check" tab shows active state
-2. Click "Upload POS Data" tab → URL changes to `/calculator/server-gap`, Tool 2 renders, tab active state moves
-3. Click "Quick Check" tab → returns to slider tool
-4. Hard-refresh on `/calculator/server-gap` → loads directly, tab state correct
-5. Confirm receipt panel, sliders, and on-cost toggle on `/calculator` still behave identically
+## 2. Better pre-upload empty state
 
-## Files touched (summary)
+Replace the single-line "Upload both files to see results" (line ~403) with a short card that says: "Upload both exports above. You'll then see a confidence score, server ranking, top-vs-bottom gap, and projected recoverable revenue — without any data leaving your browser." This makes the post-upload flow visible before the user commits.
 
-- renamed: `src/routes/calculator.tsx` → `src/routes/calculator.index.tsx` (and `createFileRoute` path updated; footer Tool 2 link removed)
-- created: `src/routes/calculator.tsx` (new layout with tabs + `<Outlet />`)
-- edited: `src/routes/calculator.server-gap.tsx` (remove duplicate top-of-page chrome only)
-- auto-regenerated: `src/routeTree.gen.ts`
+## 3. Files touched
+- `src/routes/calculator.server-gap.tsx` — add Accordion import, insert the panel, replace empty-state copy.
+
+That's the whole change. No edits to `src/lib/server-gap/*`, no edits to Tool 1, no protected files, no routing changes.
