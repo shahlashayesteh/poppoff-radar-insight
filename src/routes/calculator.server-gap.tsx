@@ -479,9 +479,17 @@ function ServerGapPage() {
         )}
 
         {!analysis && !parseError && (
-          <p className="mt-10 text-sm text-muted-foreground">
-            Upload both files to see results. Nothing is sent to our servers.
-          </p>
+          <section className="mt-10 rounded-md border border-dashed border-border bg-card/50 p-5">
+            <p className="text-sm leading-relaxed text-muted-foreground">
+              Upload both exports above. You'll then see a <strong className="text-foreground">confidence score</strong>,
+              a <strong className="text-foreground">server ranking</strong> by opportunity-adjusted revenue per hour,
+              the <strong className="text-foreground">top-vs-bottom gap</strong>, and projected{" "}
+              <strong className="text-foreground">recoverable revenue</strong> — without any data leaving your browser.
+            </p>
+            <p className="mt-3 text-xs text-muted-foreground">
+              Not sure how it works? Open <em>"How this works"</em> above.
+            </p>
+          </section>
         )}
       </div>
   );
