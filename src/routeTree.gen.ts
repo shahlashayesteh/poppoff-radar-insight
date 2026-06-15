@@ -23,6 +23,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as JoinRouteImport } from './routes/join'
 import { Route as HospitalityPerformanceSoftwareRouteImport } from './routes/hospitality-performance-software'
 import { Route as ContactRouteImport } from './routes/contact'
+import { Route as CalculatorRouteImport } from './routes/calculator'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ServerIndexRouteImport } from './routes/server.index'
 import { Route as ManagerIndexRouteImport } from './routes/manager.index'
@@ -144,6 +145,11 @@ const ContactRoute = ContactRouteImport.update({
   path: '/contact',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CalculatorRoute = CalculatorRouteImport.update({
+  id: '/calculator',
+  path: '/calculator',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -160,9 +166,9 @@ const ManagerIndexRoute = ManagerIndexRouteImport.update({
   getParentRoute: () => rootRouteImport,
 } as any)
 const CalculatorIndexRoute = CalculatorIndexRouteImport.update({
-  id: '/calculator/',
-  path: '/calculator/',
-  getParentRoute: () => rootRouteImport,
+  id: '/',
+  path: '/',
+  getParentRoute: () => CalculatorRoute,
 } as any)
 const SignupManagerRoute = SignupManagerRouteImport.update({
   id: '/manager',
@@ -255,9 +261,9 @@ const CheckoutRetryRoute = CheckoutRetryRouteImport.update({
   getParentRoute: () => rootRouteImport,
 } as any)
 const CalculatorServerGapRoute = CalculatorServerGapRouteImport.update({
-  id: '/calculator/server-gap',
-  path: '/calculator/server-gap',
-  getParentRoute: () => rootRouteImport,
+  id: '/server-gap',
+  path: '/server-gap',
+  getParentRoute: () => CalculatorRoute,
 } as any)
 const ManagerServerIndexRoute = ManagerServerIndexRouteImport.update({
   id: '/manager/server/',
@@ -376,6 +382,7 @@ const ApiPublicPaymentsWebhookRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/calculator': typeof CalculatorRouteWithChildren
   '/contact': typeof ContactRoute
   '/hospitality-performance-software': typeof HospitalityPerformanceSoftwareRoute
   '/join': typeof JoinRoute
@@ -499,6 +506,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/calculator': typeof CalculatorRouteWithChildren
   '/contact': typeof ContactRoute
   '/hospitality-performance-software': typeof HospitalityPerformanceSoftwareRoute
   '/join': typeof JoinRoute
@@ -562,6 +570,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/calculator'
     | '/contact'
     | '/hospitality-performance-software'
     | '/join'
@@ -684,6 +693,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/calculator'
     | '/contact'
     | '/hospitality-performance-software'
     | '/join'
@@ -746,6 +756,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  CalculatorRoute: typeof CalculatorRouteWithChildren
   ContactRoute: typeof ContactRoute
   HospitalityPerformanceSoftwareRoute: typeof HospitalityPerformanceSoftwareRoute
   JoinRoute: typeof JoinRoute
@@ -760,7 +771,6 @@ export interface RootRouteChildren {
   SignupRoute: typeof SignupRouteWithChildren
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   TermsRoute: typeof TermsRoute
-  CalculatorServerGapRoute: typeof CalculatorServerGapRoute
   CheckoutRetryRoute: typeof CheckoutRetryRoute
   CheckoutSuccessRoute: typeof CheckoutSuccessRoute
   DemoManagerDashboardRoute: typeof DemoManagerDashboardRoute
@@ -778,7 +788,6 @@ export interface RootRouteChildren {
   ServerProgressRoute: typeof ServerProgressRoute
   ServerStatsRoute: typeof ServerStatsRoute
   ServerWelcomeRoute: typeof ServerWelcomeRoute
-  CalculatorIndexRoute: typeof CalculatorIndexRoute
   ManagerIndexRoute: typeof ManagerIndexRoute
   ServerIndexRoute: typeof ServerIndexRoute
   ApiPublicContactRoute: typeof ApiPublicContactRoute
@@ -905,6 +914,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ContactRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/calculator': {
+      id: '/calculator'
+      path: '/calculator'
+      fullPath: '/calculator'
+      preLoaderRoute: typeof CalculatorRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -928,10 +944,10 @@ declare module '@tanstack/react-router' {
     }
     '/calculator/': {
       id: '/calculator/'
-      path: '/calculator'
+      path: '/'
       fullPath: '/calculator/'
       preLoaderRoute: typeof CalculatorIndexRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof CalculatorRoute
     }
     '/signup/manager': {
       id: '/signup/manager'
@@ -1061,10 +1077,10 @@ declare module '@tanstack/react-router' {
     }
     '/calculator/server-gap': {
       id: '/calculator/server-gap'
-      path: '/calculator/server-gap'
+      path: '/server-gap'
       fullPath: '/calculator/server-gap'
       preLoaderRoute: typeof CalculatorServerGapRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof CalculatorRoute
     }
     '/manager/server/': {
       id: '/manager/server/'
@@ -1223,6 +1239,20 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface CalculatorRouteChildren {
+  CalculatorServerGapRoute: typeof CalculatorServerGapRoute
+  CalculatorIndexRoute: typeof CalculatorIndexRoute
+}
+
+const CalculatorRouteChildren: CalculatorRouteChildren = {
+  CalculatorServerGapRoute: CalculatorServerGapRoute,
+  CalculatorIndexRoute: CalculatorIndexRoute,
+}
+
+const CalculatorRouteWithChildren = CalculatorRoute._addFileChildren(
+  CalculatorRouteChildren,
+)
+
 interface SignupRouteChildren {
   SignupManagerRoute: typeof SignupManagerRoute
 }
@@ -1236,6 +1266,7 @@ const SignupRouteWithChildren =
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  CalculatorRoute: CalculatorRouteWithChildren,
   ContactRoute: ContactRoute,
   HospitalityPerformanceSoftwareRoute: HospitalityPerformanceSoftwareRoute,
   JoinRoute: JoinRoute,
@@ -1251,7 +1282,6 @@ const rootRouteChildren: RootRouteChildren = {
   SignupRoute: SignupRouteWithChildren,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   TermsRoute: TermsRoute,
-  CalculatorServerGapRoute: CalculatorServerGapRoute,
   CheckoutRetryRoute: CheckoutRetryRoute,
   CheckoutSuccessRoute: CheckoutSuccessRoute,
   DemoManagerDashboardRoute: DemoManagerDashboardRoute,
@@ -1269,7 +1299,6 @@ const rootRouteChildren: RootRouteChildren = {
   ServerProgressRoute: ServerProgressRoute,
   ServerStatsRoute: ServerStatsRoute,
   ServerWelcomeRoute: ServerWelcomeRoute,
-  CalculatorIndexRoute: CalculatorIndexRoute,
   ManagerIndexRoute: ManagerIndexRoute,
   ServerIndexRoute: ServerIndexRoute,
   ApiPublicContactRoute: ApiPublicContactRoute,
