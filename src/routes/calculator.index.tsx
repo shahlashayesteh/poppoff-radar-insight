@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 const META_DESCRIPTION =
   "See how hard your restaurant's floor labour is working — and the upside if your whole team performed like your best server. Twenty seconds, no login. Works for UK and US venues.";
 
-export const Route = createFileRoute("/calculator")({
+export const Route = createFileRoute("/calculator/")({
   head: () => ({
     meta: [
       { title: "Floor Leverage Check | PoppOff" },
