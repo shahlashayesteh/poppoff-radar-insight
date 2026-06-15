@@ -453,14 +453,15 @@ function RankPill({ rank }: { rank: "above" | "tracking" | "below" }) {
 function UploadCard(props: {
   title: string;
   file: { name: string; result: ParseResult } | null;
-  required: string[];
-  preferred: string[];
+  required: FieldReq[];
+  preferred: FieldReq[];
   detected?: Set<string>;
   templateHref: string;
   onFile: (f: File) => void;
   onClear: () => void;
 }) {
   const [dragging, setDragging] = useState(false);
+  const has = (aliases: string[]) => aliases.some((a) => props.detected?.has(a));
   return (
     <div
       className={cn(
@@ -523,11 +524,11 @@ function UploadCard(props: {
         <p className="font-mono uppercase tracking-wider text-muted-foreground">Required</p>
         <ul className="space-y-1">
           {props.required.map((r) => {
-            const ok = r.split(" or ").some((alt) => props.detected?.has(alt as never));
+            const ok = has(r.aliases);
             return (
-              <li key={r} className="flex items-center gap-2">
+              <li key={r.label} className="flex items-center gap-2">
                 <span className={cn("h-1.5 w-1.5 rounded-full", ok ? "bg-emerald-500" : "bg-muted-foreground/50")} />
-                <span className={cn(ok ? "text-foreground" : "text-muted-foreground")}>{r}</span>
+                <span className={cn(ok ? "text-foreground" : "text-muted-foreground")}>{r.label}</span>
               </li>
             );
           })}
@@ -537,17 +538,21 @@ function UploadCard(props: {
             <p className="mt-2 font-mono uppercase tracking-wider text-muted-foreground">Preferred</p>
             <ul className="space-y-1">
               {props.preferred.map((r) => {
-                const ok = props.detected?.has(r as never);
+                const ok = has(r.aliases);
                 return (
-                  <li key={r} className="flex items-center gap-2">
+                  <li key={r.label} className="flex items-center gap-2">
                     <span className={cn("h-1.5 w-1.5 rounded-full", ok ? "bg-emerald-500" : "bg-muted-foreground/50")} />
-                    <span className={cn(ok ? "text-foreground" : "text-muted-foreground")}>{r}</span>
+                    <span className={cn(ok ? "text-foreground" : "text-muted-foreground")}>{r.label}</span>
                   </li>
                 );
               })}
             </ul>
           </>
         )}
+      </div>
+    </div>
+  );
+}
       </div>
     </div>
   );
