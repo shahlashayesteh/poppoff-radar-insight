@@ -135,12 +135,10 @@ function CalculatorPage() {
           <span className="text-brand-orange">labour working?</span>
         </h1>
         <p className="mt-5 max-w-[48ch] text-base leading-relaxed text-muted-foreground">
-          Most operators manage labour as a cost. The best ones measure it as leverage:{" "}
-          {market === "UK"
-            ? "how many pounds of revenue every pound of floor labour produces"
-            : "how many dollars of revenue every dollar of floor labour produces"}
-          . Five numbers you already know off by heart, twenty seconds, and see exactly
-          where your floor stands.
+          Most operators manage labour as a cost. The best ones see what it produces:
+          the revenue gap between their strongest and average server, and what closing
+          it is worth. A few numbers you already know, twenty seconds, and you'll see
+          the upside hiding in your own floor.
         </p>
 
         <div className="mt-14 grid items-start gap-10 lg:grid-cols-[1fr_400px] lg:gap-14">
@@ -274,7 +272,7 @@ function CalculatorPage() {
 
             <p className="mt-12 max-w-[62ch] text-sm leading-relaxed text-muted-foreground">
               <strong className="font-semibold text-foreground">
-                How the score works.
+                How this works.
               </strong>{" "}
               This is the quick check: venue-level, a few quick numbers, directional. Your full
               Labor Leverage Score™ is calculated per server, weighted by revenue
@@ -286,9 +284,11 @@ function CalculatorPage() {
               and the rest of the floor closes{" "}
               <strong className="font-semibold text-foreground">half</strong> that gap;
               it is a directional estimate, and your own POS gives the exact figure.
-              Benchmarks differ by market: UK total labour runs 30–35% of revenue; US
-              front-of-house runs 8–12% of sales in tipped-wage states and 14–16% in
-              no-tip-credit states like California and Washington. The full thinking is in{" "}
+              Benchmarks differ by market and by what's measured: UK total hospitality
+              labour runs 30–35% of revenue, with front-of-house a portion of that; US
+              front-of-house specifically runs 8–12% of sales in tipped-wage states and
+              14–16% in no-tip-credit states like California and Washington. The full
+              thinking is in{" "}
               <a
                 href={ARTICLE_URL}
                 target="_blank"
@@ -311,7 +311,7 @@ function CalculatorPage() {
                   PoppOff
                 </div>
                 <div className="mt-1 text-[11px] text-muted-foreground">
-                  *** FLOOR PERFORMANCE AUDIT ***
+                  *** FLOOR LEVERAGE CHECK ***
                 </div>
               </div>
               <hr className="my-4 border-t border-dashed border-border" />
