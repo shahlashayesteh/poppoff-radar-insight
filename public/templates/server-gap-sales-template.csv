@@ -1,0 +1,7 @@
+server_id,server_name,shift_date,shift_start,shift_end,net_sales,gross_sales,covers,section,venue
+S001,Sarah,2026-06-05,17:00,23:00,2450.00,2900.00,42,Main,Soho
+,James,2026-06-05,17:00,23:00,1980.00,2310.00,38,Main,Soho
+,Mia,2026-06-05,12:00,16:00,910.00,1085.00,22,Bar,Soho
+S001,Sarah,2026-06-06,17:00,23:30,2810.00,3320.00,46,Main,Soho
+,James,2026-06-06,12:00,16:00,840.00,990.00,20,Bar,Soho
+,Mia,2026-06-06,17:00,23:00,2120.00,2510.00,40,Main,Soho
