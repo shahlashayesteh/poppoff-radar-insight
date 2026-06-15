@@ -125,11 +125,7 @@ function CalculatorPage() {
   }, [covers, spend, servers, rate, hours, onCost, market]);
 
   return (
-    <main className="min-h-screen bg-background text-foreground">
-      <div className="mx-auto max-w-[1060px] px-6 pb-20 pt-12">
-        <p className="mb-4 font-mono text-xs uppercase tracking-[0.18em] text-brand-orange">
-          PoppOff · Floor Leverage Check™
-        </p>
+    <div className="mx-auto max-w-[1060px] px-6 pb-20 pt-10">
         <h1 className="max-w-[18ch] font-display text-[clamp(38px,6vw,68px)] font-extrabold uppercase leading-[0.98] tracking-tight">
           How hard is your floor's{" "}
           <span className="text-brand-orange">labour working?</span>
