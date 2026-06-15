@@ -311,7 +311,7 @@ function CalculatorPage() {
                   PoppOff
                 </div>
                 <div className="mt-1 text-[11px] text-muted-foreground">
-                  *** FLOOR PERFORMANCE AUDIT ***
+                  *** FLOOR LEVERAGE CHECK ***
                 </div>
               </div>
               <hr className="my-4 border-t border-dashed border-border" />
