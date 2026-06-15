@@ -407,6 +407,22 @@ function CalculatorPage() {
             </div>
           </div>
         </div>
+
+        <div className="mt-16 border-t border-border pt-8 text-center">
+          <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+            Got POS data?
+          </p>
+          <Link
+            to="/calculator/server-gap"
+            className="mt-2 inline-block font-display text-lg font-bold uppercase tracking-tight text-brand-orange underline underline-offset-[4px] hover:text-foreground"
+          >
+            Try Tool 2: Server Revenue Gap Calculator →
+          </Link>
+          <p className="mx-auto mt-2 max-w-[52ch] text-xs text-muted-foreground">
+            Upload your sales and labour exports and see the real per-server gap. Processed entirely in your
+            browser.
+          </p>
+        </div>
       </div>
     </main>
   );

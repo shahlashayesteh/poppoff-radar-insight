@@ -45,6 +45,7 @@ import { Route as DemoServerScorecardRouteImport } from './routes/demo.server-sc
 import { Route as DemoManagerDashboardRouteImport } from './routes/demo.manager-dashboard'
 import { Route as CheckoutSuccessRouteImport } from './routes/checkout.success'
 import { Route as CheckoutRetryRouteImport } from './routes/checkout.retry'
+import { Route as CalculatorServerGapRouteImport } from './routes/calculator.server-gap'
 import { Route as ManagerServerIndexRouteImport } from './routes/manager.server.index'
 import { Route as DemoServerIndexRouteImport } from './routes/demo.server.index'
 import { Route as DemoManagerIndexRouteImport } from './routes/demo.manager.index'
@@ -253,6 +254,11 @@ const CheckoutRetryRoute = CheckoutRetryRouteImport.update({
   path: '/checkout/retry',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CalculatorServerGapRoute = CalculatorServerGapRouteImport.update({
+  id: '/server-gap',
+  path: '/server-gap',
+  getParentRoute: () => CalculatorRoute,
+} as any)
 const ManagerServerIndexRoute = ManagerServerIndexRouteImport.update({
   id: '/manager/server/',
   path: '/manager/server/',
@@ -370,7 +376,7 @@ const ApiPublicPaymentsWebhookRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/calculator': typeof CalculatorRoute
+  '/calculator': typeof CalculatorRouteWithChildren
   '/contact': typeof ContactRoute
   '/hospitality-performance-software': typeof HospitalityPerformanceSoftwareRoute
   '/join': typeof JoinRoute
@@ -385,6 +391,7 @@ export interface FileRoutesByFullPath {
   '/signup': typeof SignupRouteWithChildren
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terms': typeof TermsRoute
+  '/calculator/server-gap': typeof CalculatorServerGapRoute
   '/checkout/retry': typeof CheckoutRetryRoute
   '/checkout/success': typeof CheckoutSuccessRoute
   '/demo/manager-dashboard': typeof DemoManagerDashboardRoute
@@ -430,7 +437,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/calculator': typeof CalculatorRoute
+  '/calculator': typeof CalculatorRouteWithChildren
   '/contact': typeof ContactRoute
   '/hospitality-performance-software': typeof HospitalityPerformanceSoftwareRoute
   '/join': typeof JoinRoute
@@ -445,6 +452,7 @@ export interface FileRoutesByTo {
   '/signup': typeof SignupRouteWithChildren
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terms': typeof TermsRoute
+  '/calculator/server-gap': typeof CalculatorServerGapRoute
   '/checkout/retry': typeof CheckoutRetryRoute
   '/checkout/success': typeof CheckoutSuccessRoute
   '/demo/manager-dashboard': typeof DemoManagerDashboardRoute
@@ -491,7 +499,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/calculator': typeof CalculatorRoute
+  '/calculator': typeof CalculatorRouteWithChildren
   '/contact': typeof ContactRoute
   '/hospitality-performance-software': typeof HospitalityPerformanceSoftwareRoute
   '/join': typeof JoinRoute
@@ -506,6 +514,7 @@ export interface FileRoutesById {
   '/signup': typeof SignupRouteWithChildren
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terms': typeof TermsRoute
+  '/calculator/server-gap': typeof CalculatorServerGapRoute
   '/checkout/retry': typeof CheckoutRetryRoute
   '/checkout/success': typeof CheckoutSuccessRoute
   '/demo/manager-dashboard': typeof DemoManagerDashboardRoute
@@ -568,6 +577,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/sitemap.xml'
     | '/terms'
+    | '/calculator/server-gap'
     | '/checkout/retry'
     | '/checkout/success'
     | '/demo/manager-dashboard'
@@ -628,6 +638,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/sitemap.xml'
     | '/terms'
+    | '/calculator/server-gap'
     | '/checkout/retry'
     | '/checkout/success'
     | '/demo/manager-dashboard'
@@ -688,6 +699,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/sitemap.xml'
     | '/terms'
+    | '/calculator/server-gap'
     | '/checkout/retry'
     | '/checkout/success'
     | '/demo/manager-dashboard'
@@ -734,7 +746,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  CalculatorRoute: typeof CalculatorRoute
+  CalculatorRoute: typeof CalculatorRouteWithChildren
   ContactRoute: typeof ContactRoute
   HospitalityPerformanceSoftwareRoute: typeof HospitalityPerformanceSoftwareRoute
   JoinRoute: typeof JoinRoute
@@ -1046,6 +1058,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CheckoutRetryRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/calculator/server-gap': {
+      id: '/calculator/server-gap'
+      path: '/server-gap'
+      fullPath: '/calculator/server-gap'
+      preLoaderRoute: typeof CalculatorServerGapRouteImport
+      parentRoute: typeof CalculatorRoute
+    }
     '/manager/server/': {
       id: '/manager/server/'
       path: '/manager/server'
@@ -1203,6 +1222,18 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface CalculatorRouteChildren {
+  CalculatorServerGapRoute: typeof CalculatorServerGapRoute
+}
+
+const CalculatorRouteChildren: CalculatorRouteChildren = {
+  CalculatorServerGapRoute: CalculatorServerGapRoute,
+}
+
+const CalculatorRouteWithChildren = CalculatorRoute._addFileChildren(
+  CalculatorRouteChildren,
+)
+
 interface SignupRouteChildren {
   SignupManagerRoute: typeof SignupManagerRoute
 }
@@ -1216,7 +1247,7 @@ const SignupRouteWithChildren =
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  CalculatorRoute: CalculatorRoute,
+  CalculatorRoute: CalculatorRouteWithChildren,
   ContactRoute: ContactRoute,
   HospitalityPerformanceSoftwareRoute: HospitalityPerformanceSoftwareRoute,
   JoinRoute: JoinRoute,
