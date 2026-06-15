@@ -346,14 +346,6 @@ function CalculatorPage() {
                 value={money0(currency, labour)}
               />
               <ReceiptLine
-                label="Servers as % of revenue"
-                value={
-                  weeklyRev > 0
-                    ? ((labour / weeklyRev) * 100).toFixed(1) + "%"
-                    : "0.0%"
-                }
-              />
-              <ReceiptLine
                 label="Best vs avg spread"
                 value={Math.round(spread * 100) + "%"}
               />
