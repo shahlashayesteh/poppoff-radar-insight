@@ -408,7 +408,6 @@ function ServerGapPage() {
           </p>
         )}
       </div>
-    </main>
   );
 }
 
