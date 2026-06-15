@@ -390,12 +390,9 @@ function ServerGapPage() {
                 Book a call to see your full server performance breakdown — weekly, automated, and tied to
                 coaching priorities.
               </p>
-              <div className="mt-5 flex flex-wrap justify-center gap-3">
+              <div className="mt-5 flex justify-center">
                 <Button asChild size="lg">
                   <Link to="/contact">Book a call</Link>
-                </Button>
-                <Button asChild variant="outline" size="lg">
-                  <Link to="/calculator">← Back to Floor Leverage Check</Link>
                 </Button>
               </div>
             </section>
