@@ -1,0 +1,7 @@
+server_id,server_name,shift_date,shift_start,shift_end,hours,labour_cost,role,venue
+S001,Sarah,2026-06-05,16:45,23:15,6.5,84.50,Server,Soho
+,James,2026-06-05,16:45,23:15,6.5,84.50,Server,Soho
+,Mia,2026-06-05,11:45,16:15,4.5,58.50,Server,Soho
+S001,Sarah,2026-06-06,16:45,23:45,7.0,91.00,Server,Soho
+,James,2026-06-06,11:45,16:15,4.5,58.50,Server,Soho
+,Mia,2026-06-06,16:45,23:15,6.5,84.50,Server,Soho
