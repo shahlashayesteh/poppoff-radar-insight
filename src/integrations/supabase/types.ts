@@ -14,6 +14,74 @@ export type Database = {
   }
   public: {
     Tables: {
+      canonical_shift_sources: {
+        Row: {
+          attached_at: string
+          batch_id: string
+          detached_at: string | null
+          id: string
+          is_active: boolean
+          match_confidence: number | null
+          shift_id: string
+          source_kind: string
+          staging_row_id: string
+          venue_id: string
+        }
+        Insert: {
+          attached_at?: string
+          batch_id: string
+          detached_at?: string | null
+          id?: string
+          is_active?: boolean
+          match_confidence?: number | null
+          shift_id: string
+          source_kind: string
+          staging_row_id: string
+          venue_id: string
+        }
+        Update: {
+          attached_at?: string
+          batch_id?: string
+          detached_at?: string | null
+          id?: string
+          is_active?: boolean
+          match_confidence?: number | null
+          shift_id?: string
+          source_kind?: string
+          staging_row_id?: string
+          venue_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "canonical_shift_sources_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "shift_import_batches_v2"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "canonical_shift_sources_shift_id_fkey"
+            columns: ["shift_id"]
+            isOneToOne: false
+            referencedRelation: "shifts_v2"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "canonical_shift_sources_staging_row_id_fkey"
+            columns: ["staging_row_id"]
+            isOneToOne: false
+            referencedRelation: "shift_staging_rows"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "canonical_shift_sources_venue_id_fkey"
+            columns: ["venue_id"]
+            isOneToOne: false
+            referencedRelation: "venues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contact_submissions: {
         Row: {
           created_at: string
@@ -592,6 +660,309 @@ export type Database = {
           },
         ]
       }
+      shift_import_batches_v2: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          notes: string | null
+          row_count: number
+          source_filename: string | null
+          source_kind: string
+          superseded_at: string | null
+          superseded_by_batch_id: string | null
+          updated_at: string
+          uploaded_by: string | null
+          venue_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          row_count?: number
+          source_filename?: string | null
+          source_kind: string
+          superseded_at?: string | null
+          superseded_by_batch_id?: string | null
+          updated_at?: string
+          uploaded_by?: string | null
+          venue_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          row_count?: number
+          source_filename?: string | null
+          source_kind?: string
+          superseded_at?: string | null
+          superseded_by_batch_id?: string | null
+          updated_at?: string
+          uploaded_by?: string | null
+          venue_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shift_import_batches_v2_superseded_by_batch_id_fkey"
+            columns: ["superseded_by_batch_id"]
+            isOneToOne: false
+            referencedRelation: "shift_import_batches_v2"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_import_batches_v2_venue_id_fkey"
+            columns: ["venue_id"]
+            isOneToOne: false
+            referencedRelation: "venues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shift_labor_staging: {
+        Row: {
+          batch_id: string
+          created_at: string
+          derived_labor_span_end: string | null
+          derived_labor_span_start: string | null
+          job_role: string | null
+          labor_clock_in: string | null
+          labor_clock_out: string | null
+          labor_cost: number | null
+          labor_hours_reported: number | null
+          labor_scheduled_end: string | null
+          labor_scheduled_start: string | null
+          staging_row_id: string
+          venue_id: string
+        }
+        Insert: {
+          batch_id: string
+          created_at?: string
+          derived_labor_span_end?: string | null
+          derived_labor_span_start?: string | null
+          job_role?: string | null
+          labor_clock_in?: string | null
+          labor_clock_out?: string | null
+          labor_cost?: number | null
+          labor_hours_reported?: number | null
+          labor_scheduled_end?: string | null
+          labor_scheduled_start?: string | null
+          staging_row_id: string
+          venue_id: string
+        }
+        Update: {
+          batch_id?: string
+          created_at?: string
+          derived_labor_span_end?: string | null
+          derived_labor_span_start?: string | null
+          job_role?: string | null
+          labor_clock_in?: string | null
+          labor_clock_out?: string | null
+          labor_cost?: number | null
+          labor_hours_reported?: number | null
+          labor_scheduled_end?: string | null
+          labor_scheduled_start?: string | null
+          staging_row_id?: string
+          venue_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shift_labor_staging_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "shift_import_batches_v2"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_labor_staging_staging_row_id_fkey"
+            columns: ["staging_row_id"]
+            isOneToOne: true
+            referencedRelation: "shift_staging_rows"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_labor_staging_venue_id_fkey"
+            columns: ["venue_id"]
+            isOneToOne: false
+            referencedRelation: "venues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shift_sales_staging: {
+        Row: {
+          batch_id: string
+          covers: number | null
+          created_at: string
+          gross_sales: number | null
+          net_sales: number | null
+          sales_check_close_time: string | null
+          sales_check_open_time: string | null
+          sales_employee_shift_end: string | null
+          sales_employee_shift_start: string | null
+          sales_first_txn_time: string | null
+          sales_last_txn_time: string | null
+          sales_report_period_end: string | null
+          sales_report_period_start: string | null
+          staging_row_id: string
+          venue_id: string
+        }
+        Insert: {
+          batch_id: string
+          covers?: number | null
+          created_at?: string
+          gross_sales?: number | null
+          net_sales?: number | null
+          sales_check_close_time?: string | null
+          sales_check_open_time?: string | null
+          sales_employee_shift_end?: string | null
+          sales_employee_shift_start?: string | null
+          sales_first_txn_time?: string | null
+          sales_last_txn_time?: string | null
+          sales_report_period_end?: string | null
+          sales_report_period_start?: string | null
+          staging_row_id: string
+          venue_id: string
+        }
+        Update: {
+          batch_id?: string
+          covers?: number | null
+          created_at?: string
+          gross_sales?: number | null
+          net_sales?: number | null
+          sales_check_close_time?: string | null
+          sales_check_open_time?: string | null
+          sales_employee_shift_end?: string | null
+          sales_employee_shift_start?: string | null
+          sales_first_txn_time?: string | null
+          sales_last_txn_time?: string | null
+          sales_report_period_end?: string | null
+          sales_report_period_start?: string | null
+          staging_row_id?: string
+          venue_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shift_sales_staging_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "shift_import_batches_v2"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_sales_staging_staging_row_id_fkey"
+            columns: ["staging_row_id"]
+            isOneToOne: true
+            referencedRelation: "shift_staging_rows"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_sales_staging_venue_id_fkey"
+            columns: ["venue_id"]
+            isOneToOne: false
+            referencedRelation: "venues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shift_staging_rows: {
+        Row: {
+          batch_id: string
+          created_at: string
+          duplicate_of_row_id: string | null
+          duplicate_status: string
+          excluded_from_canonical: boolean
+          id: string
+          identity_confidence: number | null
+          identity_match_method: string | null
+          last_reconciled_at: string | null
+          raw_row: Json
+          raw_row_hash: string
+          reconciliation_status: string
+          reported_identity_id: string | null
+          reported_identity_name: string | null
+          resolved_identity_id: string | null
+          service_date: string | null
+          source_kind: string
+          source_row_index: number | null
+          status_evidence: Json
+          status_reason: string | null
+          updated_at: string
+          venue_id: string
+        }
+        Insert: {
+          batch_id: string
+          created_at?: string
+          duplicate_of_row_id?: string | null
+          duplicate_status?: string
+          excluded_from_canonical?: boolean
+          id?: string
+          identity_confidence?: number | null
+          identity_match_method?: string | null
+          last_reconciled_at?: string | null
+          raw_row: Json
+          raw_row_hash: string
+          reconciliation_status?: string
+          reported_identity_id?: string | null
+          reported_identity_name?: string | null
+          resolved_identity_id?: string | null
+          service_date?: string | null
+          source_kind: string
+          source_row_index?: number | null
+          status_evidence?: Json
+          status_reason?: string | null
+          updated_at?: string
+          venue_id: string
+        }
+        Update: {
+          batch_id?: string
+          created_at?: string
+          duplicate_of_row_id?: string | null
+          duplicate_status?: string
+          excluded_from_canonical?: boolean
+          id?: string
+          identity_confidence?: number | null
+          identity_match_method?: string | null
+          last_reconciled_at?: string | null
+          raw_row?: Json
+          raw_row_hash?: string
+          reconciliation_status?: string
+          reported_identity_id?: string | null
+          reported_identity_name?: string | null
+          resolved_identity_id?: string | null
+          service_date?: string | null
+          source_kind?: string
+          source_row_index?: number | null
+          status_evidence?: Json
+          status_reason?: string | null
+          updated_at?: string
+          venue_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shift_staging_rows_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "shift_import_batches_v2"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_staging_rows_duplicate_of_row_id_fkey"
+            columns: ["duplicate_of_row_id"]
+            isOneToOne: false
+            referencedRelation: "shift_staging_rows"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_staging_rows_venue_id_fkey"
+            columns: ["venue_id"]
+            isOneToOne: false
+            referencedRelation: "venues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       shifts: {
         Row: {
           base_lls: number | null
@@ -676,6 +1047,114 @@ export type Database = {
           },
           {
             foreignKeyName: "shifts_venue_id_fkey"
+            columns: ["venue_id"]
+            isOneToOne: false
+            referencedRelation: "venues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shifts_v2: {
+        Row: {
+          active_batch_id: string | null
+          canonical_identity_id: string
+          clock_in: string | null
+          clock_out: string | null
+          confidence_breakdown: Json
+          covers: number | null
+          created_at: string
+          cross_daypart: boolean
+          daypart_distribution: Json
+          dominant_daypart: string | null
+          gross_sales: number | null
+          id: string
+          is_active: boolean
+          is_single_sided: boolean
+          labor_cost: number | null
+          labor_span_hours: number | null
+          match_method: string | null
+          needs_review: boolean
+          net_sales: number | null
+          scheduled_end: string | null
+          scheduled_start: string | null
+          service_date: string
+          service_duration_hours: number | null
+          service_duration_source: string | null
+          single_sided_authorised_by: string | null
+          single_sided_justification: string | null
+          updated_at: string
+          venue_id: string
+        }
+        Insert: {
+          active_batch_id?: string | null
+          canonical_identity_id: string
+          clock_in?: string | null
+          clock_out?: string | null
+          confidence_breakdown?: Json
+          covers?: number | null
+          created_at?: string
+          cross_daypart?: boolean
+          daypart_distribution?: Json
+          dominant_daypart?: string | null
+          gross_sales?: number | null
+          id?: string
+          is_active?: boolean
+          is_single_sided?: boolean
+          labor_cost?: number | null
+          labor_span_hours?: number | null
+          match_method?: string | null
+          needs_review?: boolean
+          net_sales?: number | null
+          scheduled_end?: string | null
+          scheduled_start?: string | null
+          service_date: string
+          service_duration_hours?: number | null
+          service_duration_source?: string | null
+          single_sided_authorised_by?: string | null
+          single_sided_justification?: string | null
+          updated_at?: string
+          venue_id: string
+        }
+        Update: {
+          active_batch_id?: string | null
+          canonical_identity_id?: string
+          clock_in?: string | null
+          clock_out?: string | null
+          confidence_breakdown?: Json
+          covers?: number | null
+          created_at?: string
+          cross_daypart?: boolean
+          daypart_distribution?: Json
+          dominant_daypart?: string | null
+          gross_sales?: number | null
+          id?: string
+          is_active?: boolean
+          is_single_sided?: boolean
+          labor_cost?: number | null
+          labor_span_hours?: number | null
+          match_method?: string | null
+          needs_review?: boolean
+          net_sales?: number | null
+          scheduled_end?: string | null
+          scheduled_start?: string | null
+          service_date?: string
+          service_duration_hours?: number | null
+          service_duration_source?: string | null
+          single_sided_authorised_by?: string | null
+          single_sided_justification?: string | null
+          updated_at?: string
+          venue_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shifts_v2_active_batch_id_fkey"
+            columns: ["active_batch_id"]
+            isOneToOne: false
+            referencedRelation: "shift_import_batches_v2"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shifts_v2_venue_id_fkey"
             columns: ["venue_id"]
             isOneToOne: false
             referencedRelation: "venues"
@@ -849,6 +1328,186 @@ export type Database = {
           },
         ]
       }
+      venue_daypart_windows: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          day_of_week: number
+          daypart: string
+          effective_from: string
+          effective_to: string | null
+          end_time: string
+          id: string
+          start_time: string
+          updated_at: string
+          venue_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          day_of_week: number
+          daypart: string
+          effective_from?: string
+          effective_to?: string | null
+          end_time: string
+          id?: string
+          start_time: string
+          updated_at?: string
+          venue_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          day_of_week?: number
+          daypart?: string
+          effective_from?: string
+          effective_to?: string | null
+          end_time?: string
+          id?: string
+          start_time?: string
+          updated_at?: string
+          venue_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "venue_daypart_windows_venue_id_fkey"
+            columns: ["venue_id"]
+            isOneToOne: false
+            referencedRelation: "venues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      venue_identity_aliases: {
+        Row: {
+          alias_name: string
+          canonical_identity_id: string
+          created_at: string
+          id: string
+          normalised_alias: string
+          source: string | null
+          venue_id: string
+        }
+        Insert: {
+          alias_name: string
+          canonical_identity_id: string
+          created_at?: string
+          id?: string
+          normalised_alias: string
+          source?: string | null
+          venue_id: string
+        }
+        Update: {
+          alias_name?: string
+          canonical_identity_id?: string
+          created_at?: string
+          id?: string
+          normalised_alias?: string
+          source?: string | null
+          venue_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "venue_identity_aliases_venue_id_fkey"
+            columns: ["venue_id"]
+            isOneToOne: false
+            referencedRelation: "venues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      venue_identity_candidates: {
+        Row: {
+          candidate_identity_id: string | null
+          created_at: string
+          id: string
+          proposed_name: string
+          resolved_at: string | null
+          resolved_by: string | null
+          similarity: number | null
+          staging_row_id: string | null
+          status: string
+          venue_id: string
+        }
+        Insert: {
+          candidate_identity_id?: string | null
+          created_at?: string
+          id?: string
+          proposed_name: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          similarity?: number | null
+          staging_row_id?: string | null
+          status?: string
+          venue_id: string
+        }
+        Update: {
+          candidate_identity_id?: string | null
+          created_at?: string
+          id?: string
+          proposed_name?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          similarity?: number | null
+          staging_row_id?: string | null
+          status?: string
+          venue_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "venue_identity_candidates_staging_row_id_fkey"
+            columns: ["staging_row_id"]
+            isOneToOne: false
+            referencedRelation: "shift_staging_rows"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "venue_identity_candidates_venue_id_fkey"
+            columns: ["venue_id"]
+            isOneToOne: false
+            referencedRelation: "venues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      venue_identity_mappings: {
+        Row: {
+          canonical_identity_id: string
+          confirmed_at: string
+          confirmed_by: string | null
+          external_id: string
+          external_system: string
+          id: string
+          venue_id: string
+        }
+        Insert: {
+          canonical_identity_id: string
+          confirmed_at?: string
+          confirmed_by?: string | null
+          external_id: string
+          external_system: string
+          id?: string
+          venue_id: string
+        }
+        Update: {
+          canonical_identity_id?: string
+          confirmed_at?: string
+          confirmed_by?: string | null
+          external_id?: string
+          external_system?: string
+          id?: string
+          venue_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "venue_identity_mappings_venue_id_fkey"
+            columns: ["venue_id"]
+            isOneToOne: false
+            referencedRelation: "venues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       venue_members: {
         Row: {
           id: string
@@ -986,6 +1645,144 @@ export type Database = {
           why?: string | null
         }
         Relationships: []
+      }
+      venue_pos_attribution_config: {
+        Row: {
+          block_pct: number
+          created_at: string
+          review_pct: number
+          updated_at: string
+          updated_by: string | null
+          venue_id: string
+          warning_pct: number
+        }
+        Insert: {
+          block_pct?: number
+          created_at?: string
+          review_pct?: number
+          updated_at?: string
+          updated_by?: string | null
+          venue_id: string
+          warning_pct?: number
+        }
+        Update: {
+          block_pct?: number
+          created_at?: string
+          review_pct?: number
+          updated_at?: string
+          updated_by?: string | null
+          venue_id?: string
+          warning_pct?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "venue_pos_attribution_config_venue_id_fkey"
+            columns: ["venue_id"]
+            isOneToOne: true
+            referencedRelation: "venues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      venue_pos_control_totals: {
+        Row: {
+          business_date: string
+          created_at: string
+          daypart: string | null
+          id: string
+          pos_covers: number | null
+          pos_gross_sales: number | null
+          pos_net_sales: number | null
+          source_filename: string | null
+          updated_at: string
+          uploaded_by: string | null
+          venue_id: string
+        }
+        Insert: {
+          business_date: string
+          created_at?: string
+          daypart?: string | null
+          id?: string
+          pos_covers?: number | null
+          pos_gross_sales?: number | null
+          pos_net_sales?: number | null
+          source_filename?: string | null
+          updated_at?: string
+          uploaded_by?: string | null
+          venue_id: string
+        }
+        Update: {
+          business_date?: string
+          created_at?: string
+          daypart?: string | null
+          id?: string
+          pos_covers?: number | null
+          pos_gross_sales?: number | null
+          pos_net_sales?: number | null
+          source_filename?: string | null
+          updated_at?: string
+          uploaded_by?: string | null
+          venue_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "venue_pos_control_totals_venue_id_fkey"
+            columns: ["venue_id"]
+            isOneToOne: false
+            referencedRelation: "venues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      venue_service_periods: {
+        Row: {
+          confidence: number | null
+          daypart: string
+          derived_at: string
+          duration_hours: number | null
+          duration_source: string
+          id: string
+          observed_end: string | null
+          observed_start: string | null
+          service_date: string
+          shift_count: number | null
+          venue_id: string
+        }
+        Insert: {
+          confidence?: number | null
+          daypart: string
+          derived_at?: string
+          duration_hours?: number | null
+          duration_source: string
+          id?: string
+          observed_end?: string | null
+          observed_start?: string | null
+          service_date: string
+          shift_count?: number | null
+          venue_id: string
+        }
+        Update: {
+          confidence?: number | null
+          daypart?: string
+          derived_at?: string
+          duration_hours?: number | null
+          duration_source?: string
+          id?: string
+          observed_end?: string | null
+          observed_start?: string | null
+          service_date?: string
+          shift_count?: number | null
+          venue_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "venue_service_periods_venue_id_fkey"
+            columns: ["venue_id"]
+            isOneToOne: false
+            referencedRelation: "venues"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       venue_settings: {
         Row: {
@@ -1186,6 +1983,46 @@ export type Database = {
       is_venue_member: { Args: { _venue_id: string }; Returns: boolean }
       join_venue_with_code: { Args: { _code: string }; Returns: string }
       latest_venue_stats_week: { Args: { p_venue_id: string }; Returns: string }
+      lls_v2_authorise_single_sided: {
+        Args: { _justification: string; _staging_row_id: string }
+        Returns: undefined
+      }
+      lls_v2_ingest_batch: {
+        Args: { _payload: Json; _venue_id: string }
+        Returns: string
+      }
+      lls_v2_is_manager: { Args: { _venue_id: string }; Returns: boolean }
+      lls_v2_refresh_service_periods: {
+        Args: { _from: string; _to: string; _venue_id: string }
+        Returns: number
+      }
+      lls_v2_resolve_duplicate: {
+        Args: { _decision: string; _staging_row_id: string }
+        Returns: undefined
+      }
+      lls_v2_resolve_identity: {
+        Args: { _decision: Json; _staging_row_id: string }
+        Returns: undefined
+      }
+      lls_v2_run_reconciliation: {
+        Args: { _batch_id: string; _venue_id: string }
+        Returns: Json
+      }
+      lls_v2_supersede_batch: {
+        Args: { _batch_id: string }
+        Returns: undefined
+      }
+      lls_v2_upsert_daypart_window: {
+        Args: {
+          _day_of_week: number
+          _daypart: string
+          _effective_from?: string
+          _end_time: string
+          _start_time: string
+          _venue_id: string
+        }
+        Returns: string
+      }
       merge_server_account_data: {
         Args: { _from_user_id: string; _to_user_id: string; _venue_id: string }
         Returns: number
