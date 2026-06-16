@@ -1,0 +1,16 @@
+{
+  "extends": "./tsconfig.json",
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "src/**/*.test.ts",
+    "src/**/__tests__/**/*.ts",
+    "scripts/**/*.ts"
+  ],
+  "exclude": [],
+  "compilerOptions": {
+    "types": ["vite/client", "@types/bun"],
+    "noEmit": true
+  }
+
+}
