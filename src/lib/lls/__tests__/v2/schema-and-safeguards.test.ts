@@ -17,23 +17,25 @@
  *       separately under src/lib/lls/__tests__/v1-regression/.
  */
 import { describe, test, expect } from 'bun:test'
-import { execSync } from 'node:child_process'
+import { execFileSync } from 'node:child_process'
 
 const HAS_DB = !!process.env.PGHOST
 const d = HAS_DB ? describe : describe.skip
 
 function psql(sql: string): string {
-  return execSync(`psql -v ON_ERROR_STOP=1 -tA -c ${JSON.stringify(sql)}`, {
+  return execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-tA', '-X'], {
     encoding: 'utf8',
-    stdio: ['ignore', 'pipe', 'pipe'],
+    input: sql,
+    stdio: ['pipe', 'pipe', 'pipe'],
   })
 }
 
 function psqlExpectError(sql: string): string {
   try {
-    execSync(`psql -v ON_ERROR_STOP=1 -tA -c ${JSON.stringify(sql)}`, {
+    execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-tA', '-X'], {
       encoding: 'utf8',
-      stdio: ['ignore', 'pipe', 'pipe'],
+      input: sql,
+      stdio: ['pipe', 'pipe', 'pipe'],
     })
     return ''
   } catch (e: any) {
