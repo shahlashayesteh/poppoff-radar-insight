@@ -9,7 +9,8 @@
   ],
   "exclude": [],
   "compilerOptions": {
-    "types": ["vite/client", "bun-types"],
+    "types": ["vite/client", "@types/bun"],
     "noEmit": true
   }
+
 }
