@@ -229,6 +229,37 @@ d('active-source exclusion + idempotency', () => {
   })
 })
 
+d('concurrent reconciliation', () => {
+  test('two simultaneous reconciliation calls cannot create duplicate canonical shifts or active sources', async () => {
+    const { batch } = seedBatch(
+      [{ anchor: `${fx.serviceDate}T12:00:00Z`, gross: 850 }],
+      [{ clockIn: `${fx.serviceDate}T11:45:00Z`, hours: 4, cost: 68 }],
+    )
+    // Spawn two parallel psql processes both calling reconcile on the same batch.
+    // The advisory xact lock serialises them; the partial unique index would catch
+    // any escape. Both should complete without raising, with exactly one canonical shift.
+    const { spawn } = await import('node:child_process')
+    const runOnce = () => new Promise<{ code: number; stderr: string }>((resolve) => {
+      const p = spawn('psql', ['-v', 'ON_ERROR_STOP=1', '-tA', '-X'], { stdio: ['pipe', 'pipe', 'pipe'] })
+      let stderr = ''
+      p.stderr.on('data', (b: Buffer) => { stderr += b.toString() })
+      p.on('close', (code) => resolve({ code: code ?? 0, stderr }))
+      p.stdin.end(`
+        SELECT set_config('request.jwt.claims', '${fx.jwt}', false);
+        SELECT public.lls_v2_run_reconciliation('${fx.venue}','${batch}');
+      `)
+    })
+    const [a, b] = await Promise.all([runOnce(), runOnce()])
+    expect(a.code).toBe(0)
+    expect(b.code).toBe(0)
+    const shifts = psql(`SELECT count(*) FROM public.shifts_v2 WHERE active_batch_id='${batch}';`).trim()
+    const css = psql(`SELECT count(*) FROM public.canonical_shift_sources WHERE batch_id='${batch}' AND is_active;`).trim()
+    expect(shifts).toBe('1')
+    expect(css).toBe('2') // one sales + one labor source
+  })
+})
+
+
 d('atomic rollback', () => {
   test('a forced failure inside the transaction rolls back the entire reconcile run', () => {
     const { batch, salesIds } = seedBatch(
