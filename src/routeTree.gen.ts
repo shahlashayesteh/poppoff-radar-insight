@@ -48,9 +48,11 @@ import { Route as CheckoutSuccessRouteImport } from './routes/checkout.success'
 import { Route as CheckoutRetryRouteImport } from './routes/checkout.retry'
 import { Route as CalculatorServerGapRouteImport } from './routes/calculator.server-gap'
 import { Route as ManagerServerIndexRouteImport } from './routes/manager.server.index'
+import { Route as ManagerLlsIndexRouteImport } from './routes/manager.lls.index'
 import { Route as DemoServerIndexRouteImport } from './routes/demo.server.index'
 import { Route as DemoManagerIndexRouteImport } from './routes/demo.manager.index'
 import { Route as ManagerServerIdRouteImport } from './routes/manager.server.$id'
+import { Route as ManagerLlsCompareRouteImport } from './routes/manager.lls.compare'
 import { Route as LovableEmailSuppressionRouteImport } from './routes/lovable/email/suppression'
 import { Route as DemoServerWelcomeRouteImport } from './routes/demo.server.welcome'
 import { Route as DemoServerStatsRouteImport } from './routes/demo.server.stats'
@@ -270,6 +272,11 @@ const ManagerServerIndexRoute = ManagerServerIndexRouteImport.update({
   path: '/manager/server/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ManagerLlsIndexRoute = ManagerLlsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ManagerLlsRoute,
+} as any)
 const DemoServerIndexRoute = DemoServerIndexRouteImport.update({
   id: '/demo/server/',
   path: '/demo/server/',
@@ -284,6 +291,11 @@ const ManagerServerIdRoute = ManagerServerIdRouteImport.update({
   id: '/manager/server/$id',
   path: '/manager/server/$id',
   getParentRoute: () => rootRouteImport,
+} as any)
+const ManagerLlsCompareRoute = ManagerLlsCompareRouteImport.update({
+  id: '/compare',
+  path: '/compare',
+  getParentRoute: () => ManagerLlsRoute,
 } as any)
 const LovableEmailSuppressionRoute = LovableEmailSuppressionRouteImport.update({
   id: '/lovable/email/suppression',
@@ -404,7 +416,7 @@ export interface FileRoutesByFullPath {
   '/demo/server-scorecard': typeof DemoServerScorecardRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/manager/coaching': typeof ManagerCoachingRoute
-  '/manager/lls': typeof ManagerLlsRoute
+  '/manager/lls': typeof ManagerLlsRouteWithChildren
   '/manager/menu': typeof ManagerMenuRoute
   '/manager/priorities': typeof ManagerPrioritiesRoute
   '/manager/reports': typeof ManagerReportsRoute
@@ -431,9 +443,11 @@ export interface FileRoutesByFullPath {
   '/demo/server/stats': typeof DemoServerStatsRoute
   '/demo/server/welcome': typeof DemoServerWelcomeRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
+  '/manager/lls/compare': typeof ManagerLlsCompareRoute
   '/manager/server/$id': typeof ManagerServerIdRoute
   '/demo/manager/': typeof DemoManagerIndexRoute
   '/demo/server/': typeof DemoServerIndexRoute
+  '/manager/lls/': typeof ManagerLlsIndexRoute
   '/manager/server/': typeof ManagerServerIndexRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/demo/manager/server/$id': typeof DemoManagerServerIdRoute
@@ -465,7 +479,6 @@ export interface FileRoutesByTo {
   '/demo/server-scorecard': typeof DemoServerScorecardRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/manager/coaching': typeof ManagerCoachingRoute
-  '/manager/lls': typeof ManagerLlsRoute
   '/manager/menu': typeof ManagerMenuRoute
   '/manager/priorities': typeof ManagerPrioritiesRoute
   '/manager/reports': typeof ManagerReportsRoute
@@ -492,9 +505,11 @@ export interface FileRoutesByTo {
   '/demo/server/stats': typeof DemoServerStatsRoute
   '/demo/server/welcome': typeof DemoServerWelcomeRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
+  '/manager/lls/compare': typeof ManagerLlsCompareRoute
   '/manager/server/$id': typeof ManagerServerIdRoute
   '/demo/manager': typeof DemoManagerIndexRoute
   '/demo/server': typeof DemoServerIndexRoute
+  '/manager/lls': typeof ManagerLlsIndexRoute
   '/manager/server': typeof ManagerServerIndexRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/demo/manager/server/$id': typeof DemoManagerServerIdRoute
@@ -528,7 +543,7 @@ export interface FileRoutesById {
   '/demo/server-scorecard': typeof DemoServerScorecardRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/manager/coaching': typeof ManagerCoachingRoute
-  '/manager/lls': typeof ManagerLlsRoute
+  '/manager/lls': typeof ManagerLlsRouteWithChildren
   '/manager/menu': typeof ManagerMenuRoute
   '/manager/priorities': typeof ManagerPrioritiesRoute
   '/manager/reports': typeof ManagerReportsRoute
@@ -555,9 +570,11 @@ export interface FileRoutesById {
   '/demo/server/stats': typeof DemoServerStatsRoute
   '/demo/server/welcome': typeof DemoServerWelcomeRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
+  '/manager/lls/compare': typeof ManagerLlsCompareRoute
   '/manager/server/$id': typeof ManagerServerIdRoute
   '/demo/manager/': typeof DemoManagerIndexRoute
   '/demo/server/': typeof DemoServerIndexRoute
+  '/manager/lls/': typeof ManagerLlsIndexRoute
   '/manager/server/': typeof ManagerServerIndexRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/demo/manager/server/$id': typeof DemoManagerServerIdRoute
@@ -619,9 +636,11 @@ export interface FileRouteTypes {
     | '/demo/server/stats'
     | '/demo/server/welcome'
     | '/lovable/email/suppression'
+    | '/manager/lls/compare'
     | '/manager/server/$id'
     | '/demo/manager/'
     | '/demo/server/'
+    | '/manager/lls/'
     | '/manager/server/'
     | '/api/public/payments/webhook'
     | '/demo/manager/server/$id'
@@ -653,7 +672,6 @@ export interface FileRouteTypes {
     | '/demo/server-scorecard'
     | '/email/unsubscribe'
     | '/manager/coaching'
-    | '/manager/lls'
     | '/manager/menu'
     | '/manager/priorities'
     | '/manager/reports'
@@ -680,9 +698,11 @@ export interface FileRouteTypes {
     | '/demo/server/stats'
     | '/demo/server/welcome'
     | '/lovable/email/suppression'
+    | '/manager/lls/compare'
     | '/manager/server/$id'
     | '/demo/manager'
     | '/demo/server'
+    | '/manager/lls'
     | '/manager/server'
     | '/api/public/payments/webhook'
     | '/demo/manager/server/$id'
@@ -742,9 +762,11 @@ export interface FileRouteTypes {
     | '/demo/server/stats'
     | '/demo/server/welcome'
     | '/lovable/email/suppression'
+    | '/manager/lls/compare'
     | '/manager/server/$id'
     | '/demo/manager/'
     | '/demo/server/'
+    | '/manager/lls/'
     | '/manager/server/'
     | '/api/public/payments/webhook'
     | '/demo/manager/server/$id'
@@ -777,7 +799,7 @@ export interface RootRouteChildren {
   DemoServerScorecardRoute: typeof DemoServerScorecardRoute
   EmailUnsubscribeRoute: typeof EmailUnsubscribeRoute
   ManagerCoachingRoute: typeof ManagerCoachingRoute
-  ManagerLlsRoute: typeof ManagerLlsRoute
+  ManagerLlsRoute: typeof ManagerLlsRouteWithChildren
   ManagerMenuRoute: typeof ManagerMenuRoute
   ManagerPrioritiesRoute: typeof ManagerPrioritiesRoute
   ManagerReportsRoute: typeof ManagerReportsRoute
@@ -1089,6 +1111,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ManagerServerIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/manager/lls/': {
+      id: '/manager/lls/'
+      path: '/'
+      fullPath: '/manager/lls/'
+      preLoaderRoute: typeof ManagerLlsIndexRouteImport
+      parentRoute: typeof ManagerLlsRoute
+    }
     '/demo/server/': {
       id: '/demo/server/'
       path: '/demo/server'
@@ -1109,6 +1138,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/manager/server/$id'
       preLoaderRoute: typeof ManagerServerIdRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/manager/lls/compare': {
+      id: '/manager/lls/compare'
+      path: '/compare'
+      fullPath: '/manager/lls/compare'
+      preLoaderRoute: typeof ManagerLlsCompareRouteImport
+      parentRoute: typeof ManagerLlsRoute
     }
     '/lovable/email/suppression': {
       id: '/lovable/email/suppression'
@@ -1264,6 +1300,20 @@ const SignupRouteChildren: SignupRouteChildren = {
 const SignupRouteWithChildren =
   SignupRoute._addFileChildren(SignupRouteChildren)
 
+interface ManagerLlsRouteChildren {
+  ManagerLlsCompareRoute: typeof ManagerLlsCompareRoute
+  ManagerLlsIndexRoute: typeof ManagerLlsIndexRoute
+}
+
+const ManagerLlsRouteChildren: ManagerLlsRouteChildren = {
+  ManagerLlsCompareRoute: ManagerLlsCompareRoute,
+  ManagerLlsIndexRoute: ManagerLlsIndexRoute,
+}
+
+const ManagerLlsRouteWithChildren = ManagerLlsRoute._addFileChildren(
+  ManagerLlsRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CalculatorRoute: CalculatorRouteWithChildren,
@@ -1288,7 +1338,7 @@ const rootRouteChildren: RootRouteChildren = {
   DemoServerScorecardRoute: DemoServerScorecardRoute,
   EmailUnsubscribeRoute: EmailUnsubscribeRoute,
   ManagerCoachingRoute: ManagerCoachingRoute,
-  ManagerLlsRoute: ManagerLlsRoute,
+  ManagerLlsRoute: ManagerLlsRouteWithChildren,
   ManagerMenuRoute: ManagerMenuRoute,
   ManagerPrioritiesRoute: ManagerPrioritiesRoute,
   ManagerReportsRoute: ManagerReportsRoute,
@@ -1327,13 +1377,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
