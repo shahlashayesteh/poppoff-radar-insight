@@ -196,6 +196,223 @@ export type Database = {
         }
         Relationships: []
       }
+      lls_v2_audit_events: {
+        Row: {
+          actor: string | null
+          created_at: string
+          event_type: string
+          id: string
+          payload: Json
+          venue_id: string
+        }
+        Insert: {
+          actor?: string | null
+          created_at?: string
+          event_type: string
+          id?: string
+          payload?: Json
+          venue_id: string
+        }
+        Update: {
+          actor?: string | null
+          created_at?: string
+          event_type?: string
+          id?: string
+          payload?: Json
+          venue_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lls_v2_audit_events_venue_id_fkey"
+            columns: ["venue_id"]
+            isOneToOne: false
+            referencedRelation: "venues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lls_v2_calculation_results: {
+        Row: {
+          adjusted_labor_cost: number | null
+          adjusted_lls: number | null
+          base_lls: number | null
+          baseline_end: string | null
+          baseline_start: string | null
+          baseline_weeks: number
+          benchmark_confidence: string | null
+          comparable_adjusted_lls: number | null
+          comparable_base_lls: number | null
+          comparable_count: number | null
+          computed_at: string
+          configuration_hash: string
+          configuration_snapshot: Json
+          effective_of: number | null
+          expected_sales: number | null
+          final_confidence: string | null
+          id: string
+          identity_id: string | null
+          inputs_snapshot: Json
+          model_version: string
+          modelled_revenue_opportunity: number | null
+          of_components: Json | null
+          of_version: string
+          override_of: number | null
+          performance_gap: number | null
+          rag_status: string | null
+          result_confidence: string | null
+          result_scope: string
+          revenue_gap: number | null
+          rpc: number | null
+          rph: number | null
+          shift_id: string | null
+          system_of: number | null
+          venue_id: string
+          week_start: string | null
+        }
+        Insert: {
+          adjusted_labor_cost?: number | null
+          adjusted_lls?: number | null
+          base_lls?: number | null
+          baseline_end?: string | null
+          baseline_start?: string | null
+          baseline_weeks: number
+          benchmark_confidence?: string | null
+          comparable_adjusted_lls?: number | null
+          comparable_base_lls?: number | null
+          comparable_count?: number | null
+          computed_at?: string
+          configuration_hash: string
+          configuration_snapshot?: Json
+          effective_of?: number | null
+          expected_sales?: number | null
+          final_confidence?: string | null
+          id?: string
+          identity_id?: string | null
+          inputs_snapshot?: Json
+          model_version: string
+          modelled_revenue_opportunity?: number | null
+          of_components?: Json | null
+          of_version: string
+          override_of?: number | null
+          performance_gap?: number | null
+          rag_status?: string | null
+          result_confidence?: string | null
+          result_scope: string
+          revenue_gap?: number | null
+          rpc?: number | null
+          rph?: number | null
+          shift_id?: string | null
+          system_of?: number | null
+          venue_id: string
+          week_start?: string | null
+        }
+        Update: {
+          adjusted_labor_cost?: number | null
+          adjusted_lls?: number | null
+          base_lls?: number | null
+          baseline_end?: string | null
+          baseline_start?: string | null
+          baseline_weeks?: number
+          benchmark_confidence?: string | null
+          comparable_adjusted_lls?: number | null
+          comparable_base_lls?: number | null
+          comparable_count?: number | null
+          computed_at?: string
+          configuration_hash?: string
+          configuration_snapshot?: Json
+          effective_of?: number | null
+          expected_sales?: number | null
+          final_confidence?: string | null
+          id?: string
+          identity_id?: string | null
+          inputs_snapshot?: Json
+          model_version?: string
+          modelled_revenue_opportunity?: number | null
+          of_components?: Json | null
+          of_version?: string
+          override_of?: number | null
+          performance_gap?: number | null
+          rag_status?: string | null
+          result_confidence?: string | null
+          result_scope?: string
+          revenue_gap?: number | null
+          rpc?: number | null
+          rph?: number | null
+          shift_id?: string | null
+          system_of?: number | null
+          venue_id?: string
+          week_start?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lls_v2_calculation_results_shift_id_fkey"
+            columns: ["shift_id"]
+            isOneToOne: false
+            referencedRelation: "shifts_v2"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lls_v2_calculation_results_venue_id_fkey"
+            columns: ["venue_id"]
+            isOneToOne: false
+            referencedRelation: "venues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lls_v2_of_overrides: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          day_of_week: number
+          daypart: string
+          duration_tier: string
+          effective_from: string
+          effective_to: string | null
+          id: string
+          override_of: number
+          reason: string | null
+          updated_at: string
+          venue_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          day_of_week: number
+          daypart: string
+          duration_tier: string
+          effective_from?: string
+          effective_to?: string | null
+          id?: string
+          override_of: number
+          reason?: string | null
+          updated_at?: string
+          venue_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          day_of_week?: number
+          daypart?: string
+          duration_tier?: string
+          effective_from?: string
+          effective_to?: string | null
+          id?: string
+          override_of?: number
+          reason?: string | null
+          updated_at?: string
+          venue_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lls_v2_of_overrides_venue_id_fkey"
+            columns: ["venue_id"]
+            isOneToOne: false
+            referencedRelation: "venues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           business_name: string | null
@@ -876,6 +1093,7 @@ export type Database = {
           id: string
           identity_confidence: number | null
           identity_match_method: string | null
+          identity_status: string
           last_reconciled_at: string | null
           raw_row: Json
           raw_row_hash: string
@@ -900,6 +1118,7 @@ export type Database = {
           id?: string
           identity_confidence?: number | null
           identity_match_method?: string | null
+          identity_status?: string
           last_reconciled_at?: string | null
           raw_row: Json
           raw_row_hash: string
@@ -924,6 +1143,7 @@ export type Database = {
           id?: string
           identity_confidence?: number | null
           identity_match_method?: string | null
+          identity_status?: string
           last_reconciled_at?: string | null
           raw_row?: Json
           raw_row_hash?: string
@@ -1080,8 +1300,10 @@ export type Database = {
           service_date: string
           service_duration_hours: number | null
           service_duration_source: string | null
+          service_duration_tier: string | null
           single_sided_authorised_by: string | null
           single_sided_justification: string | null
+          status: string
           updated_at: string
           venue_id: string
         }
@@ -1110,8 +1332,10 @@ export type Database = {
           service_date: string
           service_duration_hours?: number | null
           service_duration_source?: string | null
+          service_duration_tier?: string | null
           single_sided_authorised_by?: string | null
           single_sided_justification?: string | null
+          status?: string
           updated_at?: string
           venue_id: string
         }
@@ -1140,8 +1364,10 @@ export type Database = {
           service_date?: string
           service_duration_hours?: number | null
           service_duration_source?: string | null
+          service_duration_tier?: string | null
           single_sided_authorised_by?: string | null
           single_sided_justification?: string | null
+          status?: string
           updated_at?: string
           venue_id?: string
         }
@@ -1857,6 +2083,9 @@ export type Database = {
           created_at: string
           id: string
           join_code: string
+          lls_active_model_version: string
+          lls_compare_mode: boolean
+          lls_v2_baseline_weeks: number
           manager_id: string
           name: string
           updated_at: string
@@ -1865,6 +2094,9 @@ export type Database = {
           created_at?: string
           id?: string
           join_code: string
+          lls_active_model_version?: string
+          lls_compare_mode?: boolean
+          lls_v2_baseline_weeks?: number
           manager_id: string
           name: string
           updated_at?: string
@@ -1873,6 +2105,9 @@ export type Database = {
           created_at?: string
           id?: string
           join_code?: string
+          lls_active_model_version?: string
+          lls_compare_mode?: boolean
+          lls_v2_baseline_weeks?: number
           manager_id?: string
           name?: string
           updated_at?: string
@@ -1992,6 +2227,10 @@ export type Database = {
         Returns: string
       }
       lls_v2_is_manager: { Args: { _venue_id: string }; Returns: boolean }
+      lls_v2_recalculate_canonical_totals: {
+        Args: { _shift_id: string }
+        Returns: undefined
+      }
       lls_v2_refresh_service_periods: {
         Args: { _from: string; _to: string; _venue_id: string }
         Returns: number
