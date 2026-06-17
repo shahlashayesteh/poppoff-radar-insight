@@ -38,7 +38,7 @@ import {
 } from "@/lib/lls.functions";
 import { Upload, ChevronLeft, ChevronRight, AlertTriangle, TrendingUp, TrendingDown, Trash2, Gauge, Sparkles } from "lucide-react";
 
-export const Route = createFileRoute("/manager/lls")({ component: LlsPage });
+export const Route = createFileRoute("/manager/lls/")({ component: LlsPage });
 
 const DAYPARTS: Daypart[] = ["breakfast", "brunch", "lunch", "dinner", "late"];
 const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
