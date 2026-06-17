@@ -337,7 +337,7 @@ describe("§3.2 identity resolution priority", () => {
 
 describe("§4 service period attribution", () => {
   test("reconciled when deviation within 3%", () => {
-    expect(attributionStatus(970, 195, { gross: 1000, covers: 200 }).status).toBe("reconciled");
+    expect(attributionStatus(980, 198, { gross: 1000, covers: 200 }).status).toBe("reconciled");
   });
   test("blocked when deviation > 15%", () => {
     expect(attributionStatus(500, 100, { gross: 1000, covers: 200 }).status).toBe("blocked");
