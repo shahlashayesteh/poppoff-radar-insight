@@ -31,7 +31,7 @@ function psqlErr(sql: string): string {
   }
 }
 
-interface Fx { venue: string; manager: string; identity: string; serviceDate: string; jwt: string }
+interface Fx { venue: string; manager: string; serviceDate: string; jwt: string }
 
 // Shared fixture: real existing manager (auth.users FK), brand-new TEST venue.
 let fx: Fx
@@ -40,7 +40,6 @@ beforeAll(() => {
   const manager = psql(`SELECT manager_id FROM public.venues WHERE manager_id IS NOT NULL LIMIT 1;`).trim()
   if (!manager) throw new Error('no auth user available to seed test venue')
   const venue = randomUUID()
-  const identity = randomUUID()
   const serviceDate = '2026-06-15' // Monday (DOW=1)
   const jwt = JSON.stringify({ sub: manager, role: 'authenticated' })
   psql(`
@@ -52,25 +51,26 @@ beforeAll(() => {
       ('${venue}',1,'lunch','11:00','15:00','2020-01-01'),
       ('${venue}',1,'dinner','17:00','23:00','2020-01-01');
   `)
-  fx = { venue, manager, identity, serviceDate, jwt }
+  fx = { venue, manager, serviceDate, jwt }
 })
 
 afterAll(() => {
-  if (!HAS_DB || !fx) return
-  psql(`DELETE FROM public.venues WHERE id='${fx.venue}';`)
+  // psql role lacks DELETE on venues; test rows are tagged TEST_RECON_* for offline cleanup.
 })
 
-// Helper SQL fragment: seed a batch with given sales + labor rows.
-// sales: array of {anchor_iso|null, first_txn|null, gross, has_emp_time?:bool}
-// labor: array of {clock_in_iso, hours, cost, identity?:string}
+// Seed a batch using a FRESH identity per call so the
+// uq_shifts_v2_active_identity_date partial unique index doesn't collide
+// between independent test cases that share the same date.
 interface SalesSeed { anchor?: string | null; firstTxn?: string | null; gross: number; empTime?: string | null }
-interface LaborSeed { clockIn: string; clockOut?: string; hours: number; cost: number; identity?: string }
-function seedBatch(sales: SalesSeed[], labor: LaborSeed[]): { batch: string; salesIds: string[]; laborIds: string[] } {
+interface LaborSeed { clockIn: string; clockOut?: string; hours: number; cost: number }
+function seedBatch(
+  sales: SalesSeed[], labor: LaborSeed[],
+  opts: { identity?: string } = {},
+): { batch: string; identity: string; salesIds: string[]; laborIds: string[] } {
   const batch = randomUUID()
-  const salesIds = sales.map(() => randomUUID())
-  const laborIds = labor.map(() => randomUUID())
-  const stagingSales = sales.map((_, i) => randomUUID())
-  const stagingLabor = labor.map((_, i) => randomUUID())
+  const identity = opts.identity ?? randomUUID()
+  const stagingSales = sales.map(() => randomUUID())
+  const stagingLabor = labor.map(() => randomUUID())
   let sql = `
     INSERT INTO public.shift_import_batches_v2 (id, venue_id, uploaded_by, source_kind, source_filename, row_count)
     VALUES ('${batch}','${fx.venue}','${fx.manager}','combined','test.csv',${sales.length + labor.length});
@@ -83,7 +83,7 @@ function seedBatch(sales: SalesSeed[], labor: LaborSeed[]): { batch: string; sal
          service_date, resolved_identity_id, identity_status, duplicate_status, reconciliation_status)
       VALUES
         ('${sid}','${fx.venue}','${batch}','sales',${i},'{}'::jsonb,'h_s_${sid}',
-         '${fx.serviceDate}','${fx.identity}','resolved','unique','pending');
+         '${fx.serviceDate}','${identity}','resolved','unique','pending');
       INSERT INTO public.shift_sales_staging
         (staging_row_id, venue_id, batch_id, sales_first_txn_time,
          sales_report_period_start, sales_report_period_end,
@@ -97,7 +97,6 @@ function seedBatch(sales: SalesSeed[], labor: LaborSeed[]): { batch: string; sal
          ${s.empTime ? `'${s.empTime}'::timestamptz + interval '4 hours'` : 'NULL'},
          ${s.gross}, ${s.gross * 0.85}, 20);
     `
-    salesIds[i] = sid
   })
   labor.forEach((l, i) => {
     const lid = stagingLabor[i]
@@ -107,7 +106,7 @@ function seedBatch(sales: SalesSeed[], labor: LaborSeed[]): { batch: string; sal
          service_date, resolved_identity_id, identity_status, duplicate_status, reconciliation_status)
       VALUES
         ('${lid}','${fx.venue}','${batch}','labor',${i + sales.length},'{}'::jsonb,'h_l_${lid}',
-         '${fx.serviceDate}','${l.identity ?? fx.identity}','resolved','unique','pending');
+         '${fx.serviceDate}','${identity}','resolved','unique','pending');
       INSERT INTO public.shift_labor_staging
         (staging_row_id, venue_id, batch_id, labor_clock_in, labor_clock_out,
          labor_hours_reported, labor_cost)
@@ -116,11 +115,11 @@ function seedBatch(sales: SalesSeed[], labor: LaborSeed[]): { batch: string; sal
          ${l.clockOut ? `'${l.clockOut}'` : `'${l.clockIn}'::timestamptz + interval '${l.hours} hours'`},
          ${l.hours}, ${l.cost});
     `
-    laborIds[i] = lid
   })
   psql(sql)
-  return { batch, salesIds, laborIds }
+  return { batch, identity, salesIds: stagingSales, laborIds: stagingLabor }
 }
+
 
 function reconcile(batch: string): Record<string, number | string> {
   const out = psql(`
