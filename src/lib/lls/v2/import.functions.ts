@@ -37,7 +37,7 @@ export const v2RunReconciliation = createServerFn({ method: "POST" })
       _batch_id: data.batch_id,
     });
     if (error) throw new Error(error.message);
-    return res as Record<string, unknown>;
+    return { result: res as unknown };
   });
 
 export const v2SupersedeBatch = createServerFn({ method: "POST" })

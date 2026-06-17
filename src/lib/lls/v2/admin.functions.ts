@@ -27,7 +27,11 @@ export const v2SetVenueFlags = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: z.input<typeof FlagSchema>) => FlagSchema.parse(d))
   .handler(async ({ data, context }) => {
-    const patch: Record<string, unknown> = {};
+    const patch: {
+      lls_active_model_version?: "v1" | "v2";
+      lls_compare_mode?: boolean;
+      lls_v2_baseline_weeks?: number;
+    } = {};
     if (data.active_model_version) patch.lls_active_model_version = data.active_model_version;
     if (data.compare_mode != null) patch.lls_compare_mode = data.compare_mode;
     if (data.baseline_weeks) patch.lls_v2_baseline_weeks = data.baseline_weeks;
