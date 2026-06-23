@@ -155,32 +155,24 @@ const SPELLING_MAP: Record<string, string> = {
 /** Tokenise a header into lowercase word atoms after stripping noise. */
 export function tokenizeHeader(raw: string): string[] {
   if (!raw) return [];
-  let s = String(raw).toLowerCase();
+  let s = String(raw);
   // strip parenthetical content like "(GBP)" / "[demo]"
   s = s.replace(/\([^)]*\)/g, " ").replace(/\[[^\]]*\]/g, " ");
   // currency symbols → space
   s = s.replace(/[£$€¥]/g, " ");
-  // split on non-alphanumeric AND on camelCase boundaries
+  // split camelCase BEFORE lowercasing, then normalise to lowercase tokens.
   s = s
-    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
     .replace(/([A-Z]+)([A-Z][a-z])/g, "$1 $2")
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, " ")
     .trim();
   const tokens = s.split(/\s+/).filter(Boolean);
-  // expand spellings, drop noise + currency
   const out: string[] = [];
   for (const t of tokens) {
     if (CURRENCY_TOKENS.has(t)) continue;
     if (NOISE_TOKENS.has(t)) continue;
-    const mapped = SPELLING_MAP[t] ?? t;
-    // SPELLING_MAP may yield compound; resplit
-    if (mapped !== t) {
-      out.push(...mapped.split(/(?=[a-z])(?<=[a-z])/).filter(Boolean));
-      out.push(mapped);
-    } else {
-      out.push(t);
-    }
+    out.push(SPELLING_MAP[t] ?? t);
   }
   return out;
 }
