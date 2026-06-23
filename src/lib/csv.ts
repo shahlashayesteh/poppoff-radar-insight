@@ -302,7 +302,28 @@ function normalize(value: string) {
 
 function canonicalHeader(header: string): string {
   const normalized = normalize(header);
-  return HEADER_ALIASES[normalized] ?? header.trim();
+  if (HEADER_ALIASES[normalized]) return HEADER_ALIASES[normalized];
+  // Universal engine fallback for headers the legacy alias table misses
+  // (e.g. "FullyLoadedLabourCostEURDemo", "Net Sales (GBP)").
+  const det = detectColumns([header]);
+  const eng = det.headerToField[header];
+  if (eng) {
+    const ENGINE_TO_LEGACY: Record<string, CanonicalField> = {
+      server_name: "server_name",
+      covers_served: "total_covers",
+      gross_sales: "total_sales",
+      net_sales: "total_sales",
+      shift_date: "date",
+      week_start: "date",
+      category: "category",
+      major_group: "category",
+      menu_item: "item",
+      quantity: "quantity",
+      check_id: "check_id",
+    };
+    if (ENGINE_TO_LEGACY[eng]) return ENGINE_TO_LEGACY[eng];
+  }
+  return header.trim();
 }
 
 function numberFromCsv(value: unknown): number {
