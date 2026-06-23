@@ -25,6 +25,37 @@ function brandedErrorResponse(): Response {
   });
 }
 
+const CRAWLABLE_DEMO_PATHS = new Set(["/demo/manager", "/demo/manager/"]);
+
+function isCrawlableDemoRequest(request: Request): boolean {
+  if (request.method !== "GET" && request.method !== "HEAD") return false;
+  const url = new URL(request.url);
+  return CRAWLABLE_DEMO_PATHS.has(url.pathname);
+}
+
+function forceHtmlAcceptForCrawlableDemo(request: Request): Request {
+  if (!isCrawlableDemoRequest(request)) return request;
+
+  const accept = request.headers.get("accept")?.toLowerCase() ?? "";
+  if (accept.includes("text/html")) return request;
+
+  const headers = new Headers(request.headers);
+  headers.set("accept", "text/html,application/xhtml+xml;q=0.9,*/*;q=0.8");
+  return new Request(request, { headers });
+}
+
+function addCrawlableDemoHeaders(request: Request, response: Response): Response {
+  if (!isCrawlableDemoRequest(request)) return response;
+
+  const headers = new Headers(response.headers);
+  headers.set("x-robots-tag", "index, follow");
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
+}
+
 function isCatastrophicSsrErrorBody(body: string, responseStatus: number): boolean {
   let payload: unknown;
   try {
@@ -69,9 +100,11 @@ async function normalizeCatastrophicSsrResponse(response: Response): Promise<Res
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
+      const appRequest = forceHtmlAcceptForCrawlableDemo(request);
       const handler = await getServerEntry();
-      const response = await handler.fetch(request, env, ctx);
-      return await normalizeCatastrophicSsrResponse(response);
+      const response = await handler.fetch(appRequest, env, ctx);
+      const normalizedResponse = await normalizeCatastrophicSsrResponse(response);
+      return addCrawlableDemoHeaders(appRequest, normalizedResponse);
     } catch (error) {
       console.error(error);
       return brandedErrorResponse();
