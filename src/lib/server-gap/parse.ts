@@ -75,7 +75,7 @@ export async function parseFile(file: File): Promise<ParseResult> {
 }
 
 function finalize(rawHeaders: string[], rows: RawRow[]): ParseResult {
-  const headerMap = detectHeaders(rawHeaders);
+  const headerMap = detectHeaders(rawHeaders, rows.slice(0, 25) as Record<string, unknown>[]);
   const detected = new Set<CanonicalField>();
   for (const v of Object.values(headerMap)) if (v) detected.add(v);
   return {
