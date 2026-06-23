@@ -206,7 +206,7 @@ function LlsPage() {
     }
     const fieldsRO = source === "sales" ? SALES_FIELDS : LABOR_FIELDS;
     const fields = [...fieldsRO];
-    const { mapping: auto, ambiguous } = autoMap(parsed.headers, fields);
+    const { mapping: auto, ambiguous } = autoMap(parsed.headers, fields, parsed.rows.slice(0, 25));
 
     // Saved per-venue mapping wins over auto if its headers still exist.
     let saved: Record<string, string> = {};
@@ -797,70 +797,49 @@ function UploadZone({ label, sublabel, onFile }: { label: string; sublabel: stri
 }
 
 // Heuristic auto-mapping with ambiguity detection.
-// Returns the best header per field plus a set of fields where multiple
-// headers tied at the highest-confidence (lowest-priority) match — those
-// must be confirmed by the manager rather than guessed silently.
+// Universal column intelligence: defer all header guessing to the shared engine.
+// LLS-specific keys → canonical engine fields.
+import { detectColumns, type CanonicalField } from "@/lib/import/column-intelligence";
+
+const LLS_FIELD_TO_CANONICAL: Record<string, CanonicalField> = {
+  server_name: "server_name",
+  shift_date: "shift_date",
+  daypart: "daypart",
+  covers_served: "covers_served",
+  gross_sales: "gross_sales",
+  shift_start_time: "shift_start_time",
+  shift_end_time: "shift_end_time",
+  labor_cost: "labor_cost",
+  hours_worked: "hours_worked",
+  hourly_rate: "hourly_rate",
+};
+
 function autoMap(
   headers: string[],
   fields: ReadonlyArray<{ key: string }>,
+  sampleRows?: Record<string, unknown>[],
 ): { mapping: Record<string, string>; ambiguous: Set<string> } {
-  const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
-  // Priority order matters: earlier entries are stronger matches.
-  const SYN: Record<string, string[]> = {
-    server_name: [
-      "servername", "server", "employeename", "employee", "staffname", "staff",
-      "waitername", "waiter", "teammembername", "teammember", "username", "user",
-      "operator", "cashier", "soldby", "name",
-    ],
-    shift_date: [
-      "businessdate", "shiftdate", "tradingdate", "transactiondate", "orderdate",
-      "saledate", "servicedate", "date", "day",
-    ],
-    daypart: ["daypart", "mealperiod", "serviceperiod", "service", "period", "session"],
-    covers_served: [
-      "coversserved", "coverscount", "coverstotal", "guestsserved", "guestcount",
-      "covers", "guests", "pax", "customers",
-    ],
-    gross_sales: [
-      "grosssales", "grossrevenue", "grosstotal", "totalsales", "salestotal",
-      "sales", "revenue", "amount", "total", "netsales",
-    ],
-    shift_start_time: [
-      "shiftstart", "clockin", "starttime", "intime", "timein", "start",
-    ],
-    shift_end_time: [
-      "shiftend", "clockout", "endtime", "outtime", "timeout", "end",
-    ],
-    labor_cost: [
-      "laborcost", "labourcost", "wagecost", "payrollcost", "staffcost",
-      "employeecost", "totalpay", "wages", "pay", "cost",
-    ],
-    hours_worked: [
-      "hoursworked", "paidhours", "shifthours", "totalhours", "workedhours", "hours",
-    ],
-    hourly_rate: ["hourlyrate", "wagerate", "hourlypay", "payrate", "rate"],
-  };
-
+  const canonicalNeeded = fields
+    .map((f) => LLS_FIELD_TO_CANONICAL[f.key])
+    .filter(Boolean) as CanonicalField[];
+  // Also consider fully_loaded_labor_cost as an alias for labor_cost.
+  const det = detectColumns(headers, {
+    fields: [...canonicalNeeded, "fully_loaded_labor_cost", "net_sales"],
+    sampleRows,
+  });
   const mapping: Record<string, string> = {};
   const ambiguous = new Set<string>();
   for (const f of fields) {
-    const syns = SYN[f.key] ?? [f.key.replace(/_/g, "")];
-    let best: { header: string; prio: number } | null = null;
-    let tied = false;
-    for (const h of headers) {
-      const prio = syns.indexOf(norm(h));
-      if (prio === -1) continue;
-      if (!best || prio < best.prio) {
-        best = { header: h, prio };
-        tied = false;
-      } else if (prio === best.prio) {
-        tied = true;
-      }
-    }
-    if (best) {
-      mapping[f.key] = best.header;
-      if (tied) ambiguous.add(f.key);
-    }
+    const canon = LLS_FIELD_TO_CANONICAL[f.key];
+    if (!canon) continue;
+    let m = det.mappings[canon];
+    // Labor cost: prefer fully_loaded if direct cost is missing.
+    if (!m && canon === "labor_cost") m = det.mappings.fully_loaded_labor_cost;
+    // Gross sales: fall back to net sales if needed.
+    if (!m && canon === "gross_sales") m = det.mappings.net_sales;
+    if (!m) continue;
+    mapping[f.key] = m.header;
+    if (m.confidence === "low") ambiguous.add(f.key);
   }
   return { mapping, ambiguous };
 }

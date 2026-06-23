@@ -1,54 +1,42 @@
 // Client-side CSV / XLSX parser with fuzzy header detection.
+// Header inference is delegated to the shared universal column engine.
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
+import { detectColumns, type CanonicalField as EngineField } from "@/lib/import/column-intelligence";
 
-const ALIASES = {
-  server_id: ["server_id", "serverid", "employee_id", "emp_id", "staff_id", "id"],
-  server_name: [
-    "server_name",
-    "server",
-    "employee",
-    "employee_name",
-    "staff",
-    "staff_name",
-    "name",
-    "waiter",
-  ],
-  shift_date: ["shift_date", "date", "business_date", "service_date", "day"],
-  shift_start: ["shift_start", "start_time", "start", "clock_in", "in_time", "from"],
-  shift_end: ["shift_end", "end_time", "end", "clock_out", "out_time", "to"],
-  net_sales: ["net_sales", "net", "sales_net"],
-  gross_sales: ["gross_sales", "gross", "sales", "total_sales", "revenue", "amount"],
-  hours: ["hours", "hrs", "hours_worked", "worked_hours", "labour_hours", "labor_hours"],
-  labour_cost: ["labour_cost", "labor_cost", "wage_cost", "cost", "payroll"],
-  covers: ["covers", "guests", "guest_count", "pax", "cover_count"],
-  section: ["section", "station", "zone", "area"],
-  role: ["role", "position", "job"],
-  venue: ["venue", "site", "location", "store", "restaurant"],
-  daypart: ["daypart", "meal_period", "service", "shift_type", "period"],
-} as const;
+// Server-gap calculator only cares about this subset; keep the local type
+// stable so call sites don't change.
+const FIELD_MAP = {
+  server_id: "employee_id",
+  server_name: "server_name",
+  shift_date: "shift_date",
+  shift_start: "shift_start_time",
+  shift_end: "shift_end_time",
+  net_sales: "net_sales",
+  gross_sales: "gross_sales",
+  hours: "hours_worked",
+  labour_cost: "labor_cost",
+  covers: "covers_served",
+  section: null,
+  role: "job_role",
+  venue: "venue",
+  daypart: "daypart",
+} as const satisfies Record<string, EngineField | null>;
 
-export type CanonicalField = keyof typeof ALIASES;
+export type CanonicalField = keyof typeof FIELD_MAP;
 
-function normHeader(h: string): string {
-  return String(h ?? "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "_")
-    .replace(/^_|_$/g, "");
-}
-
-export function detectHeaders(headers: string[]): Record<string, CanonicalField | null> {
+export function detectHeaders(headers: string[], sampleRows?: Record<string, unknown>[]): Record<string, CanonicalField | null> {
+  const needed = Object.values(FIELD_MAP).filter(Boolean) as EngineField[];
+  const det = detectColumns(headers, { fields: needed, sampleRows });
   const map: Record<string, CanonicalField | null> = {};
+  // Invert: engineField → local key
+  const inverted: Partial<Record<EngineField, CanonicalField>> = {};
+  for (const [local, eng] of Object.entries(FIELD_MAP)) {
+    if (eng) inverted[eng] = local as CanonicalField;
+  }
   for (const h of headers) {
-    const norm = normHeader(h);
-    let hit: CanonicalField | null = null;
-    for (const [canon, alts] of Object.entries(ALIASES)) {
-      if ((alts as readonly string[]).includes(norm)) {
-        hit = canon as CanonicalField;
-        break;
-      }
-    }
-    map[h] = hit;
+    const eng = det.headerToField[h];
+    map[h] = eng ? inverted[eng] ?? null : null;
   }
   return map;
 }
@@ -87,7 +75,7 @@ export async function parseFile(file: File): Promise<ParseResult> {
 }
 
 function finalize(rawHeaders: string[], rows: RawRow[]): ParseResult {
-  const headerMap = detectHeaders(rawHeaders);
+  const headerMap = detectHeaders(rawHeaders, rows.slice(0, 25) as Record<string, unknown>[]);
   const detected = new Set<CanonicalField>();
   for (const v of Object.values(headerMap)) if (v) detected.add(v);
   return {
