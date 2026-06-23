@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ManagerLayout } from "@/components/manager-layout";
 import { servers } from "@/lib/sample-data";
+import { publicDemoRouteHandler } from "@/lib/public-demo-html";
 import { Bell, ChevronDown, Calendar, Users, PoundSterling, TrendingUp, Eye, Wine, Cake, Droplet, Target, Flame, MoreVertical } from "lucide-react";
 
 const DEMO_URL = "https://poppoffstats.com/demo/manager";
@@ -8,6 +9,12 @@ const DEMO_TITLE = "Manager Demo — PoppOff Restaurant Performance Dashboard";
 const DEMO_DESC = "Explore the PoppOff manager demo: team scorecards, coaching priorities, weekly focus areas, and revenue uplift insights for restaurant operators. No login required.";
 
 export const Route = createFileRoute("/demo/manager/")({
+  server: {
+    handlers: {
+      GET: publicDemoRouteHandler,
+      HEAD: publicDemoRouteHandler,
+    },
+  },
   head: () => ({
     meta: [
       { title: DEMO_TITLE },

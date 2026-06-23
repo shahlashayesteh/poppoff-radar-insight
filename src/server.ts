@@ -25,23 +25,29 @@ function brandedErrorResponse(): Response {
   });
 }
 
-const CRAWLABLE_DEMO_PATHS = new Set(["/demo/manager", "/demo/manager/"]);
-
 function isCrawlableDemoRequest(request: Request): boolean {
   if (request.method !== "GET" && request.method !== "HEAD") return false;
   const url = new URL(request.url);
-  return CRAWLABLE_DEMO_PATHS.has(url.pathname);
+  return url.pathname === "/demo/manager" || url.pathname.startsWith("/demo/manager/");
 }
 
-function forceHtmlAcceptForCrawlableDemo(request: Request): Request {
+function normalizeCrawlableDemoRequest(request: Request): Request {
   if (!isCrawlableDemoRequest(request)) return request;
 
-  const accept = request.headers.get("accept")?.toLowerCase() ?? "";
-  if (accept.includes("text/html")) return request;
+  const url = new URL(request.url);
+  if (url.pathname.length > 1 && url.pathname.endsWith("/")) {
+    url.pathname = url.pathname.replace(/\/+$/, "");
+  }
 
+  let changed = url.href !== request.url;
+  const accept = request.headers.get("accept")?.toLowerCase() ?? "";
   const headers = new Headers(request.headers);
-  headers.set("accept", "text/html,application/xhtml+xml;q=0.9,*/*;q=0.8");
-  return new Request(request, { headers });
+  if (!accept.includes("text/html")) {
+    headers.set("accept", "text/html,application/xhtml+xml;q=0.9,*/*;q=0.8");
+    changed = true;
+  }
+
+  return changed ? new Request(url, { headers, method: request.method, body: request.body }) : request;
 }
 
 function addCrawlableDemoHeaders(request: Request, response: Response): Response {
@@ -100,7 +106,7 @@ async function normalizeCatastrophicSsrResponse(response: Response): Promise<Res
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
-      const appRequest = forceHtmlAcceptForCrawlableDemo(request);
+      const appRequest = normalizeCrawlableDemoRequest(request);
       const handler = await getServerEntry();
       const response = await handler.fetch(appRequest, env, ctx);
       const normalizedResponse = await normalizeCatastrophicSsrResponse(response);

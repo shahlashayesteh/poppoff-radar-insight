@@ -1,8 +1,15 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ManagerLayout } from "@/components/manager-layout";
+import { publicDemoRouteHandler } from "@/lib/public-demo-html";
 import { Brain, ChevronRight, Utensils, Wine, Star, Camera, FileText, Sparkles, TrendingUp, Lightbulb } from "lucide-react";
 
 export const Route = createFileRoute("/demo/manager/menu")({
+  server: {
+    handlers: {
+      GET: publicDemoRouteHandler,
+      HEAD: publicDemoRouteHandler,
+    },
+  },
   component: MenuIntel,
 });
 

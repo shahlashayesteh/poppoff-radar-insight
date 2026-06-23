@@ -1,8 +1,17 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ManagerLayout } from "@/components/manager-layout";
 import { servers } from "@/lib/sample-data";
+import { publicDemoRouteHandler } from "@/lib/public-demo-html";
 
-export const Route = createFileRoute("/demo/manager/server/")({ component: Page });
+export const Route = createFileRoute("/demo/manager/server/")({
+  server: {
+    handlers: {
+      GET: publicDemoRouteHandler,
+      HEAD: publicDemoRouteHandler,
+    },
+  },
+  component: Page,
+});
 
 function Page() {
   return (

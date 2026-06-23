@@ -2,8 +2,15 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { ManagerLayout } from "@/components/manager-layout";
 import { StatusBadge, StatusDot } from "@/components/status";
 import { servers, sarahCategories } from "@/lib/sample-data";
+import { publicDemoRouteHandler } from "@/lib/public-demo-html";
 
 export const Route = createFileRoute("/demo/manager/server/$id")({
+  server: {
+    handlers: {
+      GET: publicDemoRouteHandler,
+      HEAD: publicDemoRouteHandler,
+    },
+  },
   component: ServerView,
 });
 
