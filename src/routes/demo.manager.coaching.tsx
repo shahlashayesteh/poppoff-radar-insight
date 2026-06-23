@@ -1,9 +1,18 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ManagerLayout } from "@/components/manager-layout";
 import { coachingPriorities, restaurant } from "@/lib/sample-data";
+import { publicDemoRouteHandler } from "@/lib/public-demo-html";
 import { Sparkles } from "lucide-react";
 
-export const Route = createFileRoute("/demo/manager/coaching")({ component: Page });
+export const Route = createFileRoute("/demo/manager/coaching")({
+  server: {
+    handlers: {
+      GET: publicDemoRouteHandler,
+      HEAD: publicDemoRouteHandler,
+    },
+  },
+  component: Page,
+});
 
 const demoPriorities = [
   { item_name: "Sancerre (wine by glass)", priority_flag: "High priority" },

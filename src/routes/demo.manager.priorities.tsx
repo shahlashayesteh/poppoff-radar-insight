@@ -1,9 +1,16 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ManagerLayout } from "@/components/manager-layout";
+import { publicDemoRouteHandler } from "@/lib/public-demo-html";
 import { Target, ChevronRight, MoreHorizontal, CheckCircle2 } from "lucide-react";
 import { useState } from "react";
 
 export const Route = createFileRoute("/demo/manager/priorities")({
+  server: {
+    handlers: {
+      GET: publicDemoRouteHandler,
+      HEAD: publicDemoRouteHandler,
+    },
+  },
   component: Priorities,
 });
 

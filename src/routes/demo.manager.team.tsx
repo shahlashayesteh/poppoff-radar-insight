@@ -1,9 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { ManagerLayout } from "@/components/manager-layout";
 import { servers } from "@/lib/sample-data";
+import { publicDemoRouteHandler } from "@/lib/public-demo-html";
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid } from "recharts";
 
 export const Route = createFileRoute("/demo/manager/team")({
+  server: {
+    handlers: {
+      GET: publicDemoRouteHandler,
+      HEAD: publicDemoRouteHandler,
+    },
+  },
   component: TeamTrends,
 });
 
