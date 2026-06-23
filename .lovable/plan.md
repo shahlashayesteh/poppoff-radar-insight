@@ -1,56 +1,77 @@
-# Tool 2 — surface how it works
+## Stage 1 — Calculation & import audit (read-only, revised)
 
-The calculation already runs end-to-end (matching → opportunity inference → ranking → recoverable revenue). The page just doesn't tell users that before they upload, so it looks like "nothing happens." This plan adds the explanation, mirrors the LLS page's framing for opportunity, and improves the empty state. **No calculation logic changes. No new files. Still 100% client-side.**
+Approved scope: Stage 1 only. No app code changes. Deliverables are Markdown documents under `docs/audit/`. I will stop and wait for your review before any Stage 2 work, unless I discover a calculation blocker that would make the demo unsafe — in that case I flag it and ask before touching code.
 
-## 1. New collapsible "How this works" panel
+### Audit surface
 
-Insert directly **above the Upload cards** in `src/routes/calculator.server-gap.tsx` (after the Currency selector, before the `grid md:grid-cols-2` upload block). Built with the existing shadcn `Accordion` primitive — no new dependencies.
+Every route in `src/routes/` (manager, server, demo manager, demo server, calculator, server-gap, LLS, reports, coaching, priorities, menu, team, scorecards), every helper in `src/lib/` (`lls/`, `lls/v2/`, `server-gap/`, `import/`, `performance-engine.ts`, `server-data.ts`, `sample-data.ts`, `csv.ts`, `lls.functions.ts`), the v2 calculation engine, and every CSV/XLSX upload entry point.
 
-Four sections, in this order:
+### Deliverables
 
-**1. What you upload (and why two files)**
-- Sales export: per-server, per-shift sales rows (server, date, net or gross sales; optionally shift start/end).
-- Labour export: per-server shift rows (server, date, shift start, shift end or hours).
-- Two files because almost no POS exports both together. Download buttons for both templates live in each Upload card below.
+All files written under `docs/audit/`. Nothing else changes.
 
-**2. How the two files are matched**
-- Join key: server identity (ID preferred, name fallback, case/punctuation-normalised) + shift date.
-- Multiple shifts in a day:
-  - Sales row has a start time → pair with the overlapping labour shift.
-  - No start time + exactly one labour shift that day → auto-match.
-  - No start time + multiple labour shifts → flagged **Ambiguous** and **excluded** from the calculation (never guessed).
-- Unmatched rows on either side are reported in the warnings list.
+1. **`docs/audit/00-readiness-summary.md`** — top-of-stack "presentation readiness risk summary":
+   - ✅ Safe to present now
+   - ⚠️ Risky — present with caveats
+   - 🛑 Must fix before presentation (BLOCKERs)
+   - 🕒 Can wait until after presentation
+   Each item links into the detailed sections below.
 
-**3. How shift opportunity is determined (you don't upload it)**
-Mirror the LLS framing from `src/routes/manager.lls.tsx` and the bands in `src/lib/server-gap/opportunity.ts`:
-> Opportunity is inferred from the **actual start and end times** of each labour shift. Daypart labels in your file are never used for calculation.
->
-> Each hour of the shift is scored against a day-of-week × hour grid, then averaged across the shift to produce one **Opportunity Factor**:
-> - **Low** 0.75–0.90 — off-peak hours
-> - **Normal** 0.95–1.05 — average trading hours
-> - **Strong** 1.10–1.25 — busy lunch/dinner windows
-> - **Peak** 1.30–1.40 — Fri/Sat dinner-style windows
->
-> Adjusted hours = hours × factor. A server who worked Friday dinner is held to a higher bar than a server who worked Tuesday lunch.
+2. **`docs/audit/01-calculations.md`** — one row per (page, metric):
+   - **UI location/path** (e.g. `/manager/lls` → "Adjusted LLS" column in the weekly table; `/manager` → "Team RPH" KPI card) — visible path the user clicks to see it, not just the file.
+   - Code file:line
+   - UI label as shown
+   - Exact formula in code today
+   - Source fields and classification (uploaded / derived / hardcoded / demo / fallback)
+   - Whether the same metric is calculated differently elsewhere (cross-link)
+   - Whether the UI exposes formula / source / basis / tooltip (yes/no)
+   - **Severity**: BLOCKER / HIGH / MEDIUM / LOW
+   - Recommended canonical formula
 
-(Same band labels and numeric ranges as the LLS reference page, so the two tools speak the same language.)
+3. **`docs/audit/02-imports.md`** — every CSV/XLSX entry point, parser/mapper used, whether it already routes through `src/lib/import/column-intelligence.ts`, gaps, severity.
 
-**4. What you'll see after both files are uploaded**
-A numbered list previewing the sections that render below:
-1. **Confidence score** (High / Medium / Low) + any warnings (unmatched rows, ambiguous shifts, missing start times).
-2. **Ranking table** — every server ordered by opportunity-adjusted revenue per hour vs the team weighted benchmark.
-3. **Top vs bottom gap** — the £/$ difference per adjusted hour between your best and weakest performer.
-4. **Recoverable revenue** — what lifting the bottom half toward the benchmark would project weekly / monthly / annually.
+4. **`docs/audit/03-benchmarks-and-ranking.md`** — every benchmark, ranking threshold, and flagging rule in code today; whether basis matches the metric being judged; weighted vs simple-average; threshold drift across pages; severity.
 
-Closing line inside the panel: *"All of this is computed in your browser. No row of your data leaves this page."*
+5. **`docs/audit/04-opportunity-factor.md`** — every read/derive/default of OF, application consistency across manager/server/reports/coaching, severity.
 
-Default state: **closed**. Header label: **"How this works — matching, opportunity, results."**
+6. **`docs/audit/05-transparency-gaps.md`** — every place a metric is shown without a formula/source/basis/tooltip, with the UI path and severity.
 
-## 2. Better pre-upload empty state
+### Risk taxonomy (applied across all sections)
 
-Replace the single-line "Upload both files to see results" (line ~403) with a short card that says: "Upload both exports above. You'll then see a confidence score, server ranking, top-vs-bottom gap, and projected recoverable revenue — without any data leaving your browser." This makes the post-upload flow visible before the user commits.
+Each finding is tagged with one severity AND one or more of these risk codes so you can scan by category:
 
-## 3. Files touched
-- `src/routes/calculator.server-gap.tsx` — add Accordion import, insert the panel, replace empty-state copy.
+- `LABOR_BASIS_WRONG` — wrong labour/labor cost basis used
+- `LABOR_BASIS_DOWNGRADED` — gross wage used when fully loaded was available
+- `BENCHMARK_BASIS_MISMATCH` — benchmark basis ≠ metric basis
+- `AVG_OF_AVG` — simple averages used where weighted totals should be
+- `FORMULA_DRIFT` — same metric, different formulas across pages
+- `HARDCODED_OR_DEMO_LEAK` — hardcoded / demo values reachable in real flows
+- `UNLABELLED_DERIVED` — fallback calculation not labelled as derived
+- `COLUMN_MISREAD` — imported field misread because of column naming
+- `MANAGER_SERVER_DIVERGENCE` — manager vs server dashboard inconsistency
+- `OF_INCONSISTENT` — opportunity factor applied inconsistently
+- `THRESHOLD_DRIFT` — ranking/flagging thresholds inconsistent
+- `NO_TRANSPARENCY` — metric shown without formula/source/basis/tooltip
 
-That's the whole change. No edits to `src/lib/server-gap/*`, no edits to Tool 1, no protected files, no routing changes.
+### Severity rubric
+
+- **BLOCKER** — would show wrong numbers on stage or in a buyer demo path; must fix before presenting.
+- **HIGH** — wrong on a path a buyer is likely to click; fix before presenting or hide that surface.
+- **MEDIUM** — correct in common paths, wrong in edges; safe to present with a caveat.
+- **LOW** — cosmetic / transparency only; fine after presentation.
+
+### Method
+
+- Read-only: `rg`, `code--view`, and one or more `acp_subagent--explore` passes to trace metric→component→route paths so the UI location column is accurate.
+- Cross-reference every metric across manager, server, and demo trees to detect `FORMULA_DRIFT` / `MANAGER_SERVER_DIVERGENCE`.
+- Run the existing test suite once to confirm baseline (no changes).
+
+### Stop condition
+
+After writing the six docs I stop and post the readiness summary in chat with links. No Stage 2 work, no schema changes, no UI changes, no calc changes — unless I hit a BLOCKER that makes the demo unsafe to run as-is, in which case I will ask you before touching anything.
+
+### What I still need from you (can answer after reviewing Stage 1)
+
+1. Whether any documented per-page formula deviations are intentional.
+2. Target recoverability factor for "Recoverable Opportunity" (or default + venue setting).
+3. Tip/attach denominator preference when `eligible_*` is absent (approximate label vs hide).
