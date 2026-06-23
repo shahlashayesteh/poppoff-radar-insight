@@ -206,7 +206,7 @@ function LlsPage() {
     }
     const fieldsRO = source === "sales" ? SALES_FIELDS : LABOR_FIELDS;
     const fields = [...fieldsRO];
-    const { mapping: auto, ambiguous } = autoMap(parsed.headers, fields);
+    const { mapping: auto, ambiguous } = autoMap(parsed.headers, fields, parsed.rows.slice(0, 25));
 
     // Saved per-venue mapping wins over auto if its headers still exist.
     let saved: Record<string, string> = {};
