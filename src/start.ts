@@ -24,7 +24,9 @@ function forceHtmlAcceptForCrawlableDemo(request: Request): Request {
 
 const crawlableDemoMiddleware = createMiddleware().server(async ({ next, request }) => {
   const appRequest = forceHtmlAcceptForCrawlableDemo(request);
-  const result = await next(appRequest === request ? undefined : { request: appRequest });
+  const result = await (next as (options?: { request?: Request }) => ReturnType<typeof next>)(
+    appRequest === request ? undefined : { request: appRequest },
+  );
 
   if (isCrawlableDemoRequest(appRequest) && result.response) {
     result.response.headers.set("x-robots-tag", "index, follow");
