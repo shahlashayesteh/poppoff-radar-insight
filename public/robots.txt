@@ -1,7 +1,5 @@
 User-agent: *
 Allow: /
-Allow: /demo/manager
-Allow: /demo/manager/
 Disallow: /manager
 Disallow: /server
 Disallow: /settings
@@ -10,14 +8,14 @@ Disallow: /join
 Disallow: /signin
 Disallow: /signup
 Disallow: /login
+Disallow: /demo/manager
+Disallow: /demo/server
 Disallow: /lovable
 Disallow: /api
 
 # AI assistants and answer engines — explicitly allowed for public pages
 User-agent: GPTBot
 Allow: /
-Allow: /demo/manager
-Allow: /demo/manager/
 Disallow: /manager
 Disallow: /server
 Disallow: /settings
@@ -26,13 +24,13 @@ Disallow: /join
 Disallow: /signin
 Disallow: /signup
 Disallow: /login
+Disallow: /demo/manager
+Disallow: /demo/server
 Disallow: /lovable
 Disallow: /api
 
 User-agent: OAI-SearchBot
 Allow: /
-Allow: /demo/manager
-Allow: /demo/manager/
 Disallow: /manager
 Disallow: /server
 Disallow: /settings
@@ -41,13 +39,13 @@ Disallow: /join
 Disallow: /signin
 Disallow: /signup
 Disallow: /login
+Disallow: /demo/manager
+Disallow: /demo/server
 Disallow: /lovable
 Disallow: /api
 
 User-agent: ChatGPT-User
 Allow: /
-Allow: /demo/manager
-Allow: /demo/manager/
 Disallow: /manager
 Disallow: /server
 Disallow: /settings
@@ -56,13 +54,13 @@ Disallow: /join
 Disallow: /signin
 Disallow: /signup
 Disallow: /login
+Disallow: /demo/manager
+Disallow: /demo/server
 Disallow: /lovable
 Disallow: /api
 
 User-agent: PerplexityBot
 Allow: /
-Allow: /demo/manager
-Allow: /demo/manager/
 Disallow: /manager
 Disallow: /server
 Disallow: /settings
@@ -71,13 +69,13 @@ Disallow: /join
 Disallow: /signin
 Disallow: /signup
 Disallow: /login
+Disallow: /demo/manager
+Disallow: /demo/server
 Disallow: /lovable
 Disallow: /api
 
 User-agent: Perplexity-User
 Allow: /
-Allow: /demo/manager
-Allow: /demo/manager/
 Disallow: /manager
 Disallow: /server
 Disallow: /settings
@@ -86,13 +84,13 @@ Disallow: /join
 Disallow: /signin
 Disallow: /signup
 Disallow: /login
+Disallow: /demo/manager
+Disallow: /demo/server
 Disallow: /lovable
 Disallow: /api
 
 User-agent: ClaudeBot
 Allow: /
-Allow: /demo/manager
-Allow: /demo/manager/
 Disallow: /manager
 Disallow: /server
 Disallow: /settings
@@ -101,13 +99,13 @@ Disallow: /join
 Disallow: /signin
 Disallow: /signup
 Disallow: /login
+Disallow: /demo/manager
+Disallow: /demo/server
 Disallow: /lovable
 Disallow: /api
 
 User-agent: Claude-Web
 Allow: /
-Allow: /demo/manager
-Allow: /demo/manager/
 Disallow: /manager
 Disallow: /server
 Disallow: /settings
@@ -116,13 +114,13 @@ Disallow: /join
 Disallow: /signin
 Disallow: /signup
 Disallow: /login
+Disallow: /demo/manager
+Disallow: /demo/server
 Disallow: /lovable
 Disallow: /api
 
 User-agent: Google-Extended
 Allow: /
-Allow: /demo/manager
-Allow: /demo/manager/
 Disallow: /manager
 Disallow: /server
 Disallow: /settings
@@ -131,13 +129,13 @@ Disallow: /join
 Disallow: /signin
 Disallow: /signup
 Disallow: /login
+Disallow: /demo/manager
+Disallow: /demo/server
 Disallow: /lovable
 Disallow: /api
 
 User-agent: Applebot-Extended
 Allow: /
-Allow: /demo/manager
-Allow: /demo/manager/
 Disallow: /manager
 Disallow: /server
 Disallow: /settings
@@ -146,6 +144,8 @@ Disallow: /join
 Disallow: /signin
 Disallow: /signup
 Disallow: /login
+Disallow: /demo/manager
+Disallow: /demo/server
 Disallow: /lovable
 Disallow: /api
 

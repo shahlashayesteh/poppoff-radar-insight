@@ -1,49 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ManagerLayout } from "@/components/manager-layout";
 import { servers } from "@/lib/sample-data";
-import { publicDemoRouteHandler } from "@/lib/public-demo-html";
 import { Bell, ChevronDown, Calendar, Users, PoundSterling, TrendingUp, Eye, Wine, Cake, Droplet, Target, Flame, MoreVertical } from "lucide-react";
 
-const DEMO_URL = "https://poppoffstats.com/demo/manager";
-const DEMO_TITLE = "Manager Demo — PoppOff Restaurant Performance Dashboard";
-const DEMO_DESC = "Explore the PoppOff manager demo: team scorecards, coaching priorities, weekly focus areas, and revenue uplift insights for restaurant operators. No login required.";
-
 export const Route = createFileRoute("/demo/manager/")({
-  server: {
-    handlers: {
-      GET: publicDemoRouteHandler,
-      HEAD: publicDemoRouteHandler,
-    },
-  },
-  head: () => ({
-    meta: [
-      { title: DEMO_TITLE },
-      { name: "description", content: DEMO_DESC },
-      { name: "robots", content: "index, follow" },
-      { property: "og:title", content: DEMO_TITLE },
-      { property: "og:description", content: DEMO_DESC },
-      { property: "og:url", content: DEMO_URL },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:title", content: DEMO_TITLE },
-      { name: "twitter:description", content: DEMO_DESC },
-    ],
-    links: [{ rel: "canonical", href: DEMO_URL }],
-    scripts: [
-      {
-        type: "application/ld+json",
-        children: JSON.stringify({
-          "@context": "https://schema.org",
-          "@type": "WebPage",
-          url: DEMO_URL,
-          name: DEMO_TITLE,
-          description: DEMO_DESC,
-          inLanguage: "en",
-          isPartOf: { "@id": "https://poppoffstats.com/#website" },
-        }),
-      },
-    ],
-  }),
   component: ManagerDashboard,
 });
 

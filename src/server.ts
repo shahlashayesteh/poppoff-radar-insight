@@ -25,43 +25,6 @@ function brandedErrorResponse(): Response {
   });
 }
 
-function isCrawlableDemoRequest(request: Request): boolean {
-  if (request.method !== "GET" && request.method !== "HEAD") return false;
-  const url = new URL(request.url);
-  return url.pathname === "/demo/manager" || url.pathname.startsWith("/demo/manager/");
-}
-
-function normalizeCrawlableDemoRequest(request: Request): Request {
-  if (!isCrawlableDemoRequest(request)) return request;
-
-  const url = new URL(request.url);
-  if (url.pathname.length > 1 && url.pathname.endsWith("/")) {
-    url.pathname = url.pathname.replace(/\/+$/, "");
-  }
-
-  let changed = url.href !== request.url;
-  const accept = request.headers.get("accept")?.toLowerCase() ?? "";
-  const headers = new Headers(request.headers);
-  if (!accept.includes("text/html")) {
-    headers.set("accept", "text/html,application/xhtml+xml;q=0.9,*/*;q=0.8");
-    changed = true;
-  }
-
-  return changed ? new Request(url, { headers, method: request.method, body: request.body }) : request;
-}
-
-function addCrawlableDemoHeaders(request: Request, response: Response): Response {
-  if (!isCrawlableDemoRequest(request)) return response;
-
-  const headers = new Headers(response.headers);
-  headers.set("x-robots-tag", "index, follow");
-  return new Response(response.body, {
-    status: response.status,
-    statusText: response.statusText,
-    headers,
-  });
-}
-
 function isCatastrophicSsrErrorBody(body: string, responseStatus: number): boolean {
   let payload: unknown;
   try {
@@ -106,11 +69,9 @@ async function normalizeCatastrophicSsrResponse(response: Response): Promise<Res
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
-      const appRequest = normalizeCrawlableDemoRequest(request);
       const handler = await getServerEntry();
-      const response = await handler.fetch(appRequest, env, ctx);
-      const normalizedResponse = await normalizeCatastrophicSsrResponse(response);
-      return addCrawlableDemoHeaders(appRequest, normalizedResponse);
+      const response = await handler.fetch(request, env, ctx);
+      return await normalizeCatastrophicSsrResponse(response);
     } catch (error) {
       console.error(error);
       return brandedErrorResponse();

@@ -14,7 +14,7 @@ PoppOff turns POS data into per-server scorecards and weekly coaching priorities
 - [Hospitality performance software](https://poppoffstats.com/hospitality-performance-software): Performance scorecards and coaching for hospitality groups and multi-venue operators
 - [Restaurant leaderboard software](https://poppoffstats.com/restaurant-leaderboard-software): Shared scoreboards that build friendly competition and team momentum
 - [Restaurant upselling software](https://poppoffstats.com/restaurant-upselling-software): Menu intelligence and pairing suggestions that help servers grow check size
-- [Manager dashboard demo](https://poppoffstats.com/demo/manager): What managers see — team scorecards, coaching priorities, menu pairing
+- [Manager dashboard demo](https://poppoffstats.com/demo/manager-dashboard): What managers see — team scorecards, coaching priorities, menu pairing
 - [Server scorecard demo](https://poppoffstats.com/demo/server-scorecard): What servers see — personal scorecard, streaks, milestones, weekly focus
 
 ## Optional

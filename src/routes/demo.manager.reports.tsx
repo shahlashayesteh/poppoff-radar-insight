@@ -1,16 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { ManagerLayout } from "@/components/manager-layout";
-import { publicDemoRouteHandler } from "@/lib/public-demo-html";
 
-export const Route = createFileRoute("/demo/manager/reports")({
-  server: {
-    handlers: {
-      GET: publicDemoRouteHandler,
-      HEAD: publicDemoRouteHandler,
-    },
-  },
-  component: Page,
-});
+export const Route = createFileRoute("/demo/manager/reports")({ component: Page });
 
 const weeks = [
   { week_start: "2025-05-05", label: "5 May to 11 May", servers: 5, covers: 812, sales: 47420, spc: 58.4, current: true },
