@@ -23,6 +23,8 @@ export const Route = createFileRoute("/sitemap.xml")({
           { path: "/hospitality-performance-software", changefreq: "monthly", priority: "0.7" },
           { path: "/restaurant-leaderboard-software", changefreq: "monthly", priority: "0.7" },
           { path: "/restaurant-upselling-software", changefreq: "monthly", priority: "0.7" },
+          { path: "/demo/manager", changefreq: "monthly", priority: "0.8" },
+          { path: "/demo/server", changefreq: "monthly", priority: "0.7" },
           { path: "/demo/manager-dashboard", changefreq: "monthly", priority: "0.6" },
           { path: "/demo/server-scorecard", changefreq: "monthly", priority: "0.6" },
         ];
