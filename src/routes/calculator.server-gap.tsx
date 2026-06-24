@@ -399,12 +399,66 @@ function ServerGapPage() {
                         <th className="px-3 py-2.5">#</th>
                         <th className="px-3 py-2.5">Server</th>
                         <th className="px-3 py-2.5 text-right">Shifts</th>
-                        <th className="px-3 py-2.5 text-right">Sales</th>
-                        <th className="px-3 py-2.5 text-right">Hours</th>
-                        <th className="px-3 py-2.5 text-right">Adj. hrs</th>
-                        <th className="px-3 py-2.5 text-right">Adj. RPH</th>
-                        <th className="px-3 py-2.5 text-right">Gap vs team</th>
+                        <th className="px-3 py-2.5 text-right">
+                          <MetricTooltip
+                            name="Sales"
+                            description="Total uploaded net or gross sales for this server (per selected basis)."
+                            formula="Σ sales_per_shift"
+                            sourceFields={["net_sales", "gross_sales"]}
+                            provenance="uploaded"
+                            basisLabel={effectiveBasis === "net" ? "Net sales" : "Gross sales"}
+                          >
+                            <span className="cursor-help underline decoration-dotted">Sales</span>
+                          </MetricTooltip>
+                        </th>
+                        <th className="px-3 py-2.5 text-right">
+                          <MetricTooltip
+                            name="Hours worked"
+                            description="Paid or actual hours worked from labour upload (clock-derived where needed)."
+                            formula="Σ hours_per_shift"
+                            sourceFields={["paid_hours", "actual_hours", "clock_in", "clock_out"]}
+                            provenance="uploaded"
+                          >
+                            <span className="cursor-help underline decoration-dotted">Hours</span>
+                          </MetricTooltip>
+                        </th>
+                        <th className="px-3 py-2.5 text-right">
+                          <MetricTooltip
+                            name="Adjusted hours"
+                            description="Hours weighted by shift opportunity (inferred from actual start/end times — daypart labels in your file are never used)."
+                            formula="Σ (hours × opportunity_factor)  [shift-level]"
+                            sourceFields={["hours", "opportunity_factor"]}
+                            provenance="derived"
+                            notes={["Opportunity factor defaults to 1.0 when no time data is available"]}
+                          >
+                            <span className="cursor-help underline decoration-dotted">Adj. hrs</span>
+                          </MetricTooltip>
+                        </th>
+                        <th className="px-3 py-2.5 text-right">
+                          <MetricTooltip
+                            name="Adjusted RPH"
+                            description="Revenue per opportunity-adjusted hour. The fair productivity metric across busy vs. quiet shifts."
+                            formula="Σ sales / Σ adjusted_hours  (weighted)"
+                            sourceFields={["net_sales", "hours", "opportunity_factor"]}
+                            provenance="derived"
+                          >
+                            <span className="cursor-help underline decoration-dotted">Adj. RPH</span>
+                          </MetricTooltip>
+                        </th>
+                        <th className="px-3 py-2.5 text-right">
+                          <MetricTooltip
+                            name="Gap vs team benchmark"
+                            description="How far above or below the team's weighted adjusted RPH benchmark."
+                            formula="(server_adj_rph / team_adj_rph) − 1"
+                            sourceFields={["adjusted_rph", "team_adjusted_rph"]}
+                            provenance="derived"
+                            benchmark={{ period: "uploaded period", scope: "team", basis: "weighted adjusted RPH", weighted: true }}
+                          >
+                            <span className="cursor-help underline decoration-dotted">Gap vs team</span>
+                          </MetricTooltip>
+                        </th>
                         <th className="px-3 py-2.5">Status</th>
+
                       </tr>
                     </thead>
                     <tbody>
