@@ -417,6 +417,8 @@ function LlsPage() {
             <p className="mt-1 text-sm text-muted-foreground">
               Compare server LLS against the venue benchmark using sales, covers, labor cost, and shift opportunity.
             </p>
+            <LaborBasisBadge basis={laborBasis} />
+
           </div>
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={prevWk}><ChevronLeft className="h-4 w-4" /></Button>
