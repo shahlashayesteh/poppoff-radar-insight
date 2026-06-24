@@ -56,10 +56,10 @@ function cellShort(label: CellLabel): string {
 function confidenceLabel(b: string): string {
   return b === "high" ? "High" : b === "medium" ? "Medium" : b === "low" ? "Low" : "Insufficient";
 }
-function fmtMoney(v: number | null | undefined): string {
+function fmtMoney(v: number | null | undefined, currency: string = "£"): string {
   if (v == null || !Number.isFinite(v)) return "—";
   const sign = v < 0 ? "−" : "";
-  return `${sign}$${Math.abs(v).toFixed(0)}`;
+  return `${sign}${currency}${Math.abs(v).toFixed(0)}`;
 }
 function recTypeShort(t: RecommendationType): string {
   switch (t) {
