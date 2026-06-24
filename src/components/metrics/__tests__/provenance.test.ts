@@ -11,7 +11,7 @@ import {
   DataQualityChip,
   ModelledValueLabel,
   SourceFieldPopover,
-} from "../metrics";
+} from "../index";
 
 describe("provenance labels", () => {
   it("covers every Provenance value", () => {
