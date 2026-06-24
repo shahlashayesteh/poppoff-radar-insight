@@ -38,6 +38,7 @@ export interface ComparisonPayload {
   venue: { id: string; name: string; active_model_version: string };
   weekStart: string;
   weekEnd: string;
+  baselineWeeks: number;
   comparison: ReturnType<typeof buildComparison>;
   v1_totals: { shifts: number; gross_sales: number; labor_cost: number; adj_labor_cost: number; covers: number };
   v2_totals: {
@@ -45,6 +46,7 @@ export interface ComparisonPayload {
     covers: number | null; single_sided: number; needs_review: number; cross_daypart: number;
   };
 }
+
 
 export const getLlsComparison = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
