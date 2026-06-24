@@ -1324,17 +1324,23 @@ export function computeSchedulingLeverage(
     }
   }
 
-  // De-dup per server (keep highest rota_test_priority)
-  const dedup: ServerRecommendation[] = [];
-  const seen = new Set<string>();
-  const sortedRecs = recs.sort((a, b) => b.rota_test_priority - a.rota_test_priority);
+  // Group duplicate (server, shift) recommendations into a single row whose
+  // recommendation_types[] captures every category that fired for that pair.
+  // Keep the highest rota-test-priority instance as the primary.
+  const grouped = new Map<string, ServerRecommendation>();
+  const sortedRecs = [...recs].sort((a, b) => b.rota_test_priority - a.rota_test_priority);
   for (const r of sortedRecs) {
-    const k = `${r.server_id}|${r.recommendation_type}|${r.best_fit_shift}`;
-    if (seen.has(k)) continue;
-    seen.add(k);
-    dedup.push(r);
-    if (dedup.length >= maxRecs) break;
+    const k = `${r.server_id}|${r.best_fit_shift}`;
+    const prev = grouped.get(k);
+    if (!prev) {
+      grouped.set(k, { ...r, recommendation_types: [r.recommendation_type] });
+    } else if (!prev.recommendation_types.includes(r.recommendation_type)) {
+      prev.recommendation_types.push(r.recommendation_type);
+    }
   }
+  const dedup = [...grouped.values()]
+    .sort((a, b) => b.rota_test_priority - a.rota_test_priority)
+    .slice(0, maxRecs);
 
   // ---- highlights (one per slot, allow same server) ----
   const pickHighlight = (type: RecommendationType) =>
