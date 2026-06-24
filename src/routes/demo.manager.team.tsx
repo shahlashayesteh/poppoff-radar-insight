@@ -1,18 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { ManagerLayout } from "@/components/manager-layout";
-import { servers } from "@/lib/sample-data";
+import { servers, demoSpcTrend } from "@/lib/sample-data";
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid } from "recharts";
 
 export const Route = createFileRoute("/demo/manager/team")({
   component: TeamTrends,
 });
 
-const spcTrend = [
-  { week: "W1", spc: 52 },
-  { week: "W2", spc: 54 },
-  { week: "W3", spc: 56 },
-  { week: "W4", spc: 58.4 },
-];
+const spcTrend = demoSpcTrend;
 
 const wineByServer = servers.map((s) => ({ name: s.name, score: s.wine === "green" ? 85 : s.wine === "amber" ? 60 : 40 }));
 const dessertByServer = servers.map((s) => ({ name: s.name, score: s.desserts === "green" ? 88 : s.desserts === "amber" ? 62 : 38 }));
