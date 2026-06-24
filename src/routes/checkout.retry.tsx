@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Logo } from "@/components/logo";
 import { supabase } from "@/integrations/supabase/client";
-import { usePaddleCheckout } from "@/hooks/usePaddleCheckout";
+import { StripeEmbeddedCheckout } from "@/components/StripeEmbeddedCheckout";
 
 export const Route = createFileRoute("/checkout/retry")({
   component: CheckoutRetry,
@@ -11,11 +11,12 @@ export const Route = createFileRoute("/checkout/retry")({
 
 function CheckoutRetry() {
   const navigate = useNavigate();
-  const { openCheckout, loading } = usePaddleCheckout();
   const [priceId, setPriceId] = useState<string>("");
   const [email, setEmail] = useState<string | undefined>();
   const [userId, setUserId] = useState<string>("");
   const [businessName, setBusinessName] = useState<string>("");
+  const [ready, setReady] = useState(false);
+  const [showCheckout, setShowCheckout] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -24,12 +25,28 @@ function CheckoutRetry() {
       setEmail(data.user.email ?? undefined);
       setUserId(data.user.id);
       const meta = (data.user.user_metadata ?? {}) as Record<string, unknown>;
-      const stored = (meta.plan_price_id as string) || (typeof window !== "undefined" ? localStorage.getItem("poppoff_pending_price_id") : "") || "poppoff_starter_monthly";
+      const stored = (meta.plan_price_id as string)
+        || (typeof window !== "undefined" ? localStorage.getItem("poppoff_pending_price_id") : "")
+        || "poppoff_starter_monthly";
       setPriceId(stored);
       const { data: prof } = await supabase.from("profiles").select("business_name").eq("id", data.user.id).maybeSingle();
       setBusinessName(prof?.business_name || "");
+      setReady(true);
     })();
   }, [navigate]);
+
+  if (showCheckout && ready && priceId) {
+    return (
+      <div className="min-h-screen bg-canvas px-6 py-8">
+        <div className="mx-auto max-w-3xl">
+          <Logo className="text-2xl justify-center" />
+          <div className="mt-6 rounded-3xl bg-white border border-border p-4">
+            <StripeEmbeddedCheckout priceId={priceId} customerEmail={email} userId={userId} />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-canvas grid place-items-center px-6">
@@ -40,23 +57,12 @@ function CheckoutRetry() {
           {businessName ? <>Complete payment to activate <b>{businessName}</b>.</> : "Complete payment to activate your venue."}
         </p>
         <button
-          disabled={loading || !priceId}
-          onClick={async () => {
-            const res = await openCheckout({
-              priceId,
-              customerEmail: email,
-              customData: userId ? { userId } : undefined,
-              successUrl: `${window.location.origin}/checkout/success?priceId=${encodeURIComponent(priceId)}`,
-            });
-            if (!res.ok) {
-              const { toast } = await import("sonner");
-              toast.error(res.message);
-            }
-          }}
+          disabled={!ready || !priceId}
+          onClick={() => setShowCheckout(true)}
           className="mt-6 w-full rounded-xl py-3 text-sm font-bold text-white disabled:opacity-60"
           style={{ background: "var(--brand-orange)" }}
         >
-          {loading ? "Opening…" : "Complete payment"}
+          Complete payment
         </button>
         <Link to="/" className="mt-4 inline-block text-xs text-muted-foreground">Back to home</Link>
       </div>

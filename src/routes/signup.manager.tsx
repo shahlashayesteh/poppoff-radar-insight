@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { Logo } from "@/components/logo";
 import { supabase } from "@/integrations/supabase/client";
 import { notifySignup } from "@/lib/email/send";
-import { usePaddleCheckout } from "@/hooks/usePaddleCheckout";
+import { StripeEmbeddedCheckout } from "@/components/StripeEmbeddedCheckout";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/signup/manager")({
@@ -15,7 +15,7 @@ export const Route = createFileRoute("/signup/manager")({
 function SignUpManager() {
   const { priceId } = Route.useSearch();
   const navigate = useNavigate();
-  const { openCheckout } = usePaddleCheckout();
+  const [checkoutInfo, setCheckoutInfo] = useState<{ priceId: string; email: string; userId: string } | null>(null);
   const [fullName, setFullName] = useState("");
   const [businessName, setBusinessName] = useState("");
   const [email, setEmail] = useState("");
@@ -88,22 +88,31 @@ function SignUpManager() {
       });
     }
     toast.success("Account created — starting your free trial…");
-    // Open Paddle checkout with userId so the webhook links the subscription to this account.
     const effectivePriceId = priceId || "poppoff_starter_monthly";
-    const res = await openCheckout({
-      priceId: effectivePriceId,
-      customerEmail: email,
-      customData: u.user ? { userId: u.user.id } : undefined,
-      successUrl: `${window.location.origin}/checkout/success?priceId=${encodeURIComponent(effectivePriceId)}`,
-    });
-    if (!res.ok) {
-      console.error("checkout open failed", res);
-      toast.error(res.message);
+    if (u.user) {
+      setCheckoutInfo({ priceId: effectivePriceId, email, userId: u.user.id });
+    } else {
       navigate({ to: "/checkout/retry" });
-      return;
     }
     setLoading(false);
   };
+
+  if (checkoutInfo) {
+    return (
+      <div className="min-h-screen bg-canvas px-6 py-8">
+        <div className="mx-auto max-w-3xl">
+          <Link to="/"><Logo className="text-2xl justify-center" /></Link>
+          <div className="mt-6 rounded-3xl bg-white border border-border p-4">
+            <StripeEmbeddedCheckout
+              priceId={checkoutInfo.priceId}
+              customerEmail={checkoutInfo.email}
+              userId={checkoutInfo.userId}
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-canvas flex flex-col">
