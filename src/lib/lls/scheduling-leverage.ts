@@ -582,6 +582,9 @@ export function computeSchedulingLeverage(
   } else if (matrix_scope === "daypart_only") {
     dq.notes.push("Outlet data unavailable. Matrix uses day of week and daypart only.");
   }
+  if (outlet_basis === "venue_fallback") {
+    dq.notes.push("Outlet not found in file. Venue name used as fallback — recommendations are not multi-outlet aware.");
+  }
   if (!dq.has_category) dq.notes.push("Category sales unavailable. Category fit treated as neutral.");
   if (!dq.has_checks) dq.notes.push("Guest checks unavailable — reliability based on shifts + hours only.");
   if (dq.rows_with_hours < dq.rows_total * 0.25) dq.notes.push("Hours missing on most rows — RPH and labour-adjusted metrics reduced; confidence lowered.");
