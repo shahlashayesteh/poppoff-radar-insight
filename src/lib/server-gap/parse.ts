@@ -119,8 +119,24 @@ export function toNumber(v: unknown): number | null {
   return isFinite(n) ? n : null;
 }
 
+export type DateFormat = "uk" | "us" | "auto";
+
+/** Mutable global default — set from the calculator's market/format toggle. */
+let DEFAULT_DATE_FORMAT: DateFormat = "uk";
+export function setDefaultDateFormat(f: DateFormat) {
+  DEFAULT_DATE_FORMAT = f === "auto" ? "uk" : f;
+}
+export function getDefaultDateFormat(): DateFormat {
+  return DEFAULT_DATE_FORMAT;
+}
+
+/** Tracks whether the last parse encountered ambiguous (both ≤12) numeric dates. */
+let LAST_PARSE_HAD_AMBIGUOUS = false;
+export function resetAmbiguousDateFlag() { LAST_PARSE_HAD_AMBIGUOUS = false; }
+export function lastParseHadAmbiguousDates() { return LAST_PARSE_HAD_AMBIGUOUS; }
+
 /** Canonical YYYY-MM-DD key for a date-ish input. */
-export function dateKey(v: unknown): string | null {
+export function dateKey(v: unknown, format: DateFormat = DEFAULT_DATE_FORMAT): string | null {
   if (v == null || v === "") return null;
   if (v instanceof Date && !isNaN(+v)) {
     const y = v.getFullYear();
@@ -129,6 +145,7 @@ export function dateKey(v: unknown): string | null {
     return `${y}-${m}-${d}`;
   }
   const s = String(v).trim();
+  // Prefer ISO unambiguously
   let m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
   if (m) return `${m[1]}-${m[2].padStart(2, "0")}-${m[3].padStart(2, "0")}`;
   m = s.match(/^(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2,4})/);
@@ -137,27 +154,22 @@ export function dateKey(v: unknown): string | null {
     if (y < 100) y += 2000;
     const a = +m[1];
     const b = +m[2];
-    // Disambiguate DD/MM vs MM/DD:
-    //  - if first segment > 12 → must be a day → DD/MM
-    //  - if second segment > 12 → second must be a day → MM/DD
-    //  - otherwise (both ≤ 12) → default to UK / EU DD/MM/YYYY
     let day: number;
     let mon: number;
     if (a > 12 && b <= 12) {
-      day = a;
-      mon = b;
+      day = a; mon = b;
     } else if (b > 12 && a <= 12) {
-      day = b;
-      mon = a;
+      day = b; mon = a;
     } else {
-      // ambiguous (both ≤ 12) or both > 12 (invalid) — default UK DD/MM
-      day = a;
-      mon = b;
+      // Ambiguous (both ≤ 12). Honour the selected market/format.
+      LAST_PARSE_HAD_AMBIGUOUS = true;
+      if (format === "us") { mon = a; day = b; }
+      else                 { day = a; mon = b; }
     }
     if (mon < 1 || mon > 12 || day < 1 || day > 31) return null;
     return `${y}-${String(mon).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
   }
   const t = new Date(s);
-  if (!isNaN(+t)) return dateKey(t);
+  if (!isNaN(+t)) return dateKey(t, format);
   return null;
 }
