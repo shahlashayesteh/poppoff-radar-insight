@@ -87,8 +87,23 @@ function SignUpManager() {
         userId: u.user.id,
       });
     }
-    toast.success("Welcome to PoppOff!");
-    navigate({ to: "/manager" });
+    toast.success("Account created — starting your free trial…");
+    // Open Paddle checkout with userId so the webhook links the subscription to this account.
+    const effectivePriceId = priceId || "poppoff_starter_monthly";
+    try {
+      await openCheckout({
+        priceId: effectivePriceId,
+        customerEmail: email,
+        customData: u.user ? { userId: u.user.id } : undefined,
+        successUrl: `${window.location.origin}/checkout/success?priceId=${encodeURIComponent(effectivePriceId)}`,
+      });
+    } catch (err) {
+      console.error("checkout open failed", err);
+      toast.error("Couldn't open checkout. You can retry from your dashboard.");
+      navigate({ to: "/checkout/retry" });
+      return;
+    }
+    setLoading(false);
   };
 
   return (
