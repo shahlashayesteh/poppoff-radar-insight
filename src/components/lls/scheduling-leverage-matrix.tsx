@@ -282,7 +282,7 @@ function Section({ label, children }: { label: string; children: React.ReactNode
 
 // ───────────── main component ─────────────
 
-export function SchedulingLeverageMatrix({ data }: { data: SchedulingLeverageResult }) {
+export function SchedulingLeverageMatrix({ data, currency = "£" }: { data: SchedulingLeverageResult; currency?: string }) {
   const h = data.highlights;
   const dq = data.data_quality;
   const [drawer, setDrawer] = useState<DrawerPayload | null>(null);
