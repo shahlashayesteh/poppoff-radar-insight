@@ -381,6 +381,8 @@ function ServerDashboard() {
               </div>
               <div className="font-display text-lg font-extrabold leading-tight">Next week opportunities</div>
             </div>
+            <div className="mt-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Modelled opportunity · directional</div>
+
             <ul className="mt-3 space-y-2.5">
               {opportunityList.map((o, idx) => {
                 const isPrimary = idx === 0;
