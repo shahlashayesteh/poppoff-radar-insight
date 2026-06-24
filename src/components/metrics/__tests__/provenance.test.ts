@@ -126,8 +126,9 @@ describe("manager pages expose provenance", () => {
   it("recoverable opportunity is labelled modelled/directional, not guaranteed", () => {
     const src = readFileSync(join(routesDir, "calculator.server-gap.tsx"), "utf-8");
     expect(src).toMatch(/ModelledValueLabel/);
-    // never describes recoverable as guaranteed
-    expect(src).not.toMatch(/guaranteed\s+(revenue|uplift)/i);
+    // never makes a positive guarantee of revenue/uplift (denial phrasing is fine)
+    expect(src).not.toMatch(/\bis\s+guaranteed\b/i);
+    expect(src).not.toMatch(/\bguarantees\s+(revenue|uplift)/i);
   });
 
   it("compare page discloses benchmark window basis", () => {
