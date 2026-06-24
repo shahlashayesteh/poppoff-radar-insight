@@ -1,34 +1,56 @@
 // Scheduling Leverage Matrix — manager-only UI section.
 // Renders under /manager/lls. Never imported by /server/* routes.
+//
+// UI principle: clean table first, deep reasoning second. The matrix surfaces
+// compact labels only; full reasoning lives in a right-hand drawer (Sheet)
+// opened by clicking any row or cell.
 
+import { useState } from "react";
 import type {
   SchedulingLeverageResult,
   ServerShiftCell,
   ServerRecommendation,
   CellLabel,
   RecommendationType,
+  WorkingPattern,
 } from "@/lib/lls/scheduling-leverage";
 import { MetricTooltip, DataQualityChip, ModelledValueLabel } from "@/components/metrics";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+import { Button } from "@/components/ui/button";
+import { Info } from "lucide-react";
 
 const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const DAYPARTS = ["breakfast", "brunch", "lunch", "dinner", "late"];
 
+// ───────────── helpers ─────────────
+
 function cellTone(label: CellLabel): string {
   switch (label) {
     case "best_fit":
-      return "bg-brand-green/25 text-brand-green border-brand-green/40";
+      return "bg-brand-green/25 text-brand-green border-brand-green/40 hover:bg-brand-green/35";
     case "good_fit":
-      return "bg-brand-green/10 text-brand-green border-brand-green/30";
+      return "bg-brand-green/10 text-brand-green border-brand-green/30 hover:bg-brand-green/20";
     case "test_monitor":
-      return "bg-brand-orange/15 text-brand-orange border-brand-orange/30";
+      return "bg-brand-orange/15 text-brand-orange border-brand-orange/30 hover:bg-brand-orange/25";
     case "requires_availability":
-      return "bg-amber-100 text-amber-800 border-amber-300";
+      return "bg-amber-100 text-amber-800 border-amber-300 hover:bg-amber-200";
     case "avoid_for_now":
-      return "bg-[color:var(--opportunity)]/15 text-[color:var(--opportunity)] border-[color:var(--opportunity)]/30";
+      return "bg-[color:var(--opportunity)]/15 text-[color:var(--opportunity)] border-[color:var(--opportunity)]/30 hover:bg-[color:var(--opportunity)]/25";
     case "not_eligible":
-      return "bg-zinc-100 text-zinc-500 border-zinc-300 line-through";
+      return "bg-zinc-100 text-zinc-500 border-zinc-300";
     default:
       return "bg-muted text-muted-foreground border-border";
+  }
+}
+function cellShort(label: CellLabel): string {
+  switch (label) {
+    case "best_fit": return "Best";
+    case "good_fit": return "Good";
+    case "test_monitor": return "Test";
+    case "requires_availability": return "Confirm";
+    case "avoid_for_now": return "Avoid";
+    case "not_eligible": return "—";
+    default: return "·";
   }
 }
 function confidenceLabel(b: string): string {
@@ -39,68 +61,52 @@ function fmtMoney(v: number | null | undefined): string {
   const sign = v < 0 ? "−" : "";
   return `${sign}$${Math.abs(v).toFixed(0)}`;
 }
-function recTypeLabel(t: RecommendationType): string {
+function recTypeShort(t: RecommendationType): string {
+  switch (t) {
+    case "best_overall_leverage": return "Best leverage";
+    case "slow_shift_lifter": return "Underused lift";
+    case "peak_performer": return "Peak fit";
+    case "high_rpc_specialist": return "RPC fit";
+    case "throughput_specialist": return "Throughput fit";
+    case "underused_capability": return "Underused";
+    case "development_shift": return "Coaching";
+    case "protect_from_mismatch": return "Avoid";
+  }
+}
+function recTypeLong(t: RecommendationType): string {
   switch (t) {
     case "best_overall_leverage": return "Best overall leverage";
-    case "slow_shift_lifter": return "Slow-shift lifter";
-    case "peak_performer": return "Peak performer";
+    case "slow_shift_lifter": return "Slow-shift revenue lifter";
+    case "peak_performer": return "Peak-shift performer";
     case "high_rpc_specialist": return "RPC builder";
     case "throughput_specialist": return "Throughput specialist";
     case "underused_capability": return "Underused capability";
-    case "development_shift": return "Development shift";
+    case "development_shift": return "Development / coaching shift";
     case "protect_from_mismatch": return "Protect from mismatch";
   }
 }
-function testStyleLabel(s: ServerRecommendation["test_style"]): string {
-  if (s === "swap") return "Swap within observed pattern";
-  if (s === "extra") return "Test one extra shift";
-  return "Requires availability confirmation";
+function patternShort(p: WorkingPattern): string {
+  if (p === "likely_full_time") return "FT pattern";
+  if (p === "likely_part_time") return "PT pattern";
+  if (p === "variable") return "Variable";
+  return "Unknown";
+}
+function actionFromTestStyle(rec: ServerRecommendation): string {
+  if (rec.recommendation_types.includes("development_shift")) return "Pair for coaching";
+  if (rec.recommendation_types.includes("protect_from_mismatch")) return "Avoid for now";
+  if (rec.recommendation_types.includes("peak_performer")) return "Protect on peak shift";
+  if (rec.test_style === "swap") return "Swap one usual shift";
+  if (rec.test_style === "extra") return "Test one extra shift";
+  return "Requires availability check";
+}
+function confidenceTone(c: string): string {
+  if (c === "high") return "bg-brand-green/15 text-brand-green border-brand-green/30";
+  if (c === "medium") return "bg-brand-orange/15 text-brand-orange border-brand-orange/30";
+  if (c === "low") return "bg-amber-100 text-amber-800 border-amber-300";
+  return "bg-muted text-muted-foreground border-border";
 }
 
-function HighlightCard({
-  title,
-  tooltip,
-  rec,
-}: {
-  title: string;
-  tooltip: string;
-  rec: ServerRecommendation | null;
-}) {
-  return (
-    <div className="rounded-2xl bg-white border border-border p-4 flex flex-col gap-2">
-      <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold">
-        <MetricTooltip
-          name={title}
-          description={tooltip}
-          formula="Scheduling Leverage Engine — Marginal Deployment Value × Confidence × Schedule Feasibility × (0.7+0.3·Underused) × PositiveLiftGate"
-          sourceFields={["marginal_deployment_value", "rota_test_priority", "modelled_marginal_lift", "schedule_feasibility"]}
-          provenance="derived"
-        >
-          <span className="cursor-help underline decoration-dotted">{title}</span>
-        </MetricTooltip>
-      </div>
-      {rec ? (
-        <>
-          <div className="font-display text-lg font-bold leading-tight">{rec.server_name}</div>
-          <div className="text-sm">{rec.best_fit_shift}</div>
-          <div className="text-xs text-muted-foreground">{rec.why}</div>
-          <div className="mt-1 flex flex-wrap items-center gap-2 text-xs">
-            <span>Modelled lift {fmtMoney(rec.modelled_opportunity)}</span>
-            <ModelledValueLabel kind="modelled" />
-            <span className="text-muted-foreground">· Conf: {confidenceLabel(rec.confidence)}</span>
-            {rec.requires_confirmation && (
-              <span className="text-amber-700">· Requires availability confirmation</span>
-            )}
-          </div>
-        </>
-      ) : (
-        <div className="text-sm text-muted-foreground italic">
-          Not enough comparable shifts — upload more weeks to surface this signal.
-        </div>
-      )}
-    </div>
-  );
-}
+// ───────────── small components ─────────────
 
 function ScopeChip({ children, tone = "default" }: { children: React.ReactNode; tone?: "default" | "warn" | "ok" }) {
   const cls =
@@ -112,31 +118,170 @@ function ScopeChip({ children, tone = "default" }: { children: React.ReactNode; 
   return <span className={`inline-flex items-center px-2 py-0.5 rounded border text-[10px] ${cls}`}>{children}</span>;
 }
 
-function ExplanationPanel({ rec }: { rec: ServerRecommendation }) {
-  const e = rec.explanation;
+function Pill({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className="mt-2 rounded-md border border-border bg-muted/40 p-3 text-xs space-y-1.5">
-      <div><span className="font-semibold">Why this shift:</span> {rec.why}</div>
-      <div><span className="font-semibold">Current deployment baseline:</span> {e.current_baseline}</div>
-      <div><span className="font-semibold">Projected server result:</span> {e.projected_result}</div>
-      <div>
-        <span className="font-semibold">Modelled marginal lift:</span> {e.modelled_marginal_lift}{" "}
-        <ModelledValueLabel kind="modelled" />
+    <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold ${className}`}>
+      {children}
+    </span>
+  );
+}
+
+function HighlightCard({
+  title,
+  tooltip,
+  rec,
+  onView,
+}: {
+  title: string;
+  tooltip: string;
+  rec: ServerRecommendation | null;
+  onView: (r: ServerRecommendation) => void;
+}) {
+  return (
+    <div className="rounded-xl bg-white border border-border p-3 flex flex-col gap-1.5">
+      <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold">
+        <MetricTooltip
+          name={title}
+          description={tooltip}
+          formula="Scheduling Leverage Engine — Marginal Deployment Value × Confidence × Feasibility"
+          sourceFields={["marginal_deployment_value", "rota_test_priority", "modelled_marginal_lift"]}
+          provenance="derived"
+        >
+          <span className="cursor-help underline decoration-dotted">{title}</span>
+        </MetricTooltip>
       </div>
-      <div><span className="font-semibold">Confidence:</span> {e.confidence}</div>
-      <div><span className="font-semibold">Observed rota pattern:</span> {e.observed_pattern}</div>
-      <div><span className="font-semibold">Operational note:</span> {e.operational_note}</div>
-      <div>
-        <span className="font-semibold">Suggested rota test ({testStyleLabel(rec.test_style)}):</span>{" "}
-        {rec.suggested_rota_test}
-      </div>
+      {rec ? (
+        <>
+          <div className="font-display text-base font-bold leading-tight truncate">{rec.server_name}</div>
+          <div className="text-xs text-muted-foreground truncate">{rec.best_fit_shift}</div>
+          <div className="flex items-center gap-2 text-[11px] mt-0.5">
+            <span className="font-semibold">{fmtMoney(rec.modelled_opportunity)}</span>
+            <ModelledValueLabel kind="modelled" />
+            <Pill className={confidenceTone(rec.confidence)}>{confidenceLabel(rec.confidence)}</Pill>
+          </div>
+          <button
+            onClick={() => onView(rec)}
+            className="mt-1 self-start text-[11px] text-primary hover:underline inline-flex items-center gap-1"
+          >
+            <Info className="h-3 w-3" /> View why
+          </button>
+        </>
+      ) : (
+        <div className="text-xs text-muted-foreground italic">Not enough comparable shifts yet.</div>
+      )}
     </div>
   );
 }
 
+// ───────────── detail drawer payloads ─────────────
+
+type DrawerPayload =
+  | { kind: "rec"; rec: ServerRecommendation }
+  | {
+      kind: "cell";
+      cell: ServerShiftCell;
+      server: string;
+      shiftLabel: string;
+      pattern: string;
+    };
+
+function RecommendationDetail({ rec }: { rec: ServerRecommendation }) {
+  const e = rec.explanation;
+  return (
+    <div className="space-y-4 text-sm">
+      <div className="flex flex-wrap gap-1.5">
+        {rec.recommendation_types.map((t) => (
+          <Pill key={t} className="bg-brand-green/10 text-brand-green border-brand-green/30">{recTypeLong(t)}</Pill>
+        ))}
+        <Pill className={confidenceTone(rec.confidence)}>{confidenceLabel(rec.confidence)} confidence</Pill>
+      </div>
+
+      <Section label="Shift">{rec.best_fit_shift}</Section>
+      <Section label="Recommended action">{actionFromTestStyle(rec)}</Section>
+      <Section label="Modelled marginal lift">
+        <span className="font-semibold">{fmtMoney(rec.modelled_opportunity)}</span>{" "}
+        <ModelledValueLabel kind="modelled" />
+        <div className="text-xs text-muted-foreground mt-1">{e.modelled_marginal_lift}</div>
+      </Section>
+      <Section label="Current deployment baseline">{e.current_baseline}</Section>
+      <Section label="Projected server result">{e.projected_result}</Section>
+      <Section label="Why this shift">{rec.why}</Section>
+      <Section label="Observed working pattern">{e.observed_pattern}</Section>
+      <Section label="Suggested rota test">{rec.suggested_rota_test}</Section>
+      <Section label="Operational note">{e.operational_note}</Section>
+      {rec.requires_confirmation && (
+        <div className="rounded-md border border-amber-300 bg-amber-50 p-2 text-xs text-amber-800">
+          Requires availability confirmation — recommendation exceeds the server's observed pattern.
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CellDetail({
+  cell,
+  server,
+  shiftLabel,
+  pattern,
+}: {
+  cell: ServerShiftCell;
+  server: string;
+  shiftLabel: string;
+  pattern: string;
+}) {
+  return (
+    <div className="space-y-4 text-sm">
+      <div className="flex flex-wrap gap-1.5">
+        <Pill className={`${cellTone(cell.cell_label)} border`}>{cellShort(cell.cell_label)}</Pill>
+        <Pill className={confidenceTone(cell.confidence_band)}>{confidenceLabel(cell.confidence_band)} confidence</Pill>
+      </div>
+      <Section label="Server">{server}</Section>
+      <Section label="Shift type">{shiftLabel}</Section>
+      <Section label="Modelled marginal lift">
+        <span className="font-semibold">{fmtMoney(cell.modelled_marginal_lift)}</span>{" "}
+        <ModelledValueLabel kind="modelled" />
+      </Section>
+      <Section label="Projected metrics">
+        <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
+          <div>RPC: <span className="font-semibold">{cell.projected_rpc?.toFixed(2) ?? "—"}</span></div>
+          <div>RPH: <span className="font-semibold">{cell.projected_rph?.toFixed(2) ?? "—"}</span></div>
+          <div>Adj. LLS: <span className="font-semibold">{cell.projected_adjusted_lls?.toFixed(2) ?? "—"}</span></div>
+          <div>Throughput: <span className="font-semibold">{cell.projected_cph?.toFixed(2) ?? "—"}</span></div>
+        </div>
+      </Section>
+      <Section label="Opportunity headroom">
+        {(cell.baseline.opportunity_need * 100).toFixed(0)}% — how much room exists vs. top performers on this shift
+      </Section>
+      <Section label="Marginal Deployment Value">{cell.marginal_deployment_value.toFixed(0)}/100</Section>
+      <Section label="Rota-Test Priority">{cell.rota_test_priority.toFixed(0)}</Section>
+      <Section label="Observed pattern">{pattern}</Section>
+      <Section label="Outlet eligibility">{cell.outlet_eligibility_reason}</Section>
+      <Section label="Sample">{cell.comparable_shifts} unique shifts · {cell.comparable_hours.toFixed(1)}h</Section>
+      {cell.primary_reason && <Section label="Reason">{cell.primary_reason}</Section>}
+      {cell.warnings.length > 0 && (
+        <div className="rounded-md border border-amber-300 bg-amber-50 p-2 text-xs text-amber-800 space-y-0.5">
+          {cell.warnings.map((w, i) => <div key={i}>⚠ {w}</div>)}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Section({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold">{label}</div>
+      <div className="mt-0.5">{children}</div>
+    </div>
+  );
+}
+
+// ───────────── main component ─────────────
+
 export function SchedulingLeverageMatrix({ data }: { data: SchedulingLeverageResult }) {
   const h = data.highlights;
   const dq = data.data_quality;
+  const [drawer, setDrawer] = useState<DrawerPayload | null>(null);
 
   const cellBy = new Map<string, ServerShiftCell>();
   for (const c of data.matrix) cellBy.set(`${c.server_id}|${c.shift_type}`, c);
@@ -150,188 +295,157 @@ export function SchedulingLeverageMatrix({ data }: { data: SchedulingLeverageRes
       return DAYPARTS.indexOf(a.daypart) - DAYPARTS.indexOf(b.daypart);
     });
 
+  const colLabel = (c: { outlet: string | null; dow: number; daypart: string }) =>
+    `${c.outlet ? c.outlet + " · " : ""}${DAY_NAMES[c.dow]} ${c.daypart}`;
+
   const scopeText =
     data.matrix_scope === "outlet_scoped"
-      ? `Outlet-scoped (${dq.distinct_outlets} outlet${dq.distinct_outlets === 1 ? "" : "s"})`
+      ? `Outlet-scoped (${dq.distinct_outlets})`
       : data.matrix_scope === "single_outlet_inferred"
-        ? `Single outlet inferred (${data.outlet_inferred_from_file ?? "from file name"})`
+        ? `Single outlet`
         : "Daypart-only fallback";
 
   const outletBasisText =
-    data.outlet_basis === "uploaded"
-      ? "Uploaded column"
-      : data.outlet_basis === "inferred_from_filename"
-        ? "Inferred from file name"
-        : data.outlet_basis === "venue_fallback"
-          ? "Venue name fallback (outlet column not detected)"
-          : "Missing";
+    data.outlet_basis === "uploaded" ? "Uploaded"
+      : data.outlet_basis === "inferred_from_filename" ? "Inferred from file"
+      : data.outlet_basis === "venue_fallback" ? "Venue fallback"
+      : "Missing";
   const outletBasisTone: "ok" | "warn" =
     data.outlet_basis === "uploaded" || data.outlet_basis === "inferred_from_filename" ? "ok" : "warn";
 
   return (
     <div className="mt-6 rounded-2xl bg-white border border-border p-6">
+      {/* Heading */}
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
           <h2 className="font-display text-lg font-bold">Scheduling Leverage Matrix</h2>
-          <p className="mt-1 text-xs text-muted-foreground max-w-3xl">
-            LLS shows revenue created per unit of labour cost, adjusted for shift opportunity.
-            This matrix goes one step further — it compares each server against the baseline for
-            each <strong>outlet × shift type</strong> and identifies where a rota change is most
-            likely to create marginal value, gated by what is operationally realistic given each
-            server's <strong>observed rota pattern</strong>.
+          <p className="mt-1 text-xs text-muted-foreground max-w-2xl">
+            Where each server creates the most marginal commercial value vs. the current rota baseline.
+            Click any row or cell for the full reasoning.
           </p>
         </div>
+        <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+          <ScopeChip tone="ok">Matrix: prior {data.period.weeks}w lookback</ScopeChip>
+          {data.selected_week_start && (
+            <ScopeChip tone={data.selected_week_has_shifts ? "ok" : "warn"}>
+              Week {data.selected_week_start}{data.selected_week_has_shifts === false && " · no shifts"}
+            </ScopeChip>
+          )}
+        </div>
       </div>
 
-      {/* Period / selected-week strip — disambiguates the two windows */}
-      <div className="mt-3 rounded-md border border-border bg-muted/30 p-2.5 text-[11px] text-muted-foreground flex flex-wrap items-center gap-2">
-        <ScopeChip tone="ok">
-          Scheduling Matrix: based on prior {data.period.weeks}-week lookback
-          {data.period.start && ` (${data.period.start} → ${data.period.end})`}
-        </ScopeChip>
-        {data.selected_week_start && (
-          <ScopeChip tone={data.selected_week_has_shifts ? "ok" : "warn"}>
-            Weekly scorecard: selected week {data.selected_week_start}
-            {data.selected_week_has_shifts === false && " (no shifts)"}
-          </ScopeChip>
-        )}
-        {data.selected_week_has_shifts === false && (
-          <span className="text-amber-700">
-            No shifts in the selected week. Scheduling recommendations below use historical matched data.
-          </span>
-        )}
-      </div>
+      {data.selected_week_has_shifts === false && (
+        <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+          No shifts in the selected week. The matrix below uses the prior {data.period.weeks} weeks of matched historical data.
+        </div>
+      )}
 
-      {/* Data-used strip */}
-      <div className="mt-3 grid sm:grid-cols-2 lg:grid-cols-4 gap-2 text-[11px]">
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <span className="text-muted-foreground">Outlet basis:</span>
-          <ScopeChip tone={outletBasisTone}>{outletBasisText}</ScopeChip>
-        </div>
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <span className="text-muted-foreground">Category:</span>
-          <ScopeChip tone={dq.has_category ? "ok" : "warn"}>{dq.has_category ? "Detected" : "Missing — neutral"}</ScopeChip>
-        </div>
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <span className="text-muted-foreground">Guest checks:</span>
-          <ScopeChip tone={dq.has_checks ? "ok" : "default"}>{dq.has_checks ? "Detected" : "Missing"}</ScopeChip>
-        </div>
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <span className="text-muted-foreground">Match rate:</span>
-          <ScopeChip>{dq.matched_for_lls}/{dq.rows_total}</ScopeChip>
-        </div>
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <span className="text-muted-foreground">Scope:</span>
-          <ScopeChip tone={data.matrix_scope === "daypart_only" ? "warn" : "ok"}>{scopeText}</ScopeChip>
-        </div>
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <span className="text-muted-foreground">Cross-outlet recs:</span>
-          <ScopeChip tone={dq.cross_outlet_recommendations_enabled ? "ok" : "default"}>
-            {dq.cross_outlet_recommendations_enabled ? "Enabled" : "Disabled (no eligibility confirmed)"}
-          </ScopeChip>
-        </div>
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <span className="text-muted-foreground">Hours:</span>
-          <ScopeChip tone={dq.rows_with_hours >= dq.rows_total * 0.5 ? "ok" : "warn"}>
-            {dq.rows_with_hours}/{dq.rows_total} rows
-          </ScopeChip>
-        </div>
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <span className="text-muted-foreground">Recommendation style:</span>
-          <ScopeChip>Swap within observed pattern preferred; extras require confirmation</ScopeChip>
-        </div>
+      {/* Data-used strip — compact badges only */}
+      <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[11px]">
+        <span className="text-muted-foreground">Data:</span>
+        <ScopeChip tone={outletBasisTone}>Outlet · {outletBasisText}</ScopeChip>
+        <ScopeChip tone={dq.has_category ? "ok" : "warn"}>Category · {dq.has_category ? "yes" : "missing"}</ScopeChip>
+        <ScopeChip tone={dq.has_checks ? "ok" : "default"}>Checks · {dq.has_checks ? "yes" : "missing"}</ScopeChip>
+        <ScopeChip>Match {dq.matched_for_lls}/{dq.rows_total}</ScopeChip>
+        <ScopeChip tone={data.matrix_scope === "daypart_only" ? "warn" : "ok"}>Scope · {scopeText}</ScopeChip>
+        <ScopeChip>Cross-outlet · {dq.cross_outlet_recommendations_enabled ? "on" : "off"}</ScopeChip>
         {dq.rows_total < 30 && <DataQualityChip kind="low-sample" count={dq.rows_total} />}
+        {dq.notes.length > 0 && (
+          <details className="ml-1">
+            <summary className="cursor-pointer text-[11px] text-primary hover:underline">Data notes</summary>
+            <div className="mt-1 rounded-md bg-muted/40 p-2 text-[11px] text-muted-foreground space-y-0.5">
+              {dq.notes.map((n, i) => <div key={i}>· {n}</div>)}
+            </div>
+          </details>
+        )}
       </div>
 
-      {/* Peak performer vs Slow shift revenue lifter — core intelligence explainer */}
-      <div className="mt-4 grid sm:grid-cols-2 gap-3 text-xs">
-        <div className="rounded-md border border-border bg-white p-3">
-          <div className="font-semibold text-foreground">Peak performer</div>
-          <p className="mt-1 text-muted-foreground">
-            Holds throughput and Adj. LLS when covers, pressure, or opportunity are high. Use them
-            to <em>protect</em> already-busy shifts where execution under load is the limiting factor.
-          </p>
-        </div>
-        <div className="rounded-md border border-border bg-white p-3">
-          <div className="font-semibold text-foreground">Slow-shift revenue lifter</div>
-          <p className="mt-1 text-muted-foreground">
-            Creates the biggest <em>marginal</em> value on a weaker shift because the current rota
-            baseline has more headroom there. The same server can have higher rota-test priority on
-            a quiet Tuesday than on a busy Saturday — that is the core PoppOff intelligence.
-          </p>
-        </div>
-      </div>
-
-      {/* Highlight cards */}
+      {/* Highlight cards — compact, no paragraphs */}
       <div className="mt-5 grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
-        <HighlightCard title="Best overall labour leverage" tooltip="Highest Marginal Deployment Value with positive modelled lift and feasible rota fit." rec={h.best_overall_leverage} />
-        <HighlightCard title="Best slow-shift revenue lifter" tooltip="Top rota-test priority on a shift with high commercial headroom — biggest improvement vs current rota baseline." rec={h.best_slow_shift_lifter} />
-        <HighlightCard title="Best peak-shift performer" tooltip="Holds throughput and Adj. LLS above baseline on high-opportunity shifts." rec={h.best_peak_performer} />
-        <HighlightCard title="Best RPC builder" tooltip="Highest projected revenue per cover vs current rota baseline." rec={h.best_rpc_builder} />
-        <HighlightCard title="Best throughput handler" tooltip="Highest covers-per-hour with RPH at or above baseline." rec={h.best_throughput} />
-        <HighlightCard title="Most underused capability" tooltip="Strong projected fit on a shift type they are rarely scheduled on." rec={h.most_underused} />
-        <HighlightCard title="Biggest coaching opportunity" tooltip="Below benchmark on a shift type they are heavily scheduled on. Coaching, not a revenue recommendation." rec={h.biggest_coaching_opportunity} />
+        <HighlightCard title="Best overall leverage" tooltip="Highest Marginal Deployment Value with positive modelled lift." rec={h.best_overall_leverage} onView={(r) => setDrawer({ kind: "rec", rec: r })} />
+        <HighlightCard title="Slow-shift lifter" tooltip="Biggest improvement vs current rota baseline on a quieter shift." rec={h.best_slow_shift_lifter} onView={(r) => setDrawer({ kind: "rec", rec: r })} />
+        <HighlightCard title="Peak-shift performer" tooltip="Holds throughput and Adj. LLS above baseline on high-opportunity shifts." rec={h.best_peak_performer} onView={(r) => setDrawer({ kind: "rec", rec: r })} />
+        <HighlightCard title="RPC builder" tooltip="Highest projected revenue per cover vs current rota baseline." rec={h.best_rpc_builder} onView={(r) => setDrawer({ kind: "rec", rec: r })} />
+        <HighlightCard title="Throughput handler" tooltip="Highest covers per hour with RPH at or above baseline." rec={h.best_throughput} onView={(r) => setDrawer({ kind: "rec", rec: r })} />
+        <HighlightCard title="Most underused" tooltip="Strong projected fit on a shift type they are rarely scheduled on." rec={h.most_underused} onView={(r) => setDrawer({ kind: "rec", rec: r })} />
+        <HighlightCard title="Coaching opportunity" tooltip="Below benchmark on a shift type they are heavily scheduled on." rec={h.biggest_coaching_opportunity} onView={(r) => setDrawer({ kind: "rec", rec: r })} />
       </div>
 
-      {/* Shift match recommendations — grouped, expandable explanation */}
+      {/* Shift match recommendations — clean table */}
       {data.recommendations.length > 0 && (
         <div className="mt-6">
           <h3 className="font-display text-base font-bold">Shift match recommendations</h3>
           <p className="text-xs text-muted-foreground">
-            Top {data.recommendations.length} actionable rota tests — grouped per (server, shift)
-            and ranked by rota-test priority. Click a row to see the full breakdown.
+            Top {data.recommendations.length} actions, ranked by rota-test priority. Click <em>Details</em> for full reasoning.
           </p>
-          <div className="mt-3 space-y-2">
-            {data.recommendations.map((r, i) => (
-              <details key={i} className="rounded-md border border-border bg-white open:bg-muted/20">
-                <summary className="cursor-pointer list-none p-3 grid grid-cols-12 gap-3 items-start text-xs">
-                  <div className="col-span-3 font-semibold text-sm">{r.server_name}</div>
-                  <div className="col-span-3">
-                    <div className="font-medium">{r.best_fit_shift}</div>
-                    <div className="text-[10px] text-muted-foreground">{r.current_pattern}</div>
-                  </div>
-                  <div className="col-span-3 flex flex-wrap gap-1">
-                    {r.recommendation_types.map((t) => (
-                      <span key={t} className="inline-block rounded-full bg-brand-green/10 text-brand-green border border-brand-green/30 px-2 py-0.5 text-[10px]">
-                        {recTypeLabel(t)}
-                      </span>
-                    ))}
-                  </div>
-                  <div className="col-span-2 text-right whitespace-nowrap">
-                    <div>{fmtMoney(r.modelled_opportunity)} <ModelledValueLabel kind="modelled" /></div>
-                    <div className="text-[10px] text-muted-foreground">Conf {confidenceLabel(r.confidence)}</div>
-                  </div>
-                  <div className="col-span-1 text-right text-[10px] text-muted-foreground">
-                    {r.test_style === "swap" ? "Swap" : r.test_style === "extra" ? "Extra" : "Confirm"}
-                  </div>
-                </summary>
-                <div className="px-3 pb-3">
-                  <ExplanationPanel rec={r} />
-                </div>
-              </details>
-            ))}
+          <div className="mt-3 overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-[10px] uppercase text-muted-foreground border-b border-border">
+                  <th className="text-left py-2 pr-2 w-8">#</th>
+                  <th className="text-left py-2 pr-3">Server</th>
+                  <th className="text-left py-2 pr-3">Recommendation</th>
+                  <th className="text-left py-2 pr-3">Best shift</th>
+                  <th className="text-left py-2 pr-3">Action</th>
+                  <th className="text-right py-2 pr-3">Modelled lift</th>
+                  <th className="text-center py-2 pr-3">Conf.</th>
+                  <th className="text-left py-2 pr-3">Pattern</th>
+                  <th className="text-right py-2"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.recommendations.map((r, i) => (
+                  <tr key={i} className="border-b border-border/40 hover:bg-muted/30">
+                    <td className="py-2 pr-2 text-muted-foreground">{i + 1}</td>
+                    <td className="py-2 pr-3 font-semibold">{r.server_name}</td>
+                    <td className="py-2 pr-3">
+                      <div className="flex flex-wrap gap-1">
+                        {r.recommendation_types.slice(0, 2).map((t) => (
+                          <Pill key={t} className="bg-brand-green/10 text-brand-green border-brand-green/30">{recTypeShort(t)}</Pill>
+                        ))}
+                        {r.recommendation_types.length > 2 && (
+                          <Pill className="bg-muted text-muted-foreground border-border">+{r.recommendation_types.length - 2}</Pill>
+                        )}
+                      </div>
+                    </td>
+                    <td className="py-2 pr-3 whitespace-nowrap">{r.best_fit_shift}</td>
+                    <td className="py-2 pr-3 text-xs">{actionFromTestStyle(r)}</td>
+                    <td className="py-2 pr-3 text-right font-semibold whitespace-nowrap">
+                      {fmtMoney(r.modelled_opportunity)}
+                    </td>
+                    <td className="py-2 pr-3 text-center">
+                      <Pill className={confidenceTone(r.confidence)}>{confidenceLabel(r.confidence)}</Pill>
+                    </td>
+                    <td className="py-2 pr-3 text-[11px] text-muted-foreground whitespace-nowrap">
+                      {r.requires_confirmation ? "Confirm availability" : "Fits pattern"}
+                    </td>
+                    <td className="py-2 text-right">
+                      <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setDrawer({ kind: "rec", rec: r })}>
+                        Details
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       )}
 
-      {/* Rota opportunity matrix */}
+      {/* Rota opportunity matrix — labels only, click for details */}
       {cols.length > 0 && data.servers.length > 0 && (
         <div className="mt-6">
           <h3 className="font-display text-base font-bold">Rota opportunity matrix</h3>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Outlet-scoped where outlet is known. Each cell shows a short reason; hover for full
-            Marginal Deployment Value, Rota-Test Priority, projected metrics, headroom, confidence
-            and sample.
-          </p>
+          <p className="mt-1 text-xs text-muted-foreground">Click any cell for the full reasoning behind the label.</p>
           <div className="mt-3 overflow-x-auto">
-            <table className="w-full text-xs">
+            <table className="w-full text-xs border-separate border-spacing-0">
               <thead>
                 <tr className="border-b border-border">
-                  <th className="text-left py-2 pr-3 sticky left-0 bg-white">Server</th>
-                  <th className="text-left py-2 pr-3 sticky left-[120px] bg-white text-[10px] uppercase text-muted-foreground">Pattern</th>
+                  <th className="text-left py-2 pr-3 sticky left-0 bg-white z-10">Server</th>
+                  <th className="text-left py-2 pr-3 sticky left-[120px] bg-white text-[10px] uppercase text-muted-foreground z-10">Pattern</th>
                   {cols.map((c) => (
-                    <th key={c.key} className="text-center py-2 px-1 min-w-[120px]">
-                      {c.outlet && <div className="text-[10px] text-muted-foreground">{c.outlet}</div>}
+                    <th key={c.key} className="text-center py-2 px-1 min-w-[80px]">
+                      {c.outlet && <div className="text-[10px] text-muted-foreground truncate max-w-[100px]">{c.outlet}</div>}
                       <div className="font-semibold">{DAY_NAMES[c.dow]}</div>
                       <div className="text-[10px] uppercase text-muted-foreground">{c.daypart}</div>
                     </th>
@@ -341,39 +455,42 @@ export function SchedulingLeverageMatrix({ data }: { data: SchedulingLeverageRes
               <tbody>
                 {data.servers.map((s) => (
                   <tr key={s.id} className="border-b border-border/40">
-                    <td className="py-1.5 pr-3 font-semibold sticky left-0 bg-white align-top">{s.name}</td>
-                    <td className="py-1.5 pr-3 sticky left-[120px] bg-white text-[10px] text-muted-foreground whitespace-nowrap align-top">
-                      {s.pattern.pattern_label}
+                    <td className="py-1.5 pr-3 font-semibold sticky left-0 bg-white align-middle">{s.name}</td>
+                    <td className="py-1.5 pr-3 sticky left-[120px] bg-white align-middle">
+                      <Pill
+                        className="bg-muted text-muted-foreground border-border"
+                        // native title gives a quick observed-pattern hover
+                      >
+                        <span title={s.pattern.pattern_label}>{patternShort(s.pattern.pattern)}</span>
+                      </Pill>
                     </td>
                     {cols.map((c) => {
                       const cell = cellBy.get(`${s.id}|${c.key}`);
-                      if (!cell) return <td key={c.key} className="text-center py-1 px-1 align-top"><span className="text-muted-foreground">—</span></td>;
-                      const tip = [
-                        `Marginal Deployment Value: ${cell.marginal_deployment_value.toFixed(0)}/100`,
-                        `Rota-Test Priority: ${cell.rota_test_priority.toFixed(0)}`,
-                        `Modelled marginal lift: ${fmtMoney(cell.modelled_marginal_lift)}`,
-                        `Projected RPC: ${cell.projected_rpc != null ? cell.projected_rpc.toFixed(2) : "—"}`,
-                        `Projected RPH: ${cell.projected_rph != null ? cell.projected_rph.toFixed(2) : "—"}`,
-                        `Projected Adj. LLS: ${cell.projected_adjusted_lls != null ? cell.projected_adjusted_lls.toFixed(2) : "—"}`,
-                        `Opportunity Need: ${(cell.baseline.opportunity_need * 100).toFixed(0)}%`,
-                        `Confidence: ${confidenceLabel(cell.confidence_band)}`,
-                        `Sample: ${cell.comparable_shifts} unique shifts / ${cell.comparable_hours.toFixed(1)}h`,
-                        `Feasibility: ${(cell.schedule_feasibility * 100).toFixed(0)}% (${cell.outlet_eligibility_reason})`,
-                        cell.warnings[0] ? `⚠ ${cell.warnings[0]}` : "",
-                      ].filter(Boolean).join("\n");
+                      if (!cell) {
+                        return <td key={c.key} className="text-center py-1 px-1 align-middle"><span className="text-muted-foreground">—</span></td>;
+                      }
+                      const isClickable = cell.cell_label !== "insufficient_data" && cell.cell_label !== "not_eligible";
                       return (
-                        <td key={c.key} className="text-center py-1 px-1 align-top">
-                          <span
-                            title={tip}
-                            className={`block w-full rounded-md border px-1.5 py-1 text-[11px] cursor-help ${cellTone(cell.cell_label)}`}
+                        <td key={c.key} className="text-center py-1 px-1 align-middle">
+                          <button
+                            type="button"
+                            disabled={!isClickable}
+                            onClick={() => isClickable && setDrawer({
+                              kind: "cell",
+                              cell,
+                              server: s.name,
+                              shiftLabel: colLabel(c),
+                              pattern: s.pattern.pattern_label,
+                            })}
+                            className={`block w-full rounded-md border px-1.5 py-1 text-[11px] transition-colors ${cellTone(cell.cell_label)} ${isClickable ? "cursor-pointer" : "cursor-default"}`}
                           >
-                            <span className="font-semibold">{cell.cell_label_text}</span>
-                            {cell.primary_reason && (
-                              <span className="block mt-0.5 text-[10px] font-normal opacity-90 leading-tight">
-                                {cell.primary_reason}
+                            <span className="font-semibold">{cellShort(cell.cell_label)}</span>
+                            {cell.modelled_marginal_lift != null && Math.abs(cell.modelled_marginal_lift) >= 20 && (
+                              <span className="block text-[9px] font-normal opacity-80 leading-tight">
+                                {fmtMoney(cell.modelled_marginal_lift)}
                               </span>
                             )}
-                          </span>
+                          </button>
                         </td>
                       );
                     })}
@@ -382,32 +499,57 @@ export function SchedulingLeverageMatrix({ data }: { data: SchedulingLeverageRes
               </tbody>
             </table>
           </div>
+          {/* Legend */}
           <div className="mt-3 flex flex-wrap gap-3 text-[11px] text-muted-foreground">
-            <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded-sm bg-brand-green/25" /> Best lift</span>
-            <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded-sm bg-brand-green/10" /> Good fit</span>
-            <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded-sm bg-brand-orange/15" /> Test / monitor</span>
-            <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded-sm bg-amber-100" /> Confirm availability</span>
-            <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded-sm bg-[color:var(--opportunity)]/15" /> Avoid (negative lift)</span>
-            <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded-sm bg-zinc-100" /> Not outlet eligible</span>
-            <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded-sm bg-muted" /> Insufficient data</span>
+            <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded-sm bg-brand-green/25" /> Best</span>
+            <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded-sm bg-brand-green/10" /> Good</span>
+            <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded-sm bg-brand-orange/15" /> Test</span>
+            <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded-sm bg-amber-100" /> Confirm</span>
+            <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded-sm bg-[color:var(--opportunity)]/15" /> Avoid</span>
+            <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded-sm bg-zinc-100" /> Not eligible</span>
+            <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded-sm bg-muted" /> No data</span>
           </div>
         </div>
       )}
 
-      <div className="mt-6 rounded-md bg-muted/40 p-3 text-xs text-muted-foreground space-y-1">
-        <div className="font-semibold text-foreground">Manager guardrails</div>
-        <div>
-          Recommendations are directional and modelled — never automatic rota decisions. Working
-          pattern labels reflect <strong>observed rota behaviour</strong> from unique shifts (not
-          raw POS rows), not contractual status.
+      {/* Manager guardrails — compact, collapsible */}
+      <details className="mt-6 rounded-md bg-muted/40 p-3 text-xs text-muted-foreground">
+        <summary className="cursor-pointer font-semibold text-foreground">Manager guardrails & methodology</summary>
+        <div className="mt-2 space-y-1">
+          <div>Recommendations are directional and modelled — never automatic rota decisions. Working pattern labels reflect observed rota behaviour, not contractual status.</div>
+          <div>Cross-outlet recommendations are disabled by default. A server is only suggested for an outlet where they have history or have been explicitly marked cross-outlet eligible.</div>
+          <div><strong>Peak performer</strong> holds throughput and Adj. LLS when pressure is high — use to <em>protect</em> already-busy shifts.</div>
+          <div><strong>Slow-shift lifter</strong> creates the biggest <em>marginal</em> value on a weaker shift because the current baseline has more headroom there.</div>
         </div>
-        <div>
-          Cross-outlet recommendations are disabled by default. A server is only suggested for an
-          outlet where they have history or where you have explicitly marked them as cross-outlet
-          eligible.
-        </div>
-        {data.data_quality.notes.map((n, i) => (<div key={i}>· {n}</div>))}
-      </div>
+      </details>
+
+      {/* Detail drawer */}
+      <Sheet open={drawer != null} onOpenChange={(o) => !o && setDrawer(null)}>
+        <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto">
+          {drawer?.kind === "rec" && (
+            <>
+              <SheetHeader>
+                <SheetTitle>{drawer.rec.server_name}</SheetTitle>
+                <SheetDescription>{drawer.rec.best_fit_shift}</SheetDescription>
+              </SheetHeader>
+              <div className="mt-4">
+                <RecommendationDetail rec={drawer.rec} />
+              </div>
+            </>
+          )}
+          {drawer?.kind === "cell" && (
+            <>
+              <SheetHeader>
+                <SheetTitle>{drawer.server}</SheetTitle>
+                <SheetDescription>{drawer.shiftLabel}</SheetDescription>
+              </SheetHeader>
+              <div className="mt-4">
+                <CellDetail cell={drawer.cell} server={drawer.server} shiftLabel={drawer.shiftLabel} pattern={drawer.pattern} />
+              </div>
+            </>
+          )}
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
