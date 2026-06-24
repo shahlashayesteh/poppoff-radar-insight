@@ -161,6 +161,10 @@ function LlsPage() {
   const [autoDetected, setAutoDetected] = useState<Set<string>>(new Set());
   const [needsConfirm, setNeedsConfirm] = useState<Set<string>>(new Set());
   const [mappingOpen, setMappingOpen] = useState(false);
+  // Labor cost basis detected from the most recent labor upload. Tracked so
+  // the UI can disclose whether LLS is computed against fully-loaded labour
+  // cost or gross wage cost — never silently conflate the two.
+  const [laborBasis, setLaborBasis] = useState<LaborBasis>(null);
 
   const fetchScorecard = useServerFn(getWeeklyScorecard);
   const fetchOF = useServerFn(getOpportunityFactors);
