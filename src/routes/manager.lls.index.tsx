@@ -814,11 +814,17 @@ const LLS_FIELD_TO_CANONICAL: Record<string, CanonicalField> = {
   hourly_rate: "hourly_rate",
 };
 
+export type LaborBasis = "fully_loaded" | "wage" | "derived" | null;
+
 function autoMap(
   headers: string[],
   fields: ReadonlyArray<{ key: string }>,
   sampleRows?: Record<string, unknown>[],
-): { mapping: Record<string, string>; ambiguous: Set<string> } {
+): {
+  mapping: Record<string, string>;
+  ambiguous: Set<string>;
+  laborBasis: LaborBasis;
+} {
   const canonicalNeeded = fields
     .map((f) => LLS_FIELD_TO_CANONICAL[f.key])
     .filter(Boolean) as CanonicalField[];
@@ -829,17 +835,32 @@ function autoMap(
   });
   const mapping: Record<string, string> = {};
   const ambiguous = new Set<string>();
+  let laborBasis: LaborBasis = null;
   for (const f of fields) {
     const canon = LLS_FIELD_TO_CANONICAL[f.key];
     if (!canon) continue;
     let m = det.mappings[canon];
-    // Labor cost: prefer fully_loaded if direct cost is missing.
-    if (!m && canon === "labor_cost") m = det.mappings.fully_loaded_labor_cost;
+    // Labor cost: PREFER fully-loaded labour cost when present; fall back
+    // to gross wage cost. Never silently treat wage cost as fully loaded —
+    // the basis is tracked separately and surfaced in the UI.
+    if (canon === "labor_cost") {
+      const fullyLoaded = det.mappings.fully_loaded_labor_cost;
+      const wage = det.mappings.labor_cost;
+      if (fullyLoaded) {
+        m = fullyLoaded;
+        laborBasis = "fully_loaded";
+      } else if (wage) {
+        m = wage;
+        laborBasis = "wage";
+      }
+    }
     // Gross sales: fall back to net sales if needed.
     if (!m && canon === "gross_sales") m = det.mappings.net_sales;
     if (!m) continue;
     mapping[f.key] = m.header;
     if (m.confidence === "low") ambiguous.add(f.key);
   }
-  return { mapping, ambiguous };
+  return { mapping, ambiguous, laborBasis };
 }
+
+export const __test = { autoMap };
