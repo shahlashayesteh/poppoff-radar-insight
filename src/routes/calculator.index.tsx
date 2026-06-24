@@ -4,9 +4,16 @@ import { Slider } from "@/components/ui/slider";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import {
+  MARKETS,
+  MARKET_ORDER,
+  loadedLabourCost,
+  type LabourCostBasis,
+  type MarketId,
+} from "@/lib/markets";
 
 const META_DESCRIPTION =
-  "See how hard your restaurant's floor labour is working — and the upside if your whole team performed like your best server. Twenty seconds, no login. Works for UK and US venues.";
+  "See how hard your restaurant's floor labour is working — and the upside if your whole team performed like your best server. Twenty seconds, no login. Works for UK, US and Croatia / EUR venues.";
 
 export const Route = createFileRoute("/calculator/")({
   head: () => ({
@@ -91,24 +98,32 @@ function Field({
 }
 
 function CalculatorPage() {
-  const [market, setMarket] = useState<"UK" | "US">("UK");
+  const [market, setMarket] = useState<MarketId>("UK");
   const [covers, setCovers] = useState(800);
   const [spend, setSpend] = useState(42);
   const [servers, setServers] = useState(10);
   const [rate, setRate] = useState(12.5);
   const [hours, setHours] = useState(25);
-  const [onCost, setOnCost] = useState(0.15);
-  
+  const [onCost, setOnCost] = useState(MARKETS.UK.defaultOnCost);
+  const [wageBasis, setWageBasis] = useState<LabourCostBasis>("gross_hourly");
+
   const [tick, setTick] = useState(0);
 
-  const currency = market === "UK" ? "£" : "$";
+  const preset = MARKETS[market];
+  const currency = preset.currencySymbol;
 
-  // When market changes, reset on-cost to that market's default. User can still override after.
+  // When market changes, reset on-cost to that market's default. User can still override.
   useEffect(() => {
-    setOnCost(market === "UK" ? 0.15 : 0.12);
-  }, [market]);
+    setOnCost(preset.defaultOnCost);
+  }, [market, preset.defaultOnCost]);
 
-  const labour = servers * rate * hours * (1 + onCost);
+  // Single canonical formula — handles double-counting protection.
+  const labour = loadedLabourCost({
+    rate,
+    hours: servers * hours,
+    onCost,
+    basis: wageBasis,
+  });
   const weeklyRev = covers * spend;
   const lls = labour > 0 ? weeklyRev / labour : 0;
   const floorLabourPct = weeklyRev > 0 ? (labour / weeklyRev) * 100 : 0;
@@ -122,7 +137,7 @@ function CalculatorPage() {
 
   useEffect(() => {
     setTick((t) => t + 1);
-  }, [covers, spend, servers, rate, hours, onCost, market]);
+  }, [covers, spend, servers, rate, hours, onCost, market, wageBasis]);
 
   return (
     <div className="mx-auto max-w-[1060px] px-6 pb-20 pt-10">
@@ -153,16 +168,15 @@ function CalculatorPage() {
                 value={market}
                 onValueChange={(v) => {
                   if (!v) return;
-                  setMarket(v as "UK" | "US");
+                  setMarket(v as MarketId);
                 }}
                 variant="outline"
               >
-                <ToggleGroupItem value="UK" className="rounded-full px-4">
-                  UK (£)
-                </ToggleGroupItem>
-                <ToggleGroupItem value="US" className="rounded-full px-4">
-                  US ($)
-                </ToggleGroupItem>
+                {MARKET_ORDER.map((m) => (
+                  <ToggleGroupItem key={m} value={m} className="rounded-full px-4">
+                    {MARKETS[m].label}
+                  </ToggleGroupItem>
+                ))}
               </ToggleGroup>
             </div>
 
@@ -202,11 +216,11 @@ function CalculatorPage() {
             />
             <Field
               id="rate"
-              label="Average server hourly rate"
+              label={wageBasis === "fully_loaded" ? "Fully loaded hourly rate" : "Average gross hourly rate"}
               output={money2(currency, rate)}
-              hint={market === "UK" ? "Base wage before NI, pension and tronc." : "Base wage before payroll taxes and benefits."}
-              min={10}
-              max={20}
+              hint={preset.wageHint}
+              min={5}
+              max={30}
               step={0.25}
               value={rate}
               onChange={setRate}
@@ -223,9 +237,40 @@ function CalculatorPage() {
               onChange={setHours}
             />
 
-            {/* On-cost toggle */}
+            {/* Wage basis toggle — double-counting protection */}
             <div
               className="mt-7 flex flex-wrap items-center gap-2.5"
+              role="group"
+              aria-label="Wage basis"
+            >
+              <span className="mr-1 font-mono text-xs uppercase tracking-[0.14em] text-muted-foreground">
+                Wage basis
+              </span>
+              <ToggleGroup
+                type="single"
+                value={wageBasis}
+                onValueChange={(v) => v && setWageBasis(v as LabourCostBasis)}
+                variant="outline"
+              >
+                <ToggleGroupItem value="gross_hourly" className="rounded-full px-4">
+                  Gross hourly
+                </ToggleGroupItem>
+                <ToggleGroupItem value="fully_loaded" className="rounded-full px-4">
+                  Already fully loaded
+                </ToggleGroupItem>
+              </ToggleGroup>
+            </div>
+            <p className="mt-2 max-w-[62ch] text-xs text-muted-foreground">
+              If labour cost is already fully loaded, employer on-cost is not applied
+              again — this avoids double counting.
+            </p>
+
+            {/* On-cost toggle — disabled when wage is already loaded */}
+            <div
+              className={cn(
+                "mt-7 flex flex-wrap items-center gap-2.5",
+                wageBasis === "fully_loaded" && "opacity-50",
+              )}
               role="group"
               aria-label="Employer on-costs"
             >
@@ -240,6 +285,7 @@ function CalculatorPage() {
                   setOnCost(parseFloat(v));
                 }}
                 variant="outline"
+                disabled={wageBasis === "fully_loaded"}
               >
                 <ToggleGroupItem value="0" className="rounded-full px-4">
                   Off · 0%
@@ -248,10 +294,10 @@ function CalculatorPage() {
                   Low · 10%
                 </ToggleGroupItem>
                 <ToggleGroupItem
-                  value={market === "UK" ? "0.15" : "0.12"}
+                  value={String(preset.defaultOnCost)}
                   className="rounded-full px-4"
                 >
-                  Standard · {market === "UK" ? "15%" : "12%"}
+                  {preset.shortLabel} · {nf1.format(preset.defaultOnCost * 100)}%
                 </ToggleGroupItem>
                 <ToggleGroupItem value="0.20" className="rounded-full px-4">
                   High · 20%
@@ -259,12 +305,9 @@ function CalculatorPage() {
               </ToggleGroup>
             </div>
             <p className="mt-2 max-w-[62ch] text-xs text-muted-foreground">
-              {market === "UK"
-                ? "Employer on-costs on top of base wage: National Insurance, pension and holiday pay (~15%). Adjust to match your payroll."
-                : "Employer on-costs on top of base wage: FICA, unemployment and workers' comp (~12%). Adjust to match your payroll."}
+              <strong className="font-semibold text-foreground">{preset.onCostLabel}.</strong>{" "}
+              {preset.onCostHelper}
             </p>
-
-
 
             <p className="mt-12 max-w-[62ch] text-sm leading-relaxed text-muted-foreground">
               <strong className="font-semibold text-foreground">
@@ -280,10 +323,7 @@ function CalculatorPage() {
               and the rest of the floor closes{" "}
               <strong className="font-semibold text-foreground">half</strong> that gap;
               it is a directional estimate, and your own POS gives the exact figure.
-              Benchmarks differ by market and by what's measured: UK total hospitality
-              labour runs 30–35% of revenue, with front-of-house a portion of that; US
-              front-of-house specifically runs 8–12% of sales in tipped-wage states and
-              14–16% in no-tip-credit states like California and Washington. The full
+              Benchmarks differ by market and by what's measured. The full
               thinking is in{" "}
               <a
                 href={ARTICLE_URL}
@@ -307,15 +347,22 @@ function CalculatorPage() {
                   PoppOff
                 </div>
                 <div className="mt-1 text-[11px] text-muted-foreground">
-                  *** FLOOR LEVERAGE CHECK ***
+                  *** FLOOR LEVERAGE CHECK — {preset.shortLabel.toUpperCase()} ***
                 </div>
               </div>
               <hr className="my-4 border-t border-dashed border-border" />
               <ReceiptLine label="Weekly revenue" value={money0(currency, weeklyRev)} />
               <ReceiptLine
-                label="Floor labour, fully loaded (est.)"
+                label={wageBasis === "fully_loaded"
+                  ? "Floor labour, fully loaded (as entered)"
+                  : "Floor labour, fully loaded (est.)"}
                 value={money0(currency, labour)}
               />
+              <p className="mt-1 text-[10.5px] leading-snug text-muted-foreground">
+                {wageBasis === "fully_loaded"
+                  ? "On-cost not applied — input already fully loaded."
+                  : `Gross × hours × (1 + ${nf1.format(onCost * 100)}%)`}
+              </p>
               <hr className="my-4 border-t border-dashed border-border" />
 
               <div key={`headline-${tick}`} className="py-1 animate-in zoom-in-95 duration-150">
@@ -359,9 +406,7 @@ function CalculatorPage() {
                 </strong>
               </p>
               <p className="mt-2 text-[11.5px] leading-relaxed text-muted-foreground">
-                {market === "UK"
-                  ? "UK hospitality labour typically runs 30–35% of revenue; front-of-house runs higher than the US because servers earn full minimum wage, not a tipped rate."
-                  : `Full-service front-of-house labour commonly runs 8–12% of sales in tipped-wage states. In no-tip-credit states (CA, WA, OR, NV and others) servers earn full minimum wage, so floor labour runs higher — often 14–16%. Yours is ${nf1.format(floorLabourPct)}%.`}
+                {preset.benchmarkBlurb(floorLabourPct)}
               </p>
               {market === "US" && (
                 <p className="mt-2 text-[11.5px] leading-relaxed text-muted-foreground">

@@ -32,6 +32,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { MARKETS, MARKET_ORDER, type MarketId } from "@/lib/markets";
 
 const META_DESCRIPTION =
   "See the real revenue gap between your servers. Upload your POS sales and labour exports — processed in your browser, never sent to our servers. Ranks by opportunity-adjusted revenue per hour.";
@@ -80,7 +81,7 @@ function ServerGapPage() {
   const [salesFile, setSalesFile] = useState<{ name: string; result: ParseResult } | null>(null);
   const [labourFile, setLabourFile] = useState<{ name: string; result: ParseResult } | null>(null);
   const [parseError, setParseError] = useState<string | null>(null);
-  const [currency, setCurrency] = useState<"£" | "$">("£");
+  const [market, setMarket] = useState<MarketId>("UK");
   const [dateFormat, setDateFormat] = useState<DateFormat>("uk");
   const [period, setPeriod] = useState<Period>("monthly");
   const [basis, setBasis] = useState<SalesBasis>("net");
@@ -90,10 +91,12 @@ function ServerGapPage() {
   const [recoverability, setRecoverability] = useState<number>(DEFAULT_RECOVERABILITY_FACTOR);
   const [showPreview, setShowPreview] = useState(false);
 
+  const currency = MARKETS[market].currencySymbol;
+
   // Keep date-parser default aligned with market selection.
-  const onCurrencyChange = useCallback((v: "£" | "$") => {
-    setCurrency(v);
-    const fmt: DateFormat = v === "$" ? "us" : "uk";
+  const onMarketChange = useCallback((m: MarketId) => {
+    setMarket(m);
+    const fmt: DateFormat = MARKETS[m].dateFormat;
     setDateFormat(fmt);
     setDefaultDateFormat(fmt);
   }, []);
@@ -205,16 +208,19 @@ function ServerGapPage() {
         <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3">
           <div className="flex items-center gap-2.5">
             <span className="mr-1 font-mono text-xs uppercase tracking-[0.14em] text-muted-foreground">
-              Currency
+              Market
             </span>
             <ToggleGroup
               type="single"
-              value={currency}
-              onValueChange={(v) => v && onCurrencyChange(v as "£" | "$")}
+              value={market}
+              onValueChange={(v) => v && onMarketChange(v as MarketId)}
               variant="outline"
             >
-              <ToggleGroupItem value="£" className="rounded-full px-4">UK (£)</ToggleGroupItem>
-              <ToggleGroupItem value="$" className="rounded-full px-4">US ($)</ToggleGroupItem>
+              {MARKET_ORDER.map((m) => (
+                <ToggleGroupItem key={m} value={m} className="rounded-full px-4">
+                  {MARKETS[m].label}
+                </ToggleGroupItem>
+              ))}
             </ToggleGroup>
           </div>
           <div className="flex items-center gap-2.5">
@@ -616,6 +622,7 @@ function ServerGapPage() {
                 tradingWeeks={analysis.tradingWeeks}
                 ambiguousDates={analysis.ambiguousDates}
                 dateFormat={dateFormat}
+                market={market}
               />
             )}
 
@@ -927,6 +934,7 @@ function RecoverableSection({
   tradingWeeks,
   ambiguousDates,
   dateFormat,
+  market,
 }: {
   ranked: ReturnType<typeof attachGap>;
   weekly: number;
@@ -942,6 +950,7 @@ function RecoverableSection({
   tradingWeeks: number;
   ambiguousDates: boolean;
   dateFormat: DateFormat;
+  market: MarketId;
 }) {
   const below = ranked.filter((s) => s.recoverableWeekly > 0);
   const wk = weekly * lensFactor;
@@ -990,7 +999,7 @@ function RecoverableSection({
       </p>
       {ambiguousDates && (
         <p className="mt-2 text-[11px] text-brand-orange">
-          Ambiguous dates parsed using {dateFormat === "us" ? "US (MM/DD)" : "UK (DD/MM)"} format. Switch the Date format toggle above if this looks wrong.
+          Ambiguous dates parsed using {market === "US" ? "US (MM/DD)" : market === "HR" ? "Croatia (DD/MM)" : "UK (DD/MM)"} format. Switch the Date format toggle above if this looks wrong.
         </p>
       )}
 
