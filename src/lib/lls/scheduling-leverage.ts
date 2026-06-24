@@ -1201,10 +1201,37 @@ export function computeSchedulingLeverage(
   };
   const requires_confirmation = (cell: ServerShiftCell) =>
     cell.schedule_feasibility < 0.6 || cell.weekly_capacity_fit < 1 || cell.outlet_eligibility < 1;
+  const testStyleFor = (cell: ServerShiftCell): "swap" | "extra" | "requires_confirmation" => {
+    const pat = patterns.get(cell.server_id)!;
+    if (cell.weekly_capacity_fit < 0.7) return "requires_confirmation";
+    if (pat.pattern === "likely_part_time" || cell.weekly_capacity_fit < 1) return "swap";
+    return "extra";
+  };
+  const explanationFor = (cell: ServerShiftCell): ServerRecommendation["explanation"] => {
+    const pat = patterns.get(cell.server_id)!;
+    const b = cell.baseline;
+    const fmt2 = (n: number | null | undefined) =>
+      n != null && Number.isFinite(n) ? n.toFixed(2) : "—";
+    return {
+      current_baseline: `Current rota baseline on ${humanShiftLabel(b)}: RPC ${fmt2(b.current_deployment_rpc)}, RPH ${fmt2(b.current_deployment_rph)}, Adj. LLS ${fmt2(b.current_deployment_adjusted_lls)}.`,
+      projected_result: `${cell.server_name} projected: RPC ${fmt2(cell.projected_rpc)}, RPH ${fmt2(cell.projected_rph)}, Adj. LLS ${fmt2(cell.projected_adjusted_lls)}.`,
+      modelled_marginal_lift: cell.modelled_marginal_lift == null
+        ? "Modelled lift unavailable (insufficient covers/hours)."
+        : `Modelled marginal lift ${fmtSigned(cell.modelled_marginal_lift)} vs current rota baseline.`,
+      confidence: `Confidence ${cell.confidence_band} (sample ${cell.comparable_shifts} comparable shifts / ${cell.comparable_hours.toFixed(1)}h).`,
+      observed_pattern: pat.pattern_label,
+      operational_note: cell.outlet_eligibility === 0
+        ? `Not eligible: ${cell.outlet_eligibility_reason}.`
+        : cell.weekly_capacity_fit < 1
+          ? `Would exceed observed weekly pattern — manager must confirm availability.`
+          : `Within observed working pattern.`,
+    };
+  };
   const toRec = (type: RecommendationType, cell: ServerShiftCell, why: string): ServerRecommendation => ({
     server_id: cell.server_id,
     server_name: cell.server_name,
     recommendation_type: type,
+    recommendation_types: [type],
     best_fit_shift: humanShiftLabel(cell.baseline),
     current_pattern: currentPatternFor(cell.server_id),
     why,
@@ -1215,6 +1242,8 @@ export function computeSchedulingLeverage(
     rota_test_priority: cell.rota_test_priority,
     schedule_feasibility: cell.schedule_feasibility,
     requires_confirmation: requires_confirmation(cell),
+    test_style: testStyleFor(cell),
+    explanation: explanationFor(cell),
   });
 
   // gates for revenue-style recommendations
