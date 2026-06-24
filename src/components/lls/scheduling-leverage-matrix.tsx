@@ -187,7 +187,7 @@ type DrawerPayload =
       pattern: string;
     };
 
-function RecommendationDetail({ rec }: { rec: ServerRecommendation }) {
+function RecommendationDetail({ rec, currency }: { rec: ServerRecommendation; currency: string }) {
   const e = rec.explanation;
   return (
     <div className="space-y-4 text-sm">
@@ -201,7 +201,7 @@ function RecommendationDetail({ rec }: { rec: ServerRecommendation }) {
       <Section label="Shift">{rec.best_fit_shift}</Section>
       <Section label="Recommended action">{actionFromTestStyle(rec)}</Section>
       <Section label="Modelled marginal lift">
-        <span className="font-semibold">{fmtMoney(rec.modelled_opportunity)}</span>{" "}
+        <span className="font-semibold">{fmtMoney(rec.modelled_opportunity, currency)}</span>{" "}
         <ModelledValueLabel kind="modelled" />
         <div className="text-xs text-muted-foreground mt-1">{e.modelled_marginal_lift}</div>
       </Section>
