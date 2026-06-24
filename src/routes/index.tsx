@@ -8,13 +8,13 @@ import { toast } from "sonner";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "PoppOff — Every shift. Every win." },
-      { name: "description", content: "Personal stats, streaks, and milestones for restaurant servers. Turn your numbers into momentum and more money in your pocket." },
-      { property: "og:title", content: "PoppOff — Every shift. Every win." },
-      { property: "og:description", content: "Personal stats, streaks, and milestones for restaurant servers." },
+      { title: "PoppOff — The Revenue Gap Platform for Restaurant Groups" },
+      { name: "description", content: "PoppOff turns POS data into a quantified Revenue Gap — by server, shift, and venue — so multi-site restaurant groups can close the gap with weekly coaching and clear targets. Book a free Revenue Gap Audit." },
+      { property: "og:title", content: "PoppOff — The Revenue Gap Platform for Restaurant Groups" },
+      { property: "og:description", content: "Quantify the revenue gap hiding in your POS data. Per-server, per-shift, per-venue. Built for multi-site hospitality operators and CFOs." },
       { property: "og:url", content: "https://poppoffstats.com/" },
-      { name: "twitter:title", content: "PoppOff — Every shift. Every win." },
-      { name: "twitter:description", content: "Personal stats, streaks, and milestones for restaurant servers." },
+      { name: "twitter:title", content: "PoppOff — The Revenue Gap Platform for Restaurant Groups" },
+      { name: "twitter:description", content: "Quantify the revenue gap hiding in your POS data. Per-server, per-shift, per-venue." },
     ],
     links: [
       { rel: "canonical", href: "https://poppoffstats.com/" },
@@ -162,33 +162,35 @@ function Landing() {
       <section className="px-6 pt-14 pb-20">
         <div className="mx-auto max-w-7xl grid lg:grid-cols-2 gap-10 items-center">
           <div>
-            <h1 className="font-display font-extrabold tracking-tight text-4xl sm:text-5xl md:text-6xl lg:text-7xl leading-[1.02]">
-              <span className="block">PoppOff</span>
-              <span className="block">makes <span style={{ color: "var(--foreground)" }}>server performance</span> <span style={{ color: "var(--brand-green)" }}>visible</span>.</span>
+            <div className="inline-flex items-center gap-2 rounded-full border border-border px-3 py-1 text-[11px] font-semibold tracking-wide uppercase text-foreground/70">
+              <ShieldCheck className="h-3.5 w-3.5 text-brand-green" />
+              Built for multi-site hospitality groups
+            </div>
+            <h1 className="mt-4 font-display font-extrabold tracking-tight text-4xl sm:text-5xl md:text-6xl lg:text-7xl leading-[1.02]">
+              <span className="block">Close the</span>
+              <span className="block"><span style={{ color: "var(--brand-green)" }}>revenue gap</span> hiding in your <span style={{ color: "var(--brand-orange)" }}>POS data</span>.</span>
             </h1>
             <p className="mt-6 text-base md:text-lg text-foreground/75 max-w-xl">
-              PoppOff turns POS data into server scorecards, coaching insights, and clear targets so every shift becomes more visible, more focused, and more profitable.
+              PoppOff turns the data your POS already captures into a quantified Revenue Gap — by server, shift, category and venue — then drives a weekly coaching cadence that closes it. Defensible numbers your CFO, ops director and floor team can all act on.
             </p>
             <div className="mt-6 font-display font-extrabold tracking-tight text-lg md:text-xl leading-snug">
               <div style={{ color: "var(--brand-green)" }}>Visibility changes behaviour.</div>
               <div style={{ color: "var(--brand-orange)" }}>Behaviour improves performance.</div>
-              <div style={{ color: "var(--brand-green)" }}>Performance increases revenue.</div>
-            </div>
-            <div className="mt-6 inline-flex items-center gap-3 rounded-xl border-l-4 pl-4 py-1" style={{ borderColor: "var(--brand-orange)" }}>
-              <p className="font-display text-lg md:text-xl font-extrabold tracking-tight">
-                PoppOff <span style={{ color: "var(--brand-orange)" }}>every shift.</span> Every win.
-              </p>
+              <div style={{ color: "var(--brand-green)" }}>Performance closes the revenue gap.</div>
             </div>
             <div className="mt-8 flex flex-wrap gap-3">
-              <Link to="/demo/manager" className="rounded-xl px-6 py-3 text-sm font-bold text-white inline-flex items-center gap-2" style={{ background: "var(--brand-orange)" }}>
-                See Demo
+              <Link to="/contact" className="rounded-xl px-6 py-3 text-sm font-bold text-white inline-flex items-center gap-2" style={{ background: "var(--brand-orange)" }}>
+                Book a Revenue Gap Audit
               </Link>
-              <a href="#pricing" className="rounded-xl px-6 py-3 text-sm font-bold border-2 border-foreground inline-flex items-center gap-2">
-                Start Your Pilot
+              <Link to="/demo/manager" className="rounded-xl px-6 py-3 text-sm font-bold border-2 border-foreground inline-flex items-center gap-2">
+                See the demo
+              </Link>
+              <a href="#pricing" className="rounded-xl px-6 py-3 text-sm font-bold text-foreground/70 hover:text-foreground inline-flex items-center gap-2">
+                Or start a pilot →
               </a>
             </div>
             <p className="mt-6 text-sm text-foreground/70 max-w-md">
-              Designed to help servers improve performance — turning sales data into coaching, motivation, and revenue growth.
+              Free audit. No POS integration required to start. Findings are yours whether you become a customer or not.
             </p>
           </div>
 
