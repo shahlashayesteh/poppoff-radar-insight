@@ -48,7 +48,7 @@ function Page() {
                 <tr key={w.week_start} className="border-t border-border">
                   <td className="px-5 py-4 font-semibold">
                     {w.label}
-                    {w.current && <span className="ml-2 text-xs font-normal text-brand-green">current</span>}
+                    {"current" in w && w.current && <span className="ml-2 text-xs font-normal text-brand-green">current</span>}
                   </td>
                   <td className="px-3">{w.servers}</td>
                   <td className="px-3">{w.covers.toLocaleString()}</td>
