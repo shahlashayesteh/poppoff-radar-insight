@@ -25,6 +25,7 @@ import { Route as HospitalityPerformanceSoftwareRouteImport } from './routes/hos
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as CalculatorRouteImport } from './routes/calculator'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as SignupIndexRouteImport } from './routes/signup.index'
 import { Route as ServerIndexRouteImport } from './routes/server.index'
 import { Route as ManagerIndexRouteImport } from './routes/manager.index'
 import { Route as CalculatorIndexRouteImport } from './routes/calculator.index'
@@ -156,6 +157,11 @@ const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const SignupIndexRoute = SignupIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => SignupRoute,
 } as any)
 const ServerIndexRoute = ServerIndexRouteImport.update({
   id: '/server/',
@@ -431,6 +437,7 @@ export interface FileRoutesByFullPath {
   '/calculator/': typeof CalculatorIndexRoute
   '/manager/': typeof ManagerIndexRoute
   '/server/': typeof ServerIndexRoute
+  '/signup/': typeof SignupIndexRoute
   '/api/public/contact': typeof ApiPublicContactRoute
   '/demo/manager/coaching': typeof DemoManagerCoachingRoute
   '/demo/manager/menu': typeof DemoManagerMenuRoute
@@ -469,7 +476,6 @@ export interface FileRoutesByTo {
   '/restaurant-upselling-software': typeof RestaurantUpsellingSoftwareRoute
   '/settings': typeof SettingsRoute
   '/signin': typeof SigninRoute
-  '/signup': typeof SignupRouteWithChildren
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terms': typeof TermsRoute
   '/calculator/server-gap': typeof CalculatorServerGapRoute
@@ -493,6 +499,7 @@ export interface FileRoutesByTo {
   '/calculator': typeof CalculatorIndexRoute
   '/manager': typeof ManagerIndexRoute
   '/server': typeof ServerIndexRoute
+  '/signup': typeof SignupIndexRoute
   '/api/public/contact': typeof ApiPublicContactRoute
   '/demo/manager/coaching': typeof DemoManagerCoachingRoute
   '/demo/manager/menu': typeof DemoManagerMenuRoute
@@ -558,6 +565,7 @@ export interface FileRoutesById {
   '/calculator/': typeof CalculatorIndexRoute
   '/manager/': typeof ManagerIndexRoute
   '/server/': typeof ServerIndexRoute
+  '/signup/': typeof SignupIndexRoute
   '/api/public/contact': typeof ApiPublicContactRoute
   '/demo/manager/coaching': typeof DemoManagerCoachingRoute
   '/demo/manager/menu': typeof DemoManagerMenuRoute
@@ -624,6 +632,7 @@ export interface FileRouteTypes {
     | '/calculator/'
     | '/manager/'
     | '/server/'
+    | '/signup/'
     | '/api/public/contact'
     | '/demo/manager/coaching'
     | '/demo/manager/menu'
@@ -662,7 +671,6 @@ export interface FileRouteTypes {
     | '/restaurant-upselling-software'
     | '/settings'
     | '/signin'
-    | '/signup'
     | '/sitemap.xml'
     | '/terms'
     | '/calculator/server-gap'
@@ -686,6 +694,7 @@ export interface FileRouteTypes {
     | '/calculator'
     | '/manager'
     | '/server'
+    | '/signup'
     | '/api/public/contact'
     | '/demo/manager/coaching'
     | '/demo/manager/menu'
@@ -750,6 +759,7 @@ export interface FileRouteTypes {
     | '/calculator/'
     | '/manager/'
     | '/server/'
+    | '/signup/'
     | '/api/public/contact'
     | '/demo/manager/coaching'
     | '/demo/manager/menu'
@@ -949,6 +959,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/signup/': {
+      id: '/signup/'
+      path: '/'
+      fullPath: '/signup/'
+      preLoaderRoute: typeof SignupIndexRouteImport
+      parentRoute: typeof SignupRoute
     }
     '/server/': {
       id: '/server/'
@@ -1291,10 +1308,12 @@ const CalculatorRouteWithChildren = CalculatorRoute._addFileChildren(
 
 interface SignupRouteChildren {
   SignupManagerRoute: typeof SignupManagerRoute
+  SignupIndexRoute: typeof SignupIndexRoute
 }
 
 const SignupRouteChildren: SignupRouteChildren = {
   SignupManagerRoute: SignupManagerRoute,
+  SignupIndexRoute: SignupIndexRoute,
 }
 
 const SignupRouteWithChildren =
