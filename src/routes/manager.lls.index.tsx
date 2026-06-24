@@ -37,6 +37,7 @@ import {
   type Daypart,
 } from "@/lib/lls.functions";
 import { Upload, ChevronLeft, ChevronRight, AlertTriangle, TrendingUp, TrendingDown, Trash2, Gauge, Sparkles } from "lucide-react";
+import { MetricTooltip, DataQualityChip } from "@/components/metrics";
 
 export const Route = createFileRoute("/manager/lls/")({ component: LlsPage });
 
@@ -461,19 +462,49 @@ function LlsPage() {
             label="Venue Benchmark"
             value={scorecard?.venue_benchmark != null ? `${scorecard.venue_benchmark.toFixed(2)}x weekly LLS` : "—"}
             helper="Venue weekly LLS used as the benchmark for this scorecard."
+            tooltip={{
+              name: "Venue Benchmark",
+              description:
+                "Weighted weekly adjusted LLS across all servers at the venue. Used as the reference each server is compared against.",
+              formula: "Σ net_sales / Σ(labor_cost × opportunity_factor)  [weighted, shift-level OF]",
+              sourceFields: ["net_sales", "labor_cost", "opportunity_factor"],
+              provenance: "derived",
+              basisLabel: laborBasis === "fully_loaded" ? "Fully loaded labour cost" : laborBasis === "wage" ? "Wage cost only" : laborBasis === "derived" ? "Hours × rate (wage approx.)" : undefined,
+              benchmark: {
+                period: "current week",
+                scope: "venue",
+                basis: "weighted adjusted LLS",
+                weighted: true,
+              },
+            }}
           />
           <SummaryCard
             label="Benchmark WoW Trend"
             value={scorecard?.venue_benchmark_trend_pct != null ? `${scorecard.venue_benchmark_trend_pct > 0 ? "+" : ""}${scorecard.venue_benchmark_trend_pct.toFixed(1)}%` : "—"}
             trend={scorecard?.venue_benchmark_trend_pct ?? null}
             helper="How the venue benchmark changed versus last week."
+            tooltip={{
+              name: "Benchmark WoW Trend",
+              description: "% change in the venue weekly adjusted LLS vs. the prior week.",
+              formula: "(benchmark_this_week / benchmark_last_week) − 1",
+              sourceFields: ["net_sales", "labor_cost", "opportunity_factor"],
+              provenance: "derived",
+            }}
           />
           <SummaryCard
             label="Servers Tracked"
             value={String(scorecard?.servers.length ?? 0)}
             helper="Servers with both sales and labor data this week."
+            tooltip={{
+              name: "Servers Tracked",
+              description: "Servers that have at least one shift this week with both sales and labour data.",
+              formula: "count(distinct server where sales_rows > 0 AND labor_rows > 0)",
+              sourceFields: ["server_id", "net_sales", "labor_cost"],
+              provenance: "derived",
+            }}
           />
         </div>
+
 
         {/* Upload card */}
         <div className="mt-6 rounded-2xl bg-white border border-border p-6">
@@ -529,23 +560,66 @@ function LlsPage() {
                       <th key={d} className="text-center py-2 px-1.5 w-14">{d}</th>
                     ))}
                     <th className="text-right py-2 px-2">Shifts</th>
-                    <th
-                      className="text-right py-2 px-2"
-                      title="Total Weekly Gross Sales ÷ Total Weekly Covers Served. Shows how well each server monetises each guest."
-                    >Weekly RPC</th>
-                    <th
-                      className="text-right py-2 px-2"
-                      title="Total Weekly Gross Sales ÷ Total Weekly Labor Cost. Shows sales generated for every £1 of labor."
-                    >Base LLS</th>
-                    <th
-                      className="text-right py-2 px-2"
-                      title="Total Weekly Gross Sales ÷ Total Weekly Adjusted Labor Cost (labor cost × opportunity factor)."
-                    >LLS</th>
-                    <th className="text-right py-2 px-2">Venue Benchmark</th>
-                    <th
-                      className="text-right py-2 px-2"
-                      title="LLS ÷ Venue Benchmark − 1. How far the server is above or below the venue benchmark."
-                    >Gap</th>
+                    <th className="text-right py-2 px-2">
+                      <MetricTooltip
+                        name="Weekly RPC"
+                        description="Revenue per cover — average spend each guest contributes during this server's shifts."
+                        formula="Σ net_sales / Σ covers_served"
+                        sourceFields={["net_sales", "covers_served"]}
+                        provenance="derived"
+                      >
+                        <span className="cursor-help underline decoration-dotted">Weekly RPC</span>
+                      </MetricTooltip>
+                    </th>
+                    <th className="text-right py-2 px-2">
+                      <MetricTooltip
+                        name="Base LLS"
+                        description="Net sales generated for every £1 of labour cost — no opportunity adjustment."
+                        formula="Σ net_sales / Σ labor_cost  (weighted)"
+                        sourceFields={["net_sales", "labor_cost"]}
+                        provenance="derived"
+                        basisLabel={laborBasis === "fully_loaded" ? "Fully loaded labour cost" : laborBasis === "wage" ? "Wage cost only" : laborBasis === "derived" ? "Hours × rate (wage approx.)" : undefined}
+                      >
+                        <span className="cursor-help underline decoration-dotted">Base LLS</span>
+                      </MetricTooltip>
+                    </th>
+                    <th className="text-right py-2 px-2">
+                      <MetricTooltip
+                        name="Adjusted LLS"
+                        description="LLS after adjusting each shift's labour cost for opportunity factor — a busy Sat-night shift is rewarded vs. a quiet Mon-lunch shift."
+                        formula="Σ net_sales / Σ(labor_cost × opportunity_factor)  [shift-level OF, weighted]"
+                        sourceFields={["net_sales", "labor_cost", "opportunity_factor"]}
+                        provenance="derived"
+                        basisLabel={laborBasis === "fully_loaded" ? "Fully loaded labour cost" : laborBasis === "wage" ? "Wage cost only" : laborBasis === "derived" ? "Hours × rate (wage approx.)" : undefined}
+                        notes={["Opportunity factor defaults to 1.0 when not set for a daypart"]}
+                      >
+                        <span className="cursor-help underline decoration-dotted">LLS</span>
+                      </MetricTooltip>
+                    </th>
+                    <th className="text-right py-2 px-2">
+                      <MetricTooltip
+                        name="Venue Benchmark"
+                        description="The venue's weighted weekly adjusted LLS — what 'normal' looks like for this venue."
+                        formula="Σ net_sales / Σ(labor_cost × OF)  across all servers"
+                        sourceFields={["net_sales", "labor_cost", "opportunity_factor"]}
+                        provenance="derived"
+                        benchmark={{ period: "current week", scope: "venue", basis: "weighted adjusted LLS", weighted: true }}
+                      >
+                        <span className="cursor-help underline decoration-dotted">Venue Benchmark</span>
+                      </MetricTooltip>
+                    </th>
+                    <th className="text-right py-2 px-2">
+                      <MetricTooltip
+                        name="Performance Gap"
+                        description="How far above or below the venue benchmark this server's adjusted LLS is. RAG bands: strong > +10%, tracking ±5%, monitor −5% to −10%, priority < −10%."
+                        formula="(server_adjusted_lls / venue_benchmark) − 1"
+                        sourceFields={["server_adjusted_lls", "venue_benchmark"]}
+                        provenance="derived"
+                      >
+                        <span className="cursor-help underline decoration-dotted">Gap</span>
+                      </MetricTooltip>
+                    </th>
+
                     <th className="text-left py-2 pl-3">Operator meaning</th>
                   </tr>
                 </thead>
@@ -788,10 +862,13 @@ function LlsPage() {
   );
 }
 
-function SummaryCard({ label, value, band, trend, helper }: { label: string; value: string; band?: string; trend?: number | null; helper?: string }) {
+function SummaryCard({ label, value, band, trend, helper, tooltip }: { label: string; value: string; band?: string; trend?: number | null; helper?: string; tooltip?: React.ComponentProps<typeof MetricTooltip> }) {
   return (
     <div className="rounded-2xl bg-white border border-border p-5">
-      <div className="text-xs uppercase tracking-wide text-muted-foreground">{label}</div>
+      <div className="text-xs uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
+        <span>{label}</span>
+        {tooltip ? <MetricTooltip {...tooltip} /> : null}
+      </div>
       <div className="mt-2 flex items-baseline gap-2">
         <div className={`text-3xl font-extrabold font-display ${band ? bandBg(band, true).replace(/bg-[^ ]+/, "") : ""}`}>{value}</div>
         {trend != null && (
@@ -804,6 +881,7 @@ function SummaryCard({ label, value, band, trend, helper }: { label: string; val
     </div>
   );
 }
+
 
 function UploadZone({ label, sublabel, onFile }: { label: string; sublabel: string; onFile: (f: File) => void }) {
   const [drag, setDrag] = useState(false);

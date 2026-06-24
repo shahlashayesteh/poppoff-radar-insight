@@ -21,6 +21,7 @@ import {
 } from "@/lib/server-gap/calc";
 import { buildWarnings } from "@/lib/server-gap/warnings";
 import { computeConfidence } from "@/lib/server-gap/confidence";
+import { MetricTooltip, ModelledValueLabel } from "@/components/metrics";
 import {
   Accordion,
   AccordionContent,
@@ -398,12 +399,66 @@ function ServerGapPage() {
                         <th className="px-3 py-2.5">#</th>
                         <th className="px-3 py-2.5">Server</th>
                         <th className="px-3 py-2.5 text-right">Shifts</th>
-                        <th className="px-3 py-2.5 text-right">Sales</th>
-                        <th className="px-3 py-2.5 text-right">Hours</th>
-                        <th className="px-3 py-2.5 text-right">Adj. hrs</th>
-                        <th className="px-3 py-2.5 text-right">Adj. RPH</th>
-                        <th className="px-3 py-2.5 text-right">Gap vs team</th>
+                        <th className="px-3 py-2.5 text-right">
+                          <MetricTooltip
+                            name="Sales"
+                            description="Total uploaded net or gross sales for this server (per selected basis)."
+                            formula="Σ sales_per_shift"
+                            sourceFields={["net_sales", "gross_sales"]}
+                            provenance="uploaded"
+                            basisLabel={effectiveBasis === "net" ? "Net sales" : "Gross sales"}
+                          >
+                            <span className="cursor-help underline decoration-dotted">Sales</span>
+                          </MetricTooltip>
+                        </th>
+                        <th className="px-3 py-2.5 text-right">
+                          <MetricTooltip
+                            name="Hours worked"
+                            description="Paid or actual hours worked from labour upload (clock-derived where needed)."
+                            formula="Σ hours_per_shift"
+                            sourceFields={["paid_hours", "actual_hours", "clock_in", "clock_out"]}
+                            provenance="uploaded"
+                          >
+                            <span className="cursor-help underline decoration-dotted">Hours</span>
+                          </MetricTooltip>
+                        </th>
+                        <th className="px-3 py-2.5 text-right">
+                          <MetricTooltip
+                            name="Adjusted hours"
+                            description="Hours weighted by shift opportunity (inferred from actual start/end times — daypart labels in your file are never used)."
+                            formula="Σ (hours × opportunity_factor)  [shift-level]"
+                            sourceFields={["hours", "opportunity_factor"]}
+                            provenance="derived"
+                            notes={["Opportunity factor defaults to 1.0 when no time data is available"]}
+                          >
+                            <span className="cursor-help underline decoration-dotted">Adj. hrs</span>
+                          </MetricTooltip>
+                        </th>
+                        <th className="px-3 py-2.5 text-right">
+                          <MetricTooltip
+                            name="Adjusted RPH"
+                            description="Revenue per opportunity-adjusted hour. The fair productivity metric across busy vs. quiet shifts."
+                            formula="Σ sales / Σ adjusted_hours  (weighted)"
+                            sourceFields={["net_sales", "hours", "opportunity_factor"]}
+                            provenance="derived"
+                          >
+                            <span className="cursor-help underline decoration-dotted">Adj. RPH</span>
+                          </MetricTooltip>
+                        </th>
+                        <th className="px-3 py-2.5 text-right">
+                          <MetricTooltip
+                            name="Gap vs team benchmark"
+                            description="How far above or below the team's weighted adjusted RPH benchmark."
+                            formula="(server_adj_rph / team_adj_rph) − 1"
+                            sourceFields={["adjusted_rph", "team_adjusted_rph"]}
+                            provenance="derived"
+                            benchmark={{ period: "uploaded period", scope: "team", basis: "weighted adjusted RPH", weighted: true }}
+                          >
+                            <span className="cursor-help underline decoration-dotted">Gap vs team</span>
+                          </MetricTooltip>
+                        </th>
                         <th className="px-3 py-2.5">Status</th>
+
                       </tr>
                     </thead>
                     <tbody>
@@ -769,22 +824,32 @@ function RecoverableSection({
   const below = ranked.filter((s) => s.recoverableWeekly > 0);
   return (
     <section className="mt-10 rounded-md border border-border bg-card p-6">
-      <h2 className="font-display text-2xl font-bold uppercase tracking-tight">
+      <h2 className="font-display text-2xl font-bold uppercase tracking-tight inline-flex items-center gap-2">
         Recoverable opportunity
+        <ModelledValueLabel kind="directional" />
+        <MetricTooltip
+          name="Recoverable opportunity"
+          description="Directional projection of weekly £ uplift if below-benchmark servers reached the team average on the same shifts. Not guaranteed revenue."
+          formula="Σ ((team_adj_rph − server_adj_rph) × server_adj_hours)  for below-benchmark servers"
+          sourceFields={["adjusted_rph", "team_adjusted_rph", "adjusted_hours"]}
+          provenance="derived"
+          notes={["Conservative: targets team avg, not top performer.", "Modelled value — not realised revenue."]}
+        />
       </h2>
       <p className="mt-2 text-sm text-muted-foreground">
         If every below-benchmark server reached the team average (not the top performer) — same hours, same
         shifts. Conservative by design.
       </p>
       <div className="mt-5 grid gap-3 sm:grid-cols-3">
-        <Metric label="Per week" value={money0(currency, weekly)} />
-        <Metric label="Per month" value={money0(currency, monthly)} />
-        <Metric label="Per year" value={money0(currency, annual)} emphasis />
+        <Metric label="Per week" value={money0(currency, weekly)} modelled />
+        <Metric label="Per month" value={money0(currency, monthly)} modelled />
+        <Metric label="Per year" value={money0(currency, annual)} emphasis modelled />
       </div>
       <p className="mt-4 text-xs text-muted-foreground">
         Selected period: <strong className="text-foreground">{money0(currency, projected.value)}</strong>{" "}
         {projected.label}. Data span observed: {nf1.format(weeks)} week(s).
       </p>
+
       {below.length > 0 && (
         <div className="mt-5 border-t border-border pt-4">
           <p className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
@@ -806,7 +871,7 @@ function RecoverableSection({
   );
 }
 
-function Metric({ label, value, emphasis }: { label: string; value: string; emphasis?: boolean }) {
+function Metric({ label, value, emphasis, modelled }: { label: string; value: string; emphasis?: boolean; modelled?: boolean }) {
   return (
     <div
       className={cn(
@@ -814,10 +879,14 @@ function Metric({ label, value, emphasis }: { label: string; value: string; emph
         emphasis && "border-brand-orange/40 bg-brand-orange/5",
       )}
     >
-      <p className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">{label}</p>
+      <p className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground inline-flex items-center gap-1.5">
+        {label}
+        {modelled ? <ModelledValueLabel kind="modelled" /> : null}
+      </p>
       <p className={cn("mt-1 font-display text-2xl font-bold tabular-nums", emphasis && "text-brand-orange")}>
         {value}
       </p>
     </div>
   );
 }
+

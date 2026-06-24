@@ -9,6 +9,7 @@ import {
   type VenuePerformance,
 } from "@/lib/performance-engine";
 import { engineRagFromPerf } from "@/lib/metrics/server-rag";
+import { MetricTooltip, ModelledValueLabel } from "@/components/metrics";
 
 
 export const Route = createFileRoute("/manager/team")({ component: TeamPage });
@@ -90,22 +91,50 @@ function TeamPage() {
                       <div className="mt-1 text-[10px] font-bold uppercase tracking-wider" style={{ color: tone }}>{label}{rank ? ` · #${rank}` : ""}</div>
                     </div>
                     <div className="text-right">
-                      <div className="text-xs text-muted-foreground">vs benchmark</div>
+                      <div className="text-xs text-muted-foreground inline-flex items-center gap-1">
+                        vs benchmark
+                        <MetricTooltip
+                          name="Performance gap vs venue benchmark"
+                          description="Weighted gap of this server's net sales vs the modelled expected sales given their shifts."
+                          formula="(Σ sales / Σ expected_sales) − 1"
+                          sourceFields={["net_sales", "expected_sales"]}
+                          provenance="derived"
+                          benchmark={{ period: "current week", scope: "venue", basis: "weighted expected sales", weighted: true }}
+                        />
+                      </div>
                       <div className="font-display text-2xl font-extrabold" style={{ color: tone }}>{gapText}</div>
                     </div>
                   </div>
-                  <div className="mt-3 text-xs text-muted-foreground">
-                    £{sales.toFixed(0)} sales
+                  <div className="mt-3 text-xs text-muted-foreground inline-flex items-center gap-1.5">
+                    <MetricTooltip
+                      name="Net sales"
+                      description="Sum of net sales credited to this server this week."
+                      formula="Σ net_sales for server within week"
+                      sourceFields={["net_sales"]}
+                      provenance="uploaded"
+                    >
+                      <span className="cursor-help">£{sales.toFixed(0)} sales</span>
+                    </MetricTooltip>
                     {d4 !== null && d4 !== undefined && (
                       <> · <span style={{ color: d4 >= 0 ? "var(--brand-green)" : "var(--opportunity)" }}>{d4 >= 0 ? "+" : ""}{d4.toFixed(1)}% vs 4wk</span></>
                     )}
                   </div>
-                  <div className="mt-1 text-xs">
+                  <div className="mt-1 text-xs inline-flex items-center gap-1.5">
                     <span style={{ color: influence >= 0 ? "var(--brand-green)" : "var(--opportunity)" }}>
                       {influence >= 0 ? "+" : ""}£{influence.toFixed(0)} revenue influence
                     </span>
+                    <ModelledValueLabel kind="modelled" />
+                    <MetricTooltip
+                      name="Revenue influence"
+                      description="Modelled £ effect this server's performance had vs. an average baseline server doing the same shifts. Directional — not realised revenue."
+                      formula="Σ (actual_sales − expected_sales) across shifts"
+                      sourceFields={["net_sales", "expected_sales"]}
+                      provenance="derived"
+                      notes={["Modelled value — not guaranteed revenue."]}
+                    />
                   </div>
                   <div className="mt-1 text-xs text-muted-foreground">{loginCounts[m.id] || 0} login{(loginCounts[m.id] || 0) === 1 ? "" : "s"}</div>
+
                 </Link>
               );
             })}

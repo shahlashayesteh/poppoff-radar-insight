@@ -11,6 +11,7 @@ import {
   type ServerPerformance,
 } from "@/lib/performance-engine";
 import { engineRagFromPerf } from "@/lib/metrics/server-rag";
+import { MetricTooltip, ModelledValueLabel } from "@/components/metrics";
 
 import { Sparkles, Wand2 } from "lucide-react";
 import { toast } from "sonner";
@@ -102,16 +103,35 @@ function ServerView() {
 
         <div className="mt-8 grid md:grid-cols-4 gap-4">
           <div className="rounded-2xl bg-white border border-border p-5">
-            <div className="text-xs text-muted-foreground">Performance vs benchmark</div>
+            <div className="text-xs text-muted-foreground inline-flex items-center gap-1">
+              Performance vs benchmark
+              <MetricTooltip
+                name="Performance vs venue benchmark"
+                description="Weighted gap between actual sales and modelled expected sales for this server's shifts."
+                formula="(Σ sales / Σ expected_sales) − 1"
+                sourceFields={["net_sales", "expected_sales"]}
+                provenance="derived"
+                benchmark={{ period: "current week", scope: "venue", basis: "weighted expected sales", weighted: true }}
+              />
+            </div>
             <div className="font-display text-2xl font-extrabold mt-1" style={{ color: verdict.tone }}>{gapText}</div>
             <div className="text-xs mt-1" style={{ color: verdict.tone }}>{verdict.label}</div>
-
           </div>
           <div className="rounded-2xl bg-white border border-border p-5">
-            <div className="text-xs text-muted-foreground">Spend per cover</div>
+            <div className="text-xs text-muted-foreground inline-flex items-center gap-1">
+              Spend per cover
+              <MetricTooltip
+                name="Spend per cover (RPC)"
+                description="Average net spend per guest served by this server."
+                formula="Σ net_sales / Σ covers_served"
+                sourceFields={["net_sales", "covers_served"]}
+                provenance="derived"
+              />
+            </div>
             <div className="font-display text-2xl font-extrabold mt-1">£{stat?.spend_per_cover ? Number(stat.spend_per_cover).toFixed(2) : "—"}</div>
             <div className="text-xs text-muted-foreground mt-1">Target £{target?.spend_per_cover_target ?? "—"}</div>
           </div>
+
           <div className="rounded-2xl bg-white border border-border p-5">
             <div className="text-xs text-muted-foreground">Streak</div>
             <div className="font-display text-2xl font-extrabold mt-1">{streak} week{streak === 1 ? "" : "s"}</div>
@@ -143,12 +163,24 @@ function ServerView() {
               </div>
             </div>
             <div>
-              <div className="text-xs text-muted-foreground">Revenue influence</div>
+              <div className="text-xs text-muted-foreground inline-flex items-center gap-1">
+                Revenue influence
+                <ModelledValueLabel kind="modelled" />
+                <MetricTooltip
+                  name="Revenue influence"
+                  description="Modelled £ effect of this server vs. a baseline server doing the same shifts. Directional — not realised revenue."
+                  formula="Σ (actual_sales − expected_sales) across shifts"
+                  sourceFields={["net_sales", "expected_sales"]}
+                  provenance="derived"
+                  notes={["Modelled value — not guaranteed revenue."]}
+                />
+              </div>
               <div className="font-semibold" style={{ color: perf.totals.totalRevenueInfluence >= 0 ? "var(--brand-green)" : "var(--opportunity)" }}>
                 {perf.totals.totalRevenueInfluence >= 0 ? "+" : ""}£{perf.totals.totalRevenueInfluence.toFixed(0)}
               </div>
-              <div className="text-[10px] text-muted-foreground">vs venue baseline</div>
+              <div className="text-[10px] text-muted-foreground">vs venue baseline · modelled</div>
             </div>
+
           </div>
         )}
 
