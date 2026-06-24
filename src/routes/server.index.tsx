@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ServerLayout } from "@/components/server-layout";
 import { supabase } from "@/integrations/supabase/client";
 import { useRoleGate } from "@/lib/auth-gate";
+import { getActiveVenueIdForUser } from "@/lib/active-venue";
 import { claimServerCsvData, recordLogin, fetchVenueAvgPrices, estimateItemsSold, type CategoryKey } from "@/lib/server-data";
 import { Trophy, Flame, ArrowRight, TrendingDown, Sparkles, Crown, Zap, Target, ChevronUp, ChevronDown } from "lucide-react";
 import { getMondayOfWeek, toISODate, formatWeekRange, latestStatsWeek } from "@/lib/week";
