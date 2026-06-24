@@ -134,6 +134,7 @@ const PAIRING_TIMING: Record<StatKey, string> = {
 };
 
 function ServerMenu() {
+  useRoleGate("server");
   const [items, setItems] = useState<Priority[]>([]);
   const [pairings, setPairings] = useState<Pairing[]>([]);
   const [weakCats, setWeakCats] = useState<string[]>([]);
