@@ -91,20 +91,22 @@ export type Server = {
 };
 
 export const servers: Server[] = [
-  { id: "sarah", name: "Sarah", overall: "amber", wine: "red", water: "amber", cocktails: "green", desserts: "green", sides: "red", spc: "amber", weeklyFocus: "Wine", viewed: true, acknowledged: true, uplift: 140 },
-  { id: "maria", name: "Maria", overall: "green", wine: "green", water: "green", cocktails: "green", desserts: "green", sides: "amber", spc: "green", weeklyFocus: "Maintain Cocktail Strength", viewed: true, acknowledged: true, uplift: 60 },
-  { id: "james", name: "James", overall: "red", wine: "amber", water: "red", cocktails: "amber", desserts: "amber", sides: "red", spc: "red", weeklyFocus: "Bottled Water", viewed: false, acknowledged: false, uplift: 320 },
-  { id: "ahmed", name: "Ahmed", overall: "amber", wine: "amber", water: "green", cocktails: "amber", desserts: "amber", sides: "amber", spc: "amber", weeklyFocus: "Desserts", viewed: true, acknowledged: false, uplift: 180 },
-  { id: "chloe", name: "Chloe", overall: "green", wine: "green", water: "green", cocktails: "amber", desserts: "green", sides: "green", spc: "green", weeklyFocus: "Keep Water Consistency", viewed: true, acknowledged: true, uplift: 50 },
+  { id: "sarah", name: "Sarah", overall: "amber", wine: "red", water: "amber", cocktails: "green", desserts: "green", sides: "red", spc: "amber", weeklyFocus: "Wine", viewed: true, acknowledged: true, uplift: 270 },
+  { id: "maria", name: "Maria", overall: "green", wine: "green", water: "green", cocktails: "green", desserts: "green", sides: "amber", spc: "green", weeklyFocus: "Maintain Cocktail Strength", viewed: true, acknowledged: true, uplift: 110 },
+  { id: "james", name: "James", overall: "red", wine: "amber", water: "red", cocktails: "amber", desserts: "amber", sides: "red", spc: "red", weeklyFocus: "Bottled Water", viewed: false, acknowledged: false, uplift: 610 },
+  { id: "ahmed", name: "Ahmed", overall: "amber", wine: "amber", water: "green", cocktails: "amber", desserts: "amber", sides: "amber", spc: "amber", weeklyFocus: "Desserts", viewed: true, acknowledged: false, uplift: 340 },
+  { id: "chloe", name: "Chloe", overall: "green", wine: "green", water: "green", cocktails: "amber", desserts: "green", sides: "green", spc: "green", weeklyFocus: "Keep Water Consistency", viewed: true, acknowledged: true, uplift: 90 },
 ];
 
+// Headline KPI is the same total: sum of per-server modelled uplifts above
+// (270 + 110 + 610 + 340 + 90 = 1420). One source of truth — don't drift.
 export const managerKpis = {
   totalCovers: 812,
   avgSpc: 58.4,
   uplift: 1420,
   viewed: "4 of 5",
   redOpportunities: 7,
-  wineOpportunity: "+£420",
+  wineOpportunity: "+£620",
   dessertPerformance: "+12%",
   waterProgress: "+8%",
 };
