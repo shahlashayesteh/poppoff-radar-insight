@@ -131,11 +131,13 @@ function HighlightCard({
   tooltip,
   rec,
   onView,
+  currency,
 }: {
   title: string;
   tooltip: string;
   rec: ServerRecommendation | null;
   onView: (r: ServerRecommendation) => void;
+  currency: string;
 }) {
   return (
     <div className="rounded-xl bg-white border border-border p-3 flex flex-col gap-1.5">
@@ -155,7 +157,7 @@ function HighlightCard({
           <div className="font-display text-base font-bold leading-tight truncate">{rec.server_name}</div>
           <div className="text-xs text-muted-foreground truncate">{rec.best_fit_shift}</div>
           <div className="flex items-center gap-2 text-[11px] mt-0.5">
-            <span className="font-semibold">{fmtMoney(rec.modelled_opportunity)}</span>
+            <span className="font-semibold">{fmtMoney(rec.modelled_opportunity, currency)}</span>
             <ModelledValueLabel kind="modelled" />
             <Pill className={confidenceTone(rec.confidence)}>{confidenceLabel(rec.confidence)}</Pill>
           </div>
