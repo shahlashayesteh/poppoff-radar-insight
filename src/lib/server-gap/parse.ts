@@ -137,12 +137,25 @@ export function dateKey(v: unknown): string | null {
     if (y < 100) y += 2000;
     const a = +m[1];
     const b = +m[2];
-    // assume DD/MM/YYYY
-    const day = a > 12 ? a : a;
-    const mon = a > 12 ? b : b;
-    // if first segment > 12, it must be a day
-    const dd = a > 12 ? a : a; // (kept symmetric — UK default)
-    return `${y}-${String(mon).padStart(2, "0")}-${String(dd).padStart(2, "0")}`;
+    // Disambiguate DD/MM vs MM/DD:
+    //  - if first segment > 12 → must be a day → DD/MM
+    //  - if second segment > 12 → second must be a day → MM/DD
+    //  - otherwise (both ≤ 12) → default to UK / EU DD/MM/YYYY
+    let day: number;
+    let mon: number;
+    if (a > 12 && b <= 12) {
+      day = a;
+      mon = b;
+    } else if (b > 12 && a <= 12) {
+      day = b;
+      mon = a;
+    } else {
+      // ambiguous (both ≤ 12) or both > 12 (invalid) — default UK DD/MM
+      day = a;
+      mon = b;
+    }
+    if (mon < 1 || mon > 12 || day < 1 || day > 31) return null;
+    return `${y}-${String(mon).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
   }
   const t = new Date(s);
   if (!isNaN(+t)) return dateKey(t);

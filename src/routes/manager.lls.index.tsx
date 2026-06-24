@@ -147,6 +147,34 @@ function bandBg(band: string, strong = false): string {
   return "bg-muted text-muted-foreground";
 }
 
+// LaborBasis is declared near autoMap further down in this file. Repeat the
+// type alias locally so the badge component below can render without forward
+// reference issues. Keep both in sync.
+type LaborBasisLocal = "fully_loaded" | "wage" | "derived" | null;
+
+function LaborBasisBadge({ basis }: { basis: LaborBasisLocal }) {
+  if (!basis) return null;
+  const label =
+    basis === "fully_loaded"
+      ? "Fully loaded labour cost"
+      : basis === "wage"
+        ? "Wage cost only (not fully loaded)"
+        : "Derived: hours × hourly rate (wage cost approximation)";
+  const tone =
+    basis === "fully_loaded"
+      ? "bg-brand-green/10 text-brand-green border-brand-green/30"
+      : "bg-[color:var(--opportunity)]/10 text-[color:var(--opportunity)] border-[color:var(--opportunity)]/30";
+  return (
+    <div
+      className={`mt-2 inline-flex items-center gap-2 rounded-md border px-2 py-1 text-xs font-semibold ${tone}`}
+      title="LLS denominator basis detected from the most recent labor upload. Base LLS = Net Sales ÷ Labor Cost. The basis shown here is the labor cost field used."
+    >
+      <span className="uppercase tracking-wide text-[10px] opacity-70">LLS basis</span>
+      <span>{label}</span>
+    </div>
+  );
+}
+
 function LlsPage() {
   const [weekStart, setWeekStart] = useState(toISODate(getMondayOfWeek()));
   const [scorecard, setScorecard] = useState<ScorecardResult | null>(null);
@@ -161,6 +189,10 @@ function LlsPage() {
   const [autoDetected, setAutoDetected] = useState<Set<string>>(new Set());
   const [needsConfirm, setNeedsConfirm] = useState<Set<string>>(new Set());
   const [mappingOpen, setMappingOpen] = useState(false);
+  // Labor cost basis detected from the most recent labor upload. Tracked so
+  // the UI can disclose whether LLS is computed against fully-loaded labour
+  // cost or gross wage cost — never silently conflate the two.
+  const [laborBasis, setLaborBasis] = useState<LaborBasis>(null);
 
   const fetchScorecard = useServerFn(getWeeklyScorecard);
   const fetchOF = useServerFn(getOpportunityFactors);
@@ -206,7 +238,8 @@ function LlsPage() {
     }
     const fieldsRO = source === "sales" ? SALES_FIELDS : LABOR_FIELDS;
     const fields = [...fieldsRO];
-    const { mapping: auto, ambiguous } = autoMap(parsed.headers, fields, parsed.rows.slice(0, 25));
+    const { mapping: auto, ambiguous, laborBasis: detectedBasis } = autoMap(parsed.headers, fields, parsed.rows.slice(0, 25));
+    if (source === "labor") setLaborBasis(detectedBasis);
 
     // Saved per-venue mapping wins over auto if its headers still exist.
     let saved: Record<string, string> = {};
@@ -290,7 +323,12 @@ function LlsPage() {
           if (laborCost == null) {
             const hrs = normalizeNumber(get("hours_worked"));
             const rate = normalizeNumber(get("hourly_rate"));
-            if (hrs != null && rate != null) laborCost = hrs * rate;
+            if (hrs != null && rate != null) {
+              laborCost = hrs * rate;
+              // Note: derived from hours × hourly rate — this is a wage-cost
+              // approximation, not fully loaded labour cost.
+              if (laborBasis !== "fully_loaded") setLaborBasis("derived");
+            }
           }
           row.labor_cost = laborCost;
         }
@@ -407,6 +445,8 @@ function LlsPage() {
             <p className="mt-1 text-sm text-muted-foreground">
               Compare server LLS against the venue benchmark using sales, covers, labor cost, and shift opportunity.
             </p>
+            <LaborBasisBadge basis={laborBasis} />
+
           </div>
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={prevWk}><ChevronLeft className="h-4 w-4" /></Button>
@@ -674,6 +714,7 @@ function LlsPage() {
               <p className="text-xs text-muted-foreground">
                 File: <span className="font-mono">{pendingFile.filename}</span> · {pendingFile.rows.length} rows · {pendingSource} upload
               </p>
+              {pendingSource === "labor" && <LaborBasisBadge basis={laborBasis} />}
               {needsConfirm.size > 0 && (
                 <div>
                   <div className="text-xs uppercase tracking-wide text-muted-foreground mb-2">Needs your confirmation</div>
@@ -814,11 +855,17 @@ const LLS_FIELD_TO_CANONICAL: Record<string, CanonicalField> = {
   hourly_rate: "hourly_rate",
 };
 
+export type LaborBasis = "fully_loaded" | "wage" | "derived" | null;
+
 function autoMap(
   headers: string[],
   fields: ReadonlyArray<{ key: string }>,
   sampleRows?: Record<string, unknown>[],
-): { mapping: Record<string, string>; ambiguous: Set<string> } {
+): {
+  mapping: Record<string, string>;
+  ambiguous: Set<string>;
+  laborBasis: LaborBasis;
+} {
   const canonicalNeeded = fields
     .map((f) => LLS_FIELD_TO_CANONICAL[f.key])
     .filter(Boolean) as CanonicalField[];
@@ -829,17 +876,32 @@ function autoMap(
   });
   const mapping: Record<string, string> = {};
   const ambiguous = new Set<string>();
+  let laborBasis: LaborBasis = null;
   for (const f of fields) {
     const canon = LLS_FIELD_TO_CANONICAL[f.key];
     if (!canon) continue;
     let m = det.mappings[canon];
-    // Labor cost: prefer fully_loaded if direct cost is missing.
-    if (!m && canon === "labor_cost") m = det.mappings.fully_loaded_labor_cost;
+    // Labor cost: PREFER fully-loaded labour cost when present; fall back
+    // to gross wage cost. Never silently treat wage cost as fully loaded —
+    // the basis is tracked separately and surfaced in the UI.
+    if (canon === "labor_cost") {
+      const fullyLoaded = det.mappings.fully_loaded_labor_cost;
+      const wage = det.mappings.labor_cost;
+      if (fullyLoaded) {
+        m = fullyLoaded;
+        laborBasis = "fully_loaded";
+      } else if (wage) {
+        m = wage;
+        laborBasis = "wage";
+      }
+    }
     // Gross sales: fall back to net sales if needed.
     if (!m && canon === "gross_sales") m = det.mappings.net_sales;
     if (!m) continue;
     mapping[f.key] = m.header;
     if (m.confidence === "low") ambiguous.add(f.key);
   }
-  return { mapping, ambiguous };
+  return { mapping, ambiguous, laborBasis };
 }
+
+export const __test = { autoMap };
