@@ -998,6 +998,8 @@ export function computeSchedulingLeverage(
         rota_test_priority: 0,
         positive_lift_gate: lift_raw > 0 ? 1 : 0,
         cell_label: "insufficient_data",
+        cell_label_text: "—",
+        primary_reason: "",
         reasons: [],
         warnings: [],
       };
