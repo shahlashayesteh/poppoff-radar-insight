@@ -122,6 +122,8 @@ function PhoneFrame({ children }: { children: React.ReactNode }) {
 function Landing() {
   const { openCheckout, loading } = usePaddleCheckout();
   const navigate = useNavigate();
+  const [paddleStatus, setPaddleStatus] = useState<PaddleDebugStatus>({ ready: false, tokenOk: false, sdkOk: false, pricesOk: false });
+  const handleStatusChange = useCallback((s: PaddleDebugStatus) => setPaddleStatus(s), []);
 
   const handlePlanClick = async (priceId: string) => {
     try { localStorage.setItem("poppoff_pending_price_id", priceId); } catch {}
