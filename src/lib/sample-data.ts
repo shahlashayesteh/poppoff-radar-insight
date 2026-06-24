@@ -6,7 +6,6 @@ export const statusLabel = (s: Status) =>
 export const statusColor = (s: Status) =>
   s === "green" ? "var(--success)" : s === "amber" ? "var(--warning)" : "var(--opportunity)";
 
-
 export type Category = {
   key: string;
   name: string;
@@ -32,14 +31,16 @@ export const sarahCategories: Category[] = [
     name: "Desserts",
     status: "green",
     score: 88,
-    message: "Desserts is your strongest area. Keep recommending the Chocolate Fondant before bill presentation.",
+    message:
+      "Desserts is your strongest area. Keep recommending the Chocolate Fondant before bill presentation.",
   },
   {
     key: "water",
     name: "Bottled Water",
     status: "amber",
     score: 64,
-    message: "Bottled water is close to target. Offer still or sparkling at the start of every table.",
+    message:
+      "Bottled water is close to target. Offer still or sparkling at the start of every table.",
     recommendation:
       "At the start of the table, try: \u201CWould you prefer still or sparkling water for the table?\u201D",
   },
@@ -66,8 +67,20 @@ export const sarahCategories: Category[] = [
     recommendation:
       "With the ribeye, try: \u201CWould you like to add truffle fries or seasonal greens with that?\u201D",
   },
-  { key: "coffee", name: "Coffee", status: "amber", score: 60, message: "Coffee attachment can be more consistent post-dessert." },
-  { key: "digestifs", name: "Digestifs", status: "red", score: 31, message: "Digestifs is an opportunity. Suggest one digestif with coffee." },
+  {
+    key: "coffee",
+    name: "Coffee",
+    status: "amber",
+    score: 60,
+    message: "Coffee attachment can be more consistent post-dessert.",
+  },
+  {
+    key: "digestifs",
+    name: "Digestifs",
+    status: "red",
+    score: 31,
+    message: "Digestifs is an opportunity. Suggest one digestif with coffee.",
+  },
 ];
 
 export type Server = {
@@ -87,11 +100,81 @@ export type Server = {
 };
 
 export const servers: Server[] = [
-  { id: "sarah", name: "Sarah", overall: "amber", wine: "red", water: "amber", cocktails: "green", desserts: "green", sides: "red", spc: "amber", weeklyFocus: "Wine", viewed: true, acknowledged: true, uplift: 270 },
-  { id: "maria", name: "Maria", overall: "green", wine: "green", water: "green", cocktails: "green", desserts: "green", sides: "amber", spc: "green", weeklyFocus: "Maintain Cocktail Strength", viewed: true, acknowledged: true, uplift: 110 },
-  { id: "james", name: "James", overall: "red", wine: "amber", water: "red", cocktails: "amber", desserts: "amber", sides: "red", spc: "red", weeklyFocus: "Bottled Water", viewed: false, acknowledged: false, uplift: 610 },
-  { id: "ahmed", name: "Ahmed", overall: "amber", wine: "amber", water: "green", cocktails: "amber", desserts: "amber", sides: "amber", spc: "amber", weeklyFocus: "Desserts", viewed: true, acknowledged: false, uplift: 340 },
-  { id: "chloe", name: "Chloe", overall: "green", wine: "green", water: "green", cocktails: "amber", desserts: "green", sides: "green", spc: "green", weeklyFocus: "Keep Water Consistency", viewed: true, acknowledged: true, uplift: 90 },
+  {
+    id: "sarah",
+    name: "Sarah",
+    overall: "amber",
+    wine: "red",
+    water: "amber",
+    cocktails: "green",
+    desserts: "green",
+    sides: "red",
+    spc: "amber",
+    weeklyFocus: "Wine",
+    viewed: true,
+    acknowledged: true,
+    uplift: 270,
+  },
+  {
+    id: "maria",
+    name: "Maria",
+    overall: "green",
+    wine: "green",
+    water: "green",
+    cocktails: "green",
+    desserts: "green",
+    sides: "amber",
+    spc: "green",
+    weeklyFocus: "Maintain Cocktail Strength",
+    viewed: true,
+    acknowledged: true,
+    uplift: 110,
+  },
+  {
+    id: "james",
+    name: "James",
+    overall: "red",
+    wine: "amber",
+    water: "red",
+    cocktails: "amber",
+    desserts: "amber",
+    sides: "red",
+    spc: "red",
+    weeklyFocus: "Bottled Water",
+    viewed: false,
+    acknowledged: false,
+    uplift: 610,
+  },
+  {
+    id: "ahmed",
+    name: "Ahmed",
+    overall: "amber",
+    wine: "amber",
+    water: "green",
+    cocktails: "amber",
+    desserts: "amber",
+    sides: "amber",
+    spc: "amber",
+    weeklyFocus: "Desserts",
+    viewed: true,
+    acknowledged: false,
+    uplift: 340,
+  },
+  {
+    id: "chloe",
+    name: "Chloe",
+    overall: "green",
+    wine: "green",
+    water: "green",
+    cocktails: "amber",
+    desserts: "green",
+    sides: "green",
+    spc: "green",
+    weeklyFocus: "Keep Water Consistency",
+    viewed: true,
+    acknowledged: true,
+    uplift: 90,
+  },
 ];
 
 // ─────────────────────────────────────────────────────────────────────
@@ -166,11 +249,46 @@ export const demoWeeklyHistory = [
     spc: demoManagerKpis.avgSpc,
     current: true,
   },
-  { week_start: "2025-04-28", label: "28 Apr to 4 May", servers: 5, covers: 786, sales: 44210, spc: 56.25 },
-  { week_start: "2025-04-21", label: "21 Apr to 27 Apr", servers: 5, covers: 803, sales: 45380, spc: 56.51 },
-  { week_start: "2025-04-14", label: "14 Apr to 20 Apr", servers: 4, covers: 742, sales: 41020, spc: 55.28 },
-  { week_start: "2025-04-07", label: "7 Apr to 13 Apr", servers: 4, covers: 765, sales: 41890, spc: 54.76 },
-  { week_start: "2025-03-31", label: "31 Mar to 6 Apr", servers: 4, covers: 728, sales: 39810, spc: 54.68 },
+  {
+    week_start: "2025-04-28",
+    label: "28 Apr to 4 May",
+    servers: 5,
+    covers: 786,
+    sales: 44210,
+    spc: 56.25,
+  },
+  {
+    week_start: "2025-04-21",
+    label: "21 Apr to 27 Apr",
+    servers: 5,
+    covers: 803,
+    sales: 45380,
+    spc: 56.51,
+  },
+  {
+    week_start: "2025-04-14",
+    label: "14 Apr to 20 Apr",
+    servers: 4,
+    covers: 742,
+    sales: 41020,
+    spc: 55.28,
+  },
+  {
+    week_start: "2025-04-07",
+    label: "7 Apr to 13 Apr",
+    servers: 4,
+    covers: 765,
+    sales: 41890,
+    spc: 54.76,
+  },
+  {
+    week_start: "2025-03-31",
+    label: "31 Mar to 6 Apr",
+    servers: 4,
+    covers: 728,
+    sales: 39810,
+    spc: 54.68,
+  },
 ] as const;
 
 // Weekly SPC trend for /demo/manager/team — last point pulls from KPIs.
@@ -218,19 +336,69 @@ export const coachingPriorities = [
   },
   {
     title: "Bottled water consistency at lunch",
-    insight: "Lunch service shows the biggest opportunity. Offer still or sparkling at every table on seating.",
+    insight:
+      "Lunch service shows the biggest opportunity. Offer still or sparkling at every table on seating.",
   },
   {
     title: "Dessert recommendation before bill presentation",
-    insight: "Two servers stop offering dessert when tables ask for the bill. Coach to offer once before the bill is dropped.",
+    insight:
+      "Two servers stop offering dessert when tables ask for the bill. Coach to offer once before the bill is dropped.",
   },
 ];
 
 export const menuItems = [
-  { name: "Grilled Salmon", category: "Premium Main", price: 28, margin: "High", pairing: "Sancerre", priority: "High Priority", status: "Promote" },
-  { name: "Ribeye Steak", category: "Premium Main", price: 36, margin: "High", pairing: "Malbec", priority: "High Priority", status: "Promote" },
-  { name: "Chocolate Fondant", category: "Dessert", price: 12, margin: "Medium", pairing: "Espresso Martini", priority: "Standard", status: "Promote" },
-  { name: "Truffle Fries", category: "Side", price: 7, margin: "High", pairing: "Ribeye Steak", priority: "High Priority", status: "Promote" },
-  { name: "Sancerre", category: "Wine by Glass", price: 14, margin: "High", pairing: "Salmon", priority: "High Priority", status: "Promote" },
-  { name: "Sparkling Water", category: "Bottled Water", price: 5, margin: "High", pairing: "Start of Service", priority: "Standard", status: "Promote" },
+  {
+    name: "Grilled Salmon",
+    category: "Premium Main",
+    price: 28,
+    margin: "High",
+    pairing: "Sancerre",
+    priority: "High Priority",
+    status: "Promote",
+  },
+  {
+    name: "Ribeye Steak",
+    category: "Premium Main",
+    price: 36,
+    margin: "High",
+    pairing: "Malbec",
+    priority: "High Priority",
+    status: "Promote",
+  },
+  {
+    name: "Chocolate Fondant",
+    category: "Dessert",
+    price: 12,
+    margin: "Medium",
+    pairing: "Espresso Martini",
+    priority: "Standard",
+    status: "Promote",
+  },
+  {
+    name: "Truffle Fries",
+    category: "Side",
+    price: 7,
+    margin: "High",
+    pairing: "Ribeye Steak",
+    priority: "High Priority",
+    status: "Promote",
+  },
+  {
+    name: "Sancerre",
+    category: "Wine by Glass",
+    price: 14,
+    margin: "High",
+    pairing: "Salmon",
+    priority: "High Priority",
+    status: "Promote",
+  },
+  {
+    name: "Sparkling Water",
+    category: "Bottled Water",
+    price: 5,
+    margin: "High",
+    pairing: "Start of Service",
+    priority: "Standard",
+    status: "Promote",
+  },
 ];

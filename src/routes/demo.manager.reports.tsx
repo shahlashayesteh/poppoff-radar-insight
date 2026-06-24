@@ -15,10 +15,20 @@ function Page() {
 
         <div className="mt-6 grid md:grid-cols-4 gap-4">
           {[
-            { label: "Total covers (this week)", value: demoManagerKpis.totalCovers.toLocaleString() },
+            {
+              label: "Total covers (this week)",
+              value: demoManagerKpis.totalCovers.toLocaleString(),
+            },
             { label: "Avg spend per cover", value: `£${demoManagerKpis.avgSpc.toFixed(2)}` },
-            { label: "Estimated uplift", value: `£${demoManagerKpis.uplift.toLocaleString()}`, accent: true },
-            { label: "Stats viewed", value: `${demoManagerKpis.viewedCount} of ${demoManagerKpis.totalServers}` },
+            {
+              label: "Estimated uplift",
+              value: `£${demoManagerKpis.uplift.toLocaleString()}`,
+              accent: true,
+            },
+            {
+              label: "Stats viewed",
+              value: `${demoManagerKpis.viewedCount} of ${demoManagerKpis.totalServers}`,
+            },
           ].map((c) => (
             <div key={c.label} className="rounded-2xl bg-white border border-border p-5">
               <div className="text-xs text-muted-foreground">{c.label}</div>
@@ -48,7 +58,9 @@ function Page() {
                 <tr key={w.week_start} className="border-t border-border">
                   <td className="px-5 py-4 font-semibold">
                     {w.label}
-                    {"current" in w && w.current && <span className="ml-2 text-xs font-normal text-brand-green">current</span>}
+                    {"current" in w && w.current && (
+                      <span className="ml-2 text-xs font-normal text-brand-green">current</span>
+                    )}
                   </td>
                   <td className="px-3">{w.servers}</td>
                   <td className="px-3">{w.covers.toLocaleString()}</td>

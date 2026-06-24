@@ -40,11 +40,13 @@ function Page() {
                     totalDelta === null
                       ? "var(--muted-foreground)"
                       : totalDelta >= 0
-                      ? "var(--brand-green)"
-                      : "var(--opportunity)",
+                        ? "var(--brand-green)"
+                        : "var(--opportunity)",
                 }}
               >
-                {totalDelta === null ? "—" : `${totalDelta >= 0 ? "↑" : "↓"} ${Math.abs(totalDelta).toFixed(0)}%`}
+                {totalDelta === null
+                  ? "—"
+                  : `${totalDelta >= 0 ? "↑" : "↓"} ${Math.abs(totalDelta).toFixed(0)}%`}
               </div>
             </div>
           </div>
@@ -54,8 +56,8 @@ function Page() {
               colour === "green"
                 ? "var(--brand-green)"
                 : colour === "amber"
-                ? "var(--brand-orange)"
-                : "var(--opportunity)";
+                  ? "var(--brand-orange)"
+                  : "var(--opportunity)";
             const d = pctDelta(r.items, r.prevItems);
             return (
               <div key={r.label} className="rounded-2xl bg-white border border-border p-4">
