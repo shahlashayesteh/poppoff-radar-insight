@@ -38,9 +38,10 @@ import {
   type SchedulingLeverageResult,
   type Daypart,
 } from "@/lib/lls.functions";
-import { Upload, ChevronLeft, ChevronRight, AlertTriangle, TrendingUp, TrendingDown, Trash2, Gauge, Sparkles } from "lucide-react";
+import { Upload, ChevronLeft, ChevronRight, AlertTriangle, TrendingUp, TrendingDown, Trash2, Gauge, Sparkles, Info } from "lucide-react";
 import { MetricTooltip, DataQualityChip } from "@/components/metrics";
 import { SchedulingLeverageMatrix } from "@/components/lls/scheduling-leverage-matrix";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 export const Route = createFileRoute("/manager/lls/")({ component: LlsPage });
 
