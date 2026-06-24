@@ -41,12 +41,18 @@ function CheckoutRetry() {
         </p>
         <button
           disabled={loading || !priceId}
-          onClick={() => openCheckout({
-            priceId,
-            customerEmail: email,
-            customData: userId ? { userId } : undefined,
-            successUrl: `${window.location.origin}/checkout/success?priceId=${encodeURIComponent(priceId)}`,
-          })}
+          onClick={async () => {
+            const res = await openCheckout({
+              priceId,
+              customerEmail: email,
+              customData: userId ? { userId } : undefined,
+              successUrl: `${window.location.origin}/checkout/success?priceId=${encodeURIComponent(priceId)}`,
+            });
+            if (!res.ok) {
+              const { toast } = await import("sonner");
+              toast.error(res.message);
+            }
+          }}
           className="mt-6 w-full rounded-xl py-3 text-sm font-bold text-white disabled:opacity-60"
           style={{ background: "var(--brand-orange)" }}
         >
