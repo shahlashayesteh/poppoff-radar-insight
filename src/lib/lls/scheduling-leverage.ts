@@ -144,10 +144,12 @@ export interface ShiftTypeBaseline {
 export interface ServerWorkingPattern {
   server_id: string;
   active_weeks: number;
-  total_shifts: number;
+  total_shifts: number;             // unique shifts (deduped)
+  total_worked_days: number;        // unique calendar days worked
   avg_shifts_per_week: number;
   p75_shifts_per_week: number;
   max_shifts_per_week: number;
+  avg_worked_days_per_week: number;
   avg_hours_per_week: number;
   p75_hours_per_week: number;
   max_hours_per_week: number;
