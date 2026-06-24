@@ -182,6 +182,7 @@ function LaborBasisBadge({ basis }: { basis: LaborBasisLocal }) {
 function LlsPage() {
   const [weekStart, setWeekStart] = useState(toISODate(getMondayOfWeek()));
   const [scorecard, setScorecard] = useState<ScorecardResult | null>(null);
+  const [leverage, setLeverage] = useState<SchedulingLeverageResult | null>(null);
   const [grid, setGrid] = useState<Record<number, Record<Daypart, number>> | null>(null);
   const [batches, setBatches] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
