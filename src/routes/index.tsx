@@ -431,7 +431,7 @@ function Landing() {
             <span className="text-muted-foreground">© 2026 PoppOff. All rights reserved.</span>
           </div>
           <nav className="flex items-center gap-6 text-muted-foreground">
-            <a href="mailto:hello@poppoffstats.com" className="hover:text-foreground">Contact</a>
+            <Link to="/contact" className="hover:text-foreground">Book audit</Link>
             <Link to="/privacy" className="hover:text-foreground">Privacy Policy</Link>
             <Link to="/terms" className="hover:text-foreground">Terms of Service</Link>
           </nav>
