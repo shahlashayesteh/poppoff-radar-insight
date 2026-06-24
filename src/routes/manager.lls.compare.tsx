@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { getMondayOfWeek, toISODate, formatWeekRange, previousMonday } from "@/lib/week";
 import { getLlsComparison, type ComparisonPayload } from "@/lib/lls/v2/comparison.functions";
 import { ChevronLeft, ChevronRight, ArrowLeft, AlertCircle } from "lucide-react";
+import { MetricTooltip, ModelledValueLabel } from "@/components/metrics";
 
 export const Route = createFileRoute("/manager/lls/compare")({ component: ComparePage });
 
