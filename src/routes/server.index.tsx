@@ -123,8 +123,7 @@ function ServerDashboard() {
       setName(fn.split(" ")[0] || "there");
       await claimServerCsvData();
       await recordLogin();
-      const { data: vm } = await supabase.from("venue_members").select("venue_id").eq("user_id", u.user.id).limit(1);
-      const v = vm?.[0]?.venue_id;
+      const v = await getActiveVenueIdForUser(u.user.id);
       if (!v) return;
       setVenueId(v);
       const visibleWeek = await latestStatsWeek(
