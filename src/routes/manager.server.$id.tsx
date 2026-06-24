@@ -163,12 +163,24 @@ function ServerView() {
               </div>
             </div>
             <div>
-              <div className="text-xs text-muted-foreground">Revenue influence</div>
+              <div className="text-xs text-muted-foreground inline-flex items-center gap-1">
+                Revenue influence
+                <ModelledValueLabel kind="modelled" />
+                <MetricTooltip
+                  name="Revenue influence"
+                  description="Modelled £ effect of this server vs. a baseline server doing the same shifts. Directional — not realised revenue."
+                  formula="Σ (actual_sales − expected_sales) across shifts"
+                  sourceFields={["net_sales", "expected_sales"]}
+                  provenance="derived"
+                  notes={["Modelled value — not guaranteed revenue."]}
+                />
+              </div>
               <div className="font-semibold" style={{ color: perf.totals.totalRevenueInfluence >= 0 ? "var(--brand-green)" : "var(--opportunity)" }}>
                 {perf.totals.totalRevenueInfluence >= 0 ? "+" : ""}£{perf.totals.totalRevenueInfluence.toFixed(0)}
               </div>
-              <div className="text-[10px] text-muted-foreground">vs venue baseline</div>
+              <div className="text-[10px] text-muted-foreground">vs venue baseline · modelled</div>
             </div>
+
           </div>
         )}
 
