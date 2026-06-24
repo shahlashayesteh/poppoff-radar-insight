@@ -481,7 +481,7 @@ function ServerGapPage() {
                             {nf1.format(s.gapPct * 100)}%
                           </td>
                           <td className="px-3 py-2.5">
-                            <RankPill rank={s.rank} />
+                            <RankPill band={s.rankBand} />
                           </td>
                         </tr>
                       ))}
