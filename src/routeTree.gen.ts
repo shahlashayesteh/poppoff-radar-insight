@@ -36,6 +36,7 @@ import { Route as ServerProgressRouteImport } from './routes/server.progress'
 import { Route as ServerProfileRouteImport } from './routes/server.profile'
 import { Route as ServerMenuRouteImport } from './routes/server.menu'
 import { Route as ServerLeaderboardRouteImport } from './routes/server.leaderboard'
+import { Route as ServerCoachingRouteImport } from './routes/server.coaching'
 import { Route as ManagerTeamRouteImport } from './routes/manager.team'
 import { Route as ManagerSettingsRouteImport } from './routes/manager.settings'
 import { Route as ManagerReportsRouteImport } from './routes/manager.reports'
@@ -212,6 +213,11 @@ const ServerMenuRoute = ServerMenuRouteImport.update({
 const ServerLeaderboardRoute = ServerLeaderboardRouteImport.update({
   id: '/server/leaderboard',
   path: '/server/leaderboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ServerCoachingRoute = ServerCoachingRouteImport.update({
+  id: '/server/coaching',
+  path: '/server/coaching',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ManagerTeamRoute = ManagerTeamRouteImport.update({
@@ -434,6 +440,7 @@ export interface FileRoutesByFullPath {
   '/manager/reports': typeof ManagerReportsRoute
   '/manager/settings': typeof ManagerSettingsRoute
   '/manager/team': typeof ManagerTeamRoute
+  '/server/coaching': typeof ServerCoachingRoute
   '/server/leaderboard': typeof ServerLeaderboardRoute
   '/server/menu': typeof ServerMenuRoute
   '/server/profile': typeof ServerProfileRoute
@@ -497,6 +504,7 @@ export interface FileRoutesByTo {
   '/manager/reports': typeof ManagerReportsRoute
   '/manager/settings': typeof ManagerSettingsRoute
   '/manager/team': typeof ManagerTeamRoute
+  '/server/coaching': typeof ServerCoachingRoute
   '/server/leaderboard': typeof ServerLeaderboardRoute
   '/server/menu': typeof ServerMenuRoute
   '/server/profile': typeof ServerProfileRoute
@@ -564,6 +572,7 @@ export interface FileRoutesById {
   '/manager/reports': typeof ManagerReportsRoute
   '/manager/settings': typeof ManagerSettingsRoute
   '/manager/team': typeof ManagerTeamRoute
+  '/server/coaching': typeof ServerCoachingRoute
   '/server/leaderboard': typeof ServerLeaderboardRoute
   '/server/menu': typeof ServerMenuRoute
   '/server/profile': typeof ServerProfileRoute
@@ -632,6 +641,7 @@ export interface FileRouteTypes {
     | '/manager/reports'
     | '/manager/settings'
     | '/manager/team'
+    | '/server/coaching'
     | '/server/leaderboard'
     | '/server/menu'
     | '/server/profile'
@@ -695,6 +705,7 @@ export interface FileRouteTypes {
     | '/manager/reports'
     | '/manager/settings'
     | '/manager/team'
+    | '/server/coaching'
     | '/server/leaderboard'
     | '/server/menu'
     | '/server/profile'
@@ -761,6 +772,7 @@ export interface FileRouteTypes {
     | '/manager/reports'
     | '/manager/settings'
     | '/manager/team'
+    | '/server/coaching'
     | '/server/leaderboard'
     | '/server/menu'
     | '/server/profile'
@@ -827,6 +839,7 @@ export interface RootRouteChildren {
   ManagerReportsRoute: typeof ManagerReportsRoute
   ManagerSettingsRoute: typeof ManagerSettingsRoute
   ManagerTeamRoute: typeof ManagerTeamRoute
+  ServerCoachingRoute: typeof ServerCoachingRoute
   ServerLeaderboardRoute: typeof ServerLeaderboardRoute
   ServerMenuRoute: typeof ServerMenuRoute
   ServerProfileRoute: typeof ServerProfileRoute
@@ -1048,6 +1061,13 @@ declare module '@tanstack/react-router' {
       path: '/server/leaderboard'
       fullPath: '/server/leaderboard'
       preLoaderRoute: typeof ServerLeaderboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/server/coaching': {
+      id: '/server/coaching'
+      path: '/server/coaching'
+      fullPath: '/server/coaching'
+      preLoaderRoute: typeof ServerCoachingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/manager/team': {
@@ -1383,6 +1403,7 @@ const rootRouteChildren: RootRouteChildren = {
   ManagerReportsRoute: ManagerReportsRoute,
   ManagerSettingsRoute: ManagerSettingsRoute,
   ManagerTeamRoute: ManagerTeamRoute,
+  ServerCoachingRoute: ServerCoachingRoute,
   ServerLeaderboardRoute: ServerLeaderboardRoute,
   ServerMenuRoute: ServerMenuRoute,
   ServerProfileRoute: ServerProfileRoute,
