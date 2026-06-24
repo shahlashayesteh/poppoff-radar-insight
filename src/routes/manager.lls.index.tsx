@@ -295,7 +295,12 @@ function LlsPage() {
           if (laborCost == null) {
             const hrs = normalizeNumber(get("hours_worked"));
             const rate = normalizeNumber(get("hourly_rate"));
-            if (hrs != null && rate != null) laborCost = hrs * rate;
+            if (hrs != null && rate != null) {
+              laborCost = hrs * rate;
+              // Note: derived from hours × hourly rate — this is a wage-cost
+              // approximation, not fully loaded labour cost.
+              if (laborBasis !== "fully_loaded") setLaborBasis("derived");
+            }
           }
           row.labor_cost = laborCost;
         }
