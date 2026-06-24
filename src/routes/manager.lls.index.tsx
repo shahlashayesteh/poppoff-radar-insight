@@ -147,6 +147,34 @@ function bandBg(band: string, strong = false): string {
   return "bg-muted text-muted-foreground";
 }
 
+// LaborBasis is declared near autoMap further down in this file. Repeat the
+// type alias locally so the badge component below can render without forward
+// reference issues. Keep both in sync.
+type LaborBasisLocal = "fully_loaded" | "wage" | "derived" | null;
+
+function LaborBasisBadge({ basis }: { basis: LaborBasisLocal }) {
+  if (!basis) return null;
+  const label =
+    basis === "fully_loaded"
+      ? "Fully loaded labour cost"
+      : basis === "wage"
+        ? "Wage cost only (not fully loaded)"
+        : "Derived: hours × hourly rate (wage cost approximation)";
+  const tone =
+    basis === "fully_loaded"
+      ? "bg-brand-green/10 text-brand-green border-brand-green/30"
+      : "bg-[color:var(--opportunity)]/10 text-[color:var(--opportunity)] border-[color:var(--opportunity)]/30";
+  return (
+    <div
+      className={`mt-2 inline-flex items-center gap-2 rounded-md border px-2 py-1 text-xs font-semibold ${tone}`}
+      title="LLS denominator basis detected from the most recent labor upload. Base LLS = Net Sales ÷ Labor Cost. The basis shown here is the labor cost field used."
+    >
+      <span className="uppercase tracking-wide text-[10px] opacity-70">LLS basis</span>
+      <span>{label}</span>
+    </div>
+  );
+}
+
 function LlsPage() {
   const [weekStart, setWeekStart] = useState(toISODate(getMondayOfWeek()));
   const [scorecard, setScorecard] = useState<ScorecardResult | null>(null);
