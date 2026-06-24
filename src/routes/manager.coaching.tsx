@@ -11,6 +11,7 @@ import { toast } from "sonner";
 export const Route = createFileRoute("/manager/coaching")({ component: Page });
 
 function Page() {
+  useRoleGate("manager");
   const [venueId, setVenueId] = useState<string | null>(null);
   const [priorities, setPriorities] = useState<any[]>([]);
   const [insights, setInsights] = useState<string>("");
