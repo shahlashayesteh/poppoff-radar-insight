@@ -85,8 +85,9 @@ export const getLlsComparison = createServerFn({ method: "POST" })
       v1Shifts += 1;
     }
 
-    // --- v1 historical benchmark (prior 4 weeks venue adj LLS) ---
-    const v1HistStart = addDays(ws, -28);
+    // --- v1 historical benchmark (aligned to baselineWeeks for apples-to-apples comparison with v2) ---
+    const v1HistStart = baselineStart;
+
     const { data: v1Hist } = await supabase
       .from("shifts")
       .select("gross_sales, labor_cost, opportunity_factor")
