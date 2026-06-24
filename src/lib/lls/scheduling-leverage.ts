@@ -379,6 +379,47 @@ function isoWeekKey(dateIso: string): string {
   return `${target.getUTCFullYear()}-W${String(week).padStart(2, "0")}`;
 }
 
+// Unique-shift key — protects working-pattern counts from being inflated by
+// multiple POS / category rows belonging to the same scheduled shift.
+//   Preferred: server | date | outlet | start | end
+//   Fallback : server | date | outlet | daypart
+export function uniqueShiftKey(r: LeverageShiftRow): string {
+  const start = (r.shift_start ?? "").trim();
+  const end = (r.shift_end ?? "").trim();
+  if (start || end) {
+    return `${r.server_id}|${r.shift_date}|${r.outlet ?? ""}|${start}|${end}`;
+  }
+  return `${r.server_id}|${r.shift_date}|${r.outlet ?? ""}|${r.daypart}`;
+}
+
+// Pick a representative row per unique shift, preserving max signal (hours,
+// covers, sales, labour) across joined POS / category / labour rows.
+function dedupeUniqueShifts(rows: LeverageShiftRow[]): LeverageShiftRow[] {
+  const byKey = new Map<string, LeverageShiftRow>();
+  for (const r of rows) {
+    const k = uniqueShiftKey(r);
+    const prev = byKey.get(k);
+    if (!prev) {
+      byKey.set(k, { ...r });
+      continue;
+    }
+    // merge — take max of positive numeric signals (avoids double-counting)
+    const maxOr = (a: number | null | undefined, b: number | null | undefined) => {
+      const av = isPos(a) ? (a as number) : null;
+      const bv = isPos(b) ? (b as number) : null;
+      if (av != null && bv != null) return Math.max(av, bv);
+      return av ?? bv ?? null;
+    };
+    prev.hours = maxOr(prev.hours, r.hours);
+    prev.covers = maxOr(prev.covers, r.covers);
+    prev.gross_sales = maxOr(prev.gross_sales, r.gross_sales);
+    prev.net_sales = maxOr(prev.net_sales, r.net_sales);
+    prev.labor_cost = maxOr(prev.labor_cost, r.labor_cost);
+    prev.checks = maxOr(prev.checks, r.checks);
+  }
+  return [...byKey.values()];
+}
+
 // ---------- working pattern ----------
 
 function computeWorkingPattern(
@@ -386,7 +427,10 @@ function computeWorkingPattern(
   rows: LeverageShiftRow[],
   opts: LeverageEngineOptions,
 ): ServerWorkingPattern {
-  const mine = rows.filter((r) => r.server_id === serverId);
+  // Count UNIQUE scheduled shifts only — multiple rows from the same shift
+  // (POS + category + labour joins) must not inflate weekly pattern counts.
+  const mine = dedupeUniqueShifts(rows.filter((r) => r.server_id === serverId));
+
   const byWeek = new Map<string, LeverageShiftRow[]>();
   for (const r of mine) {
     const k = isoWeekKey(r.shift_date);
@@ -397,19 +441,18 @@ function computeWorkingPattern(
   const weeklyHours = [...byWeek.values()].map((w) =>
     w.reduce((a, r) => a + (isPos(r.hours ?? null) ? r.hours! : 0), 0),
   );
+  const weeklyDays = [...byWeek.values()].map((w) => new Set(w.map((r) => r.shift_date)).size);
 
-  const dayCounts = new Map<number, number>();
-  const dayPartCounts = new Map<string, number>();
   const outletCounts = new Map<string, number>();
   for (const r of mine) {
-    dayCounts.set(r.day_of_week, (dayCounts.get(r.day_of_week) ?? 0) + 1);
-    dayPartCounts.set(r.daypart, (dayPartCounts.get(r.daypart) ?? 0) + 1);
     if (r.outlet) outletCounts.set(r.outlet, (outletCounts.get(r.outlet) ?? 0) + 1);
   }
 
   const active_weeks = byWeek.size;
   const total_shifts = mine.length;
+  const total_worked_days = new Set(mine.map((r) => r.shift_date)).size;
   const avg_shifts_per_week = active_weeks > 0 ? total_shifts / active_weeks : 0;
+  const avg_worked_days_per_week = active_weeks > 0 ? total_worked_days / active_weeks : 0;
   const p75_shifts_per_week = percentile(weeklyShifts, 0.75) ?? 0;
   const max_shifts_per_week = weeklyShifts.length ? Math.max(...weeklyShifts) : 0;
   const totalHrs = weeklyHours.reduce((a, b) => a + b, 0);
@@ -417,7 +460,6 @@ function computeWorkingPattern(
   const p75_hours_per_week = percentile(weeklyHours, 0.75) ?? 0;
   const max_hours_per_week = weeklyHours.length ? Math.max(...weeklyHours) : 0;
 
-  // "Usual" = day/daypart/outlet that the server worked in ≥30% of active weeks.
   const weeksByDay = new Map<number, Set<string>>();
   const weeksByDp = new Map<string, Set<string>>();
   for (const [wk, list] of byWeek) {
@@ -443,6 +485,7 @@ function computeWorkingPattern(
   let label: string;
   const contracted = opts.contractedShiftsPerWeek?.[serverId];
   const contractedH = opts.contractedHoursPerWeek?.[serverId];
+  const rounded = (n: number) => (n >= 10 ? n.toFixed(0) : n.toFixed(1));
   if (active_weeks < 2) {
     pattern = "unknown";
     label = "Observed pattern: insufficient history";
@@ -450,16 +493,16 @@ function computeWorkingPattern(
     const variation = max_shifts_per_week - Math.max(1, p75_shifts_per_week);
     if (p75_shifts_per_week >= 5 || p75_hours_per_week >= 35) {
       pattern = "likely_full_time";
-      label = `Observed pattern: likely full-time (${avg_shifts_per_week.toFixed(1)} shifts/wk)`;
+      label = `Observed pattern: likely full-time (~${rounded(avg_shifts_per_week)} shifts/wk, ${rounded(avg_worked_days_per_week)} days/wk)`;
     } else if (p75_shifts_per_week <= 3 || p75_hours_per_week < 28) {
       pattern = "likely_part_time";
-      label = `Observed pattern: likely part-time (~${Math.round(avg_shifts_per_week)} shifts/wk)`;
+      label = `Observed pattern: likely part-time (~${rounded(avg_shifts_per_week)} shifts/wk)`;
     } else if (variation >= 2) {
       pattern = "variable";
-      label = `Observed pattern: variable (${avg_shifts_per_week.toFixed(1)} shifts/wk avg)`;
+      label = `Observed pattern: variable, ${Math.max(0, max_shifts_per_week - 2)}–${max_shifts_per_week} shifts/wk`;
     } else {
       pattern = "variable";
-      label = `Observed pattern: ~${avg_shifts_per_week.toFixed(1)} shifts/wk`;
+      label = `Observed pattern: ~${rounded(avg_shifts_per_week)} shifts/wk`;
     }
   }
   if (contracted != null) label = `Contracted ${contracted} shifts/wk` + (contractedH ? ` (${contractedH}h)` : "");
@@ -468,7 +511,9 @@ function computeWorkingPattern(
     server_id: serverId,
     active_weeks,
     total_shifts,
+    total_worked_days,
     avg_shifts_per_week,
+    avg_worked_days_per_week,
     p75_shifts_per_week,
     max_shifts_per_week,
     avg_hours_per_week,
