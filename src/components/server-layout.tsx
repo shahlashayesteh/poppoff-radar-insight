@@ -7,8 +7,8 @@ const items = [
   { to: "/server", label: "Home", icon: Home },
   { to: "/server/stats", label: "Stats", icon: BarChart3 },
   { to: "/server/leaderboard", label: "Ranks", icon: Trophy },
-  { to: "/server/menu", label: "Coaching", icon: Target },
-  { to: "/server/welcome", label: "Rewards", icon: Gift },
+  { to: "/server/coaching", label: "Coaching", icon: Target },
+  { to: "/server/rewards", label: "Rewards", icon: Gift },
   { to: "/server/profile", label: "Profile", icon: User },
 ];
 
