@@ -208,10 +208,8 @@ export function SchedulingLeverageMatrix({ data }: { data: SchedulingLeverageRes
                     <td className="py-2 pr-3 text-xs text-muted-foreground">
                       {r.suggested_rota_test}
                     </td>
-                    <td className="py-2 pr-3 text-right text-xs">
-                      <ModelledValueLabel variant="modelled">
-                        {fmtMoney(r.modelled_opportunity)}
-                      </ModelledValueLabel>
+                    <td className="py-2 pr-3 text-right text-xs whitespace-nowrap">
+                      {fmtMoney(r.modelled_opportunity)} <ModelledValueLabel kind="modelled" />
                     </td>
                     <td className="py-2 pr-3 text-right text-xs">{confidenceLabel(r.confidence)}</td>
                   </tr>
