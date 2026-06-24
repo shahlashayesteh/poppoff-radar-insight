@@ -33,11 +33,14 @@ import {
   saveColumnMapping,
   listRecentBatches,
   rollbackBatch,
+  getSchedulingLeverage,
   type ScorecardResult,
+  type SchedulingLeverageResult,
   type Daypart,
 } from "@/lib/lls.functions";
 import { Upload, ChevronLeft, ChevronRight, AlertTriangle, TrendingUp, TrendingDown, Trash2, Gauge, Sparkles } from "lucide-react";
 import { MetricTooltip, DataQualityChip } from "@/components/metrics";
+import { SchedulingLeverageMatrix } from "@/components/lls/scheduling-leverage-matrix";
 
 export const Route = createFileRoute("/manager/lls/")({ component: LlsPage });
 
