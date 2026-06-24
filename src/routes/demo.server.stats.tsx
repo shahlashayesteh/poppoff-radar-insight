@@ -1,19 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { ServerLayout } from "@/components/server-layout";
 import { performanceColour } from "@/lib/week";
+import { sarahDemoStats, demoVenue } from "@/lib/sample-data";
 
 export const Route = createFileRoute("/demo/server/stats")({ component: Page });
 
 type Row = { label: string; conversion: number; target: number; items: number; prevItems: number };
 
-const rows: Row[] = [
-  { label: "Wine", conversion: 42, target: 65, items: 18, prevItems: 24 },
-  { label: "Cocktails", conversion: 81, target: 70, items: 32, prevItems: 27 },
-  { label: "Desserts", conversion: 88, target: 75, items: 41, prevItems: 36 },
-  { label: "Sides", conversion: 38, target: 60, items: 22, prevItems: 28 },
-  { label: "Spirits", conversion: 58, target: 55, items: 14, prevItems: 12 },
-  { label: "Sparkling", conversion: 64, target: 70, items: 19, prevItems: 17 },
-];
+const rows: Row[] = sarahDemoStats.map((r) => ({ ...r }));
 
 function pctDelta(current: number, previous: number): number | null {
   if (!previous || previous === 0) return null;
