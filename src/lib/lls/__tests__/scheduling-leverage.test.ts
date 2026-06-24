@@ -286,6 +286,8 @@ describe("Scheduling Leverage v2", () => {
     if (sun) {
       expect(["requires_availability", "test_monitor", "avoid_for_now", "insufficient_data"]).toContain(sun.cell_label);
     }
+  });
+
   it("working pattern counts UNIQUE shifts — multiple POS/category rows from the same shift do not inflate weekly counts", () => {
     // Sarah has 8 weeks of Tue+Thu+Sat dinner shifts; each shift has 3 duplicate
     // rows (POS sale + 2 category-split rows). Working pattern must still say ~3 shifts/wk.
