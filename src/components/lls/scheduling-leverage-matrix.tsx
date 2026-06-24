@@ -415,7 +415,7 @@ export function SchedulingLeverageMatrix({ data, currency = "£" }: { data: Sche
                     <td className="py-2 pr-3 whitespace-nowrap">{r.best_fit_shift}</td>
                     <td className="py-2 pr-3 text-xs">{actionFromTestStyle(r)}</td>
                     <td className="py-2 pr-3 text-right font-semibold whitespace-nowrap">
-                      {fmtMoney(r.modelled_opportunity)}
+                      {fmtMoney(r.modelled_opportunity, currency)}
                     </td>
                     <td className="py-2 pr-3 text-center">
                       <Pill className={confidenceTone(r.confidence)}>{confidenceLabel(r.confidence)}</Pill>
