@@ -199,12 +199,14 @@ export function projectPeriod(
   weeklyRecoverable: number,
   period: Period,
   dataWeeks = 1,
+  tradingWeeks = 52,
 ): { label: string; value: number } {
+  const tw = clampTradingWeeks(tradingWeeks);
   switch (period) {
     case "weekly":
       return { label: "per week", value: weeklyRecoverable };
     case "monthly":
-      return { label: "per month", value: weeklyRecoverable * (52 / 12) };
+      return { label: "per month", value: (weeklyRecoverable * tw) / 12 };
     case "custom":
       return { label: `over ${dataWeeks.toFixed(1)} weeks observed`, value: weeklyRecoverable * dataWeeks };
   }
