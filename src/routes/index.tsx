@@ -3,11 +3,9 @@ import { Logo } from "@/components/logo";
 import { Trophy, Award, Check, ShieldCheck, BarChart3, Users, BookOpen, Target } from "lucide-react";
 import { usePaddleCheckout } from "@/hooks/usePaddleCheckout";
 import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
-import { PaddleDebugPanel, type PaddleDebugStatus } from "@/components/PaddleDebugPanel";
 import { supabase } from "@/integrations/supabase/client";
 import { precheckPaddle } from "@/lib/paddle";
 import { toast } from "sonner";
-import { useCallback, useState } from "react";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -122,8 +120,6 @@ function PhoneFrame({ children }: { children: React.ReactNode }) {
 function Landing() {
   const { openCheckout, loading } = usePaddleCheckout();
   const navigate = useNavigate();
-  const [paddleStatus, setPaddleStatus] = useState<PaddleDebugStatus>({ ready: false, tokenOk: false, sdkOk: false, pricesOk: false });
-  const handleStatusChange = useCallback((s: PaddleDebugStatus) => setPaddleStatus(s), []);
 
   const handlePlanClick = async (priceId: string) => {
     try { localStorage.setItem("poppoff_pending_price_id", priceId); } catch {}
@@ -372,12 +368,6 @@ function Landing() {
       <section id="pricing" className="px-6 py-20">
         <div className="mx-auto max-w-6xl">
           <h2 className="font-display text-4xl md:text-5xl font-extrabold tracking-tight">Simple, transparent pricing</h2>
-          <div className="mt-8">
-            <PaddleDebugPanel
-              priceIds={["poppoff_starter_monthly", "poppoff_pro_monthly"]}
-              onStatusChange={handleStatusChange}
-            />
-          </div>
           <div className="mt-10 grid md:grid-cols-3 gap-5">
             {[
               { name: "Starter", price: "£99", priceId: "poppoff_starter_monthly", note: "/ month", featured: false, features: ["1 venue", "30-day free trial", "Personal server scorecards", "All coaching", "Menu intelligence"], cta: "Start Free Trial", action: "checkout" as const },
@@ -403,12 +393,11 @@ function Landing() {
                 ) : (
                   <button
                     onClick={() => handlePlanClick(p.priceId)}
-                    disabled={loading || !paddleStatus.ready}
-                    title={!paddleStatus.ready ? "Checking Paddle configuration…" : undefined}
-                    className={`mt-6 block w-full text-center rounded-xl py-3 text-sm font-bold disabled:opacity-60 disabled:cursor-not-allowed ${p.featured ? "text-white" : "border-2 border-brand-orange text-brand-orange"}`}
+                    disabled={loading}
+                    className={`mt-6 block w-full text-center rounded-xl py-3 text-sm font-bold disabled:opacity-60 ${p.featured ? "text-white" : "border-2 border-brand-orange text-brand-orange"}`}
                     style={p.featured ? { background: "var(--brand-orange)" } : {}}
                   >
-                    {loading ? "Opening…" : !paddleStatus.ready ? "Checking…" : p.cta}
+                    {loading ? "Opening…" : p.cta}
                   </button>
                 )}
               </div>
