@@ -37,6 +37,7 @@ import {
   type Daypart,
 } from "@/lib/lls.functions";
 import { Upload, ChevronLeft, ChevronRight, AlertTriangle, TrendingUp, TrendingDown, Trash2, Gauge, Sparkles } from "lucide-react";
+import { MetricTooltip, DataQualityChip } from "@/components/metrics";
 
 export const Route = createFileRoute("/manager/lls/")({ component: LlsPage });
 
