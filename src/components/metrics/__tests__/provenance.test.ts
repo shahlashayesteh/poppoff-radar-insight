@@ -35,7 +35,8 @@ describe("provenance labels", () => {
   });
 
   it("never relabels wage_only as fully loaded", () => {
-    expect(LABOR_BASIS_LABEL.wage_only).not.toMatch(/fully loaded/i);
+    // Wage-only must explicitly disclose it is NOT fully loaded.
+    expect(LABOR_BASIS_LABEL.wage_only).toMatch(/not fully loaded/i);
     expect(LABOR_BASIS_LABEL.wage_only).toMatch(/wage cost only/i);
     expect(LABOR_BASIS_LABEL.rate_times_hours).toMatch(/approx|approximation/i);
   });
