@@ -21,6 +21,7 @@ import {
 } from "@/lib/server-gap/calc";
 import { buildWarnings } from "@/lib/server-gap/warnings";
 import { computeConfidence } from "@/lib/server-gap/confidence";
+import { MetricTooltip, ModelledValueLabel } from "@/components/metrics";
 import {
   Accordion,
   AccordionContent,
