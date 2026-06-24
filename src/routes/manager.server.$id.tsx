@@ -6,13 +6,12 @@ import { getManagerVenue } from "@/lib/manager-venue";
 import { getMondayOfWeek, toISODate, formatWeekRange, latestStatsWeek } from "@/lib/week";
 import {
   loadServerPerformance,
-  overallScore,
   statusTone,
-  scoreTone,
-  scoreLabel,
   formatItems,
   type ServerPerformance,
 } from "@/lib/performance-engine";
+import { engineRagFromPerf } from "@/lib/metrics/server-rag";
+
 import { Sparkles, Wand2 } from "lucide-react";
 import { toast } from "sonner";
 
