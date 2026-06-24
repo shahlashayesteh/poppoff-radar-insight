@@ -819,10 +819,13 @@ function LlsPage() {
   );
 }
 
-function SummaryCard({ label, value, band, trend, helper }: { label: string; value: string; band?: string; trend?: number | null; helper?: string }) {
+function SummaryCard({ label, value, band, trend, helper, tooltip }: { label: string; value: string; band?: string; trend?: number | null; helper?: string; tooltip?: React.ComponentProps<typeof MetricTooltip> }) {
   return (
     <div className="rounded-2xl bg-white border border-border p-5">
-      <div className="text-xs uppercase tracking-wide text-muted-foreground">{label}</div>
+      <div className="text-xs uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
+        <span>{label}</span>
+        {tooltip ? <MetricTooltip {...tooltip} /> : null}
+      </div>
       <div className="mt-2 flex items-baseline gap-2">
         <div className={`text-3xl font-extrabold font-display ${band ? bandBg(band, true).replace(/bg-[^ ]+/, "") : ""}`}>{value}</div>
         {trend != null && (
@@ -835,6 +838,7 @@ function SummaryCard({ label, value, band, trend, helper }: { label: string; val
     </div>
   );
 }
+
 
 function UploadZone({ label, sublabel, onFile }: { label: string; sublabel: string; onFile: (f: File) => void }) {
   const [drag, setDrag] = useState(false);
