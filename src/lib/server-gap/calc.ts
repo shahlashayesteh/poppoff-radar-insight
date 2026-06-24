@@ -1,7 +1,15 @@
 // Pure calculation functions. Weighted totals throughout — never avg of avgs.
+//
+// MIGRATION: gap math + RAG/rank thresholds delegate to the canonical
+// metrics engine in `src/lib/metrics/`. The calculator's productivity
+// metric is RPH (revenue per hour) and OF is applied to hours rather than
+// to labor_cost (calculator does not always have labor_cost). The Σ/Σ
+// weighting and the engine's performance-gap + RAG bands are reused.
 
 import type { MatchedShift } from "./merge";
 import { resolveFactorFromTimes, type Band, type FactorResult } from "./opportunity";
+import { performanceGap as enginePerformanceGap, ragBand as engineRagBand } from "@/lib/metrics/gap";
+
 
 export type ShiftMetric = MatchedShift & {
   factor: number;
@@ -125,15 +133,23 @@ export function attachGap(servers: ServerMetric[], team: TeamBenchmark): ServerW
   return servers
     .map((s) => {
       const gapAbsRPH = s.adjustedRPH - team.adjustedRPH;
-      const gapPct = team.adjustedRPH > 0 ? gapAbsRPH / team.adjustedRPH : 0;
+      // Canonical performance gap + RAG bands from the metrics engine.
+      const gapPct = enginePerformanceGap(s.adjustedRPH, team.adjustedRPH).value ?? 0;
+      // Calculator UI uses a 3-band rank label; project the canonical
+      // 4-band engine output: strong→above, tracking→tracking,
+      // monitor|priority→below. ±5% threshold preserved.
+      const band = engineRagBand(gapPct);
       const rank: ServerWithGap["rank"] =
-        gapPct >= 0.05 ? "above" : gapPct <= -0.05 ? "below" : "tracking";
+        band === "strong" ? "above"
+        : band === "tracking" ? "tracking"
+        : "below";
       const recoverableWeekly = Math.max(0, -gapAbsRPH) * s.totalAdjustedHours;
       return { ...s, gapAbsRPH, gapPct, rank, recoverableWeekly };
     })
     // RANK ONLY BY OPPORTUNITY-ADJUSTED RPH
     .sort((a, b) => b.adjustedRPH - a.adjustedRPH);
 }
+
 
 export function computeRecoverable(servers: ServerWithGap[]): {
   weekly: number;

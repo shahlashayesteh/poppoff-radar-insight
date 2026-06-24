@@ -440,14 +440,34 @@ export const listRecentBatches = createServerFn({ method: "GET" })
 
 // ---------- weekly scorecard ----------
 //
-// All metrics are derived from totals across worked shifts (not averages of averages).
-//   weekly_rpc           = total_gross_sales / total_covers_served
-//   weekly_base_lls      = total_gross_sales / total_labor_cost
-//   weekly_adjusted_lls  = total_gross_sales / total_adjusted_labor_cost
-//                          where total_adjusted_labor_cost = Σ(labor_cost × opportunity_factor)
-// The DB column `shifts.final_lls` stores Adjusted LLS (Base LLS ÷ Opportunity Factor)
-// — the legacy column name is kept for migration safety only. The API surfaces this
-// as `adjusted_lls`; the legacy label is never surfaced to users.
+// MIGRATION: This module is now a thin orchestrator over the canonical
+// metrics engine in `src/lib/metrics/`. All per-shift sales/labour math,
+// shift-level Opportunity-Factor application, weighted Σ/Σ aggregation,
+// performance-gap math, and RAG banding flow through the engine — there
+// are no parallel formulas defined here any more.
+//
+// Mapping into the engine:
+//   ScorecardInputRow.gross_sales   → engine SalesInput.gross_sales
+//                                     (used as the *uploaded* basis here:
+//                                      legacy v1 data only stores gross,
+//                                      so net_sales is null and the engine
+//                                      derives net_sales := gross_sales)
+//   ScorecardInputRow.labor_cost    → engine LaborInput.total_labor_cost
+//                                     (basis = "total")
+//   ScorecardInputRow.opportunity_factor → engine ShiftRow.opportunity_factor
+//
+// The UI consumes a 3-band RAG (green/amber/red). That is a projection of
+// the canonical 4-band engine output: strong → green, tracking|monitor →
+// amber, priority → red. The thresholds match the engine.
+
+import {
+  aggregate as engineAggregate,
+  type ShiftRow as EngineShiftRow,
+} from "@/lib/metrics/lls";
+import {
+  performanceGap as enginePerformanceGap,
+  ragBand as engineRagBand,
+} from "@/lib/metrics/gap";
 
 export type ScorecardDaily = { dow: number; adjusted_lls: number | null; shifts: number };
 
@@ -481,10 +501,18 @@ function safeDiv(num: number, den: number): number | null {
   return num / den;
 }
 
+/**
+ * 3-band UI RAG = projection of the canonical 4-band engine output.
+ *   strong (>+10%)            → green
+ *   tracking (±5%) / monitor  → amber
+ *   priority (<-10%)          → red
+ * Thresholds come from `src/lib/metrics/gap.ts` — never re-define them here.
+ */
 function ragFromGap(gap: number | null): "green" | "amber" | "red" | "none" {
-  if (gap == null || !Number.isFinite(gap)) return "none";
-  if (gap >= 0.10) return "green";
-  if (gap <= -0.10) return "red";
+  const band = engineRagBand(gap ?? undefined);
+  if (band === "insufficient_data") return "none";
+  if (band === "strong") return "green";
+  if (band === "priority") return "red";
   return "amber";
 }
 
@@ -504,8 +532,8 @@ function operatorMeaningFor(rag: "green" | "amber" | "red" | "none", gap: number
 
 // Pure core extracted so the v1 regression harness can run the EXACT
 // production calculation against fixture rows without spinning up the
-// TanStack Start server-function middleware. The handler below is a thin
-// data-loading wrapper around this function — every formula lives here.
+// TanStack Start server-function middleware. Every formula delegates to
+// the canonical metrics engine.
 export type ScorecardInputRow = {
   server_id: string;
   server_name: string;
@@ -516,6 +544,17 @@ export type ScorecardInputRow = {
   labor_cost: number | null;
   opportunity_factor: number | null;
 };
+
+/** Adapter: production row → canonical engine ShiftRow. */
+function toEngineRow(r: ScorecardInputRow): EngineShiftRow {
+  return {
+    // v1 data only carries gross sales — engine will derive net as gross
+    // (no leakage columns present). Basis is preserved as gross-derived.
+    gross_sales: r.gross_sales,
+    total_labor_cost: r.labor_cost,
+    opportunity_factor: r.opportunity_factor,
+  };
+}
 
 export function computeWeeklyScorecardFromRows(
   all: ScorecardInputRow[],
@@ -537,26 +576,14 @@ export function computeWeeklyScorecardFromRows(
     r.gross_sales != null && Number(r.gross_sales) > 0 &&
     r.labor_cost != null && Number(r.labor_cost) > 0;
 
-  type Totals = { gross: number; covers: number; labor: number; adjLabor: number; shifts: number };
-  const emptyTotals = (): Totals => ({ gross: 0, covers: 0, labor: 0, adjLabor: 0, shifts: 0 });
-  const accumulate = (t: Totals, r: ScorecardInputRow) => {
-    const of = r.opportunity_factor != null && Number(r.opportunity_factor) > 0 ? Number(r.opportunity_factor) : 1.0;
-    t.gross += Number(r.gross_sales);
-    t.covers += Number(r.covers_served ?? 0);
-    t.labor += Number(r.labor_cost);
-    t.adjLabor += Number(r.labor_cost) * of;
-    t.shifts += 1;
-  };
+  // Venue benchmark for the current week — weighted Σ/Σ via engine.
+  const venueCurRows = all.filter((r) => worked(r) && inCurrent(r.shift_date));
+  const venuePrevRows = all.filter((r) => worked(r) && inPrev(r.shift_date));
+  const venueCurAgg = engineAggregate(venueCurRows.map(toEngineRow), { allowMixedLaborBasis: true });
+  const venuePrevAgg = engineAggregate(venuePrevRows.map(toEngineRow), { allowMixedLaborBasis: true });
 
-  const venueCur = emptyTotals();
-  const venuePrev = emptyTotals();
-  for (const r of all) {
-    if (!worked(r)) continue;
-    if (inCurrent(r.shift_date)) accumulate(venueCur, r);
-    else if (inPrev(r.shift_date)) accumulate(venuePrev, r);
-  }
-  const venue_benchmark = safeDiv(venueCur.gross, venueCur.adjLabor);
-  const venue_benchmark_prev = safeDiv(venuePrev.gross, venuePrev.adjLabor);
+  const venue_benchmark = venueCurAgg.adjustedLLS.value;
+  const venue_benchmark_prev = venuePrevAgg.adjustedLLS.value;
   const venue_benchmark_trend_pct =
     venue_benchmark != null && venue_benchmark_prev != null && venue_benchmark_prev > 0
       ? ((venue_benchmark - venue_benchmark_prev) / venue_benchmark_prev) * 100
@@ -578,28 +605,25 @@ export function computeWeeklyScorecardFromRows(
         daily.push({ dow, adjusted_lls: null, shifts: 0 });
         continue;
       }
-      const t = emptyTotals();
-      dayRows.forEach((r) => accumulate(t, r));
-      daily.push({ dow, adjusted_lls: safeDiv(t.gross, t.adjLabor), shifts: t.shifts });
+      const dayAgg = engineAggregate(dayRows.map(toEngineRow), { allowMixedLaborBasis: true });
+      daily.push({ dow, adjusted_lls: dayAgg.adjustedLLS.value, shifts: dayAgg.rowsIncluded });
     }
 
-    const t = emptyTotals();
-    rows.forEach((r) => accumulate(t, r));
-    const weekly_rpc = safeDiv(t.gross, t.covers);
-    const weekly_base_lls = safeDiv(t.gross, t.labor);
-    const weekly_adjusted_lls = safeDiv(t.gross, t.adjLabor);
+    // Weekly per-server totals via engine (weighted Σ/Σ, shift-level OF).
+    const wkAgg = engineAggregate(rows.map(toEngineRow), { allowMixedLaborBasis: true });
+    const totalCovers = rows.reduce((a, r) => a + Number(r.covers_served ?? 0), 0);
+    const weekly_rpc = safeDiv(wkAgg.totalNetSales, totalCovers);
+    const weekly_base_lls = wkAgg.baseLLS.value;
+    const weekly_adjusted_lls = wkAgg.adjustedLLS.value;
 
-    const performance_gap =
-      weekly_adjusted_lls != null && venue_benchmark != null && venue_benchmark > 0
-        ? weekly_adjusted_lls / venue_benchmark - 1
-        : null;
+    const performance_gap = enginePerformanceGap(weekly_adjusted_lls, venue_benchmark).value;
     const rag_status = ragFromGap(performance_gap);
 
     servers.push({
       serverId,
       serverName: name,
       daily,
-      shifts_worked: t.shifts,
+      shifts_worked: wkAgg.rowsIncluded,
       weekly_rpc,
       weekly_base_lls,
       weekly_adjusted_lls,
@@ -607,7 +631,7 @@ export function computeWeeklyScorecardFromRows(
       performance_gap,
       rag_status,
       operator_meaning: operatorMeaningFor(rag_status, performance_gap),
-      lowSample: t.shifts < 3,
+      lowSample: wkAgg.rowsIncluded < 3,
     });
   }
 
@@ -634,6 +658,7 @@ export function computeWeeklyScorecardFromRows(
     toReview,
   };
 }
+
 
 export const getWeeklyScorecard = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
