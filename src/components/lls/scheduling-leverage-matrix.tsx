@@ -491,7 +491,7 @@ export function SchedulingLeverageMatrix({ data, currency = "£" }: { data: Sche
                             <span className="font-semibold">{cellShort(cell.cell_label)}</span>
                             {cell.modelled_marginal_lift != null && Math.abs(cell.modelled_marginal_lift) >= 20 && (
                               <span className="block text-[9px] font-normal opacity-80 leading-tight">
-                                {fmtMoney(cell.modelled_marginal_lift)}
+                                {fmtMoney(cell.modelled_marginal_lift, currency)}
                               </span>
                             )}
                           </button>
