@@ -14,6 +14,7 @@ function CheckoutRetry() {
   const { openCheckout, loading } = usePaddleCheckout();
   const [priceId, setPriceId] = useState<string>("");
   const [email, setEmail] = useState<string | undefined>();
+  const [userId, setUserId] = useState<string>("");
   const [businessName, setBusinessName] = useState<string>("");
 
   useEffect(() => {
@@ -21,6 +22,7 @@ function CheckoutRetry() {
       const { data } = await supabase.auth.getUser();
       if (!data.user) { navigate({ to: "/signin" }); return; }
       setEmail(data.user.email ?? undefined);
+      setUserId(data.user.id);
       const meta = (data.user.user_metadata ?? {}) as Record<string, unknown>;
       const stored = (meta.plan_price_id as string) || (typeof window !== "undefined" ? localStorage.getItem("poppoff_pending_price_id") : "") || "poppoff_starter_monthly";
       setPriceId(stored);
@@ -39,7 +41,12 @@ function CheckoutRetry() {
         </p>
         <button
           disabled={loading || !priceId}
-          onClick={() => openCheckout({ priceId, customerEmail: email, successUrl: `${window.location.origin}/checkout/success?priceId=${encodeURIComponent(priceId)}` })}
+          onClick={() => openCheckout({
+            priceId,
+            customerEmail: email,
+            customData: userId ? { userId } : undefined,
+            successUrl: `${window.location.origin}/checkout/success?priceId=${encodeURIComponent(priceId)}`,
+          })}
           className="mt-6 w-full rounded-xl py-3 text-sm font-bold text-white disabled:opacity-60"
           style={{ background: "var(--brand-orange)" }}
         >
