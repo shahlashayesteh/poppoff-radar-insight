@@ -217,9 +217,9 @@ describe("Scheduling Leverage v2", () => {
         rows.push(row({ server_id: "Star", day: 4, daypart: "dinner", outlet: "V", gross_sales: 2000, covers: 50 }));
       }
     }
-    // single very strong Tuesday lunch
-    rows.push(row({ server_id: "Star", day: 1, daypart: "lunch", outlet: "V", gross_sales: 1400, covers: 45 }));
-    rows.push(row({ server_id: "Star", day: 1, daypart: "lunch", outlet: "V", gross_sales: 1500, covers: 48 }));
+    // two very strong Tuesday lunches on distinct dates
+    rows.push(row({ server_id: "Star", day: 1, daypart: "lunch", outlet: "V", gross_sales: 1400, covers: 45, shift_date: "2026-05-05" }));
+    rows.push(row({ server_id: "Star", day: 1, daypart: "lunch", outlet: "V", gross_sales: 1500, covers: 48, shift_date: "2026-05-12" }));
     const out = computeSchedulingLeverage(rows);
     // The matrix at least produces an underused recommendation OR highlights it
     const hasUnder = out.recommendations.some((r) => r.recommendation_type === "underused_capability") || out.highlights.most_underused != null;
