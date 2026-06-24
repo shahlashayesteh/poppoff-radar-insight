@@ -238,7 +238,7 @@ function ManagerDashboard() {
               <path d="M0,55 C30,52 50,48 70,42 S110,30 130,22 S180,8 200,4" fill="none" stroke="var(--brand-green)" strokeWidth="3" strokeLinecap="round" />
               <path d="M195,12 L200,4 L192,2" fill="none" stroke="var(--brand-green)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
-            <div className="mt-2 text-sm"><span className="text-brand-green font-bold">+£1,420</span> <span className="text-muted-foreground">modelled opportunity this week (sum of per-server uplifts)</span></div>
+            <div className="mt-2 text-sm"><span className="text-brand-green font-bold">+£{demoManagerKpis.uplift.toLocaleString()}</span> <span className="text-muted-foreground">modelled opportunity this week (sum of per-server uplifts)</span></div>
           </div>
 
           {/* Focus ack */}
@@ -249,13 +249,13 @@ function ManagerDashboard() {
                 <svg viewBox="0 0 100 100" className="h-full w-full -rotate-90">
                   <circle cx="50" cy="50" r="40" fill="none" stroke="color-mix(in oklab, var(--brand-green) 14%, white)" strokeWidth="10" />
                   <circle cx="50" cy="50" r="40" fill="none" stroke="var(--brand-green)" strokeWidth="10"
-                    strokeDasharray={2 * Math.PI * 40} strokeDashoffset={2 * Math.PI * 40 * 0.2} strokeLinecap="round" />
+                    strokeDasharray={2 * Math.PI * 40} strokeDashoffset={2 * Math.PI * 40 * (1 - demoManagerKpis.ackRatePct / 100)} strokeLinecap="round" />
                 </svg>
-                <div className="absolute inset-0 grid place-items-center font-display text-xl font-extrabold">80%</div>
+                <div className="absolute inset-0 grid place-items-center font-display text-xl font-extrabold">{demoManagerKpis.ackRatePct}%</div>
               </div>
               <div className="text-sm">
                 <div className="text-muted-foreground">Team has acknowledged this week's focus</div>
-                <div className="mt-2 font-display text-xl font-extrabold text-brand-green">4/5 servers</div>
+                <div className="mt-2 font-display text-xl font-extrabold text-brand-green">{demoManagerKpis.ackCount}/{demoManagerKpis.totalServers} servers</div>
                 <div className="text-xs text-muted-foreground">acknowledged</div>
               </div>
             </div>
