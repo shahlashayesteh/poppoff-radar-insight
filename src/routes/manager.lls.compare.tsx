@@ -116,12 +116,16 @@ function ComparePage() {
 
         {data && (
           <>
+            <div className="rounded-2xl border border-border bg-amber-50/60 p-3 text-xs text-foreground/80">
+              <strong>Benchmark window:</strong> both v1 and v2 use the prior <strong>{data.baselineWeeks} weeks</strong> of venue history for an apples-to-apples comparison.
+            </div>
+
             <div className="grid md:grid-cols-2 gap-4">
               <ModelCard title="v1 (production)" version={data.venue.active_model_version} accent="var(--muted-foreground)">
                 <Row label="Adjusted LLS" value={fmtLls(data.comparison.v1.adjusted_lls)} />
                 <Row label="Base LLS" value={fmtLls(data.comparison.v1.base_lls)} />
                 <Row label="Weekly RPC" value={fmtLls(data.comparison.v1.weekly_rpc)} />
-                <Row label="Benchmark Adj LLS" value={fmtLls(data.comparison.v1.benchmark_adjusted_lls)} />
+                <Row label={`Benchmark Adj LLS (prior ${data.baselineWeeks}w)`} value={fmtLls(data.comparison.v1.benchmark_adjusted_lls)} />
                 <Row label="Performance gap" value={fmtPct(data.comparison.v1.performance_gap)} />
                 <Row label="RAG" value={<span style={{ color: ragColour(data.comparison.v1.rag) }} className="font-semibold uppercase text-xs">{data.comparison.v1.rag ?? "—"}</span>} />
                 <Row label="Shifts" value={String(data.v1_totals.shifts)} />
@@ -131,14 +135,15 @@ function ComparePage() {
                 <Row label="Adjusted LLS" value={fmtLls(data.comparison.v2.adjusted_lls)} />
                 <Row label="Base LLS" value={fmtLls(data.comparison.v2.base_lls)} />
                 <Row label="Weekly RPC" value={fmtLls(data.comparison.v2.weekly_rpc)} />
-                <Row label="Comparable Adj LLS" value={fmtLls(data.comparison.v2.comparable_adjusted_lls)} />
+                <Row label={`Comparable Adj LLS (prior ${data.baselineWeeks}w)`} value={fmtLls(data.comparison.v2.comparable_adjusted_lls)} />
                 <Row label="Performance gap" value={fmtPct(data.comparison.v2.performance_gap)} />
                 <Row label="RAG" value={<span style={{ color: ragColour(data.comparison.v2.rag) }} className="font-semibold uppercase text-xs">{data.comparison.v2.rag}</span>} />
-                <Row label="Expected sales" value={fmtMoney(data.comparison.v2.expected_sales)} />
+                <Row label="Expected sales (modelled)" value={fmtMoney(data.comparison.v2.expected_sales)} />
                 <Row label="Modelled revenue opportunity" value={fmtMoney(data.comparison.v2.modelled_revenue_opportunity)} />
                 <Row label="Shifts" value={`${data.v2_totals.shifts} (${data.v2_totals.needs_review} review · ${data.v2_totals.single_sided} single-sided · ${data.v2_totals.cross_daypart} cross-daypart)`} />
               </ModelCard>
             </div>
+
 
             <div className="rounded-2xl border border-border bg-white p-5 space-y-3">
               <h2 className="font-display text-lg font-bold">Difference</h2>
