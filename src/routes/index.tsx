@@ -4,6 +4,8 @@ import { Trophy, Award, Check, ShieldCheck, BarChart3, Users, BookOpen, Target }
 import { usePaddleCheckout } from "@/hooks/usePaddleCheckout";
 import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
 import { supabase } from "@/integrations/supabase/client";
+import { precheckPaddle } from "@/lib/paddle";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -121,17 +123,24 @@ function Landing() {
 
   const handlePlanClick = async (priceId: string) => {
     try { localStorage.setItem("poppoff_pending_price_id", priceId); } catch {}
+    // Pre-check Paddle before routing the user anywhere — fail fast with a real reason.
+    const pre = await precheckPaddle(priceId);
+    if (!pre.ok) {
+      toast.error(pre.message);
+      return;
+    }
     const { data } = await supabase.auth.getUser();
     if (data.user) {
       const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", data.user.id);
       const isManager = roles?.some((r) => r.role === "manager");
       if (isManager) {
-        await openCheckout({
+        const res = await openCheckout({
           priceId,
           customerEmail: data.user.email ?? undefined,
           customData: { userId: data.user.id },
           successUrl: `${window.location.origin}/checkout/success?priceId=${encodeURIComponent(priceId)}`,
         });
+        if (!res.ok) toast.error(res.message);
         return;
       }
     }
