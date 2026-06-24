@@ -934,6 +934,7 @@ function RecoverableSection({
   tradingWeeks,
   ambiguousDates,
   dateFormat,
+  market,
 }: {
   ranked: ReturnType<typeof attachGap>;
   weekly: number;
@@ -949,6 +950,7 @@ function RecoverableSection({
   tradingWeeks: number;
   ambiguousDates: boolean;
   dateFormat: DateFormat;
+  market: MarketId;
 }) {
   const below = ranked.filter((s) => s.recoverableWeekly > 0);
   const wk = weekly * lensFactor;
