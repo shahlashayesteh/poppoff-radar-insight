@@ -3,10 +3,12 @@ import { useEffect, useState } from "react";
 import { ManagerLayout } from "@/components/manager-layout";
 import { supabase } from "@/integrations/supabase/client";
 import { getManagerVenue } from "@/lib/manager-venue";
+import { useRoleGate } from "@/lib/auth-gate";
 
 export const Route = createFileRoute("/manager/server/")({ component: Page });
 
 function Page() {
+  useRoleGate("manager");
   const [members, setMembers] = useState<{ id: string; full_name: string | null }[]>([]);
   useEffect(() => {
     (async () => {
