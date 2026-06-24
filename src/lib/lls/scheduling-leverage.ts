@@ -34,7 +34,16 @@ export interface LeverageShiftRow {
   category_sales?: Record<string, number | null> | null;
   category_target_rate?: Record<string, number | null> | null;
   match_confidence?: number | null; // 0..1 imported join confidence
+  /** Optional clock window for unique-shift identification. */
+  shift_start?: string | null;
+  shift_end?: string | null;
 }
+
+export type OutletBasis =
+  | "uploaded"
+  | "inferred_from_filename"
+  | "venue_fallback"
+  | "missing";
 
 export interface LeverageEngineOptions {
   targetMultiplier?: number;
@@ -45,11 +54,19 @@ export interface LeverageEngineOptions {
   crossOutletEligibility?: Record<string, boolean>;
   /** Outlet inferred from upload file name when rows have no outlet column. */
   outletInferredFromFile?: string | null;
+  /** Outlet provenance label — drives the data-used strip. */
+  outletBasis?: OutletBasis;
   /** Optional contracted shifts/week per server (overrides observed P75 cap). */
   contractedShiftsPerWeek?: Record<string, number>;
   contractedHoursPerWeek?: Record<string, number>;
   /** Maximum recommendations returned in the actionable table. */
   maxRecommendations?: number;
+  /** Period metadata for the rows passed in (echoed back in the result). */
+  period?: { start: string; end: string; weeks: number };
+  /** Whether the scorecard's selected week has any matched shifts. */
+  selectedWeekHasShifts?: boolean;
+  /** Selected week start (ISO yyyy-mm-dd) for the contextual notice. */
+  selectedWeekStart?: string;
 }
 
 // ---------- outputs ----------
@@ -127,10 +144,12 @@ export interface ShiftTypeBaseline {
 export interface ServerWorkingPattern {
   server_id: string;
   active_weeks: number;
-  total_shifts: number;
+  total_shifts: number;             // unique shifts (deduped)
+  total_worked_days: number;        // unique calendar days worked
   avg_shifts_per_week: number;
   p75_shifts_per_week: number;
   max_shifts_per_week: number;
+  avg_worked_days_per_week: number;
   avg_hours_per_week: number;
   p75_hours_per_week: number;
   max_hours_per_week: number;
@@ -195,6 +214,10 @@ export interface ServerShiftCell {
   rota_test_priority: number;
   positive_lift_gate: 0 | 1;
   cell_label: CellLabel;
+  /** Short, visible reason phrase shown in the cell (one line). */
+  primary_reason: string;
+  /** Compact label code shown to managers (e.g. "Best lift", "Peak fit"). */
+  cell_label_text: string;
   reasons: string[];
   warnings: string[];
 }
@@ -203,6 +226,8 @@ export interface ServerRecommendation {
   server_id: string;
   server_name: string;
   recommendation_type: RecommendationType;
+  /** All recommendation types that apply to this (server, shift) pair. */
+  recommendation_types: RecommendationType[];
   best_fit_shift: string;
   current_pattern: string;
   why: string;
@@ -213,11 +238,28 @@ export interface ServerRecommendation {
   rota_test_priority: number;
   schedule_feasibility: number;
   requires_confirmation: boolean;
+  /** Whether the test is a swap within the observed pattern or an extra shift. */
+  test_style: "swap" | "extra" | "requires_confirmation";
+  /** Plain-English breakdown used by the explanation panel. */
+  explanation: {
+    current_baseline: string;
+    projected_result: string;
+    modelled_marginal_lift: string;
+    confidence: string;
+    observed_pattern: string;
+    operational_note: string;
+  };
 }
 
 export interface SchedulingLeverageResult {
   matrix_scope: MatrixScope;
   outlet_inferred_from_file: string | null;
+  outlet_basis: OutletBasis;
+  /** Period the matrix is computed over. */
+  period: { start: string; end: string; weeks: number };
+  /** Whether the manager's selected week has matched shifts. */
+  selected_week_has_shifts: boolean | null;
+  selected_week_start: string | null;
   shift_types: ShiftTypeBaseline[];
   servers: { id: string; name: string; pattern: ServerWorkingPattern }[];
   matrix: ServerShiftCell[];
@@ -254,6 +296,7 @@ export interface SchedulingLeverageResult {
 const isPos = (n: unknown): n is number => typeof n === "number" && Number.isFinite(n) && n > 0;
 const isNum = (n: unknown): n is number => typeof n === "number" && Number.isFinite(n);
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
+const fmtSigned = (n: number) => `${n >= 0 ? "+" : "−"}$${Math.abs(n).toFixed(0)}`;
 const ofOrOne = (v: unknown) => (isPos(v) ? (v as number) : 1);
 
 function shiftTypeKey(outlet: string | null, dow: number, daypart: string): string {
@@ -337,6 +380,47 @@ function isoWeekKey(dateIso: string): string {
   return `${target.getUTCFullYear()}-W${String(week).padStart(2, "0")}`;
 }
 
+// Unique-shift key — protects working-pattern counts from being inflated by
+// multiple POS / category rows belonging to the same scheduled shift.
+//   Preferred: server | date | outlet | start | end
+//   Fallback : server | date | outlet | daypart
+export function uniqueShiftKey(r: LeverageShiftRow): string {
+  const start = (r.shift_start ?? "").trim();
+  const end = (r.shift_end ?? "").trim();
+  if (start || end) {
+    return `${r.server_id}|${r.shift_date}|${r.outlet ?? ""}|${start}|${end}`;
+  }
+  return `${r.server_id}|${r.shift_date}|${r.outlet ?? ""}|${r.daypart}`;
+}
+
+// Pick a representative row per unique shift, preserving max signal (hours,
+// covers, sales, labour) across joined POS / category / labour rows.
+function dedupeUniqueShifts(rows: LeverageShiftRow[]): LeverageShiftRow[] {
+  const byKey = new Map<string, LeverageShiftRow>();
+  for (const r of rows) {
+    const k = uniqueShiftKey(r);
+    const prev = byKey.get(k);
+    if (!prev) {
+      byKey.set(k, { ...r });
+      continue;
+    }
+    // merge — take max of positive numeric signals (avoids double-counting)
+    const maxOr = (a: number | null | undefined, b: number | null | undefined) => {
+      const av = isPos(a) ? (a as number) : null;
+      const bv = isPos(b) ? (b as number) : null;
+      if (av != null && bv != null) return Math.max(av, bv);
+      return av ?? bv ?? null;
+    };
+    prev.hours = maxOr(prev.hours, r.hours);
+    prev.covers = maxOr(prev.covers, r.covers);
+    prev.gross_sales = maxOr(prev.gross_sales, r.gross_sales);
+    prev.net_sales = maxOr(prev.net_sales, r.net_sales);
+    prev.labor_cost = maxOr(prev.labor_cost, r.labor_cost);
+    prev.checks = maxOr(prev.checks, r.checks);
+  }
+  return [...byKey.values()];
+}
+
 // ---------- working pattern ----------
 
 function computeWorkingPattern(
@@ -344,7 +428,10 @@ function computeWorkingPattern(
   rows: LeverageShiftRow[],
   opts: LeverageEngineOptions,
 ): ServerWorkingPattern {
-  const mine = rows.filter((r) => r.server_id === serverId);
+  // Count UNIQUE scheduled shifts only — multiple rows from the same shift
+  // (POS + category + labour joins) must not inflate weekly pattern counts.
+  const mine = dedupeUniqueShifts(rows.filter((r) => r.server_id === serverId));
+
   const byWeek = new Map<string, LeverageShiftRow[]>();
   for (const r of mine) {
     const k = isoWeekKey(r.shift_date);
@@ -355,19 +442,18 @@ function computeWorkingPattern(
   const weeklyHours = [...byWeek.values()].map((w) =>
     w.reduce((a, r) => a + (isPos(r.hours ?? null) ? r.hours! : 0), 0),
   );
+  const weeklyDays = [...byWeek.values()].map((w) => new Set(w.map((r) => r.shift_date)).size);
 
-  const dayCounts = new Map<number, number>();
-  const dayPartCounts = new Map<string, number>();
   const outletCounts = new Map<string, number>();
   for (const r of mine) {
-    dayCounts.set(r.day_of_week, (dayCounts.get(r.day_of_week) ?? 0) + 1);
-    dayPartCounts.set(r.daypart, (dayPartCounts.get(r.daypart) ?? 0) + 1);
     if (r.outlet) outletCounts.set(r.outlet, (outletCounts.get(r.outlet) ?? 0) + 1);
   }
 
   const active_weeks = byWeek.size;
   const total_shifts = mine.length;
+  const total_worked_days = new Set(mine.map((r) => r.shift_date)).size;
   const avg_shifts_per_week = active_weeks > 0 ? total_shifts / active_weeks : 0;
+  const avg_worked_days_per_week = active_weeks > 0 ? total_worked_days / active_weeks : 0;
   const p75_shifts_per_week = percentile(weeklyShifts, 0.75) ?? 0;
   const max_shifts_per_week = weeklyShifts.length ? Math.max(...weeklyShifts) : 0;
   const totalHrs = weeklyHours.reduce((a, b) => a + b, 0);
@@ -375,7 +461,6 @@ function computeWorkingPattern(
   const p75_hours_per_week = percentile(weeklyHours, 0.75) ?? 0;
   const max_hours_per_week = weeklyHours.length ? Math.max(...weeklyHours) : 0;
 
-  // "Usual" = day/daypart/outlet that the server worked in ≥30% of active weeks.
   const weeksByDay = new Map<number, Set<string>>();
   const weeksByDp = new Map<string, Set<string>>();
   for (const [wk, list] of byWeek) {
@@ -401,6 +486,7 @@ function computeWorkingPattern(
   let label: string;
   const contracted = opts.contractedShiftsPerWeek?.[serverId];
   const contractedH = opts.contractedHoursPerWeek?.[serverId];
+  const rounded = (n: number) => (n >= 10 ? n.toFixed(0) : n.toFixed(1));
   if (active_weeks < 2) {
     pattern = "unknown";
     label = "Observed pattern: insufficient history";
@@ -408,16 +494,16 @@ function computeWorkingPattern(
     const variation = max_shifts_per_week - Math.max(1, p75_shifts_per_week);
     if (p75_shifts_per_week >= 5 || p75_hours_per_week >= 35) {
       pattern = "likely_full_time";
-      label = `Observed pattern: likely full-time (${avg_shifts_per_week.toFixed(1)} shifts/wk)`;
+      label = `Observed pattern: likely full-time (~${rounded(avg_shifts_per_week)} shifts/wk, ${rounded(avg_worked_days_per_week)} days/wk)`;
     } else if (p75_shifts_per_week <= 3 || p75_hours_per_week < 28) {
       pattern = "likely_part_time";
-      label = `Observed pattern: likely part-time (~${Math.round(avg_shifts_per_week)} shifts/wk)`;
+      label = `Observed pattern: likely part-time (~${rounded(avg_shifts_per_week)} shifts/wk)`;
     } else if (variation >= 2) {
       pattern = "variable";
-      label = `Observed pattern: variable (${avg_shifts_per_week.toFixed(1)} shifts/wk avg)`;
+      label = `Observed pattern: variable, ${Math.max(0, max_shifts_per_week - 2)}–${max_shifts_per_week} shifts/wk`;
     } else {
       pattern = "variable";
-      label = `Observed pattern: ~${avg_shifts_per_week.toFixed(1)} shifts/wk`;
+      label = `Observed pattern: ~${rounded(avg_shifts_per_week)} shifts/wk`;
     }
   }
   if (contracted != null) label = `Contracted ${contracted} shifts/wk` + (contractedH ? ` (${contractedH}h)` : "");
@@ -426,7 +512,9 @@ function computeWorkingPattern(
     server_id: serverId,
     active_weeks,
     total_shifts,
+    total_worked_days,
     avg_shifts_per_week,
+    avg_worked_days_per_week,
     p75_shifts_per_week,
     max_shifts_per_week,
     avg_hours_per_week,
@@ -457,14 +545,19 @@ export function computeSchedulingLeverage(
   let outlet_inferred_from_file: string | null = null;
   let rows: LeverageShiftRow[] = rowsIn;
   let matrix_scope: MatrixScope;
+  // Outlet priority: uploaded column > filename inference > venue fallback > missing
+  let outlet_basis: OutletBasis;
   if (anyOutletInRows) {
     matrix_scope = "outlet_scoped";
+    outlet_basis = opts.outletBasis ?? "uploaded";
   } else if (opts.outletInferredFromFile && opts.outletInferredFromFile.trim()) {
     outlet_inferred_from_file = opts.outletInferredFromFile.trim();
     rows = rowsIn.map((r) => ({ ...r, outlet: outlet_inferred_from_file }));
     matrix_scope = "single_outlet_inferred";
+    outlet_basis = opts.outletBasis ?? "inferred_from_filename";
   } else {
     matrix_scope = "daypart_only";
+    outlet_basis = opts.outletBasis ?? "missing";
   }
 
   // ---- data quality ----
@@ -488,6 +581,9 @@ export function computeSchedulingLeverage(
     dq.notes.push(`Outlet inferred from file name (${outlet_inferred_from_file}). Matrix is scoped to that outlet only.`);
   } else if (matrix_scope === "daypart_only") {
     dq.notes.push("Outlet data unavailable. Matrix uses day of week and daypart only.");
+  }
+  if (outlet_basis === "venue_fallback") {
+    dq.notes.push("Outlet not found in file. Venue name used as fallback — recommendations are not multi-outlet aware.");
   }
   if (!dq.has_category) dq.notes.push("Category sales unavailable. Category fit treated as neutral.");
   if (!dq.has_checks) dq.notes.push("Guest checks unavailable — reliability based on shifts + hours only.");
@@ -627,7 +723,13 @@ export function computeSchedulingLeverage(
   // ---- per-server profile ----
   const serverIds = Array.from(new Set(rows.map((r) => r.server_id)));
   const serverNames = new Map(rows.map((r) => [r.server_id, r.server_name]));
-  const serverTotalShifts = new Map<string, number>(serverIds.map((id) => [id, rows.filter((r) => r.server_id === id).length]));
+  // unique-shift dedupe (POS + category + labour joins must not double-count)
+  const serverUniqueRows = new Map<string, LeverageShiftRow[]>(
+    serverIds.map((id) => [id, dedupeUniqueShifts(rows.filter((r) => r.server_id === id))]),
+  );
+  const serverTotalShifts = new Map<string, number>(
+    serverIds.map((id) => [id, serverUniqueRows.get(id)!.length]),
+  );
 
   // per (server, outlet) skill profile
   const serverOutletProfile = new Map<string, { rpc: number | null; rph: number | null; cph: number | null; lls: number | null }>();
@@ -655,14 +757,16 @@ export function computeSchedulingLeverage(
 
   for (const id of serverIds) {
     const myRows = rows.filter((r) => r.server_id === id);
+    const myUnique = serverUniqueRows.get(id) ?? [];
     const totalServerShifts = serverTotalShifts.get(id) ?? 0;
     const pat = patterns.get(id)!;
 
     for (const [k, baseline] of baselines) {
       const inType = myRows.filter((r) => shiftTypeKey(r.outlet ?? null, r.day_of_week, r.daypart) === k);
-      const comparable_shifts = inType.length;
-      const comparable_hours = inType.reduce((a, r) => a + (isPos(r.hours ?? null) ? r.hours! : 0), 0);
-      const comparable_checks = inType.reduce((a, r) => a + (isPos(r.checks ?? null) ? r.checks! : 0), 0);
+      const inTypeUnique = myUnique.filter((r) => shiftTypeKey(r.outlet ?? null, r.day_of_week, r.daypart) === k);
+      const comparable_shifts = inTypeUnique.length;
+      const comparable_hours = inTypeUnique.reduce((a, r) => a + (isPos(r.hours ?? null) ? r.hours! : 0), 0);
+      const comparable_checks = inTypeUnique.reduce((a, r) => a + (isPos(r.checks ?? null) ? r.checks! : 0), 0);
 
       // reliability
       const sRel = Math.min(1, comparable_shifts / shiftFloor);
@@ -903,6 +1007,8 @@ export function computeSchedulingLeverage(
         rota_test_priority: 0,
         positive_lift_gate: lift_raw > 0 ? 1 : 0,
         cell_label: "insufficient_data",
+        cell_label_text: "—",
+        primary_reason: "",
         reasons: [],
         warnings: [],
       };
@@ -1023,6 +1129,59 @@ export function computeSchedulingLeverage(
     for (let i = cap; i < promoted.length; i++) promoted[i].cell_label = "test_monitor";
   }
 
+  // ---- compact, manager-visible reason + label text per cell ----
+  const labelText: Record<CellLabel, string> = {
+    best_fit: "Best lift",
+    good_fit: "Good fit",
+    test_monitor: "Test",
+    requires_availability: "Confirm",
+    avoid_for_now: "Avoid",
+    not_eligible: "Not eligible",
+    insufficient_data: "No data",
+  };
+  for (const cell of matrix) {
+    cell.cell_label_text = labelText[cell.cell_label];
+    const lift = cell.modelled_marginal_lift ?? 0;
+    let reason = "";
+    switch (cell.cell_label) {
+      case "best_fit":
+        reason = lift > 0
+          ? `High lift +$${lift.toFixed(0)}, ${cell.confidence_band} confidence`
+          : "Top-ranked fit on this shift";
+        break;
+      case "good_fit": {
+        const bits: string[] = [];
+        if (cell.rpc_index >= 1.10) bits.push(`RPC +${((cell.rpc_index - 1) * 100).toFixed(0)}%`);
+        if (cell.rph_index >= 1.10) bits.push(`RPH +${((cell.rph_index - 1) * 100).toFixed(0)}%`);
+        if (cell.current_allocation_share < 0.1) bits.push("underused");
+        if (cell.baseline.opportunity_need >= 0.15) bits.push("headroom");
+        reason = bits.length ? bits.join(" · ") : "Positive lift, feasible";
+        break;
+      }
+      case "test_monitor":
+        reason = lift > 0
+          ? `Positive lift, ${cell.confidence_band} confidence — monitor`
+          : "Neutral — monitor only";
+        break;
+      case "requires_availability":
+        reason = "Outside observed pattern";
+        break;
+      case "avoid_for_now":
+        reason = lift < 0
+          ? `Negative modelled lift ${fmtSigned(lift)}`
+          : "Avoid";
+        break;
+      case "not_eligible":
+        reason = cell.baseline.outlet ? `No history in ${cell.baseline.outlet}` : "Outlet not eligible";
+        break;
+      default:
+        reason = cell.comparable_shifts === 0
+          ? "No comparable shifts yet"
+          : "Insufficient sample";
+    }
+    cell.primary_reason = reason;
+  }
+
   // ---- recommendations ----
   const recs: ServerRecommendation[] = [];
   const currentPatternFor = (id: string): string => {
@@ -1051,10 +1210,37 @@ export function computeSchedulingLeverage(
   };
   const requires_confirmation = (cell: ServerShiftCell) =>
     cell.schedule_feasibility < 0.6 || cell.weekly_capacity_fit < 1 || cell.outlet_eligibility < 1;
+  const testStyleFor = (cell: ServerShiftCell): "swap" | "extra" | "requires_confirmation" => {
+    const pat = patterns.get(cell.server_id)!;
+    if (cell.weekly_capacity_fit < 0.7) return "requires_confirmation";
+    if (pat.pattern === "likely_part_time" || cell.weekly_capacity_fit < 1) return "swap";
+    return "extra";
+  };
+  const explanationFor = (cell: ServerShiftCell): ServerRecommendation["explanation"] => {
+    const pat = patterns.get(cell.server_id)!;
+    const b = cell.baseline;
+    const fmt2 = (n: number | null | undefined) =>
+      n != null && Number.isFinite(n) ? n.toFixed(2) : "—";
+    return {
+      current_baseline: `Current rota baseline on ${humanShiftLabel(b)}: RPC ${fmt2(b.current_deployment_rpc)}, RPH ${fmt2(b.current_deployment_rph)}, Adj. LLS ${fmt2(b.current_deployment_adjusted_lls)}.`,
+      projected_result: `${cell.server_name} projected: RPC ${fmt2(cell.projected_rpc)}, RPH ${fmt2(cell.projected_rph)}, Adj. LLS ${fmt2(cell.projected_adjusted_lls)}.`,
+      modelled_marginal_lift: cell.modelled_marginal_lift == null
+        ? "Modelled lift unavailable (insufficient covers/hours)."
+        : `Modelled marginal lift ${fmtSigned(cell.modelled_marginal_lift)} vs current rota baseline.`,
+      confidence: `Confidence ${cell.confidence_band} (sample ${cell.comparable_shifts} comparable shifts / ${cell.comparable_hours.toFixed(1)}h).`,
+      observed_pattern: pat.pattern_label,
+      operational_note: cell.outlet_eligibility === 0
+        ? `Not eligible: ${cell.outlet_eligibility_reason}.`
+        : cell.weekly_capacity_fit < 1
+          ? `Would exceed observed weekly pattern — manager must confirm availability.`
+          : `Within observed working pattern.`,
+    };
+  };
   const toRec = (type: RecommendationType, cell: ServerShiftCell, why: string): ServerRecommendation => ({
     server_id: cell.server_id,
     server_name: cell.server_name,
     recommendation_type: type,
+    recommendation_types: [type],
     best_fit_shift: humanShiftLabel(cell.baseline),
     current_pattern: currentPatternFor(cell.server_id),
     why,
@@ -1065,6 +1251,8 @@ export function computeSchedulingLeverage(
     rota_test_priority: cell.rota_test_priority,
     schedule_feasibility: cell.schedule_feasibility,
     requires_confirmation: requires_confirmation(cell),
+    test_style: testStyleFor(cell),
+    explanation: explanationFor(cell),
   });
 
   // gates for revenue-style recommendations
@@ -1144,17 +1332,23 @@ export function computeSchedulingLeverage(
     }
   }
 
-  // De-dup per server (keep highest rota_test_priority)
-  const dedup: ServerRecommendation[] = [];
-  const seen = new Set<string>();
-  const sortedRecs = recs.sort((a, b) => b.rota_test_priority - a.rota_test_priority);
+  // Group duplicate (server, shift) recommendations into a single row whose
+  // recommendation_types[] captures every category that fired for that pair.
+  // Keep the highest rota-test-priority instance as the primary.
+  const grouped = new Map<string, ServerRecommendation>();
+  const sortedRecs = [...recs].sort((a, b) => b.rota_test_priority - a.rota_test_priority);
   for (const r of sortedRecs) {
-    const k = `${r.server_id}|${r.recommendation_type}|${r.best_fit_shift}`;
-    if (seen.has(k)) continue;
-    seen.add(k);
-    dedup.push(r);
-    if (dedup.length >= maxRecs) break;
+    const k = `${r.server_id}|${r.best_fit_shift}`;
+    const prev = grouped.get(k);
+    if (!prev) {
+      grouped.set(k, { ...r, recommendation_types: [r.recommendation_type] });
+    } else if (!prev.recommendation_types.includes(r.recommendation_type)) {
+      prev.recommendation_types.push(r.recommendation_type);
+    }
   }
+  const dedup = [...grouped.values()]
+    .sort((a, b) => b.rota_test_priority - a.rota_test_priority)
+    .slice(0, maxRecs);
 
   // ---- highlights (one per slot, allow same server) ----
   const pickHighlight = (type: RecommendationType) =>
@@ -1169,9 +1363,20 @@ export function computeSchedulingLeverage(
     biggest_coaching_opportunity: pickHighlight("development_shift"),
   };
 
+  // Period — explicit option wins; otherwise infer min/max date in rows.
+  const dates = rows.map((r) => r.shift_date).filter(Boolean).sort();
+  const inferredPeriod = dates.length
+    ? { start: dates[0], end: dates[dates.length - 1], weeks: Math.max(1, Math.round(((new Date(dates[dates.length - 1]).getTime() - new Date(dates[0]).getTime()) / 86400000 + 1) / 7)) }
+    : { start: "", end: "", weeks: 0 };
+  const period = opts.period ?? inferredPeriod;
+
   return {
     matrix_scope,
     outlet_inferred_from_file,
+    outlet_basis,
+    period,
+    selected_week_has_shifts: opts.selectedWeekHasShifts ?? null,
+    selected_week_start: opts.selectedWeekStart ?? null,
     shift_types: Array.from(baselines.values()).sort((a, b) => {
       const oa = a.outlet ?? "", ob = b.outlet ?? "";
       if (oa !== ob) return oa.localeCompare(ob);
@@ -1190,4 +1395,4 @@ function expectedCoversPositive(v: number | null): boolean {
   return v != null && Number.isFinite(v) && v > 0;
 }
 
-export const __test_only = { shiftTypeKey, humanShiftLabel, topQuartile, percentile, isoWeekKey };
+export const __test_only = { shiftTypeKey, humanShiftLabel, topQuartile, percentile, isoWeekKey, uniqueShiftKey, dedupeUniqueShifts };

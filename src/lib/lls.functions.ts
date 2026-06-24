@@ -773,9 +773,9 @@ export const getSchedulingLeverage = createServerFn({ method: "POST" })
         shift_date: r.shift_date,
         day_of_week: r.day_of_week,
         daypart: r.daypart,
-        // Single-venue v1 schema: treat the venue as the outlet so all engine
-        // calculations stay outlet-scoped. Multi-outlet uploads will populate
-        // the outlet field per row.
+        // V1 single-venue schema: there is no outlet/revenue-centre column,
+        // so we use the venue name as the outlet — this is a VENUE FALLBACK
+        // (the engine surfaces a manager-visible warning).
         outlet: venueName,
         gross_sales: r.gross_sales != null ? Number(r.gross_sales) : null,
         net_sales: null,
@@ -783,10 +783,25 @@ export const getSchedulingLeverage = createServerFn({ method: "POST" })
         hours,
         labor_cost: r.labor_cost != null ? Number(r.labor_cost) : null,
         opportunity_factor: r.opportunity_factor != null ? Number(r.opportunity_factor) : 1,
+        // Used to dedupe unique shifts (multiple POS / category / labour rows
+        // for the same scheduled shift must not inflate working-pattern counts).
+        shift_start: r.shift_start_time ?? null,
+        shift_end: r.shift_end_time ?? null,
       };
     });
 
-    return computeSchedulingLeverage(rows);
+    // Whether the manager's selected week has any matched shifts.
+    const selectedWeekHasShifts = rows.some(
+      (r) => r.shift_date >= ws && r.shift_date < iso(weekEnd) && (r.gross_sales != null || r.labor_cost != null),
+    );
+
+    return computeSchedulingLeverage(rows, {
+      // V1 has no outlet column — engine treats the venue name as a fallback.
+      outletBasis: "venue_fallback",
+      period: { start: iso(start), end: iso(weekEnd), weeks },
+      selectedWeekHasShifts,
+      selectedWeekStart: ws,
+    });
   });
 
 
