@@ -38,6 +38,7 @@ export interface ComparisonPayload {
   venue: { id: string; name: string; active_model_version: string };
   weekStart: string;
   weekEnd: string;
+  baselineWeeks: number;
   comparison: ReturnType<typeof buildComparison>;
   v1_totals: { shifts: number; gross_sales: number; labor_cost: number; adj_labor_cost: number; covers: number };
   v2_totals: {
@@ -45,6 +46,7 @@ export interface ComparisonPayload {
     covers: number | null; single_sided: number; needs_review: number; cross_daypart: number;
   };
 }
+
 
 export const getLlsComparison = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -83,8 +85,9 @@ export const getLlsComparison = createServerFn({ method: "POST" })
       v1Shifts += 1;
     }
 
-    // --- v1 historical benchmark (prior 4 weeks venue adj LLS) ---
-    const v1HistStart = addDays(ws, -28);
+    // --- v1 historical benchmark (aligned to baselineWeeks for apples-to-apples comparison with v2) ---
+    const v1HistStart = baselineStart;
+
     const { data: v1Hist } = await supabase
       .from("shifts")
       .select("gross_sales, labor_cost, opportunity_factor")
@@ -247,6 +250,8 @@ export const getLlsComparison = createServerFn({ method: "POST" })
       },
       weekStart: ws,
       weekEnd: we,
+      baselineWeeks,
+
       comparison,
       v1_totals: {
         shifts: v1Shifts, gross_sales: v1Gross, labor_cost: v1Labor,

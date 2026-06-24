@@ -6,13 +6,12 @@ import { getManagerVenue } from "@/lib/manager-venue";
 import { getMondayOfWeek, toISODate, formatWeekRange, latestStatsWeek } from "@/lib/week";
 import {
   loadServerPerformance,
-  overallScore,
   statusTone,
-  scoreTone,
-  scoreLabel,
   formatItems,
   type ServerPerformance,
 } from "@/lib/performance-engine";
+import { engineRagFromPerf } from "@/lib/metrics/server-rag";
+
 import { Sparkles, Wand2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -84,7 +83,10 @@ function ServerView() {
     })();
   }, [id, weekStart]);
 
-  const overall = overallScore(perf);
+  const verdict = engineRagFromPerf(perf);
+  const gapText = verdict.gapPct === null
+    ? "—"
+    : `${verdict.gapPct >= 0 ? "+" : ""}${(verdict.gapPct * 100).toFixed(1)}%`;
 
   return (
     <ManagerLayout>
@@ -100,11 +102,10 @@ function ServerView() {
 
         <div className="mt-8 grid md:grid-cols-4 gap-4">
           <div className="rounded-2xl bg-white border border-border p-5">
-            <div className="text-xs text-muted-foreground">Overall score</div>
-            <div className="font-display text-2xl font-extrabold mt-1" style={{ color: scoreTone(overall) }}>
-              {overall === null ? "—" : overall.toFixed(0)}
-            </div>
-            <div className="text-xs mt-1" style={{ color: scoreTone(overall) }}>{scoreLabel(overall)}</div>
+            <div className="text-xs text-muted-foreground">Performance vs benchmark</div>
+            <div className="font-display text-2xl font-extrabold mt-1" style={{ color: verdict.tone }}>{gapText}</div>
+            <div className="text-xs mt-1" style={{ color: verdict.tone }}>{verdict.label}</div>
+
           </div>
           <div className="rounded-2xl bg-white border border-border p-5">
             <div className="text-xs text-muted-foreground">Spend per cover</div>

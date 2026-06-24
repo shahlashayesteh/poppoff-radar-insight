@@ -6,10 +6,10 @@ import { getManagerVenue } from "@/lib/manager-venue";
 import { getMondayOfWeek, toISODate, formatWeekRange, latestStatsWeek } from "@/lib/week";
 import {
   loadVenuePerformance,
-  scoreTone,
-  scoreLabel,
   type VenuePerformance,
 } from "@/lib/performance-engine";
+import { engineRagFromPerf } from "@/lib/metrics/server-rag";
+
 
 export const Route = createFileRoute("/manager/team")({ component: TeamPage });
 
@@ -62,7 +62,7 @@ function TeamPage() {
       <div className="px-8 py-8">
         <div className="text-xs uppercase tracking-widest text-muted-foreground">Team</div>
         <h1 className="font-display text-4xl font-extrabold tracking-tight mt-2">Your servers</h1>
-        <div className="mt-1 text-xs text-muted-foreground">{formatWeekRange(displayWeekStart)} · ranked by overall performance score</div>
+        <div className="mt-1 text-xs text-muted-foreground">{formatWeekRange(displayWeekStart)} · ranked by commercial impact (engine RAG vs benchmark)</div>
 
         {members.length === 0 ? (
           <div className="mt-8 rounded-2xl bg-white border border-border p-6 text-sm text-muted-foreground">
@@ -72,9 +72,12 @@ function TeamPage() {
           <div className="mt-8 grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {sortedMembers.map((m) => {
               const entry = perf?.byUser[m.id];
-              const overall = entry?.overall ?? null;
-              const tone = scoreTone(overall);
-              const label = scoreLabel(overall);
+              const verdict = engineRagFromPerf(entry?.perf);
+              const tone = verdict.tone;
+              const label = verdict.label;
+              const gapText = verdict.gapPct === null
+                ? "—"
+                : `${verdict.gapPct >= 0 ? "+" : ""}${(verdict.gapPct * 100).toFixed(1)}%`;
               const sales = entry?.perf.totals.sales ?? 0;
               const d4 = entry?.perf.totals.salesDeltaPctVs4wk;
               const influence = entry?.perf.totals.totalRevenueInfluence ?? 0;
@@ -87,8 +90,8 @@ function TeamPage() {
                       <div className="mt-1 text-[10px] font-bold uppercase tracking-wider" style={{ color: tone }}>{label}{rank ? ` · #${rank}` : ""}</div>
                     </div>
                     <div className="text-right">
-                      <div className="text-xs text-muted-foreground">Score</div>
-                      <div className="font-display text-2xl font-extrabold" style={{ color: tone }}>{overall === null ? "—" : overall.toFixed(0)}</div>
+                      <div className="text-xs text-muted-foreground">vs benchmark</div>
+                      <div className="font-display text-2xl font-extrabold" style={{ color: tone }}>{gapText}</div>
                     </div>
                   </div>
                   <div className="mt-3 text-xs text-muted-foreground">
@@ -106,6 +109,7 @@ function TeamPage() {
                 </Link>
               );
             })}
+
           </div>
         )}
       </div>

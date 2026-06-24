@@ -381,6 +381,8 @@ function ServerDashboard() {
               </div>
               <div className="font-display text-lg font-extrabold leading-tight">Next week opportunities</div>
             </div>
+            <div className="mt-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Modelled opportunity · directional</div>
+
             <ul className="mt-3 space-y-2.5">
               {opportunityList.map((o, idx) => {
                 const isPrimary = idx === 0;
@@ -396,7 +398,7 @@ function ServerDashboard() {
                 if (pulse?.catch && uplift !== null) {
                   reward = `Could move you above ${pulse.catch.name}`;
                 } else if (uplift !== null && uplift >= 30) {
-                  reward = `Roughly £${uplift} in uplift`;
+                  reward = `Roughly £${uplift} modelled uplift`;
                 } else if (pulse?.watch) {
                   reward = `Protects your rank from ${pulse.watch.name}`;
                 } else if (myRank && myRank > 1) {
