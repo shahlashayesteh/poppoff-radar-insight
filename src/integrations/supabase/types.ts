@@ -84,28 +84,49 @@ export type Database = {
       }
       contact_submissions: {
         Row: {
+          audit_goal: string | null
           created_at: string
+          current_pos: string | null
           email: string
           id: string
           message: string
+          monthly_revenue_band: string | null
           name: string
+          phone: string | null
           restaurant: string | null
+          role: string | null
+          source: string | null
+          venue_count: string | null
         }
         Insert: {
+          audit_goal?: string | null
           created_at?: string
+          current_pos?: string | null
           email: string
           id?: string
           message: string
+          monthly_revenue_band?: string | null
           name: string
+          phone?: string | null
           restaurant?: string | null
+          role?: string | null
+          source?: string | null
+          venue_count?: string | null
         }
         Update: {
+          audit_goal?: string | null
           created_at?: string
+          current_pos?: string | null
           email?: string
           id?: string
           message?: string
+          monthly_revenue_band?: string | null
           name?: string
+          phone?: string | null
           restaurant?: string | null
+          role?: string | null
+          source?: string | null
+          venue_count?: string | null
         }
         Relationships: []
       }
