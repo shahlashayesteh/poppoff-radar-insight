@@ -68,10 +68,10 @@ function ManagerDashboard() {
         <div className="mt-8 grid grid-cols-2 lg:grid-cols-4 gap-4">
           <Stat icon={Users} tone="var(--brand-green)" label="Total Covers" value="812" sub="▲ +5% vs last week" />
           <Stat icon={PoundSterling} tone="var(--brand-green)" label="Avg Spend per Cover" value="£58.40" sub="▲ +6.3% vs last week" />
-          <Stat icon={TrendingUp} tone="var(--brand-green)" label="Estimated Uplift" value="£1,420" sub="▲ +8% vs last week" />
+          <Stat icon={TrendingUp} tone="var(--brand-green)" label="Modelled opportunity (week)" value="£1,420" sub="▲ +8% vs last week" />
           <Stat icon={Eye} tone="var(--brand-green)" label="Server Viewed Stats" value="4 / 5" sub="80%" subTone="var(--muted-foreground)" />
 
-          <Stat icon={Wine} tone="oklch(0.55 0.18 290)" label="Wine Opportunity" value="£620" sub="▲ +11% vs last week" />
+          <Stat icon={Wine} tone="oklch(0.55 0.18 290)" label="Wine modelled opportunity" value="£620" sub="▲ +11% vs last week" />
           <Stat icon={Cake} tone="var(--opportunity)" label="Dessert Performance" value="+14%" sub="vs last week" />
           <Stat icon={Droplet} tone="oklch(0.65 0.15 240)" label="Bottled Water Progress" value="+9%" sub="vs last week" />
           <Stat icon={Target} tone="var(--opportunity)" label="Red Opportunities" value="7" sub="▼ this week" subTone="var(--opportunity)" />
@@ -155,7 +155,7 @@ function ManagerDashboard() {
               <path d="M0,55 C30,52 50,48 70,42 S110,30 130,22 S180,8 200,4" fill="none" stroke="var(--brand-green)" strokeWidth="3" strokeLinecap="round" />
               <path d="M195,12 L200,4 L192,2" fill="none" stroke="var(--brand-green)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
-            <div className="mt-2 text-sm"><span className="text-brand-green font-bold">+£1,420</span> <span className="text-muted-foreground">potential uplift this week</span></div>
+            <div className="mt-2 text-sm"><span className="text-brand-green font-bold">+£1,420</span> <span className="text-muted-foreground">modelled opportunity this week (sum of per-server uplifts)</span></div>
           </div>
 
           {/* Focus ack */}

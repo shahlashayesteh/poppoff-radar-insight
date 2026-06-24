@@ -391,7 +391,8 @@ function CalculatorPage() {
                     {money0(currency, annualUpside(0.12))} to{" "}
                     {money0(currency, annualUpside(0.20))} a year
                   </strong>{" "}
-                  — about {nf1.format(upsidePctOfRev(0.12))}% to{" "}
+                  <span className="inline-flex items-center rounded-full border border-brand-orange/40 bg-brand-orange/10 px-1.5 py-px text-[10px] font-semibold uppercase tracking-wide text-brand-orange align-middle">Modelled</span>
+                  {" "}— about {nf1.format(upsidePctOfRev(0.12))}% to{" "}
                   {nf1.format(upsidePctOfRev(0.20))}% of revenue.
                 </p>
               </div>

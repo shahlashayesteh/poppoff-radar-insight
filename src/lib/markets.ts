@@ -68,7 +68,7 @@ export const MARKETS: Record<MarketId, MarketPreset> = {
   HR: {
     id: "HR",
     label: "Croatia (€)",
-    shortLabel: "Croatia / EUR",
+    shortLabel: "Croatia",
     currencySymbol: "€",
     currencyCode: "EUR",
     dateFormat: "uk",

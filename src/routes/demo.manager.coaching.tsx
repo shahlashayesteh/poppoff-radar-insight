@@ -14,7 +14,7 @@ const demoPriorities = [
 
 const talkingPoints = `Team focus this week — ${restaurant.week}
 
-1. Wine attachment is the biggest opportunity (estimated +£420 uplift).
+1. Wine attachment is the biggest opportunity (modelled +£620 uplift).
    • Sarah and James were below their personal wine targets on dinner shifts.
    • Coach one specific pairing line: "Would you like to try our Sancerre with the salmon?"
 

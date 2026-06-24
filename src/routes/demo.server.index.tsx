@@ -61,19 +61,19 @@ function ServerDashboard() {
           <div className="mt-4 grid grid-cols-3 gap-2">
             <div className="flex flex-col items-center">
               <div className="text-xs text-muted-foreground mb-2">Wine</div>
-              <Ring value={78} color="var(--brand-orange)" label="" />
-              <div className="mt-1 text-xs text-brand-green font-semibold">↑ +12%</div>
+              <Ring value={42} color="var(--opportunity)" label="" />
+              <div className="mt-1 text-xs text-brand-green font-semibold">↑ +4%</div>
               <div className="text-[10px] text-muted-foreground">vs last week</div>
             </div>
             <div className="flex flex-col items-center">
               <div className="text-xs text-muted-foreground mb-2">Cocktails</div>
-              <Ring value={72} color="var(--brand-green)" label="" />
+              <Ring value={81} color="var(--brand-green)" label="" />
               <div className="mt-1 text-xs text-brand-green font-semibold">↑ +8%</div>
               <div className="text-[10px] text-muted-foreground">vs last week</div>
             </div>
             <div className="flex flex-col items-center">
               <div className="text-xs text-muted-foreground mb-2">Desserts</div>
-              <Ring value={64} color="oklch(0.82 0.16 80)" label="" />
+              <Ring value={88} color="var(--brand-green)" label="" />
               <div className="mt-1 text-xs text-brand-green font-semibold">↑ +18%</div>
               <div className="text-[10px] text-muted-foreground">vs last week</div>
             </div>

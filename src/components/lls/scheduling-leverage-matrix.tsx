@@ -56,10 +56,10 @@ function cellShort(label: CellLabel): string {
 function confidenceLabel(b: string): string {
   return b === "high" ? "High" : b === "medium" ? "Medium" : b === "low" ? "Low" : "Insufficient";
 }
-function fmtMoney(v: number | null | undefined): string {
+function fmtMoney(v: number | null | undefined, currency: string = "£"): string {
   if (v == null || !Number.isFinite(v)) return "—";
   const sign = v < 0 ? "−" : "";
-  return `${sign}$${Math.abs(v).toFixed(0)}`;
+  return `${sign}${currency}${Math.abs(v).toFixed(0)}`;
 }
 function recTypeShort(t: RecommendationType): string {
   switch (t) {
@@ -131,11 +131,13 @@ function HighlightCard({
   tooltip,
   rec,
   onView,
+  currency,
 }: {
   title: string;
   tooltip: string;
   rec: ServerRecommendation | null;
   onView: (r: ServerRecommendation) => void;
+  currency: string;
 }) {
   return (
     <div className="rounded-xl bg-white border border-border p-3 flex flex-col gap-1.5">
@@ -155,7 +157,7 @@ function HighlightCard({
           <div className="font-display text-base font-bold leading-tight truncate">{rec.server_name}</div>
           <div className="text-xs text-muted-foreground truncate">{rec.best_fit_shift}</div>
           <div className="flex items-center gap-2 text-[11px] mt-0.5">
-            <span className="font-semibold">{fmtMoney(rec.modelled_opportunity)}</span>
+            <span className="font-semibold">{fmtMoney(rec.modelled_opportunity, currency)}</span>
             <ModelledValueLabel kind="modelled" />
             <Pill className={confidenceTone(rec.confidence)}>{confidenceLabel(rec.confidence)}</Pill>
           </div>
@@ -185,7 +187,7 @@ type DrawerPayload =
       pattern: string;
     };
 
-function RecommendationDetail({ rec }: { rec: ServerRecommendation }) {
+function RecommendationDetail({ rec, currency }: { rec: ServerRecommendation; currency: string }) {
   const e = rec.explanation;
   return (
     <div className="space-y-4 text-sm">
@@ -199,7 +201,7 @@ function RecommendationDetail({ rec }: { rec: ServerRecommendation }) {
       <Section label="Shift">{rec.best_fit_shift}</Section>
       <Section label="Recommended action">{actionFromTestStyle(rec)}</Section>
       <Section label="Modelled marginal lift">
-        <span className="font-semibold">{fmtMoney(rec.modelled_opportunity)}</span>{" "}
+        <span className="font-semibold">{fmtMoney(rec.modelled_opportunity, currency)}</span>{" "}
         <ModelledValueLabel kind="modelled" />
         <div className="text-xs text-muted-foreground mt-1">{e.modelled_marginal_lift}</div>
       </Section>
@@ -223,11 +225,13 @@ function CellDetail({
   server,
   shiftLabel,
   pattern,
+  currency,
 }: {
   cell: ServerShiftCell;
   server: string;
   shiftLabel: string;
   pattern: string;
+  currency: string;
 }) {
   return (
     <div className="space-y-4 text-sm">
@@ -238,7 +242,7 @@ function CellDetail({
       <Section label="Server">{server}</Section>
       <Section label="Shift type">{shiftLabel}</Section>
       <Section label="Modelled marginal lift">
-        <span className="font-semibold">{fmtMoney(cell.modelled_marginal_lift)}</span>{" "}
+        <span className="font-semibold">{fmtMoney(cell.modelled_marginal_lift, currency)}</span>{" "}
         <ModelledValueLabel kind="modelled" />
       </Section>
       <Section label="Projected metrics">
@@ -278,7 +282,7 @@ function Section({ label, children }: { label: string; children: React.ReactNode
 
 // ───────────── main component ─────────────
 
-export function SchedulingLeverageMatrix({ data }: { data: SchedulingLeverageResult }) {
+export function SchedulingLeverageMatrix({ data, currency = "£" }: { data: SchedulingLeverageResult; currency?: string }) {
   const h = data.highlights;
   const dq = data.data_quality;
   const [drawer, setDrawer] = useState<DrawerPayload | null>(null);
@@ -362,13 +366,13 @@ export function SchedulingLeverageMatrix({ data }: { data: SchedulingLeverageRes
 
       {/* Highlight cards — compact, no paragraphs */}
       <div className="mt-5 grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
-        <HighlightCard title="Best overall leverage" tooltip="Highest Marginal Deployment Value with positive modelled lift." rec={h.best_overall_leverage} onView={(r) => setDrawer({ kind: "rec", rec: r })} />
-        <HighlightCard title="Slow-shift lifter" tooltip="Biggest improvement vs current rota baseline on a quieter shift." rec={h.best_slow_shift_lifter} onView={(r) => setDrawer({ kind: "rec", rec: r })} />
-        <HighlightCard title="Peak-shift performer" tooltip="Holds throughput and Adj. LLS above baseline on high-opportunity shifts." rec={h.best_peak_performer} onView={(r) => setDrawer({ kind: "rec", rec: r })} />
-        <HighlightCard title="RPC builder" tooltip="Highest projected revenue per cover vs current rota baseline." rec={h.best_rpc_builder} onView={(r) => setDrawer({ kind: "rec", rec: r })} />
-        <HighlightCard title="Throughput handler" tooltip="Highest covers per hour with RPH at or above baseline." rec={h.best_throughput} onView={(r) => setDrawer({ kind: "rec", rec: r })} />
-        <HighlightCard title="Most underused" tooltip="Strong projected fit on a shift type they are rarely scheduled on." rec={h.most_underused} onView={(r) => setDrawer({ kind: "rec", rec: r })} />
-        <HighlightCard title="Coaching opportunity" tooltip="Below benchmark on a shift type they are heavily scheduled on." rec={h.biggest_coaching_opportunity} onView={(r) => setDrawer({ kind: "rec", rec: r })} />
+        <HighlightCard currency={currency} title="Best overall leverage" tooltip="Highest Marginal Deployment Value with positive modelled lift." rec={h.best_overall_leverage} onView={(r) => setDrawer({ kind: "rec", rec: r })} />
+        <HighlightCard currency={currency} title="Slow-shift lifter" tooltip="Biggest improvement vs current rota baseline on a quieter shift." rec={h.best_slow_shift_lifter} onView={(r) => setDrawer({ kind: "rec", rec: r })} />
+        <HighlightCard currency={currency} title="Peak-shift performer" tooltip="Holds throughput and Adj. LLS above baseline on high-opportunity shifts." rec={h.best_peak_performer} onView={(r) => setDrawer({ kind: "rec", rec: r })} />
+        <HighlightCard currency={currency} title="RPC builder" tooltip="Highest projected revenue per cover vs current rota baseline." rec={h.best_rpc_builder} onView={(r) => setDrawer({ kind: "rec", rec: r })} />
+        <HighlightCard currency={currency} title="Throughput handler" tooltip="Highest covers per hour with RPH at or above baseline." rec={h.best_throughput} onView={(r) => setDrawer({ kind: "rec", rec: r })} />
+        <HighlightCard currency={currency} title="Most underused" tooltip="Strong projected fit on a shift type they are rarely scheduled on." rec={h.most_underused} onView={(r) => setDrawer({ kind: "rec", rec: r })} />
+        <HighlightCard currency={currency} title="Coaching opportunity" tooltip="Below benchmark on a shift type they are heavily scheduled on." rec={h.biggest_coaching_opportunity} onView={(r) => setDrawer({ kind: "rec", rec: r })} />
       </div>
 
       {/* Shift match recommendations — clean table */}
@@ -411,7 +415,7 @@ export function SchedulingLeverageMatrix({ data }: { data: SchedulingLeverageRes
                     <td className="py-2 pr-3 whitespace-nowrap">{r.best_fit_shift}</td>
                     <td className="py-2 pr-3 text-xs">{actionFromTestStyle(r)}</td>
                     <td className="py-2 pr-3 text-right font-semibold whitespace-nowrap">
-                      {fmtMoney(r.modelled_opportunity)}
+                      {fmtMoney(r.modelled_opportunity, currency)}
                     </td>
                     <td className="py-2 pr-3 text-center">
                       <Pill className={confidenceTone(r.confidence)}>{confidenceLabel(r.confidence)}</Pill>
@@ -487,7 +491,7 @@ export function SchedulingLeverageMatrix({ data }: { data: SchedulingLeverageRes
                             <span className="font-semibold">{cellShort(cell.cell_label)}</span>
                             {cell.modelled_marginal_lift != null && Math.abs(cell.modelled_marginal_lift) >= 20 && (
                               <span className="block text-[9px] font-normal opacity-80 leading-tight">
-                                {fmtMoney(cell.modelled_marginal_lift)}
+                                {fmtMoney(cell.modelled_marginal_lift, currency)}
                               </span>
                             )}
                           </button>
@@ -533,7 +537,7 @@ export function SchedulingLeverageMatrix({ data }: { data: SchedulingLeverageRes
                 <SheetDescription>{drawer.rec.best_fit_shift}</SheetDescription>
               </SheetHeader>
               <div className="mt-4">
-                <RecommendationDetail rec={drawer.rec} />
+                <RecommendationDetail rec={drawer.rec} currency={currency} />
               </div>
             </>
           )}
@@ -544,7 +548,7 @@ export function SchedulingLeverageMatrix({ data }: { data: SchedulingLeverageRes
                 <SheetDescription>{drawer.shiftLabel}</SheetDescription>
               </SheetHeader>
               <div className="mt-4">
-                <CellDetail cell={drawer.cell} server={drawer.server} shiftLabel={drawer.shiftLabel} pattern={drawer.pattern} />
+                <CellDetail cell={drawer.cell} server={drawer.server} shiftLabel={drawer.shiftLabel} pattern={drawer.pattern} currency={currency} />
               </div>
             </>
           )}
