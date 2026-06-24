@@ -296,6 +296,7 @@ export interface SchedulingLeverageResult {
 const isPos = (n: unknown): n is number => typeof n === "number" && Number.isFinite(n) && n > 0;
 const isNum = (n: unknown): n is number => typeof n === "number" && Number.isFinite(n);
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
+const fmtSigned = (n: number) => `${n >= 0 ? "+" : "−"}$${Math.abs(n).toFixed(0)}`;
 const ofOrOne = (v: unknown) => (isPos(v) ? (v as number) : 1);
 
 function shiftTypeKey(outlet: string | null, dow: number, daypart: string): string {
