@@ -548,7 +548,7 @@ export function SchedulingLeverageMatrix({ data, currency = "£" }: { data: Sche
                 <SheetDescription>{drawer.shiftLabel}</SheetDescription>
               </SheetHeader>
               <div className="mt-4">
-                <CellDetail cell={drawer.cell} server={drawer.server} shiftLabel={drawer.shiftLabel} pattern={drawer.pattern} />
+                <CellDetail cell={drawer.cell} server={drawer.server} shiftLabel={drawer.shiftLabel} pattern={drawer.pattern} currency={currency} />
               </div>
             </>
           )}
