@@ -700,6 +700,13 @@ function LlsPage() {
           </div>
         )}
 
+        {/* Scheduling Leverage Matrix — manager-only intelligence */}
+        {leverage && leverage.matrix.length > 0 && (
+          <SchedulingLeverageMatrix data={leverage} />
+        )}
+
+
+
         {/* Opportunity Factor editor */}
         <div className="mt-6 rounded-2xl bg-white border border-border p-6">
           <div className="flex items-start justify-between gap-3 flex-wrap">
