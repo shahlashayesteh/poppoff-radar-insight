@@ -59,10 +59,10 @@ function ManagerDashboard() {
           </div>
           <div className="flex items-center gap-3">
             <button className="inline-flex items-center gap-2 rounded-xl border border-border bg-white px-4 py-2 text-sm font-medium">
-              The Demo Restaurant <ChevronDown className="h-4 w-4" />
+              {demoVenue.name} <ChevronDown className="h-4 w-4" />
             </button>
             <button className="inline-flex items-center gap-2 rounded-xl border border-border bg-white px-4 py-2 text-sm font-medium">
-              <Calendar className="h-4 w-4" /> 4 May – 10 May
+              <Calendar className="h-4 w-4" /> {demoVenue.weekLabel}
             </button>
             <button className="relative h-10 w-10 grid place-items-center rounded-full border border-border bg-white">
               <Bell className="h-4 w-4" />
@@ -73,15 +73,91 @@ function ManagerDashboard() {
 
         {/* KPI grid 4x2 */}
         <div className="mt-8 grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <Stat icon={Users} tone="var(--brand-green)" label="Total Covers" value="812" sub="▲ +5% vs last week" />
-          <Stat icon={PoundSterling} tone="var(--brand-green)" label="Avg Spend per Cover" value="£58.40" sub="▲ +6.3% vs last week" />
-          <Stat icon={TrendingUp} tone="var(--brand-green)" label="Modelled opportunity (week)" value="£1,420" sub="▲ +8% vs last week" />
-          <Stat icon={Eye} tone="var(--brand-green)" label="Server Viewed Stats" value="4 / 5" sub="80%" subTone="var(--muted-foreground)" />
+          <Stat icon={Users} tone="var(--brand-green)" label="Total Covers" value={demoManagerKpis.totalCovers.toLocaleString()} sub="▲ +5% vs last week" />
+          <Stat icon={PoundSterling} tone="var(--brand-green)" label="Avg Spend per Cover" value={`£${demoManagerKpis.avgSpc.toFixed(2)}`} sub="▲ +6.3% vs last week" />
+          <Stat icon={TrendingUp} tone="var(--brand-green)" label="Modelled opportunity (week)" value={`£${demoManagerKpis.uplift.toLocaleString()}`} sub="▲ +8% vs last week" />
+          <Stat icon={Eye} tone="var(--brand-green)" label="Server Viewed Stats" value={`${demoManagerKpis.viewedCount} / ${demoManagerKpis.totalServers}`} sub={`${demoManagerKpis.viewedRatePct}%`} subTone="var(--muted-foreground)" />
 
-          <Stat icon={Wine} tone="oklch(0.55 0.18 290)" label="Wine modelled opportunity" value="£620" sub="▲ +11% vs last week" />
-          <Stat icon={Cake} tone="var(--opportunity)" label="Dessert Performance" value="+14%" sub="vs last week" />
-          <Stat icon={Droplet} tone="oklch(0.65 0.15 240)" label="Bottled Water Progress" value="+9%" sub="vs last week" />
-          <Stat icon={Target} tone="var(--opportunity)" label="Red Opportunities" value="7" sub="▼ this week" subTone="var(--opportunity)" />
+          <Stat icon={Wine} tone="oklch(0.55 0.18 290)" label="Wine modelled opportunity" value={`£${demoManagerKpis.wineOpportunity}`} sub={`▲ +${demoCategoryOpportunities[0].deltaPct}% vs last week`} />
+          <Stat icon={Cake} tone="var(--opportunity)" label="Dessert Performance" value={`+${demoManagerKpis.dessertDeltaPct}%`} sub="vs last week" />
+          <Stat icon={Droplet} tone="oklch(0.65 0.15 240)" label="Bottled Water Progress" value={`+${demoManagerKpis.waterDeltaPct}%`} sub="vs last week" />
+          <Stat icon={Target} tone="var(--opportunity)" label="Red Opportunities" value={String(demoManagerKpis.redOpportunities)} sub="▼ this week" subTone="var(--opportunity)" />
+        </div>
+
+        {/* Category opportunities */}
+        <div className="mt-6 rounded-2xl bg-white border border-border p-5">
+          <h2 className="font-display text-lg font-bold">Category opportunities</h2>
+          <p className="text-xs text-muted-foreground mt-1">Modelled uplift by category — sums to £{demoManagerKpis.uplift.toLocaleString()} this week.</p>
+          <div className="mt-4 grid sm:grid-cols-2 lg:grid-cols-5 gap-3">
+            {demoCategoryOpportunities.map((c) => (
+              <div key={c.key} className="rounded-xl border border-border p-3">
+                <div className="text-xs text-muted-foreground">{c.label}</div>
+                <div className="font-display text-xl font-extrabold mt-1">£{c.uplift.toLocaleString()}</div>
+                <div className="text-xs text-brand-green font-semibold mt-0.5">+{c.deltaPct}% vs last week</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Labour leverage + Shift match preview */}
+        <div className="mt-6 grid lg:grid-cols-2 gap-4">
+          <div className="rounded-2xl bg-white border border-border p-5">
+            <div className="flex items-start gap-3">
+              <div className="h-11 w-11 rounded-full grid place-items-center" style={{ background: "color-mix(in oklab, var(--brand-green) 14%, white)" }}>
+                <Scale className="h-5 w-5" style={{ color: "var(--brand-green)" }} />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-display font-bold">Labour Leverage preview</h3>
+                <p className="text-xs text-muted-foreground mt-1">Margin earned per £ of labour. Full view in the LLS workspace.</p>
+              </div>
+            </div>
+            <div className="mt-4 grid grid-cols-3 gap-3 text-sm">
+              <div>
+                <div className="text-xs text-muted-foreground">LLS score</div>
+                <div className="font-display text-2xl font-extrabold">{demoLabourLeveragePreview.scorePct}%</div>
+                <div className="text-xs text-muted-foreground">benchmark {demoLabourLeveragePreview.benchmarkPct}%</div>
+              </div>
+              <div>
+                <div className="text-xs text-muted-foreground">Monthly opportunity</div>
+                <div className="font-display text-2xl font-extrabold text-brand-green">£{demoLabourLeveragePreview.monthlyOpportunity.toLocaleString()}</div>
+              </div>
+              <div>
+                <div className="text-xs text-muted-foreground">Top gap</div>
+                <div className="font-display text-base font-bold">{demoLabourLeveragePreview.topGap.daypart}</div>
+                <div className="text-xs text-opportunity font-semibold">−£{demoLabourLeveragePreview.topGap.lostMargin.toLocaleString()}</div>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-2xl bg-white border border-border p-5">
+            <div className="flex items-start gap-3">
+              <div className="h-11 w-11 rounded-full grid place-items-center" style={{ background: "color-mix(in oklab, var(--brand-orange) 14%, white)" }}>
+                <CalendarClock className="h-5 w-5" style={{ color: "var(--brand-orange)" }} />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-display font-bold">Shift Match preview</h3>
+                <p className="text-xs text-muted-foreground mt-1">How well the rota tracks forecasted demand this week.</p>
+              </div>
+            </div>
+            <div className="mt-4 grid grid-cols-4 gap-3 text-sm">
+              <div>
+                <div className="text-xs text-muted-foreground">Match</div>
+                <div className="font-display text-2xl font-extrabold">{demoShiftMatchPreview.matchPct}%</div>
+              </div>
+              <div>
+                <div className="text-xs text-muted-foreground">Over</div>
+                <div className="font-display text-2xl font-extrabold text-opportunity">{demoShiftMatchPreview.overstaffedShifts}</div>
+              </div>
+              <div>
+                <div className="text-xs text-muted-foreground">Under</div>
+                <div className="font-display text-2xl font-extrabold text-opportunity">{demoShiftMatchPreview.understaffedShifts}</div>
+              </div>
+              <div>
+                <div className="text-xs text-muted-foreground">Reshuffles</div>
+                <div className="font-display text-2xl font-extrabold">{demoShiftMatchPreview.recommendedReshuffles}</div>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Team performance */}
