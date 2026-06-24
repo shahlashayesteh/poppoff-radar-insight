@@ -225,11 +225,13 @@ function CellDetail({
   server,
   shiftLabel,
   pattern,
+  currency,
 }: {
   cell: ServerShiftCell;
   server: string;
   shiftLabel: string;
   pattern: string;
+  currency: string;
 }) {
   return (
     <div className="space-y-4 text-sm">
@@ -240,7 +242,7 @@ function CellDetail({
       <Section label="Server">{server}</Section>
       <Section label="Shift type">{shiftLabel}</Section>
       <Section label="Modelled marginal lift">
-        <span className="font-semibold">{fmtMoney(cell.modelled_marginal_lift)}</span>{" "}
+        <span className="font-semibold">{fmtMoney(cell.modelled_marginal_lift, currency)}</span>{" "}
         <ModelledValueLabel kind="modelled" />
       </Section>
       <Section label="Projected metrics">
