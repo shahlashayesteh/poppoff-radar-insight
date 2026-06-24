@@ -735,6 +735,16 @@ export const getSchedulingLeverage = createServerFn({ method: "POST" })
     start.setDate(start.getDate() - 7 * weeks);
     const iso = (d: Date) => d.toISOString().slice(0, 10);
 
+    // Pull venue name to use as the outlet label (single-venue case → outlet
+    // scope is the venue itself). When the v2 multi-outlet schema lands, swap
+    // this for a per-row outlet/revenue centre column.
+    const { data: venueRow } = await supabase
+      .from("venues")
+      .select("name")
+      .eq("id", venueId)
+      .maybeSingle();
+    const venueName: string | null = (venueRow as any)?.name ?? null;
+
     const { data: shifts, error } = await supabase
       .from("shifts")
       .select(
@@ -763,7 +773,10 @@ export const getSchedulingLeverage = createServerFn({ method: "POST" })
         shift_date: r.shift_date,
         day_of_week: r.day_of_week,
         daypart: r.daypart,
-        outlet: null,
+        // Single-venue v1 schema: treat the venue as the outlet so all engine
+        // calculations stay outlet-scoped. Multi-outlet uploads will populate
+        // the outlet field per row.
+        outlet: venueName,
         gross_sales: r.gross_sales != null ? Number(r.gross_sales) : null,
         net_sales: null,
         covers: r.covers_served != null ? Number(r.covers_served) : null,
@@ -775,5 +788,6 @@ export const getSchedulingLeverage = createServerFn({ method: "POST" })
 
     return computeSchedulingLeverage(rows);
   });
+
 
 
