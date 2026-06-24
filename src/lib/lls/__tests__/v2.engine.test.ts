@@ -9,22 +9,24 @@ import { baseLLS, adjustedLLS, aggregate } from "@/lib/metrics/lls";
 import { performanceGap as enginePerformanceGap } from "@/lib/metrics/gap";
 import type { CanonicalShift } from "@/lib/lls/v2/types";
 
-const mkShift = (over: Partial<CanonicalShift>): CanonicalShift =>
-  ({
-    id: "x",
-    venue_id: "v",
-    identity_id: "i",
-    service_date: "2026-06-22",
-    gross_sales: 1000,
-    labor_cost: 100,
-    hours_worked: 8,
-    covers: 30,
-    is_active: true,
-    is_single_sided: false,
-    needs_review: false,
-    cross_daypart: false,
-    ...over,
-  }) as CanonicalShift;
+const mkShift = (over: Partial<CanonicalShift>): CanonicalShift => ({
+  id: "x",
+  venue_id: "v",
+  identity_id: "i",
+  service_date: "2026-06-22",
+  day_of_week: 0,
+  daypart: "dinner",
+  duration_tier: "standard",
+  gross_sales: 1000,
+  net_sales: null,
+  labor_cost: 100,
+  hours_worked: 8,
+  covers: 30,
+  cross_daypart: false,
+  status: "active",
+  ...over,
+});
+
 
 describe("lls v2 ⇄ canonical engine", () => {
   it("calcShift base/adjusted LLS = engine baseLLS/adjustedLLS", () => {
