@@ -201,20 +201,37 @@ function ServerGapPage() {
           </p>
         </section>
 
-        {/* Currency selector */}
-        <div className="mt-8 flex flex-wrap items-center gap-2.5">
-          <span className="mr-1 font-mono text-xs uppercase tracking-[0.14em] text-muted-foreground">
-            Currency
-          </span>
-          <ToggleGroup
-            type="single"
-            value={currency}
-            onValueChange={(v) => v && setCurrency(v as "£" | "$")}
-            variant="outline"
-          >
-            <ToggleGroupItem value="£" className="rounded-full px-4">UK (£)</ToggleGroupItem>
-            <ToggleGroupItem value="$" className="rounded-full px-4">US ($)</ToggleGroupItem>
-          </ToggleGroup>
+        {/* Market + date-format selectors */}
+        <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3">
+          <div className="flex items-center gap-2.5">
+            <span className="mr-1 font-mono text-xs uppercase tracking-[0.14em] text-muted-foreground">
+              Currency
+            </span>
+            <ToggleGroup
+              type="single"
+              value={currency}
+              onValueChange={(v) => v && onCurrencyChange(v as "£" | "$")}
+              variant="outline"
+            >
+              <ToggleGroupItem value="£" className="rounded-full px-4">UK (£)</ToggleGroupItem>
+              <ToggleGroupItem value="$" className="rounded-full px-4">US ($)</ToggleGroupItem>
+            </ToggleGroup>
+          </div>
+          <div className="flex items-center gap-2.5">
+            <span className="font-mono text-xs uppercase tracking-[0.14em] text-muted-foreground">
+              Date format
+            </span>
+            <ToggleGroup
+              type="single"
+              value={dateFormat}
+              onValueChange={(v) => v && onDateFormatChange(v as DateFormat)}
+              variant="outline"
+            >
+              <ToggleGroupItem value="uk" className="rounded-full px-3">DD/MM</ToggleGroupItem>
+              <ToggleGroupItem value="us" className="rounded-full px-3">MM/DD</ToggleGroupItem>
+            </ToggleGroup>
+            <span className="text-[11px] text-muted-foreground">ISO YYYY-MM-DD always wins.</span>
+          </div>
         </div>
 
         {/* How this works — explainer */}
