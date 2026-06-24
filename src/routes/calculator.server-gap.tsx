@@ -81,12 +81,30 @@ function ServerGapPage() {
   const [labourFile, setLabourFile] = useState<{ name: string; result: ParseResult } | null>(null);
   const [parseError, setParseError] = useState<string | null>(null);
   const [currency, setCurrency] = useState<"£" | "$">("£");
+  const [dateFormat, setDateFormat] = useState<DateFormat>("uk");
   const [period, setPeriod] = useState<Period>("monthly");
   const [basis, setBasis] = useState<SalesBasis>("net");
+  const [tradingWeeks, setTradingWeeks] = useState<number>(52);
+  const [lens, setLens] = useState<"revenue" | "gp">("revenue");
+  const [gpMargin, setGpMargin] = useState<0.6 | 0.7 | 0.8>(0.7);
+  const [recoverability, setRecoverability] = useState<number>(DEFAULT_RECOVERABILITY_FACTOR);
   const [showPreview, setShowPreview] = useState(false);
+
+  // Keep date-parser default aligned with market selection.
+  const onCurrencyChange = useCallback((v: "£" | "$") => {
+    setCurrency(v);
+    const fmt: DateFormat = v === "$" ? "us" : "uk";
+    setDateFormat(fmt);
+    setDefaultDateFormat(fmt);
+  }, []);
+  const onDateFormatChange = useCallback((v: DateFormat) => {
+    setDateFormat(v);
+    setDefaultDateFormat(v);
+  }, []);
 
   const handleFile = useCallback(async (kind: UploadKind, file: File) => {
     setParseError(null);
+    setDefaultDateFormat(dateFormat);
     try {
       const result = await parseFile(file);
       if (kind === "sales") setSalesFile({ name: file.name, result });
@@ -94,7 +112,7 @@ function ServerGapPage() {
     } catch (e) {
       setParseError(`Couldn't parse ${file.name}: ${(e as Error).message}`);
     }
-  }, []);
+  }, [dateFormat]);
 
   // Sales-basis auto-selection on upload
   const salesHasGross = salesFile?.result.detected.has("gross_sales") ?? false;
