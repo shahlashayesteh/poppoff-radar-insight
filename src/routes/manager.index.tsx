@@ -70,9 +70,10 @@ type StatProps = {
   label: string;
   value: string | number;
   sub?: string;
+  tooltip?: React.ComponentProps<typeof MetricTooltip>;
 };
 
-const Stat = ({ icon: Icon, tone, label, value, sub }: StatProps) => (
+const Stat = ({ icon: Icon, tone, label, value, sub, tooltip }: StatProps) => (
   <div className="rounded-2xl bg-white border border-border p-4">
     <div className="flex items-start gap-3">
       <div
@@ -82,13 +83,17 @@ const Stat = ({ icon: Icon, tone, label, value, sub }: StatProps) => (
         <Icon className="h-5 w-5" style={{ color: tone }} />
       </div>
       <div className="flex-1 min-w-0">
-        <div className="text-xs text-muted-foreground">{label}</div>
+        <div className="text-xs text-muted-foreground inline-flex items-center gap-1">
+          {label}
+          {tooltip ? <MetricTooltip {...tooltip} /> : null}
+        </div>
         <div className="font-display text-2xl font-extrabold mt-0.5">{value}</div>
         {sub && <div className="text-xs mt-1 text-muted-foreground">{sub}</div>}
       </div>
     </div>
   </div>
 );
+
 
 const Dot = ({ s }: { s: "green" | "amber" | "red" }) => (
   <span
