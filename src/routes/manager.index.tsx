@@ -35,6 +35,7 @@ import {
 import { getManagerVenue } from "@/lib/manager-venue";
 import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
 import { toast } from "sonner";
+import { MetricTooltip } from "@/components/metrics";
 
 export const Route = createFileRoute("/manager/")({ component: ManagerDashboard });
 
