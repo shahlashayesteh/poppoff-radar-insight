@@ -1120,6 +1120,59 @@ export function computeSchedulingLeverage(
     for (let i = cap; i < promoted.length; i++) promoted[i].cell_label = "test_monitor";
   }
 
+  // ---- compact, manager-visible reason + label text per cell ----
+  const labelText: Record<CellLabel, string> = {
+    best_fit: "Best lift",
+    good_fit: "Good fit",
+    test_monitor: "Test",
+    requires_availability: "Confirm",
+    avoid_for_now: "Avoid",
+    not_eligible: "Not eligible",
+    insufficient_data: "No data",
+  };
+  for (const cell of matrix) {
+    cell.cell_label_text = labelText[cell.cell_label];
+    const lift = cell.modelled_marginal_lift ?? 0;
+    let reason = "";
+    switch (cell.cell_label) {
+      case "best_fit":
+        reason = lift > 0
+          ? `High lift +$${lift.toFixed(0)}, ${cell.confidence_band} confidence`
+          : "Top-ranked fit on this shift";
+        break;
+      case "good_fit": {
+        const bits: string[] = [];
+        if (cell.rpc_index >= 1.10) bits.push(`RPC +${((cell.rpc_index - 1) * 100).toFixed(0)}%`);
+        if (cell.rph_index >= 1.10) bits.push(`RPH +${((cell.rph_index - 1) * 100).toFixed(0)}%`);
+        if (cell.current_allocation_share < 0.1) bits.push("underused");
+        if (cell.baseline.opportunity_need >= 0.15) bits.push("headroom");
+        reason = bits.length ? bits.join(" · ") : "Positive lift, feasible";
+        break;
+      }
+      case "test_monitor":
+        reason = lift > 0
+          ? `Positive lift, ${cell.confidence_band} confidence — monitor`
+          : "Neutral — monitor only";
+        break;
+      case "requires_availability":
+        reason = "Outside observed pattern";
+        break;
+      case "avoid_for_now":
+        reason = lift < 0
+          ? `Negative modelled lift ${fmtSigned(lift)}`
+          : "Avoid";
+        break;
+      case "not_eligible":
+        reason = cell.baseline.outlet ? `No history in ${cell.baseline.outlet}` : "Outlet not eligible";
+        break;
+      default:
+        reason = cell.comparable_shifts === 0
+          ? "No comparable shifts yet"
+          : "Insufficient sample";
+    }
+    cell.primary_reason = reason;
+  }
+
   // ---- recommendations ----
   const recs: ServerRecommendation[] = [];
   const currentPatternFor = (id: string): string => {
