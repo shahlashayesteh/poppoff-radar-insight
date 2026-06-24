@@ -1,110 +1,68 @@
-# Stage 2 — Canonical Calculation Engine + Dashboard Separation
+## What's actually happening
 
-Stage 1 audit (docs/audit/*) and the two emergency patches (dateKey + labor basis) are already in. This plan executes the rest in **5 controlled phases**, each independently reviewable. I will stop after each phase for your sign-off.
+The "Something went wrong / Please try again later / Contact support" notification you're seeing is **Paddle's own overlay error**, not a Lovable toast. Our code says specific things like "Couldn't open checkout" — Paddle says "Something went wrong, contact support." That distinction matters because it tells us:
 
----
+- Our code is reaching `Paddle.Checkout.open()` successfully.
+- Paddle.js itself is rejecting the checkout once the overlay opens.
 
-## Phase A — Canonical Calculation Engine (foundation, no UI change)
+I verified from the Paddle API:
+- Price `poppoff_pro_monthly` → `pri_01kr1gpqeb8ha7kfhg0jm6m514`, status `active`, £199 GBP. ✅
+- Price `poppoff_starter_monthly` exists and is active. ✅
+- Sandbox webhook is registered to the dev URL. ✅
+- Client tokens are present in both `.env.development` and `.env.production`. ✅
 
-Create `src/lib/metrics/` as the single source of truth. Every page must import from here.
+The remaining failure modes that produce Paddle's generic "contact support" screen are almost all **environment/account configuration** issues, not code:
 
-**Files (new):**
-- `src/lib/metrics/types.ts` — `Basis` enums (`SalesBasis`, `LaborBasis`, `HoursBasis`, `Provenance: "uploaded" | "derived" | "estimated" | "defaulted"`).
-- `src/lib/metrics/sales.ts` — `netSales()`, `grossSales()`, `leakageAmount()`, `leakageRate()`.
-- `src/lib/metrics/labor.ts` — `laborCost()` with hierarchy (fully_loaded → total → wage+oncost → wage → rate×hours), `hoursWorked()` hierarchy, returns `{value, basis, provenance}`.
-- `src/lib/metrics/productivity.ts` — `rph()`, `rpc()`, `avgCheck()`, `coversPerHour()`, `itemsPerCover()`, `laborPct()`.
-- `src/lib/metrics/lls.ts` — `baseLLS()`, `adjustedLLS()` (shift-level OF only), `teamBaseLLS()`, `teamAdjustedLLS()`, `serverWeeklyBaseLLS()`, `serverWeeklyAdjustedLLS()`. **All use weighted sums, never avg-of-avg. RPC is never multiplied in.**
-- `src/lib/metrics/opportunity.ts` — `applyOFAtShift()`, `aggregateAdjustedLaborCost()`. Enforces shift-level application.
-- `src/lib/metrics/benchmark.ts` — `venueBenchmark({basis, period, scope})` — returns benchmark **with the same basis as the metric being compared**. Mismatched basis throws.
-- `src/lib/metrics/gap.ts` — `performanceGap()`, `ragBand()` (>+10 strong / ±5 tracking / -5..-10 monitor / <-10 priority).
-- `src/lib/metrics/tips.ts` — `tipPct()`, `serviceChargePct()`, `attachRate()` — preferred eligible-denominator, fallback labelled approximate.
-- `src/lib/metrics/trend.ts` — `trendPct()`.
-- `src/lib/metrics/recoverable.ts` — `recoverableOpportunity()` with configurable `recoverabilityFactor` (default 0.5, labelled modelled).
-- `src/lib/metrics/index.ts` — barrel export + `MetricResult<T>` wrapper `{value, basis, provenance, formula, sourceFields}` used by tooltips.
-- `src/lib/metrics/__tests__/*` — unit tests for every formula incl. avg-of-avg regression, OF-at-shift, basis-mismatch guard.
+1. **Approved domains missing** — Paddle blocks `Checkout.open()` from any origin that isn't on the sandbox account's approved domains list. The current preview origin (`id-preview--…lovable.app`) and the published origin (`poppoffstats.com`, `www.poppoffstats.com`, `poppoff-radar-insight.lovable.app`) all need to be there.
+2. **Default payment link unset** in Paddle Checkout settings.
+3. **Sandbox client token revoked / from a different seller account** than the one holding the prices.
 
-**Removals/refactors (replace in-place to call the engine):**
-- `src/lib/lls/v2/comparison.functions.ts` — replace mean-of-OF with shift-level.
-- `src/lib/lls/v2/performance-engine.ts` — replace `mean()` baselines with weighted.
-- `src/routes/manager.lls.index.tsx` — pull all calcs from engine.
-- `src/routes/calculator.server-gap.tsx`, `src/lib/server-gap/*` — pull from engine.
-- Any other manager/server/report file recomputing these metrics (audit list in `docs/audit/01-calculations.md`).
+None of those can be fixed from code — they're toggles in the Paddle sandbox dashboard. But what we *can* do is stop hiding the failure: today we just `console.error` and fire a generic toast, so you have no idea which of the four things failed.
 
-**Deliverable:** all existing pages work identically; tests prove math is now centralised. **No UI change yet.**
+## Scoped code change (pre-check)
 
----
+Add a single `precheckPaddle(priceId)` helper that runs before any `Paddle.Checkout.open()` call and turns each failure into a specific, actionable toast + console line.
 
-## Phase B — Basis & Provenance Transparency (manager UI)
+Steps it runs, in order:
 
-Add tooltip + badge system on every manager metric.
+1. `clientToken` is present and starts with `test_` or `live_` → otherwise toast: "Payments not configured (missing client token)."
+2. `initializePaddle()` resolves and `window.Paddle.Checkout` exists → otherwise toast: "Couldn't load Paddle. Check network / ad-blocker."
+3. `resolvePaddlePrice({ priceId, environment })` returns a `pri_…` ID → otherwise toast: `Price not found in {env}: {priceId}`.
+4. Returns `{ paddlePriceId, environment }` for the caller to pass to `Checkout.open()`.
 
-**Files (new):**
-- `src/components/metrics/MetricTooltip.tsx` — wraps a number, shows formula / source fields / basis / provenance.
-- `src/components/metrics/BasisBadge.tsx` — small inline label (`fully loaded` / `wage only` / `derived` / `estimated` / `scheduled est.` / `approx.`).
-- `src/components/metrics/RagPill.tsx` — canonical RAG bands.
+Wire the pre-check into the two real entry points:
 
-**Wire-up:** every metric on manager-facing routes listed in `docs/audit/05-transparency-gaps.md` gets `<MetricTooltip>` + `<BasisBadge>` where relevant.
+- `src/routes/index.tsx` → `handlePlanClick` (Pricing → Get Started / Start Free Trial). Run pre-check before either the signed-in `openCheckout` call or the navigate-to-signup branch, so we fail fast with a real reason instead of bouncing the user into a signup form for a broken flow.
+- `src/routes/signup.manager.tsx` → before the post-signup auto-`openCheckout`. Same pre-check.
 
-**Server-facing routes do NOT get these** — kept simple.
+Also tighten `src/hooks/usePaddleCheckout.ts` so the `try/catch` actually catches `Paddle.Checkout.open()` errors (today it's fire-and-forget — Paddle's overlay errors never reach our catch). Wrap the `Paddle.Checkout.open` call and surface any synchronous throw.
 
----
+Add `console.info` lines tagged `[paddle]` at each step (env, token prefix, resolved price ID, origin) so the next time it fails you can read exactly which gate tripped.
 
-## Phase C — Manager LLS upgrade: Scheduling Leverage Matrix
+## What you almost certainly need to do in Paddle
 
-In `src/routes/manager.lls.index.tsx` (or a new `manager.lls.scheduling.tsx` child route) add the six sections you described.
+Even with the pre-check, if the failure is "approved domains," only you can fix it. In the Paddle **sandbox** dashboard:
 
-**New files:**
-- `src/lib/scheduling/match-score.ts` — `matchScore(server, shiftType)` with the documented weights (configurable via `src/lib/scheduling/config.ts`).
-- `src/lib/scheduling/indices.ts` — `AdjustedLLSIndex`, `RPHIndex`, `RPCFit`, `ThroughputFit`, `CategoryFit`, `ConsistencyScore`.
-- `src/lib/scheduling/recommendations.ts` — classifier producing labels: Best peak / Slow-shift lifter / High RPC specialist / Throughput / Category specialist / Development / Protect from mismatch.
-- `src/lib/scheduling/__tests__/*` — covers marginal-value logic (best server ≠ always best for peak).
-- `src/components/scheduling/StrongestLeverageCards.tsx` — Section 2.
-- `src/components/scheduling/ShiftMatchTable.tsx` — Section 3.
-- `src/components/scheduling/RotaOpportunityMatrix.tsx` — Section 4 (green/amber/red/grey cells).
-- `src/components/scheduling/SuggestedTests.tsx` — Section 5.
-- `src/components/scheduling/Guardrails.tsx` — Section 6.
-- `src/components/scheduling/WhatTheScoreMeans.tsx` — Section 1.
+- Checkout settings → **Default payment link**: set to `https://poppoffstats.com/checkout/success` (or your preferred URL).
+- Checkout settings → **Approved domains**: add
+  - `poppoffstats.com`
+  - `www.poppoffstats.com`
+  - `poppoff-radar-insight.lovable.app`
+  - `id-preview--af1ebe93-3732-42dc-b865-a7e858845056.lovable.app`
+  - `project--af1ebe93-3732-42dc-b865-a7e858845056-dev.lovable.app`
+- Repeat the same for the **live** account before going live.
 
-Language strictly uses "modelled / estimated opportunity / suggested test" — no "guaranteed revenue".
+After the code change ships, click Get Started once more — the toast will now name the exact gate that's failing, and we can act on it.
 
----
+## Files changed
 
-## Phase D — Server Dashboard hardening (keep gamified, strip manager intel)
+- `src/lib/paddle.ts` — add `precheckPaddle(priceId)` exported helper; keep existing `initializePaddle` / `getPaddlePriceId`.
+- `src/hooks/usePaddleCheckout.ts` — call pre-check, catch overlay errors, return `{ ok, error }`.
+- `src/routes/index.tsx` — `handlePlanClick` uses pre-check; specific toasts.
+- `src/routes/signup.manager.tsx` — pre-check before post-signup `openCheckout`.
 
-Audit every `/server/*` route and remove anything that leaks manager-only intelligence: LLS, labour cost, fully loaded cost, benchmark formulas, scheduling logic, other servers' efficiency.
+## Out of scope
 
-**Touched files** (read-only audit first, then surgical edits):
-- `src/routes/server.*.tsx` — keep: rank, streaks, items, categories, coaching prompts, milestones, "vs your usual week" framing.
-- `src/components/server/*` — add `EstimatedBadge` for estimated item counts; ensure no `<BasisBadge>`/`<MetricTooltip>` imports here.
-- Rewrite any leaked labour/LLS UI into personal-progress language.
-
-Server dashboard stays visually as-is — only sanitise content.
-
----
-
-## Phase E — Universal import intelligence wiring
-
-Stage 1 already created `src/lib/import/column-intelligence.ts`. This phase makes **every** upload route call it.
-
-**Audit & refactor:**
-- `src/lib/csv.ts`, `src/lib/server-gap/parse.ts` — already on engine; verify.
-- All other CSV/XLSX entry points listed in `docs/audit/02-imports.md` — switch to the shared engine.
-- Add **join-confidence panel** for manager uploads: matched / unmatched POS / unmatched labour / ambiguous, surfaced in upload review modal only — not on server pages.
-- Block uploads only on genuinely missing/ambiguous required fields; never on missing optional metric columns.
-
----
-
-## Stop conditions & rollout
-
-- After **each phase**, I stop, run tests, post a short diff summary, and wait for approval before the next phase.
-- Phase A is the riskiest — all subsequent phases depend on it. If Phase A breaks any existing page, I will roll back and fix before continuing.
-- Nothing in this plan touches DB schema. No migrations.
-- Server dashboard never imports from `src/lib/metrics/labor.ts`, `lls.ts`, `benchmark.ts`, or `scheduling/*` — enforced by a lint check added in Phase D.
-
-## Final deliverables (after Phase E)
-
-The full list you specified: formulas inventory, pages using the engine, removed calculations, labelled metrics, benchmarks + basis, manager/server separation confirmation, weighted-totals confirmation, no-RPC-in-LLS confirmation, fully-loaded preference confirmation, basis-match confirmation, import robustness confirmation, ambiguous-join flagging confirmation, Scheduling Leverage Matrix confirmation, server-dashboard sanitisation confirmation, screenshots of tooltips and server dashboard.
-
----
-
-**Approve to start Phase A**, or tell me to reorder / drop / expand any phase before I begin.
+- No changes to webhook handler, server functions, subscriptions table, or Paddle catalog.
+- No changes to auth/tenant/upload logic.
+- No demo data touched.
