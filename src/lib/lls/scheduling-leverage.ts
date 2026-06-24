@@ -34,7 +34,16 @@ export interface LeverageShiftRow {
   category_sales?: Record<string, number | null> | null;
   category_target_rate?: Record<string, number | null> | null;
   match_confidence?: number | null; // 0..1 imported join confidence
+  /** Optional clock window for unique-shift identification. */
+  shift_start?: string | null;
+  shift_end?: string | null;
 }
+
+export type OutletBasis =
+  | "uploaded"
+  | "inferred_from_filename"
+  | "venue_fallback"
+  | "missing";
 
 export interface LeverageEngineOptions {
   targetMultiplier?: number;
@@ -45,11 +54,19 @@ export interface LeverageEngineOptions {
   crossOutletEligibility?: Record<string, boolean>;
   /** Outlet inferred from upload file name when rows have no outlet column. */
   outletInferredFromFile?: string | null;
+  /** Outlet provenance label — drives the data-used strip. */
+  outletBasis?: OutletBasis;
   /** Optional contracted shifts/week per server (overrides observed P75 cap). */
   contractedShiftsPerWeek?: Record<string, number>;
   contractedHoursPerWeek?: Record<string, number>;
   /** Maximum recommendations returned in the actionable table. */
   maxRecommendations?: number;
+  /** Period metadata for the rows passed in (echoed back in the result). */
+  period?: { start: string; end: string; weeks: number };
+  /** Whether the scorecard's selected week has any matched shifts. */
+  selectedWeekHasShifts?: boolean;
+  /** Selected week start (ISO yyyy-mm-dd) for the contextual notice. */
+  selectedWeekStart?: string;
 }
 
 // ---------- outputs ----------
