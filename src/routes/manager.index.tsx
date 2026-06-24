@@ -758,6 +758,7 @@ function ManagerDashboard() {
             label="Total Covers"
             value={totals.covers.toLocaleString()}
             sub={`${members.length} server${members.length === 1 ? "" : "s"}`}
+            tooltip={{ name: "Total Covers", description: "Total guests served this week across all reporting servers.", formula: "Σ covers_served", sourceFields: ["covers_served"], provenance: "uploaded" }}
           />
           <Stat
             icon={PoundSterling}
@@ -765,12 +766,14 @@ function ManagerDashboard() {
             label="Avg Spend per Cover"
             value={`£${totals.spc.toFixed(2)}`}
             sub={`Total £${totals.sales.toFixed(0)}`}
+            tooltip={{ name: "Avg Spend per Cover (RPC)", description: "Average net spend per guest across the venue this week.", formula: "Σ net_sales / Σ covers_served", sourceFields: ["total_sales", "covers_served"], provenance: "derived" }}
           />
           <Stat
             icon={TrendingUp}
             tone={members.length ? performanceTone(stats.length, members.length) : "var(--brand-orange)"}
             label="Servers reporting"
             value={`${stats.length} / ${members.length}`}
+            tooltip={{ name: "Servers reporting", description: "Servers with at least one uploaded shift this week.", formula: "count(distinct server with stats) / count(team)", sourceFields: ["server_stats.user_id"], provenance: "derived" }}
           />
           <Stat
             icon={Eye}
@@ -778,8 +781,10 @@ function ManagerDashboard() {
             label="Viewed Stats"
             value={`${viewedCount} / ${members.length}`}
             sub={`${ackedCount} ack'd focus`}
+            tooltip={{ name: "Engagement", description: "How many servers have opened their stats and acknowledged this week's focus.", formula: "count(server_stat_views) / count(team)", sourceFields: ["server_stat_views", "server_focus_acks"], provenance: "uploaded" }}
           />
         </div>
+
 
         {/* Team table */}
         <div className="mt-6 rounded-2xl bg-white border border-border">
