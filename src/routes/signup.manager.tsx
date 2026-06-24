@@ -15,6 +15,7 @@ export const Route = createFileRoute("/signup/manager")({
 function SignUpManager() {
   const { priceId } = Route.useSearch();
   const navigate = useNavigate();
+  const { openCheckout } = usePaddleCheckout();
   const [fullName, setFullName] = useState("");
   const [businessName, setBusinessName] = useState("");
   const [email, setEmail] = useState("");
