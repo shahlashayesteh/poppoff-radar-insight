@@ -1,8 +1,9 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Logo } from "@/components/logo";
 import { Trophy, Award, Check, ShieldCheck, BarChart3, Users, BookOpen, Target } from "lucide-react";
 import { usePaddleCheckout } from "@/hooks/usePaddleCheckout";
 import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -116,6 +117,27 @@ function PhoneFrame({ children }: { children: React.ReactNode }) {
 
 function Landing() {
   const { openCheckout, loading } = usePaddleCheckout();
+  const navigate = useNavigate();
+
+  const handlePlanClick = async (priceId: string) => {
+    try { localStorage.setItem("poppoff_pending_price_id", priceId); } catch {}
+    const { data } = await supabase.auth.getUser();
+    if (data.user) {
+      const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", data.user.id);
+      const isManager = roles?.some((r) => r.role === "manager");
+      if (isManager) {
+        await openCheckout({
+          priceId,
+          customerEmail: data.user.email ?? undefined,
+          customData: { userId: data.user.id },
+          successUrl: `${window.location.origin}/checkout/success?priceId=${encodeURIComponent(priceId)}`,
+        });
+        return;
+      }
+    }
+    navigate({ to: "/signup/manager", search: { priceId } });
+  };
+
   return (
     <div className="bg-white text-ink">
       <PaymentTestModeBanner />
@@ -361,7 +383,7 @@ function Landing() {
                   </a>
                 ) : (
                   <button
-                    onClick={() => openCheckout({ priceId: p.priceId, successUrl: `${window.location.origin}/checkout/success?priceId=${encodeURIComponent(p.priceId)}` })}
+                    onClick={() => handlePlanClick(p.priceId)}
                     disabled={loading}
                     className={`mt-6 block w-full text-center rounded-xl py-3 text-sm font-bold disabled:opacity-60 ${p.featured ? "text-white" : "border-2 border-brand-orange text-brand-orange"}`}
                     style={p.featured ? { background: "var(--brand-orange)" } : {}}

@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Logo } from "@/components/logo";
 import { supabase } from "@/integrations/supabase/client";
 import { notifySignup } from "@/lib/email/send";
+import { usePaddleCheckout } from "@/hooks/usePaddleCheckout";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/signup/manager")({
@@ -14,6 +15,7 @@ export const Route = createFileRoute("/signup/manager")({
 function SignUpManager() {
   const { priceId } = Route.useSearch();
   const navigate = useNavigate();
+  const { openCheckout } = usePaddleCheckout();
   const [fullName, setFullName] = useState("");
   const [businessName, setBusinessName] = useState("");
   const [email, setEmail] = useState("");
@@ -85,8 +87,23 @@ function SignUpManager() {
         userId: u.user.id,
       });
     }
-    toast.success("Welcome to PoppOff!");
-    navigate({ to: "/manager" });
+    toast.success("Account created — starting your free trial…");
+    // Open Paddle checkout with userId so the webhook links the subscription to this account.
+    const effectivePriceId = priceId || "poppoff_starter_monthly";
+    try {
+      await openCheckout({
+        priceId: effectivePriceId,
+        customerEmail: email,
+        customData: u.user ? { userId: u.user.id } : undefined,
+        successUrl: `${window.location.origin}/checkout/success?priceId=${encodeURIComponent(effectivePriceId)}`,
+      });
+    } catch (err) {
+      console.error("checkout open failed", err);
+      toast.error("Couldn't open checkout. You can retry from your dashboard.");
+      navigate({ to: "/checkout/retry" });
+      return;
+    }
+    setLoading(false);
   };
 
   return (
@@ -99,15 +116,15 @@ function SignUpManager() {
       </header>
       <div className="flex-1 grid place-items-center px-6 py-12">
         <div className="w-full max-w-md rounded-3xl bg-white border border-border p-8">
-          <h1 className="font-display text-3xl font-extrabold tracking-tight">Set up your account</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Payment received. Just a few details to finish.</p>
+          <h1 className="font-display text-3xl font-extrabold tracking-tight">Start your free trial</h1>
+          <p className="mt-1 text-sm text-muted-foreground">Create your account, then enter card details for the 30-day free trial. Cancel anytime.</p>
           <form onSubmit={submit} className="mt-6 space-y-3">
             <input className="w-full rounded-xl border border-border px-4 py-3 text-sm" placeholder="Full name" value={fullName} onChange={(e) => setFullName(e.target.value)} required />
             <input className="w-full rounded-xl border border-border px-4 py-3 text-sm" placeholder="Business / venue name" value={businessName} onChange={(e) => setBusinessName(e.target.value)} required />
             <input className="w-full rounded-xl border border-border px-4 py-3 text-sm" type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required />
             <input className="w-full rounded-xl border border-border px-4 py-3 text-sm" type="password" placeholder="Password (min 8 chars)" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} />
             <button disabled={loading} className="w-full rounded-xl py-3 text-sm font-bold text-white disabled:opacity-60" style={{ background: "var(--brand-orange)" }}>
-              {loading ? "Creating…" : "Create account"}
+              {loading ? "Creating…" : "Continue to payment"}
             </button>
           </form>
         </div>
