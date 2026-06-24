@@ -368,6 +368,62 @@ function ServerGapPage() {
                 </ToggleGroup>
               </div>
             )}
+            <div className="flex items-center gap-2.5">
+              <span className="font-mono text-xs uppercase tracking-[0.14em] text-muted-foreground">Impact lens</span>
+              <ToggleGroup
+                type="single"
+                value={lens}
+                onValueChange={(v) => v && setLens(v as "revenue" | "gp")}
+                variant="outline"
+              >
+                <ToggleGroupItem value="revenue" className="rounded-full px-3">Revenue</ToggleGroupItem>
+                <ToggleGroupItem value="gp" className="rounded-full px-3">Gross profit</ToggleGroupItem>
+              </ToggleGroup>
+              {lens === "gp" && (
+                <ToggleGroup
+                  type="single"
+                  value={String(gpMargin)}
+                  onValueChange={(v) => v && setGpMargin(Number(v) as 0.6 | 0.7 | 0.8)}
+                  variant="outline"
+                >
+                  <ToggleGroupItem value="0.6" className="rounded-full px-3">60%</ToggleGroupItem>
+                  <ToggleGroupItem value="0.7" className="rounded-full px-3">70%</ToggleGroupItem>
+                  <ToggleGroupItem value="0.8" className="rounded-full px-3">80%</ToggleGroupItem>
+                </ToggleGroup>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="font-mono text-xs uppercase tracking-[0.14em] text-muted-foreground" htmlFor="trading-weeks">
+                Trading weeks/yr
+              </label>
+              <input
+                id="trading-weeks"
+                type="number"
+                min={TRADING_WEEKS_MIN}
+                max={TRADING_WEEKS_MAX}
+                value={tradingWeeks}
+                onChange={(e) => setTradingWeeks(clampTradingWeeks(Number(e.target.value)))}
+                className="w-16 rounded-md border border-border bg-background px-2 py-1 text-sm tabular-nums"
+              />
+              <span className="text-[11px] text-muted-foreground">({TRADING_WEEKS_MIN}–{TRADING_WEEKS_MAX})</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="font-mono text-xs uppercase tracking-[0.14em] text-muted-foreground" htmlFor="recov-factor">
+                Recoverability
+              </label>
+              <input
+                id="recov-factor"
+                type="number"
+                min={0.1} max={1} step={0.05}
+                value={recoverability}
+                onChange={(e) => {
+                  const n = Number(e.target.value);
+                  if (isFinite(n) && n > 0 && n <= 1) setRecoverability(n);
+                }}
+                className="w-16 rounded-md border border-border bg-background px-2 py-1 text-sm tabular-nums"
+              />
+              <span className="text-[11px] text-muted-foreground">default 0.50</span>
+            </div>
             <button
               type="button"
               onClick={() => setShowPreview((v) => !v)}
