@@ -636,9 +636,9 @@ function LlsPage() {
                 </thead>
                 <tbody>
                   {scorecard.servers.map((s) => {
-                    const statusLabel = s.rag_status === "green" ? "Strong"
-                      : s.rag_status === "amber" ? "Average"
-                      : s.rag_status === "red" ? "Weak" : "—";
+                    const statusLabel = s.rag_status === "green" ? "Strong performer"
+                      : s.rag_status === "amber" ? "On track"
+                      : s.rag_status === "red" ? "Priority review" : "—";
                     return (
                     <tr key={s.serverId} className="border-b border-border/50 hover:bg-muted/20">
                       <td className="py-2 pr-3 font-semibold">
