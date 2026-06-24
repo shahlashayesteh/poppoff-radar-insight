@@ -117,6 +117,27 @@ function PhoneFrame({ children }: { children: React.ReactNode }) {
 
 function Landing() {
   const { openCheckout, loading } = usePaddleCheckout();
+  const navigate = useNavigate();
+
+  const handlePlanClick = async (priceId: string) => {
+    try { localStorage.setItem("poppoff_pending_price_id", priceId); } catch {}
+    const { data } = await supabase.auth.getUser();
+    if (data.user) {
+      const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", data.user.id);
+      const isManager = roles?.some((r) => r.role === "manager");
+      if (isManager) {
+        await openCheckout({
+          priceId,
+          customerEmail: data.user.email ?? undefined,
+          customData: { userId: data.user.id },
+          successUrl: `${window.location.origin}/checkout/success?priceId=${encodeURIComponent(priceId)}`,
+        });
+        return;
+      }
+    }
+    navigate({ to: "/signup/manager", search: { priceId } });
+  };
+
   return (
     <div className="bg-white text-ink">
       <PaymentTestModeBanner />
