@@ -3,9 +3,11 @@ import { Logo } from "@/components/logo";
 import { Trophy, Award, Check, ShieldCheck, BarChart3, Users, BookOpen, Target } from "lucide-react";
 import { usePaddleCheckout } from "@/hooks/usePaddleCheckout";
 import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
+import { PaddleDebugPanel, type PaddleDebugStatus } from "@/components/PaddleDebugPanel";
 import { supabase } from "@/integrations/supabase/client";
 import { precheckPaddle } from "@/lib/paddle";
 import { toast } from "sonner";
+import { useCallback, useState } from "react";
 
 export const Route = createFileRoute("/")({
   head: () => ({
