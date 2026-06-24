@@ -32,6 +32,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { MARKETS, MARKET_ORDER, type MarketId } from "@/lib/markets";
 
 const META_DESCRIPTION =
   "See the real revenue gap between your servers. Upload your POS sales and labour exports — processed in your browser, never sent to our servers. Ranks by opportunity-adjusted revenue per hour.";
