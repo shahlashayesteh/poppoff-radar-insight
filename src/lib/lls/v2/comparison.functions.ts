@@ -250,6 +250,8 @@ export const getLlsComparison = createServerFn({ method: "POST" })
       },
       weekStart: ws,
       weekEnd: we,
+      baselineWeeks,
+
       comparison,
       v1_totals: {
         shifts: v1Shifts, gross_sales: v1Gross, labor_cost: v1Labor,
