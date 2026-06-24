@@ -55,6 +55,7 @@ function ragColour(r: string | null): string {
 }
 
 function ComparePage() {
+  useRoleGate("manager");
   const [weekStart, setWeekStart] = useState<string>(toISODate(getMondayOfWeek()));
   const fetchComparison = useServerFn(getLlsComparison);
 
