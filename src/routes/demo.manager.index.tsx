@@ -155,7 +155,7 @@ function ManagerDashboard() {
               <path d="M0,55 C30,52 50,48 70,42 S110,30 130,22 S180,8 200,4" fill="none" stroke="var(--brand-green)" strokeWidth="3" strokeLinecap="round" />
               <path d="M195,12 L200,4 L192,2" fill="none" stroke="var(--brand-green)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
-            <div className="mt-2 text-sm"><span className="text-brand-green font-bold">+£1,420</span> <span className="text-muted-foreground">potential uplift this week</span></div>
+            <div className="mt-2 text-sm"><span className="text-brand-green font-bold">+£1,420</span> <span className="text-muted-foreground">modelled opportunity this week (sum of per-server uplifts)</span></div>
           </div>
 
           {/* Focus ack */}
