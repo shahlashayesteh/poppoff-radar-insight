@@ -1395,4 +1395,4 @@ function expectedCoversPositive(v: number | null): boolean {
   return v != null && Number.isFinite(v) && v > 0;
 }
 
-export const __test_only = { shiftTypeKey, humanShiftLabel, topQuartile, percentile, isoWeekKey };
+export const __test_only = { shiftTypeKey, humanShiftLabel, topQuartile, percentile, isoWeekKey, uniqueShiftKey, dedupeUniqueShifts };
