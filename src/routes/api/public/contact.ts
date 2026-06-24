@@ -14,6 +14,20 @@ const contactSchema = z.object({
   restaurant: z.string().trim().max(150).optional().default(''),
   email: z.string().trim().email().max(255),
   message: z.string().trim().min(1).max(4000),
+  // Phase 1: optional revenue-gap-audit intake fields.
+  role: z.string().trim().max(100).optional().default(''),
+  venueCount: z.string().trim().max(50).optional().default(''),
+  monthlyRevenueBand: z.string().trim().max(50).optional().default(''),
+  currentPos: z.string().trim().max(100).optional().default(''),
+  phone: z.string().trim().max(40).optional().default(''),
+  auditGoal: z.string().trim().max(2000).optional().default(''),
+  source: z.string().trim().max(60).optional().default(''),
+  // Spam protection.
+  // `website` is a honeypot — real users never see it, bots fill every field.
+  // `elapsedMs` is the time the form was visible before submit; sub-second
+  // submits are almost always automated.
+  website: z.string().max(200).optional().default(''),
+  elapsedMs: z.number().int().nonnegative().optional().default(0),
 })
 
 function generateToken(): string {
@@ -40,6 +54,12 @@ export const Route = createFileRoute('/api/public/contact')({
           return Response.json({ error: 'Invalid input', details: err?.message }, { status: 400 })
         }
 
+        // Honeypot: silently accept but discard if the trap field is filled
+        // or the form was submitted suspiciously fast (< 1.2s).
+        if (parsed.website.trim().length > 0 || (parsed.elapsedMs > 0 && parsed.elapsedMs < 1200)) {
+          return Response.json({ success: true })
+        }
+
         const supabase = createClient(supabaseUrl, serviceKey)
 
         const { data: inserted, error: insertError } = await supabase
@@ -49,6 +69,13 @@ export const Route = createFileRoute('/api/public/contact')({
             restaurant: parsed.restaurant || null,
             email: parsed.email,
             message: parsed.message,
+            role: parsed.role || null,
+            venue_count: parsed.venueCount || null,
+            monthly_revenue_band: parsed.monthlyRevenueBand || null,
+            current_pos: parsed.currentPos || null,
+            phone: parsed.phone || null,
+            audit_goal: parsed.auditGoal || null,
+            source: parsed.source || 'contact',
           })
           .select('id, created_at')
           .single()
