@@ -3,7 +3,7 @@ import { useCallback, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { cn } from "@/lib/utils";
-import { parseFile, type ParseResult } from "@/lib/server-gap/parse";
+import { parseFile, type ParseResult, setDefaultDateFormat, lastParseHadAmbiguousDates, type DateFormat } from "@/lib/server-gap/parse";
 import {
   mergeRows,
   normaliseLabour,
@@ -17,6 +17,10 @@ import {
   computeShiftMetrics,
   computeTeamBenchmark,
   projectPeriod,
+  clampTradingWeeks,
+  TRADING_WEEKS_MIN,
+  TRADING_WEEKS_MAX,
+  DEFAULT_RECOVERABILITY_FACTOR,
   type Period,
 } from "@/lib/server-gap/calc";
 import { buildWarnings } from "@/lib/server-gap/warnings";
