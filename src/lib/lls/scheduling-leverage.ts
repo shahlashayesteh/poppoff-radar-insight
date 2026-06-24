@@ -714,7 +714,13 @@ export function computeSchedulingLeverage(
   // ---- per-server profile ----
   const serverIds = Array.from(new Set(rows.map((r) => r.server_id)));
   const serverNames = new Map(rows.map((r) => [r.server_id, r.server_name]));
-  const serverTotalShifts = new Map<string, number>(serverIds.map((id) => [id, rows.filter((r) => r.server_id === id).length]));
+  // unique-shift dedupe (POS + category + labour joins must not double-count)
+  const serverUniqueRows = new Map<string, LeverageShiftRow[]>(
+    serverIds.map((id) => [id, dedupeUniqueShifts(rows.filter((r) => r.server_id === id))]),
+  );
+  const serverTotalShifts = new Map<string, number>(
+    serverIds.map((id) => [id, serverUniqueRows.get(id)!.length]),
+  );
 
   // per (server, outlet) skill profile
   const serverOutletProfile = new Map<string, { rpc: number | null; rph: number | null; cph: number | null; lls: number | null }>();
@@ -742,14 +748,16 @@ export function computeSchedulingLeverage(
 
   for (const id of serverIds) {
     const myRows = rows.filter((r) => r.server_id === id);
+    const myUnique = serverUniqueRows.get(id) ?? [];
     const totalServerShifts = serverTotalShifts.get(id) ?? 0;
     const pat = patterns.get(id)!;
 
     for (const [k, baseline] of baselines) {
       const inType = myRows.filter((r) => shiftTypeKey(r.outlet ?? null, r.day_of_week, r.daypart) === k);
-      const comparable_shifts = inType.length;
-      const comparable_hours = inType.reduce((a, r) => a + (isPos(r.hours ?? null) ? r.hours! : 0), 0);
-      const comparable_checks = inType.reduce((a, r) => a + (isPos(r.checks ?? null) ? r.checks! : 0), 0);
+      const inTypeUnique = myUnique.filter((r) => shiftTypeKey(r.outlet ?? null, r.day_of_week, r.daypart) === k);
+      const comparable_shifts = inTypeUnique.length;
+      const comparable_hours = inTypeUnique.reduce((a, r) => a + (isPos(r.hours ?? null) ? r.hours! : 0), 0);
+      const comparable_checks = inTypeUnique.reduce((a, r) => a + (isPos(r.checks ?? null) ? r.checks! : 0), 0);
 
       // reliability
       const sRel = Math.min(1, comparable_shifts / shiftFloor);
