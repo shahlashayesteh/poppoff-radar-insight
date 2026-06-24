@@ -824,22 +824,32 @@ function RecoverableSection({
   const below = ranked.filter((s) => s.recoverableWeekly > 0);
   return (
     <section className="mt-10 rounded-md border border-border bg-card p-6">
-      <h2 className="font-display text-2xl font-bold uppercase tracking-tight">
+      <h2 className="font-display text-2xl font-bold uppercase tracking-tight inline-flex items-center gap-2">
         Recoverable opportunity
+        <ModelledValueLabel kind="directional" />
+        <MetricTooltip
+          name="Recoverable opportunity"
+          description="Directional projection of weekly £ uplift if below-benchmark servers reached the team average on the same shifts. Not guaranteed revenue."
+          formula="Σ ((team_adj_rph − server_adj_rph) × server_adj_hours)  for below-benchmark servers"
+          sourceFields={["adjusted_rph", "team_adjusted_rph", "adjusted_hours"]}
+          provenance="derived"
+          notes={["Conservative: targets team avg, not top performer.", "Modelled value — not realised revenue."]}
+        />
       </h2>
       <p className="mt-2 text-sm text-muted-foreground">
         If every below-benchmark server reached the team average (not the top performer) — same hours, same
         shifts. Conservative by design.
       </p>
       <div className="mt-5 grid gap-3 sm:grid-cols-3">
-        <Metric label="Per week" value={money0(currency, weekly)} />
-        <Metric label="Per month" value={money0(currency, monthly)} />
-        <Metric label="Per year" value={money0(currency, annual)} emphasis />
+        <Metric label="Per week" value={money0(currency, weekly)} modelled />
+        <Metric label="Per month" value={money0(currency, monthly)} modelled />
+        <Metric label="Per year" value={money0(currency, annual)} emphasis modelled />
       </div>
       <p className="mt-4 text-xs text-muted-foreground">
         Selected period: <strong className="text-foreground">{money0(currency, projected.value)}</strong>{" "}
         {projected.label}. Data span observed: {nf1.format(weeks)} week(s).
       </p>
+
       {below.length > 0 && (
         <div className="mt-5 border-t border-border pt-4">
           <p className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
