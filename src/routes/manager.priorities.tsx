@@ -14,6 +14,7 @@ export const Route = createFileRoute("/manager/priorities")({ component: Priorit
 type Item = { id: string; item_name: string; category: string | null; priority_flag: string };
 
 function Priorities() {
+  useRoleGate("manager");
   const [venueId, setVenueId] = useState<string | null>(null);
   const [items, setItems] = useState<Item[]>([]);
   const [name, setName] = useState("");
