@@ -871,7 +871,7 @@ function RecoverableSection({
   );
 }
 
-function Metric({ label, value, emphasis }: { label: string; value: string; emphasis?: boolean }) {
+function Metric({ label, value, emphasis, modelled }: { label: string; value: string; emphasis?: boolean; modelled?: boolean }) {
   return (
     <div
       className={cn(
@@ -879,10 +879,14 @@ function Metric({ label, value, emphasis }: { label: string; value: string; emph
         emphasis && "border-brand-orange/40 bg-brand-orange/5",
       )}
     >
-      <p className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">{label}</p>
+      <p className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground inline-flex items-center gap-1.5">
+        {label}
+        {modelled ? <ModelledValueLabel kind="modelled" /> : null}
+      </p>
       <p className={cn("mt-1 font-display text-2xl font-bold tabular-nums", emphasis && "text-brand-orange")}>
         {value}
       </p>
     </div>
   );
 }
+
