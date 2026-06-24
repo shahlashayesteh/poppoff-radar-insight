@@ -1363,9 +1363,20 @@ export function computeSchedulingLeverage(
     biggest_coaching_opportunity: pickHighlight("development_shift"),
   };
 
+  // Period — explicit option wins; otherwise infer min/max date in rows.
+  const dates = rows.map((r) => r.shift_date).filter(Boolean).sort();
+  const inferredPeriod = dates.length
+    ? { start: dates[0], end: dates[dates.length - 1], weeks: Math.max(1, Math.round(((new Date(dates[dates.length - 1]).getTime() - new Date(dates[0]).getTime()) / 86400000 + 1) / 7)) }
+    : { start: "", end: "", weeks: 0 };
+  const period = opts.period ?? inferredPeriod;
+
   return {
     matrix_scope,
     outlet_inferred_from_file,
+    outlet_basis,
+    period,
+    selected_week_has_shifts: opts.selectedWeekHasShifts ?? null,
+    selected_week_start: opts.selectedWeekStart ?? null,
     shift_types: Array.from(baselines.values()).sort((a, b) => {
       const oa = a.outlet ?? "", ob = b.outlet ?? "";
       if (oa !== ob) return oa.localeCompare(ob);
