@@ -570,13 +570,15 @@ function ConfidencePill({ level }: { level: "High" | "Medium" | "Low" }) {
   );
 }
 
-function RankPill({ rank }: { rank: "above" | "tracking" | "below" }) {
+function RankPill({ band }: { band: import("@/lib/server-gap/calc").RankBand }) {
   const map = {
-    above: { label: "Outperforming", cls: "bg-emerald-500/15 text-emerald-500" },
-    tracking: { label: "Tracking", cls: "bg-brand-orange/15 text-brand-orange" },
-    below: { label: "Below benchmark", cls: "bg-destructive/15 text-destructive" },
+    strong:        { label: "Strong",        cls: "bg-emerald-500/20 text-emerald-500" },
+    outperforming: { label: "Outperforming", cls: "bg-emerald-500/10 text-emerald-500" },
+    tracking:      { label: "On track",      cls: "bg-foreground/10 text-foreground" },
+    watch:         { label: "Watch",         cls: "bg-brand-orange/15 text-brand-orange" },
+    priority:      { label: "Priority",      cls: "bg-destructive/15 text-destructive" },
   } as const;
-  const m = map[rank];
+  const m = map[band];
   return (
     <span className={cn("inline-block rounded-full px-2.5 py-1 text-[11px] font-semibold", m.cls)}>
       {m.label}
