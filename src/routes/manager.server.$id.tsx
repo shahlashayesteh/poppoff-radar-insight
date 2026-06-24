@@ -22,6 +22,7 @@ export const Route = createFileRoute("/manager/server/$id")({ component: ServerV
 // Category list now comes entirely from the engine — no per-page constants.
 
 function ServerView() {
+  useRoleGate("manager");
   const { id } = Route.useParams();
   const [name, setName] = useState("");
   const [stat, setStat] = useState<any>(null);
