@@ -11,6 +11,7 @@ import {
   type ServerPerformance,
 } from "@/lib/performance-engine";
 import { engineRagFromPerf } from "@/lib/metrics/server-rag";
+import { MetricTooltip, ModelledValueLabel } from "@/components/metrics";
 
 import { Sparkles, Wand2 } from "lucide-react";
 import { toast } from "sonner";
