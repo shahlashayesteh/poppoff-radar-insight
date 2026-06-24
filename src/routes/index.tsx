@@ -403,11 +403,12 @@ function Landing() {
                 ) : (
                   <button
                     onClick={() => handlePlanClick(p.priceId)}
-                    disabled={loading}
-                    className={`mt-6 block w-full text-center rounded-xl py-3 text-sm font-bold disabled:opacity-60 ${p.featured ? "text-white" : "border-2 border-brand-orange text-brand-orange"}`}
+                    disabled={loading || !paddleStatus.ready}
+                    title={!paddleStatus.ready ? "Checking Paddle configuration…" : undefined}
+                    className={`mt-6 block w-full text-center rounded-xl py-3 text-sm font-bold disabled:opacity-60 disabled:cursor-not-allowed ${p.featured ? "text-white" : "border-2 border-brand-orange text-brand-orange"}`}
                     style={p.featured ? { background: "var(--brand-orange)" } : {}}
                   >
-                    {loading ? "Opening…" : p.cta}
+                    {loading ? "Opening…" : !paddleStatus.ready ? "Checking…" : p.cta}
                   </button>
                 )}
               </div>
