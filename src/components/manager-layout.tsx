@@ -103,6 +103,11 @@ export function ManagerLayout({ children }: { children: React.ReactNode }) {
           })}
         </nav>
         <div className="p-3 border-t border-border space-y-1">
+          {!isDemo && (
+            <div className="px-1 pb-2">
+              <VenueSelector className="w-full" />
+            </div>
+          )}
           <div className="flex items-center gap-3 rounded-xl bg-muted/60 px-3 py-2.5">
             <div className="h-8 w-8 rounded-full bg-brand-green/15 grid place-items-center text-brand-green text-xs font-bold uppercase">{initials || "·"}</div>
             <div className="flex-1 min-w-0">
