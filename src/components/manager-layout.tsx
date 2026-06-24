@@ -23,6 +23,7 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { VenueSelector } from "@/components/venue-selector";
 
 type NavItem = { to: string; label: string; icon: typeof LayoutDashboard; key?: string };
 const items: NavItem[] = [
