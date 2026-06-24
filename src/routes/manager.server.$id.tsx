@@ -103,16 +103,35 @@ function ServerView() {
 
         <div className="mt-8 grid md:grid-cols-4 gap-4">
           <div className="rounded-2xl bg-white border border-border p-5">
-            <div className="text-xs text-muted-foreground">Performance vs benchmark</div>
+            <div className="text-xs text-muted-foreground inline-flex items-center gap-1">
+              Performance vs benchmark
+              <MetricTooltip
+                name="Performance vs venue benchmark"
+                description="Weighted gap between actual sales and modelled expected sales for this server's shifts."
+                formula="(Σ sales / Σ expected_sales) − 1"
+                sourceFields={["net_sales", "expected_sales"]}
+                provenance="derived"
+                benchmark={{ period: "current week", scope: "venue", basis: "weighted expected sales", weighted: true }}
+              />
+            </div>
             <div className="font-display text-2xl font-extrabold mt-1" style={{ color: verdict.tone }}>{gapText}</div>
             <div className="text-xs mt-1" style={{ color: verdict.tone }}>{verdict.label}</div>
-
           </div>
           <div className="rounded-2xl bg-white border border-border p-5">
-            <div className="text-xs text-muted-foreground">Spend per cover</div>
+            <div className="text-xs text-muted-foreground inline-flex items-center gap-1">
+              Spend per cover
+              <MetricTooltip
+                name="Spend per cover (RPC)"
+                description="Average net spend per guest served by this server."
+                formula="Σ net_sales / Σ covers_served"
+                sourceFields={["net_sales", "covers_served"]}
+                provenance="derived"
+              />
+            </div>
             <div className="font-display text-2xl font-extrabold mt-1">£{stat?.spend_per_cover ? Number(stat.spend_per_cover).toFixed(2) : "—"}</div>
             <div className="text-xs text-muted-foreground mt-1">Target £{target?.spend_per_cover_target ?? "—"}</div>
           </div>
+
           <div className="rounded-2xl bg-white border border-border p-5">
             <div className="text-xs text-muted-foreground">Streak</div>
             <div className="font-display text-2xl font-extrabold mt-1">{streak} week{streak === 1 ? "" : "s"}</div>
