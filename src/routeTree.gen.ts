@@ -32,11 +32,14 @@ import { Route as CalculatorIndexRouteImport } from './routes/calculator.index'
 import { Route as SignupManagerRouteImport } from './routes/signup.manager'
 import { Route as ServerWelcomeRouteImport } from './routes/server.welcome'
 import { Route as ServerStatsRouteImport } from './routes/server.stats'
+import { Route as ServerRewardsRouteImport } from './routes/server.rewards'
 import { Route as ServerProgressRouteImport } from './routes/server.progress'
 import { Route as ServerProfileRouteImport } from './routes/server.profile'
 import { Route as ServerMenuRouteImport } from './routes/server.menu'
 import { Route as ServerLeaderboardRouteImport } from './routes/server.leaderboard'
+import { Route as ServerCoachingRouteImport } from './routes/server.coaching'
 import { Route as ManagerTeamRouteImport } from './routes/manager.team'
+import { Route as ManagerSettingsRouteImport } from './routes/manager.settings'
 import { Route as ManagerReportsRouteImport } from './routes/manager.reports'
 import { Route as ManagerPrioritiesRouteImport } from './routes/manager.priorities'
 import { Route as ManagerMenuRouteImport } from './routes/manager.menu'
@@ -193,6 +196,11 @@ const ServerStatsRoute = ServerStatsRouteImport.update({
   path: '/server/stats',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ServerRewardsRoute = ServerRewardsRouteImport.update({
+  id: '/server/rewards',
+  path: '/server/rewards',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ServerProgressRoute = ServerProgressRouteImport.update({
   id: '/server/progress',
   path: '/server/progress',
@@ -213,9 +221,19 @@ const ServerLeaderboardRoute = ServerLeaderboardRouteImport.update({
   path: '/server/leaderboard',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ServerCoachingRoute = ServerCoachingRouteImport.update({
+  id: '/server/coaching',
+  path: '/server/coaching',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ManagerTeamRoute = ManagerTeamRouteImport.update({
   id: '/manager/team',
   path: '/manager/team',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ManagerSettingsRoute = ManagerSettingsRouteImport.update({
+  id: '/manager/settings',
+  path: '/manager/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ManagerReportsRoute = ManagerReportsRouteImport.update({
@@ -426,11 +444,14 @@ export interface FileRoutesByFullPath {
   '/manager/menu': typeof ManagerMenuRoute
   '/manager/priorities': typeof ManagerPrioritiesRoute
   '/manager/reports': typeof ManagerReportsRoute
+  '/manager/settings': typeof ManagerSettingsRoute
   '/manager/team': typeof ManagerTeamRoute
+  '/server/coaching': typeof ServerCoachingRoute
   '/server/leaderboard': typeof ServerLeaderboardRoute
   '/server/menu': typeof ServerMenuRoute
   '/server/profile': typeof ServerProfileRoute
   '/server/progress': typeof ServerProgressRoute
+  '/server/rewards': typeof ServerRewardsRoute
   '/server/stats': typeof ServerStatsRoute
   '/server/welcome': typeof ServerWelcomeRoute
   '/signup/manager': typeof SignupManagerRoute
@@ -488,11 +509,14 @@ export interface FileRoutesByTo {
   '/manager/menu': typeof ManagerMenuRoute
   '/manager/priorities': typeof ManagerPrioritiesRoute
   '/manager/reports': typeof ManagerReportsRoute
+  '/manager/settings': typeof ManagerSettingsRoute
   '/manager/team': typeof ManagerTeamRoute
+  '/server/coaching': typeof ServerCoachingRoute
   '/server/leaderboard': typeof ServerLeaderboardRoute
   '/server/menu': typeof ServerMenuRoute
   '/server/profile': typeof ServerProfileRoute
   '/server/progress': typeof ServerProgressRoute
+  '/server/rewards': typeof ServerRewardsRoute
   '/server/stats': typeof ServerStatsRoute
   '/server/welcome': typeof ServerWelcomeRoute
   '/signup/manager': typeof SignupManagerRoute
@@ -554,11 +578,14 @@ export interface FileRoutesById {
   '/manager/menu': typeof ManagerMenuRoute
   '/manager/priorities': typeof ManagerPrioritiesRoute
   '/manager/reports': typeof ManagerReportsRoute
+  '/manager/settings': typeof ManagerSettingsRoute
   '/manager/team': typeof ManagerTeamRoute
+  '/server/coaching': typeof ServerCoachingRoute
   '/server/leaderboard': typeof ServerLeaderboardRoute
   '/server/menu': typeof ServerMenuRoute
   '/server/profile': typeof ServerProfileRoute
   '/server/progress': typeof ServerProgressRoute
+  '/server/rewards': typeof ServerRewardsRoute
   '/server/stats': typeof ServerStatsRoute
   '/server/welcome': typeof ServerWelcomeRoute
   '/signup/manager': typeof SignupManagerRoute
@@ -621,11 +648,14 @@ export interface FileRouteTypes {
     | '/manager/menu'
     | '/manager/priorities'
     | '/manager/reports'
+    | '/manager/settings'
     | '/manager/team'
+    | '/server/coaching'
     | '/server/leaderboard'
     | '/server/menu'
     | '/server/profile'
     | '/server/progress'
+    | '/server/rewards'
     | '/server/stats'
     | '/server/welcome'
     | '/signup/manager'
@@ -683,11 +713,14 @@ export interface FileRouteTypes {
     | '/manager/menu'
     | '/manager/priorities'
     | '/manager/reports'
+    | '/manager/settings'
     | '/manager/team'
+    | '/server/coaching'
     | '/server/leaderboard'
     | '/server/menu'
     | '/server/profile'
     | '/server/progress'
+    | '/server/rewards'
     | '/server/stats'
     | '/server/welcome'
     | '/signup/manager'
@@ -748,11 +781,14 @@ export interface FileRouteTypes {
     | '/manager/menu'
     | '/manager/priorities'
     | '/manager/reports'
+    | '/manager/settings'
     | '/manager/team'
+    | '/server/coaching'
     | '/server/leaderboard'
     | '/server/menu'
     | '/server/profile'
     | '/server/progress'
+    | '/server/rewards'
     | '/server/stats'
     | '/server/welcome'
     | '/signup/manager'
@@ -813,11 +849,14 @@ export interface RootRouteChildren {
   ManagerMenuRoute: typeof ManagerMenuRoute
   ManagerPrioritiesRoute: typeof ManagerPrioritiesRoute
   ManagerReportsRoute: typeof ManagerReportsRoute
+  ManagerSettingsRoute: typeof ManagerSettingsRoute
   ManagerTeamRoute: typeof ManagerTeamRoute
+  ServerCoachingRoute: typeof ServerCoachingRoute
   ServerLeaderboardRoute: typeof ServerLeaderboardRoute
   ServerMenuRoute: typeof ServerMenuRoute
   ServerProfileRoute: typeof ServerProfileRoute
   ServerProgressRoute: typeof ServerProgressRoute
+  ServerRewardsRoute: typeof ServerRewardsRoute
   ServerStatsRoute: typeof ServerStatsRoute
   ServerWelcomeRoute: typeof ServerWelcomeRoute
   ManagerIndexRoute: typeof ManagerIndexRoute
@@ -1009,6 +1048,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ServerStatsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/server/rewards': {
+      id: '/server/rewards'
+      path: '/server/rewards'
+      fullPath: '/server/rewards'
+      preLoaderRoute: typeof ServerRewardsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/server/progress': {
       id: '/server/progress'
       path: '/server/progress'
@@ -1037,11 +1083,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ServerLeaderboardRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/server/coaching': {
+      id: '/server/coaching'
+      path: '/server/coaching'
+      fullPath: '/server/coaching'
+      preLoaderRoute: typeof ServerCoachingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/manager/team': {
       id: '/manager/team'
       path: '/manager/team'
       fullPath: '/manager/team'
       preLoaderRoute: typeof ManagerTeamRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/manager/settings': {
+      id: '/manager/settings'
+      path: '/manager/settings'
+      fullPath: '/manager/settings'
+      preLoaderRoute: typeof ManagerSettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/manager/reports': {
@@ -1361,11 +1421,14 @@ const rootRouteChildren: RootRouteChildren = {
   ManagerMenuRoute: ManagerMenuRoute,
   ManagerPrioritiesRoute: ManagerPrioritiesRoute,
   ManagerReportsRoute: ManagerReportsRoute,
+  ManagerSettingsRoute: ManagerSettingsRoute,
   ManagerTeamRoute: ManagerTeamRoute,
+  ServerCoachingRoute: ServerCoachingRoute,
   ServerLeaderboardRoute: ServerLeaderboardRoute,
   ServerMenuRoute: ServerMenuRoute,
   ServerProfileRoute: ServerProfileRoute,
   ServerProgressRoute: ServerProgressRoute,
+  ServerRewardsRoute: ServerRewardsRoute,
   ServerStatsRoute: ServerStatsRoute,
   ServerWelcomeRoute: ServerWelcomeRoute,
   ManagerIndexRoute: ManagerIndexRoute,

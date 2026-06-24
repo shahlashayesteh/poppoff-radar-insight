@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ServerLayout } from "@/components/server-layout";
 import { supabase } from "@/integrations/supabase/client";
 import { useRoleGate } from "@/lib/auth-gate";
+import { getActiveVenueIdForUser } from "@/lib/active-venue";
 import { claimServerCsvData, recordLogin, fetchVenueAvgPrices, estimateItemsSold, type CategoryKey } from "@/lib/server-data";
 import { Trophy, Flame, ArrowRight, TrendingDown, Sparkles, Crown, Zap, Target, ChevronUp, ChevronDown } from "lucide-react";
 import { getMondayOfWeek, toISODate, formatWeekRange, latestStatsWeek } from "@/lib/week";
@@ -122,8 +123,7 @@ function ServerDashboard() {
       setName(fn.split(" ")[0] || "there");
       await claimServerCsvData();
       await recordLogin();
-      const { data: vm } = await supabase.from("venue_members").select("venue_id").eq("user_id", u.user.id).limit(1);
-      const v = vm?.[0]?.venue_id;
+      const v = await getActiveVenueIdForUser(u.user.id);
       if (!v) return;
       setVenueId(v);
       const visibleWeek = await latestStatsWeek(

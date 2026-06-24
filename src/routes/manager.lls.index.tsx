@@ -43,6 +43,7 @@ import { MetricTooltip, DataQualityChip } from "@/components/metrics";
 import { SchedulingLeverageMatrix } from "@/components/lls/scheduling-leverage-matrix";
 import { MARKETS, MARKET_ORDER, type MarketId } from "@/lib/markets";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { useRoleGate } from "@/lib/auth-gate";
 
 export const Route = createFileRoute("/manager/lls/")({ component: LlsPage });
 
@@ -182,6 +183,7 @@ function LaborBasisBadge({ basis }: { basis: LaborBasisLocal }) {
 }
 
 function LlsPage() {
+  useRoleGate("manager");
   const [weekStart, setWeekStart] = useState(toISODate(getMondayOfWeek()));
   // Phase G.1: display-only market currency selector for SLM money formatting.
   // Does NOT affect any engine math (LLS, SLM, Server-Gap, FLC). Persisted in

@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { ManagerLayout } from "@/components/manager-layout";
 import { supabase } from "@/integrations/supabase/client";
 import { getManagerVenue } from "@/lib/manager-venue";
+import { useRoleGate } from "@/lib/auth-gate";
 import { getMondayOfWeek, toISODate, formatWeekRange, latestStatsWeek } from "@/lib/week";
 import {
   loadVenuePerformance,
@@ -17,6 +18,7 @@ export const Route = createFileRoute("/manager/team")({ component: TeamPage });
 type Member = { id: string; full_name: string | null };
 
 function TeamPage() {
+  useRoleGate("manager");
   const [members, setMembers] = useState<Member[]>([]);
   const [perf, setPerf] = useState<VenuePerformance | null>(null);
   const [loginCounts, setLoginCounts] = useState<Record<string, number>>({});

@@ -49,7 +49,7 @@ function Page() {
         <div className="mx-auto max-w-7xl px-6 py-4 flex items-center justify-between">
           <Link to="/"><Logo className="text-2xl" /></Link>
           <div className="flex items-center gap-2">
-            <Link to="/login" className="rounded-xl px-3 py-2 text-sm font-bold text-white" style={{ background: "var(--brand-orange)" }}>See Demo</Link>
+            <Link to="/demo/manager" className="rounded-xl px-3 py-2 text-sm font-bold text-white" style={{ background: "var(--brand-orange)" }}>See Demo</Link>
             <Link to="/contact" className="rounded-xl px-3 py-2 text-sm font-semibold border border-border hover:border-foreground">Contact</Link>
           </div>
         </div>
@@ -66,8 +66,8 @@ function Page() {
               PoppOff turns POS data into menu intelligence and pairing suggestions, so servers know which categories to grow next and managers can coach upselling with clarity.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
-              <Link to="/login" className="rounded-xl px-6 py-3 text-sm font-bold text-white" style={{ background: "var(--brand-orange)" }}>See Demo</Link>
-              <Link to="/login" className="rounded-xl px-6 py-3 text-sm font-bold border-2 border-foreground">Start Your Pilot</Link>
+              <Link to="/demo/manager" className="rounded-xl px-6 py-3 text-sm font-bold text-white" style={{ background: "var(--brand-orange)" }}>See Demo</Link>
+              <Link to="/demo/manager" className="rounded-xl px-6 py-3 text-sm font-bold border-2 border-foreground">Start Your Pilot</Link>
             </div>
           </div>
         </section>
@@ -111,7 +111,7 @@ function Page() {
               ))}
             </ul>
             <div className="mt-8 flex flex-wrap gap-3">
-              <Link to="/login" className="rounded-xl px-6 py-3 text-sm font-bold text-white" style={{ background: "var(--brand-orange)" }}>See Demo</Link>
+              <Link to="/demo/manager" className="rounded-xl px-6 py-3 text-sm font-bold text-white" style={{ background: "var(--brand-orange)" }}>See Demo</Link>
               <Link to="/contact" className="rounded-xl px-6 py-3 text-sm font-bold border-2 border-foreground">Talk to us</Link>
             </div>
           </div>

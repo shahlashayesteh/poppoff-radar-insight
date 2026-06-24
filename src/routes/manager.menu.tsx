@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { ManagerLayout } from "@/components/manager-layout";
 import { supabase } from "@/integrations/supabase/client";
 import { getManagerVenue } from "@/lib/manager-venue";
+import { useRoleGate } from "@/lib/auth-gate";
 import { Brain, Sparkles, Wand2, ChevronRight, Plus, Trash2, FileText, Upload } from "lucide-react";
 import { getMondayOfWeek, toISODate } from "@/lib/week";
 import { toast } from "sonner";
@@ -17,6 +18,7 @@ type Pairing = { item: string; pair_with: string; why: string; priority?: string
 const MAX_MENUS = 10;
 
 function MenuIntel() {
+  useRoleGate("manager");
   const [venueId, setVenueId] = useState<string | null>(null);
   const [menus, setMenus] = useState<Menu[]>([]);
   const [text, setText] = useState("");

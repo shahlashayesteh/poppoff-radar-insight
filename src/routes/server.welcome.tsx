@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ServerLayout } from "@/components/server-layout";
 import { supabase } from "@/integrations/supabase/client";
 import { useRoleGate } from "@/lib/auth-gate";
+import { getActiveVenueIdForUser } from "@/lib/active-venue";
 import { Sparkles, TrendingUp, ChevronRight } from "lucide-react";
 import { getMondayOfWeek, toISODate, latestStatsWeek } from "@/lib/week";
 import {
@@ -59,9 +60,7 @@ function SmartRecs() {
       const { data: u } = await supabase.auth.getUser();
       if (!u.user) { setLoading(false); return; }
       const userId = u.user.id;
-      const { data: vm } = await supabase
-        .from("venue_members").select("venue_id").eq("user_id", userId).limit(1);
-      const venueId = vm?.[0]?.venue_id;
+      const venueId = await getActiveVenueIdForUser(userId);
       if (!venueId) { setLoading(false); return; }
 
       const weekStart = toISODate(getMondayOfWeek());

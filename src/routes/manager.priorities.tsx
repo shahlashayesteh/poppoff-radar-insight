@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { ManagerLayout } from "@/components/manager-layout";
 import { supabase } from "@/integrations/supabase/client";
 import { getManagerVenue } from "@/lib/manager-venue";
+import { useRoleGate } from "@/lib/auth-gate";
 import { Target, Plus, Trash2, CheckCircle2 } from "lucide-react";
 import { getMondayOfWeek, toISODate, formatWeekRange, latestStatsWeek } from "@/lib/week";
 import { toast } from "sonner";
@@ -13,6 +14,7 @@ export const Route = createFileRoute("/manager/priorities")({ component: Priorit
 type Item = { id: string; item_name: string; category: string | null; priority_flag: string };
 
 function Priorities() {
+  useRoleGate("manager");
   const [venueId, setVenueId] = useState<string | null>(null);
   const [items, setItems] = useState<Item[]>([]);
   const [name, setName] = useState("");

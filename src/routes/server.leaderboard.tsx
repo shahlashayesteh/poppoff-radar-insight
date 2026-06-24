@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ServerLayout } from "@/components/server-layout";
 import { supabase } from "@/integrations/supabase/client";
 import { useRoleGate } from "@/lib/auth-gate";
+import { getActiveVenueIdForUser } from "@/lib/active-venue";
 import { Crown, Trophy, TrendingUp, Flame } from "lucide-react";
 import { getMondayOfWeek, toISODate, formatWeekRange } from "@/lib/week";
 import { fetchVenueAvgPrices, estimateItemsSold, type CategoryKey } from "@/lib/server-data";
@@ -49,8 +50,7 @@ function Page() {
       } catch (e) {
         console.warn("[leaderboard] claim_placeholder_data failed", e);
       }
-      const { data: vm } = await supabase.from("venue_members").select("venue_id").eq("user_id", u.user.id).limit(1);
-      const v = vm?.[0]?.venue_id;
+      const v = await getActiveVenueIdForUser(u.user.id);
       if (!v) return;
       const { data: latest, error: latestErr } = await supabase.rpc("latest_venue_stats_week" as never, { p_venue_id: v } as never);
       if (latestErr) console.warn("[leaderboard] latest_venue_stats_week failed", latestErr);

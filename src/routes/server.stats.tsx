@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import { ServerLayout } from "@/components/server-layout";
 import { supabase } from "@/integrations/supabase/client";
 import { claimServerCsvData, recordLogin } from "@/lib/server-data";
+import { useRoleGate } from "@/lib/auth-gate";
+import { getActiveVenueIdForUser } from "@/lib/active-venue";
 import { getMondayOfWeek, toISODate, formatWeekRange, latestStatsWeek } from "@/lib/week";
 import {
   loadServerPerformance,
@@ -28,6 +30,7 @@ function ragLabel(rag: Rag): string {
 }
 
 function Page() {
+  useRoleGate("server");
   const [perf, setPerf] = useState<ServerPerformance | null>(null);
   const [hasStat, setHasStat] = useState<boolean>(false);
   const weekStart = toISODate(getMondayOfWeek());
@@ -39,8 +42,7 @@ function Page() {
       if (!u.user) return;
       await claimServerCsvData();
       await recordLogin();
-      const { data: vm } = await supabase.from("venue_members").select("venue_id").eq("user_id", u.user.id).limit(1);
-      const venueId = vm?.[0]?.venue_id;
+      const venueId = await getActiveVenueIdForUser(u.user.id);
       if (!venueId) return;
       const visibleWeek = await latestStatsWeek(
         supabase.from("server_stats").select("week_start, created_at").eq("user_id", u.user.id).eq("venue_id", venueId).order("created_at", { ascending: false }).order("week_start", { ascending: false }).limit(1),

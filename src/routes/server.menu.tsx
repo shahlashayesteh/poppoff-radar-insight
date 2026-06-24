@@ -3,6 +3,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ServerLayout } from "@/components/server-layout";
 import { supabase } from "@/integrations/supabase/client";
 import { claimServerCsvData } from "@/lib/server-data";
+import { useRoleGate } from "@/lib/auth-gate";
+import { getActiveVenueIdForUser } from "@/lib/active-venue";
 import { Sparkles, CheckCircle2, Search, Target, Zap, MessageSquareQuote, Clock } from "lucide-react";
 import { getMondayOfWeek, toISODate, latestStatsWeek } from "@/lib/week";
 import { toast } from "sonner";
@@ -132,6 +134,7 @@ const PAIRING_TIMING: Record<StatKey, string> = {
 };
 
 function ServerMenu() {
+  useRoleGate("server");
   const [items, setItems] = useState<Priority[]>([]);
   const [pairings, setPairings] = useState<Pairing[]>([]);
   const [weakCats, setWeakCats] = useState<string[]>([]);
@@ -154,8 +157,7 @@ function ServerMenu() {
       const { data: u } = await supabase.auth.getUser();
       if (!u.user) return;
       await claimServerCsvData();
-      const { data: vm } = await supabase.from("venue_members").select("venue_id").eq("user_id", u.user.id).limit(1);
-      const v = vm?.[0]?.venue_id;
+      const v = await getActiveVenueIdForUser(u.user.id);
       if (!v) return;
       setVenueId(v);
       const visibleWeek = await latestStatsWeek(

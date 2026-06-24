@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { ManagerLayout } from "@/components/manager-layout";
 import { supabase } from "@/integrations/supabase/client";
 import { getManagerVenue } from "@/lib/manager-venue";
+import { useRoleGate } from "@/lib/auth-gate";
 import { Sparkles, Wand2 } from "lucide-react";
 import { getMondayOfWeek, toISODate, formatWeekRange, latestStatsWeek } from "@/lib/week";
 import { toast } from "sonner";
@@ -10,6 +11,7 @@ import { toast } from "sonner";
 export const Route = createFileRoute("/manager/coaching")({ component: Page });
 
 function Page() {
+  useRoleGate("manager");
   const [venueId, setVenueId] = useState<string | null>(null);
   const [priorities, setPriorities] = useState<any[]>([]);
   const [insights, setInsights] = useState<string>("");
