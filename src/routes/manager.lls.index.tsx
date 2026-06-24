@@ -560,23 +560,66 @@ function LlsPage() {
                       <th key={d} className="text-center py-2 px-1.5 w-14">{d}</th>
                     ))}
                     <th className="text-right py-2 px-2">Shifts</th>
-                    <th
-                      className="text-right py-2 px-2"
-                      title="Total Weekly Gross Sales ÷ Total Weekly Covers Served. Shows how well each server monetises each guest."
-                    >Weekly RPC</th>
-                    <th
-                      className="text-right py-2 px-2"
-                      title="Total Weekly Gross Sales ÷ Total Weekly Labor Cost. Shows sales generated for every £1 of labor."
-                    >Base LLS</th>
-                    <th
-                      className="text-right py-2 px-2"
-                      title="Total Weekly Gross Sales ÷ Total Weekly Adjusted Labor Cost (labor cost × opportunity factor)."
-                    >LLS</th>
-                    <th className="text-right py-2 px-2">Venue Benchmark</th>
-                    <th
-                      className="text-right py-2 px-2"
-                      title="LLS ÷ Venue Benchmark − 1. How far the server is above or below the venue benchmark."
-                    >Gap</th>
+                    <th className="text-right py-2 px-2">
+                      <MetricTooltip
+                        name="Weekly RPC"
+                        description="Revenue per cover — average spend each guest contributes during this server's shifts."
+                        formula="Σ net_sales / Σ covers_served"
+                        sourceFields={["net_sales", "covers_served"]}
+                        provenance="derived"
+                      >
+                        <span className="cursor-help underline decoration-dotted">Weekly RPC</span>
+                      </MetricTooltip>
+                    </th>
+                    <th className="text-right py-2 px-2">
+                      <MetricTooltip
+                        name="Base LLS"
+                        description="Net sales generated for every £1 of labour cost — no opportunity adjustment."
+                        formula="Σ net_sales / Σ labor_cost  (weighted)"
+                        sourceFields={["net_sales", "labor_cost"]}
+                        provenance="derived"
+                        basisLabel={laborBasis === "fully_loaded" ? "Fully loaded labour cost" : laborBasis === "wage" ? "Wage cost only" : laborBasis === "derived" ? "Hours × rate (wage approx.)" : undefined}
+                      >
+                        <span className="cursor-help underline decoration-dotted">Base LLS</span>
+                      </MetricTooltip>
+                    </th>
+                    <th className="text-right py-2 px-2">
+                      <MetricTooltip
+                        name="Adjusted LLS"
+                        description="LLS after adjusting each shift's labour cost for opportunity factor — a busy Sat-night shift is rewarded vs. a quiet Mon-lunch shift."
+                        formula="Σ net_sales / Σ(labor_cost × opportunity_factor)  [shift-level OF, weighted]"
+                        sourceFields={["net_sales", "labor_cost", "opportunity_factor"]}
+                        provenance="derived"
+                        basisLabel={laborBasis === "fully_loaded" ? "Fully loaded labour cost" : laborBasis === "wage" ? "Wage cost only" : laborBasis === "derived" ? "Hours × rate (wage approx.)" : undefined}
+                        notes={["Opportunity factor defaults to 1.0 when not set for a daypart"]}
+                      >
+                        <span className="cursor-help underline decoration-dotted">LLS</span>
+                      </MetricTooltip>
+                    </th>
+                    <th className="text-right py-2 px-2">
+                      <MetricTooltip
+                        name="Venue Benchmark"
+                        description="The venue's weighted weekly adjusted LLS — what 'normal' looks like for this venue."
+                        formula="Σ net_sales / Σ(labor_cost × OF)  across all servers"
+                        sourceFields={["net_sales", "labor_cost", "opportunity_factor"]}
+                        provenance="derived"
+                        benchmark={{ period: "current week", scope: "venue", basis: "weighted adjusted LLS", weighted: true }}
+                      >
+                        <span className="cursor-help underline decoration-dotted">Venue Benchmark</span>
+                      </MetricTooltip>
+                    </th>
+                    <th className="text-right py-2 px-2">
+                      <MetricTooltip
+                        name="Performance Gap"
+                        description="How far above or below the venue benchmark this server's adjusted LLS is. RAG bands: strong > +10%, tracking ±5%, monitor −5% to −10%, priority < −10%."
+                        formula="(server_adjusted_lls / venue_benchmark) − 1"
+                        sourceFields={["server_adjusted_lls", "venue_benchmark"]}
+                        provenance="derived"
+                      >
+                        <span className="cursor-help underline decoration-dotted">Gap</span>
+                      </MetricTooltip>
+                    </th>
+
                     <th className="text-left py-2 pl-3">Operator meaning</th>
                   </tr>
                 </thead>
