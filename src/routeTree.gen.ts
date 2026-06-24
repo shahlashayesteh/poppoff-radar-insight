@@ -37,6 +37,7 @@ import { Route as ServerProfileRouteImport } from './routes/server.profile'
 import { Route as ServerMenuRouteImport } from './routes/server.menu'
 import { Route as ServerLeaderboardRouteImport } from './routes/server.leaderboard'
 import { Route as ManagerTeamRouteImport } from './routes/manager.team'
+import { Route as ManagerSettingsRouteImport } from './routes/manager.settings'
 import { Route as ManagerReportsRouteImport } from './routes/manager.reports'
 import { Route as ManagerPrioritiesRouteImport } from './routes/manager.priorities'
 import { Route as ManagerMenuRouteImport } from './routes/manager.menu'
@@ -216,6 +217,11 @@ const ServerLeaderboardRoute = ServerLeaderboardRouteImport.update({
 const ManagerTeamRoute = ManagerTeamRouteImport.update({
   id: '/manager/team',
   path: '/manager/team',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ManagerSettingsRoute = ManagerSettingsRouteImport.update({
+  id: '/manager/settings',
+  path: '/manager/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ManagerReportsRoute = ManagerReportsRouteImport.update({
@@ -426,6 +432,7 @@ export interface FileRoutesByFullPath {
   '/manager/menu': typeof ManagerMenuRoute
   '/manager/priorities': typeof ManagerPrioritiesRoute
   '/manager/reports': typeof ManagerReportsRoute
+  '/manager/settings': typeof ManagerSettingsRoute
   '/manager/team': typeof ManagerTeamRoute
   '/server/leaderboard': typeof ServerLeaderboardRoute
   '/server/menu': typeof ServerMenuRoute
@@ -488,6 +495,7 @@ export interface FileRoutesByTo {
   '/manager/menu': typeof ManagerMenuRoute
   '/manager/priorities': typeof ManagerPrioritiesRoute
   '/manager/reports': typeof ManagerReportsRoute
+  '/manager/settings': typeof ManagerSettingsRoute
   '/manager/team': typeof ManagerTeamRoute
   '/server/leaderboard': typeof ServerLeaderboardRoute
   '/server/menu': typeof ServerMenuRoute
@@ -554,6 +562,7 @@ export interface FileRoutesById {
   '/manager/menu': typeof ManagerMenuRoute
   '/manager/priorities': typeof ManagerPrioritiesRoute
   '/manager/reports': typeof ManagerReportsRoute
+  '/manager/settings': typeof ManagerSettingsRoute
   '/manager/team': typeof ManagerTeamRoute
   '/server/leaderboard': typeof ServerLeaderboardRoute
   '/server/menu': typeof ServerMenuRoute
@@ -621,6 +630,7 @@ export interface FileRouteTypes {
     | '/manager/menu'
     | '/manager/priorities'
     | '/manager/reports'
+    | '/manager/settings'
     | '/manager/team'
     | '/server/leaderboard'
     | '/server/menu'
@@ -683,6 +693,7 @@ export interface FileRouteTypes {
     | '/manager/menu'
     | '/manager/priorities'
     | '/manager/reports'
+    | '/manager/settings'
     | '/manager/team'
     | '/server/leaderboard'
     | '/server/menu'
@@ -748,6 +759,7 @@ export interface FileRouteTypes {
     | '/manager/menu'
     | '/manager/priorities'
     | '/manager/reports'
+    | '/manager/settings'
     | '/manager/team'
     | '/server/leaderboard'
     | '/server/menu'
@@ -813,6 +825,7 @@ export interface RootRouteChildren {
   ManagerMenuRoute: typeof ManagerMenuRoute
   ManagerPrioritiesRoute: typeof ManagerPrioritiesRoute
   ManagerReportsRoute: typeof ManagerReportsRoute
+  ManagerSettingsRoute: typeof ManagerSettingsRoute
   ManagerTeamRoute: typeof ManagerTeamRoute
   ServerLeaderboardRoute: typeof ServerLeaderboardRoute
   ServerMenuRoute: typeof ServerMenuRoute
@@ -1042,6 +1055,13 @@ declare module '@tanstack/react-router' {
       path: '/manager/team'
       fullPath: '/manager/team'
       preLoaderRoute: typeof ManagerTeamRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/manager/settings': {
+      id: '/manager/settings'
+      path: '/manager/settings'
+      fullPath: '/manager/settings'
+      preLoaderRoute: typeof ManagerSettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/manager/reports': {
@@ -1361,6 +1381,7 @@ const rootRouteChildren: RootRouteChildren = {
   ManagerMenuRoute: ManagerMenuRoute,
   ManagerPrioritiesRoute: ManagerPrioritiesRoute,
   ManagerReportsRoute: ManagerReportsRoute,
+  ManagerSettingsRoute: ManagerSettingsRoute,
   ManagerTeamRoute: ManagerTeamRoute,
   ServerLeaderboardRoute: ServerLeaderboardRoute,
   ServerMenuRoute: ServerMenuRoute,

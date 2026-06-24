@@ -1,10 +1,10 @@
-import { supabase } from "@/integrations/supabase/client";
+// Phase 1A: thin wrapper around active-venue. Kept so existing call sites
+// (manager pages) continue to work without churn; new code should import
+// from "@/lib/active-venue" directly.
+import { getActiveManagerVenue, type ManagerVenue } from "@/lib/active-venue";
 
-export type ManagerVenue = { id: string; name: string; join_code: string };
+export type { ManagerVenue };
 
 export async function getManagerVenue() {
-  const { data, error } = await supabase.rpc("get_my_manager_venue" as never);
-  if (error) throw error;
-  const rows = (Array.isArray(data) ? data : []) as ManagerVenue[];
-  return rows[0] ?? null;
+  return getActiveManagerVenue();
 }
