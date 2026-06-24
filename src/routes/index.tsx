@@ -358,12 +358,16 @@ function Landing() {
       {/* Pricing */}
       <section id="pricing" className="px-6 py-20">
         <div className="mx-auto max-w-6xl">
-          <h2 className="font-display text-4xl md:text-5xl font-extrabold tracking-tight">Simple, transparent pricing</h2>
+          <div className="text-xs uppercase tracking-widest text-brand-green font-bold">Pricing</div>
+          <h2 className="mt-2 font-display text-4xl md:text-5xl font-extrabold tracking-tight">From single sites to national groups.</h2>
+          <p className="mt-4 max-w-3xl text-foreground/75">
+            Most operators start with a free Revenue Gap Audit, then run a paid pilot on one or two sites before rolling out across the estate. Pricing scales by venue, not by user — every server, manager and head office seat is included.
+          </p>
           <div className="mt-10 grid md:grid-cols-3 gap-5">
             {[
-              { name: "Starter", price: "£99", priceId: "poppoff_starter_monthly", note: "/ month", featured: false, features: ["1 venue", "30-day free trial", "Personal server scorecards", "All coaching", "Menu intelligence"], cta: "Start Free Trial", action: "checkout" as const },
-              { name: "Pro", price: "£199", priceId: "poppoff_pro_monthly", note: "/ month", featured: true, badge: "Most Popular", features: ["Up to 3 venues", "Everything in Starter", "Weekly win priorities", "Advanced insights", "Priority support"], cta: "Get Started", action: "checkout" as const },
-              { name: "Enterprise", price: "Contact us", priceId: "", note: "4+ venues", featured: false, features: ["Unlimited venues", "Custom onboarding", "Dedicated success manager", "SLA & SSO available"], cta: "Let's Talk", action: "mailto" as const },
+              { name: "Starter", price: "£99", priceId: "poppoff_starter_monthly", note: "/ venue / month", featured: false, features: ["Single venue", "30-day free trial", "Per-server scorecards", "Weekly coaching priorities", "Menu intelligence"], cta: "Start a pilot", action: "checkout" as const },
+              { name: "Group", price: "£199", priceId: "poppoff_pro_monthly", note: "/ venue / month", featured: true, badge: "Most Popular", features: ["Up to 3 venues", "Everything in Starter", "Cross-site benchmarking", "Revenue Gap rollups", "Priority support"], cta: "Start a group pilot", action: "checkout" as const },
+              { name: "Enterprise", price: "Custom", priceId: "", note: "4+ venues", featured: false, features: ["Unlimited venues", "POS data migration & onboarding", "SSO, SAML, audit logs", "Dedicated success manager", "Commercial SLA"], cta: "Talk to us", action: "contact" as const },
             ].map((p) => (
               <div key={p.name} className={`relative rounded-2xl border-2 p-6 ${p.featured ? "border-brand-orange" : "border-border bg-white"}`}>
                 {p.featured && (
@@ -374,13 +378,13 @@ function Landing() {
                 <ul className="mt-5 space-y-2 text-sm">
                   {p.features.map((f) => <li key={f} className="flex items-center gap-2"><Check className="h-4 w-4 text-brand-green" />{f}</li>)}
                 </ul>
-                {p.action === "mailto" ? (
-                  <a
-                    href="mailto:hello@poppoffstats.com"
-                    className={`mt-6 block w-full text-center rounded-xl py-3 text-sm font-bold border-2 border-brand-orange text-brand-orange`}
+                {p.action === "contact" ? (
+                  <Link
+                    to="/contact"
+                    className="mt-6 block w-full text-center rounded-xl py-3 text-sm font-bold border-2 border-brand-orange text-brand-orange"
                   >
                     {p.cta}
-                  </a>
+                  </Link>
                 ) : (
                   <button
                     onClick={() => handlePlanClick(p.priceId)}
@@ -394,9 +398,10 @@ function Landing() {
               </div>
             ))}
           </div>
-          <p className="mt-6 text-xs text-muted-foreground">No contract. Cancel anytime.</p>
+          <p className="mt-6 text-xs text-muted-foreground">No contract. Cancel anytime. Enterprise terms available for multi-site groups.</p>
         </div>
       </section>
+
 
       {/* Closing benefits */}
       <section id="about" className="px-6 py-16 bg-canvas border-t border-border">
