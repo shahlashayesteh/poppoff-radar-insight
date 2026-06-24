@@ -210,14 +210,20 @@ describe("Scheduling Leverage v2", () => {
 
   it("surfaces underused capability when strong fit + low allocation share", () => {
     const rows: LeverageShiftRow[] = [];
-    // Star mostly works Friday dinner; only 1 Tuesday lunch but very strong
-    for (let w = 0; w < 6; w++) {
+    // Star works MANY Friday dinners and only one Tuesday lunch (very strong)
+    const baseMon = new Date("2026-04-06T00:00:00Z");
+    for (let w = 0; w < 12; w++) {
+      const mon = new Date(baseMon); mon.setUTCDate(mon.getUTCDate() + w * 7);
+      const fri = new Date(mon); fri.setUTCDate(fri.getUTCDate() + 4);
+      const tue = new Date(mon); tue.setUTCDate(tue.getUTCDate() + 1);
+      const friISO = fri.toISOString().slice(0, 10);
+      const tueISO = tue.toISOString().slice(0, 10);
       for (let i = 0; i < 6; i++) {
-        rows.push(row({ server_id: `p${i}`, day: 1, daypart: "lunch", outlet: "V", gross_sales: 700, covers: 40 }));
-        rows.push(row({ server_id: "Star", day: 4, daypart: "dinner", outlet: "V", gross_sales: 2000, covers: 50 }));
+        rows.push(row({ server_id: `p${i}`, day: 1, daypart: "lunch", outlet: "V", gross_sales: 700, covers: 40, shift_date: tueISO }));
       }
+      rows.push(row({ server_id: "Star", day: 4, daypart: "dinner", outlet: "V", gross_sales: 2000, covers: 50, shift_date: friISO }));
     }
-    // two very strong Tuesday lunches on distinct dates
+    // two very strong Tuesday lunches on distinct dates — Star is rarely scheduled there
     rows.push(row({ server_id: "Star", day: 1, daypart: "lunch", outlet: "V", gross_sales: 1400, covers: 45, shift_date: "2026-05-05" }));
     rows.push(row({ server_id: "Star", day: 1, daypart: "lunch", outlet: "V", gross_sales: 1500, covers: 48, shift_date: "2026-05-12" }));
     const out = computeSchedulingLeverage(rows);
