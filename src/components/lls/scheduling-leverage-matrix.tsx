@@ -366,13 +366,13 @@ export function SchedulingLeverageMatrix({ data, currency = "£" }: { data: Sche
 
       {/* Highlight cards — compact, no paragraphs */}
       <div className="mt-5 grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
-        <HighlightCard title="Best overall leverage" tooltip="Highest Marginal Deployment Value with positive modelled lift." rec={h.best_overall_leverage} onView={(r) => setDrawer({ kind: "rec", rec: r })} />
-        <HighlightCard title="Slow-shift lifter" tooltip="Biggest improvement vs current rota baseline on a quieter shift." rec={h.best_slow_shift_lifter} onView={(r) => setDrawer({ kind: "rec", rec: r })} />
-        <HighlightCard title="Peak-shift performer" tooltip="Holds throughput and Adj. LLS above baseline on high-opportunity shifts." rec={h.best_peak_performer} onView={(r) => setDrawer({ kind: "rec", rec: r })} />
-        <HighlightCard title="RPC builder" tooltip="Highest projected revenue per cover vs current rota baseline." rec={h.best_rpc_builder} onView={(r) => setDrawer({ kind: "rec", rec: r })} />
-        <HighlightCard title="Throughput handler" tooltip="Highest covers per hour with RPH at or above baseline." rec={h.best_throughput} onView={(r) => setDrawer({ kind: "rec", rec: r })} />
-        <HighlightCard title="Most underused" tooltip="Strong projected fit on a shift type they are rarely scheduled on." rec={h.most_underused} onView={(r) => setDrawer({ kind: "rec", rec: r })} />
-        <HighlightCard title="Coaching opportunity" tooltip="Below benchmark on a shift type they are heavily scheduled on." rec={h.biggest_coaching_opportunity} onView={(r) => setDrawer({ kind: "rec", rec: r })} />
+        <HighlightCard currency={currency} title="Best overall leverage" tooltip="Highest Marginal Deployment Value with positive modelled lift." rec={h.best_overall_leverage} onView={(r) => setDrawer({ kind: "rec", rec: r })} />
+        <HighlightCard currency={currency} title="Slow-shift lifter" tooltip="Biggest improvement vs current rota baseline on a quieter shift." rec={h.best_slow_shift_lifter} onView={(r) => setDrawer({ kind: "rec", rec: r })} />
+        <HighlightCard currency={currency} title="Peak-shift performer" tooltip="Holds throughput and Adj. LLS above baseline on high-opportunity shifts." rec={h.best_peak_performer} onView={(r) => setDrawer({ kind: "rec", rec: r })} />
+        <HighlightCard currency={currency} title="RPC builder" tooltip="Highest projected revenue per cover vs current rota baseline." rec={h.best_rpc_builder} onView={(r) => setDrawer({ kind: "rec", rec: r })} />
+        <HighlightCard currency={currency} title="Throughput handler" tooltip="Highest covers per hour with RPH at or above baseline." rec={h.best_throughput} onView={(r) => setDrawer({ kind: "rec", rec: r })} />
+        <HighlightCard currency={currency} title="Most underused" tooltip="Strong projected fit on a shift type they are rarely scheduled on." rec={h.most_underused} onView={(r) => setDrawer({ kind: "rec", rec: r })} />
+        <HighlightCard currency={currency} title="Coaching opportunity" tooltip="Below benchmark on a shift type they are heavily scheduled on." rec={h.biggest_coaching_opportunity} onView={(r) => setDrawer({ kind: "rec", rec: r })} />
       </div>
 
       {/* Shift match recommendations — clean table */}
