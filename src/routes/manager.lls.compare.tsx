@@ -9,6 +9,7 @@ import { getMondayOfWeek, toISODate, formatWeekRange, previousMonday } from "@/l
 import { getLlsComparison, type ComparisonPayload } from "@/lib/lls/v2/comparison.functions";
 import { ChevronLeft, ChevronRight, ArrowLeft, AlertCircle } from "lucide-react";
 import { MetricTooltip, ModelledValueLabel } from "@/components/metrics";
+import { useRoleGate } from "@/lib/auth-gate";
 
 export const Route = createFileRoute("/manager/lls/compare")({ component: ComparePage });
 
