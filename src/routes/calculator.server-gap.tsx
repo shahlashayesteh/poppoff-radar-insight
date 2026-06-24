@@ -81,7 +81,7 @@ function ServerGapPage() {
   const [salesFile, setSalesFile] = useState<{ name: string; result: ParseResult } | null>(null);
   const [labourFile, setLabourFile] = useState<{ name: string; result: ParseResult } | null>(null);
   const [parseError, setParseError] = useState<string | null>(null);
-  const [currency, setCurrency] = useState<"£" | "$">("£");
+  const [market, setMarket] = useState<MarketId>("UK");
   const [dateFormat, setDateFormat] = useState<DateFormat>("uk");
   const [period, setPeriod] = useState<Period>("monthly");
   const [basis, setBasis] = useState<SalesBasis>("net");
@@ -91,10 +91,12 @@ function ServerGapPage() {
   const [recoverability, setRecoverability] = useState<number>(DEFAULT_RECOVERABILITY_FACTOR);
   const [showPreview, setShowPreview] = useState(false);
 
+  const currency = MARKETS[market].currencySymbol;
+
   // Keep date-parser default aligned with market selection.
-  const onCurrencyChange = useCallback((v: "£" | "$") => {
-    setCurrency(v);
-    const fmt: DateFormat = v === "$" ? "us" : "uk";
+  const onMarketChange = useCallback((m: MarketId) => {
+    setMarket(m);
+    const fmt: DateFormat = MARKETS[m].dateFormat;
     setDateFormat(fmt);
     setDefaultDateFormat(fmt);
   }, []);
