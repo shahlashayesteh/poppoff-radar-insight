@@ -23,7 +23,7 @@ function Page() {
     <ServerLayout>
       <div className="px-5 pt-6">
         <h1 className="font-display text-3xl font-extrabold tracking-tight">Stats</h1>
-        <div className="mt-1 text-xs text-muted-foreground">4 May to 10 May</div>
+        <div className="mt-1 text-xs text-muted-foreground">{demoVenue.weekLabel}</div>
 
         <div className="mt-6 space-y-3">
           <div className="rounded-2xl bg-white border border-border p-4 flex items-center justify-between">
