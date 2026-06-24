@@ -6,10 +6,10 @@ import { getManagerVenue } from "@/lib/manager-venue";
 import { getMondayOfWeek, toISODate, formatWeekRange, latestStatsWeek } from "@/lib/week";
 import {
   loadVenuePerformance,
-  scoreTone,
-  scoreLabel,
   type VenuePerformance,
 } from "@/lib/performance-engine";
+import { engineRagFromPerf } from "@/lib/metrics/server-rag";
+
 
 export const Route = createFileRoute("/manager/team")({ component: TeamPage });
 
