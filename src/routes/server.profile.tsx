@@ -41,12 +41,7 @@ function Page() {
       setName(fullName || "Server");
       setInitial((fullName.trim()[0] || "S").toUpperCase());
 
-      const { data: vm } = await supabase
-        .from("venue_members")
-        .select("venue_id")
-        .eq("user_id", userId)
-        .limit(1);
-      const venueId = vm?.[0]?.venue_id;
+      const venueId = await getActiveVenueIdForUser(userId);
       if (!venueId) { setLoading(false); return; }
 
       const { data: ven } = await supabase
