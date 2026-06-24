@@ -9,6 +9,7 @@ import { getMondayOfWeek, toISODate, formatWeekRange } from "@/lib/week";
 export const Route = createFileRoute("/manager/reports")({ component: Page });
 
 function Page() {
+  useRoleGate("manager");
   const [weeks, setWeeks] = useState<{ week_start: string; covers: number; sales: number; spc: number; servers: number }[]>([]);
 
   useEffect(() => {
