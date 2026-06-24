@@ -42,12 +42,20 @@ export type TeamBenchmark = {
   rawRPH: number;
 };
 
+export type RankBand = "strong" | "outperforming" | "tracking" | "watch" | "priority";
+
 export type ServerWithGap = ServerMetric & {
   gapAbsRPH: number;
   gapPct: number;
+  /** Coarse 3-band UI projection (above/tracking/below) — preserved for legacy cells. */
   rank: "above" | "tracking" | "below";
+  /** Canonical 5-band status (engine-derived). */
+  rankBand: RankBand;
   recoverableWeekly: number;
 };
+
+/** Conservative recoverability factor — matches the canonical manager LLS engine. */
+export const DEFAULT_RECOVERABILITY_FACTOR = 0.5;
 
 export function computeShiftMetrics(
   shifts: MatchedShift[],
