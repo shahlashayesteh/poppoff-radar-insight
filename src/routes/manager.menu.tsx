@@ -18,6 +18,7 @@ type Pairing = { item: string; pair_with: string; why: string; priority?: string
 const MAX_MENUS = 10;
 
 function MenuIntel() {
+  useRoleGate("manager");
   const [venueId, setVenueId] = useState<string | null>(null);
   const [menus, setMenus] = useState<Menu[]>([]);
   const [text, setText] = useState("");
