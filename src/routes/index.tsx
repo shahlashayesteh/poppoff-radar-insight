@@ -372,6 +372,12 @@ function Landing() {
       <section id="pricing" className="px-6 py-20">
         <div className="mx-auto max-w-6xl">
           <h2 className="font-display text-4xl md:text-5xl font-extrabold tracking-tight">Simple, transparent pricing</h2>
+          <div className="mt-8">
+            <PaddleDebugPanel
+              priceIds={["poppoff_starter_monthly", "poppoff_pro_monthly"]}
+              onStatusChange={handleStatusChange}
+            />
+          </div>
           <div className="mt-10 grid md:grid-cols-3 gap-5">
             {[
               { name: "Starter", price: "£99", priceId: "poppoff_starter_monthly", note: "/ month", featured: false, features: ["1 venue", "30-day free trial", "Personal server scorecards", "All coaching", "Menu intelligence"], cta: "Start Free Trial", action: "checkout" as const },
