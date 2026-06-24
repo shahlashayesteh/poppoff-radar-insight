@@ -30,11 +30,12 @@ export interface EngineRagVerdict {
 
 function toneForBand(b: RagBand): string {
   switch (b) {
-    case "strong":   return "var(--brand-green)";
-    case "tracking": return "var(--brand-green)";
-    case "monitor":  return "var(--brand-orange)";
-    case "priority": return "var(--opportunity)";
-    default:         return "var(--muted-foreground)";
+    case "strong":        return "var(--brand-green)";
+    case "outperforming": return "var(--brand-green)";
+    case "tracking":      return "var(--brand-green)";
+    case "monitor":       return "var(--brand-orange)";
+    case "priority":      return "var(--opportunity)";
+    default:              return "var(--muted-foreground)";
   }
 }
 
