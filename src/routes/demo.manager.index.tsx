@@ -1,7 +1,14 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ManagerLayout } from "@/components/manager-layout";
-import { servers } from "@/lib/sample-data";
-import { Bell, ChevronDown, Calendar, Users, PoundSterling, TrendingUp, Eye, Wine, Cake, Droplet, Target, Flame, MoreVertical } from "lucide-react";
+import {
+  servers,
+  demoVenue,
+  demoManagerKpis,
+  demoCategoryOpportunities,
+  demoLabourLeveragePreview,
+  demoShiftMatchPreview,
+} from "@/lib/sample-data";
+import { Bell, ChevronDown, Calendar, Users, PoundSterling, TrendingUp, Eye, Wine, Cake, Droplet, Target, Flame, MoreVertical, Scale, CalendarClock } from "lucide-react";
 
 export const Route = createFileRoute("/demo/manager/")({
   component: ManagerDashboard,
