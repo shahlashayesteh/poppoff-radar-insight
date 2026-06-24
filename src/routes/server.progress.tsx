@@ -18,6 +18,7 @@ const LABELS: Record<string, string> = {
 };
 
 function ServerProgress() {
+  useRoleGate("server");
   const [current, setCurrent] = useState(0);
   const [longest, setLongest] = useState(0);
   const [milestones, setMilestones] = useState<{ milestone_type: string; unlocked_at: string }[]>([]);
@@ -28,8 +29,7 @@ function ServerProgress() {
       const { data: u } = await supabase.auth.getUser();
       if (!u.user) return;
       await claimServerCsvData();
-      const { data: vm } = await supabase.from("venue_members").select("venue_id").eq("user_id", u.user.id).limit(1);
-      const venueId = vm?.[0]?.venue_id;
+      const venueId = await getActiveVenueIdForUser(u.user.id);
       if (!venueId) return;
       const { data: sk } = await supabase.from("server_streaks").select("current_streak, longest_streak").eq("user_id", u.user.id).eq("venue_id", venueId).maybeSingle();
       setCurrent((sk as any)?.current_streak ?? 0);
