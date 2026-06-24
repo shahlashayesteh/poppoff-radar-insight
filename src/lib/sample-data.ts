@@ -6,10 +6,6 @@ export const statusLabel = (s: Status) =>
 export const statusColor = (s: Status) =>
   s === "green" ? "var(--success)" : s === "amber" ? "var(--warning)" : "var(--opportunity)";
 
-export const restaurant = {
-  name: "The Demo Restaurant",
-  week: "4 May to 10 May",
-};
 
 export type Category = {
   key: string;
