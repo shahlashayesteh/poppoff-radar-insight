@@ -183,6 +183,7 @@ function LaborBasisBadge({ basis }: { basis: LaborBasisLocal }) {
 }
 
 function LlsPage() {
+  useRoleGate("manager");
   const [weekStart, setWeekStart] = useState(toISODate(getMondayOfWeek()));
   // Phase G.1: display-only market currency selector for SLM money formatting.
   // Does NOT affect any engine math (LLS, SLM, Server-Gap, FLC). Persisted in
