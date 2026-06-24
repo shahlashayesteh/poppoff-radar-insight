@@ -41,6 +41,7 @@ import {
 import { Upload, ChevronLeft, ChevronRight, AlertTriangle, TrendingUp, TrendingDown, Trash2, Gauge, Sparkles, Info } from "lucide-react";
 import { MetricTooltip, DataQualityChip } from "@/components/metrics";
 import { SchedulingLeverageMatrix } from "@/components/lls/scheduling-leverage-matrix";
+import { MARKETS, MARKET_ORDER, type MarketId } from "@/lib/markets";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 export const Route = createFileRoute("/manager/lls/")({ component: LlsPage });
@@ -182,6 +183,19 @@ function LaborBasisBadge({ basis }: { basis: LaborBasisLocal }) {
 
 function LlsPage() {
   const [weekStart, setWeekStart] = useState(toISODate(getMondayOfWeek()));
+  // Phase G.1: display-only market currency selector for SLM money formatting.
+  // Does NOT affect any engine math (LLS, SLM, Server-Gap, FLC). Persisted in
+  // localStorage so the choice survives reloads until tenant/venue currency exists.
+  const [displayMarket, setDisplayMarket] = useState<MarketId>(() => {
+    if (typeof window === "undefined") return "UK";
+    const saved = window.localStorage.getItem("pop:displayMarket");
+    return saved === "UK" || saved === "US" || saved === "HR" ? saved : "UK";
+  });
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem("pop:displayMarket", displayMarket);
+    }
+  }, [displayMarket]);
   const [scorecard, setScorecard] = useState<ScorecardResult | null>(null);
   const [leverage, setLeverage] = useState<SchedulingLeverageResult | null>(null);
   const [grid, setGrid] = useState<Record<number, Record<Daypart, number>> | null>(null);
@@ -460,10 +474,28 @@ function LlsPage() {
             <LaborBasisBadge basis={laborBasis} />
 
           </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={prevWk}><ChevronLeft className="h-4 w-4" /></Button>
-            <div className="text-sm font-semibold px-2 min-w-[160px] text-center">{formatWeekRange(weekStart)}</div>
-            <Button variant="outline" size="sm" onClick={nextWk}><ChevronRight className="h-4 w-4" /></Button>
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="flex flex-col">
+              <Label htmlFor="display-market" className="text-[11px] uppercase tracking-wider text-muted-foreground mb-1">
+                Display market
+              </Label>
+              <Select value={displayMarket} onValueChange={(v) => setDisplayMarket(v as MarketId)}>
+                <SelectTrigger id="display-market" className="h-9 w-[160px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {MARKET_ORDER.map((id) => (
+                    <SelectItem key={id} value={id}>{MARKETS[id].label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <span className="text-[11px] text-muted-foreground mt-1">Used for display only. Calculations are unchanged.</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={prevWk}><ChevronLeft className="h-4 w-4" /></Button>
+              <div className="text-sm font-semibold px-2 min-w-[160px] text-center">{formatWeekRange(weekStart)}</div>
+              <Button variant="outline" size="sm" onClick={nextWk}><ChevronRight className="h-4 w-4" /></Button>
+            </div>
           </div>
         </div>
 
@@ -727,7 +759,7 @@ function LlsPage() {
 
         {/* Scheduling Leverage Matrix — manager-only intelligence */}
         {leverage && leverage.matrix.length > 0 && (
-          <SchedulingLeverageMatrix data={leverage} />
+          <SchedulingLeverageMatrix data={leverage} currency={MARKETS[displayMarket].currencySymbol} />
         )}
 
 
