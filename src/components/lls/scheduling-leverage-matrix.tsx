@@ -122,19 +122,18 @@ export function SchedulingLeverageMatrix({ data }: { data: SchedulingLeverageRes
             baseline.
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <DataQualityChip
-            label={`${data.data_quality.matched_for_lls}/${data.data_quality.rows_total} matched`}
-            tone="info"
-          />
-          {!data.data_quality.has_outlet && (
-            <DataQualityChip label="Outlet not detected" tone="warning" />
-          )}
+        <div className="flex flex-wrap gap-2 items-center">
+          <span className="text-[10px] text-muted-foreground">
+            {data.data_quality.matched_for_lls}/{data.data_quality.rows_total} rows matched for LLS
+          </span>
           {data.data_quality.rows_with_hours < data.data_quality.rows_total * 0.5 && (
-            <DataQualityChip label="Hours partial" tone="warning" />
+            <DataQualityChip kind="missing-field" />
+          )}
+          {data.data_quality.rows_total < 30 && (
+            <DataQualityChip kind="low-sample" count={data.data_quality.rows_total} />
           )}
           {!data.data_quality.has_category && (
-            <DataQualityChip label="Category fit neutral" tone="info" />
+            <DataQualityChip kind="estimated-value" />
           )}
         </div>
       </div>
