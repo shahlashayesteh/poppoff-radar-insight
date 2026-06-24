@@ -473,11 +473,15 @@ export function computeSchedulingLeverage(
       })();
       const matchConfidence = 1; // join confidence n/a in v1
       const volatilityConfidence = 1 - volatility;
-      const confidence =
+      const rawConfidence =
         0.35 * reliability +
         0.25 * dataCompleteness +
         0.25 * matchConfidence +
         0.15 * volatilityConfidence;
+      // Hard cap: confidence cannot exceed what the sample reliability can
+      // legitimately support. A 1-shift sample with otherwise perfect data
+      // must still resolve to "low" / "insufficient" — never "high".
+      const confidence = Math.min(rawConfidence, 0.4 + 0.6 * reliability);
       const confidence_band = bandConfidence(confidence);
 
       // rota test priority
