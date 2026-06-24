@@ -537,7 +537,7 @@ export function SchedulingLeverageMatrix({ data, currency = "£" }: { data: Sche
                 <SheetDescription>{drawer.rec.best_fit_shift}</SheetDescription>
               </SheetHeader>
               <div className="mt-4">
-                <RecommendationDetail rec={drawer.rec} />
+                <RecommendationDetail rec={drawer.rec} currency={currency} />
               </div>
             </>
           )}
