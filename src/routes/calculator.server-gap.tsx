@@ -999,7 +999,7 @@ function RecoverableSection({
       </p>
       {ambiguousDates && (
         <p className="mt-2 text-[11px] text-brand-orange">
-          Ambiguous dates parsed using {dateFormat === "us" ? "US (MM/DD)" : "UK (DD/MM)"} format. Switch the Date format toggle above if this looks wrong.
+          Ambiguous dates parsed using {market === "US" ? "US (MM/DD)" : market === "HR" ? "Croatia (DD/MM)" : "UK (DD/MM)"} format. Switch the Date format toggle above if this looks wrong.
         </p>
       )}
 
