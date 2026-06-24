@@ -28,11 +28,10 @@ import {
 } from "@/lib/week";
 import {
   loadVenuePerformance,
-  scoreTone,
-  scoreLabel,
   statusTone,
   type VenuePerformance,
 } from "@/lib/performance-engine";
+
 import { getManagerVenue } from "@/lib/manager-venue";
 import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
 import { toast } from "sonner";
