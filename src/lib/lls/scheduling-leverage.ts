@@ -712,7 +712,7 @@ export function computeSchedulingLeverage(
 
     // throughput specialist
     const tpCells = cells.filter(
-      (c) => c.throughput_index >= 1.1 && c.rph_index >= 1.05 && c.rpc_index >= 0.8,
+      (c) => c.throughput_index >= 1.1 && c.rph_index >= 1.05 && c.rpc_index >= 0.75,
     );
     const tpStar = tpCells.sort((a, b) => b.throughput_index - a.throughput_index)[0];
     if (tpStar)
