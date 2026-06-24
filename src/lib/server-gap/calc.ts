@@ -1,7 +1,15 @@
 // Pure calculation functions. Weighted totals throughout — never avg of avgs.
+//
+// MIGRATION: gap math + RAG/rank thresholds delegate to the canonical
+// metrics engine in `src/lib/metrics/`. The calculator's productivity
+// metric is RPH (revenue per hour) and OF is applied to hours rather than
+// to labor_cost (calculator does not always have labor_cost). The Σ/Σ
+// weighting and the engine's performance-gap + RAG bands are reused.
 
 import type { MatchedShift } from "./merge";
 import { resolveFactorFromTimes, type Band, type FactorResult } from "./opportunity";
+import { performanceGap as enginePerformanceGap, ragBand as engineRagBand } from "@/lib/metrics/gap";
+
 
 export type ShiftMetric = MatchedShift & {
   factor: number;
