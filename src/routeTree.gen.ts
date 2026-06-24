@@ -32,6 +32,7 @@ import { Route as CalculatorIndexRouteImport } from './routes/calculator.index'
 import { Route as SignupManagerRouteImport } from './routes/signup.manager'
 import { Route as ServerWelcomeRouteImport } from './routes/server.welcome'
 import { Route as ServerStatsRouteImport } from './routes/server.stats'
+import { Route as ServerRewardsRouteImport } from './routes/server.rewards'
 import { Route as ServerProgressRouteImport } from './routes/server.progress'
 import { Route as ServerProfileRouteImport } from './routes/server.profile'
 import { Route as ServerMenuRouteImport } from './routes/server.menu'
@@ -193,6 +194,11 @@ const ServerWelcomeRoute = ServerWelcomeRouteImport.update({
 const ServerStatsRoute = ServerStatsRouteImport.update({
   id: '/server/stats',
   path: '/server/stats',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ServerRewardsRoute = ServerRewardsRouteImport.update({
+  id: '/server/rewards',
+  path: '/server/rewards',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ServerProgressRoute = ServerProgressRouteImport.update({
@@ -445,6 +451,7 @@ export interface FileRoutesByFullPath {
   '/server/menu': typeof ServerMenuRoute
   '/server/profile': typeof ServerProfileRoute
   '/server/progress': typeof ServerProgressRoute
+  '/server/rewards': typeof ServerRewardsRoute
   '/server/stats': typeof ServerStatsRoute
   '/server/welcome': typeof ServerWelcomeRoute
   '/signup/manager': typeof SignupManagerRoute
@@ -509,6 +516,7 @@ export interface FileRoutesByTo {
   '/server/menu': typeof ServerMenuRoute
   '/server/profile': typeof ServerProfileRoute
   '/server/progress': typeof ServerProgressRoute
+  '/server/rewards': typeof ServerRewardsRoute
   '/server/stats': typeof ServerStatsRoute
   '/server/welcome': typeof ServerWelcomeRoute
   '/signup/manager': typeof SignupManagerRoute
@@ -577,6 +585,7 @@ export interface FileRoutesById {
   '/server/menu': typeof ServerMenuRoute
   '/server/profile': typeof ServerProfileRoute
   '/server/progress': typeof ServerProgressRoute
+  '/server/rewards': typeof ServerRewardsRoute
   '/server/stats': typeof ServerStatsRoute
   '/server/welcome': typeof ServerWelcomeRoute
   '/signup/manager': typeof SignupManagerRoute
@@ -646,6 +655,7 @@ export interface FileRouteTypes {
     | '/server/menu'
     | '/server/profile'
     | '/server/progress'
+    | '/server/rewards'
     | '/server/stats'
     | '/server/welcome'
     | '/signup/manager'
@@ -710,6 +720,7 @@ export interface FileRouteTypes {
     | '/server/menu'
     | '/server/profile'
     | '/server/progress'
+    | '/server/rewards'
     | '/server/stats'
     | '/server/welcome'
     | '/signup/manager'
@@ -777,6 +788,7 @@ export interface FileRouteTypes {
     | '/server/menu'
     | '/server/profile'
     | '/server/progress'
+    | '/server/rewards'
     | '/server/stats'
     | '/server/welcome'
     | '/signup/manager'
@@ -844,6 +856,7 @@ export interface RootRouteChildren {
   ServerMenuRoute: typeof ServerMenuRoute
   ServerProfileRoute: typeof ServerProfileRoute
   ServerProgressRoute: typeof ServerProgressRoute
+  ServerRewardsRoute: typeof ServerRewardsRoute
   ServerStatsRoute: typeof ServerStatsRoute
   ServerWelcomeRoute: typeof ServerWelcomeRoute
   ManagerIndexRoute: typeof ManagerIndexRoute
@@ -1033,6 +1046,13 @@ declare module '@tanstack/react-router' {
       path: '/server/stats'
       fullPath: '/server/stats'
       preLoaderRoute: typeof ServerStatsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/server/rewards': {
+      id: '/server/rewards'
+      path: '/server/rewards'
+      fullPath: '/server/rewards'
+      preLoaderRoute: typeof ServerRewardsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/server/progress': {
@@ -1408,6 +1428,7 @@ const rootRouteChildren: RootRouteChildren = {
   ServerMenuRoute: ServerMenuRoute,
   ServerProfileRoute: ServerProfileRoute,
   ServerProgressRoute: ServerProgressRoute,
+  ServerRewardsRoute: ServerRewardsRoute,
   ServerStatsRoute: ServerStatsRoute,
   ServerWelcomeRoute: ServerWelcomeRoute,
   ManagerIndexRoute: ManagerIndexRoute,
