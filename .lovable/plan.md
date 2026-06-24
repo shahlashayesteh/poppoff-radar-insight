@@ -1,68 +1,49 @@
-## What's actually happening
+## Root cause found
 
-The "Something went wrong / Please try again later / Contact support" notification you're seeing is **Paddle's own overlay error**, not a Lovable toast. Our code says specific things like "Couldn't open checkout" — Paddle says "Something went wrong, contact support." That distinction matters because it tells us:
+Paddle itself is connected: test and live products/prices exist, live go-live checks are completed, and webhooks are registered.
 
-- Our code is reaching `Paddle.Checkout.open()` successfully.
-- Paddle.js itself is rejecting the checkout once the overlay opens.
+The failure is coming from the checkout transaction state, not from missing catalog or approval:
 
-I verified from the Paddle API:
-- Price `poppoff_pro_monthly` → `pri_01kr1gpqeb8ha7kfhg0jm6m514`, status `active`, £199 GBP. ✅
-- Price `poppoff_starter_monthly` exists and is active. ✅
-- Sandbox webhook is registered to the dev URL. ✅
-- Client tokens are present in both `.env.development` and `.env.production`. ✅
+- The newest test checkout attempts are creating Paddle transactions successfully.
+- Those transactions remain in `draft` with no payment attempts.
+- For the current Pro plan, the test price has **no 30-day trial period**, while live does have the trial.
+- The app is opening checkout without a strong `customer.email`/`customData` path when started from the pricing page for unauthenticated users.
+- The current pre-check proves token + price resolution, but it does not prove Paddle can actually create a valid checkout session with the same customer/price/trial requirements.
 
-The remaining failure modes that produce Paddle's generic "contact support" screen are almost all **environment/account configuration** issues, not code:
+## Recommended fix before switching provider
 
-1. **Approved domains missing** — Paddle blocks `Checkout.open()` from any origin that isn't on the sandbox account's approved domains list. The current preview origin (`id-preview--…lovable.app`) and the published origin (`poppoffstats.com`, `www.poppoffstats.com`, `poppoff-radar-insight.lovable.app`) all need to be there.
-2. **Default payment link unset** in Paddle Checkout settings.
-3. **Sandbox client token revoked / from a different seller account** than the one holding the prices.
+Keep Paddle for now and make the checkout flow deterministic:
 
-None of those can be fixed from code — they're toggles in the Paddle sandbox dashboard. But what we *can* do is stop hiding the failure: today we just `console.error` and fire a generic toast, so you have no idea which of the four things failed.
+1. **Restore trial parity in Paddle catalog**
+   - Update the test Pro price to include the same 30-day card-required trial as live.
+   - Confirm Starter and Pro both resolve in test and live.
 
-## Scoped code change (pre-check)
+2. **Move checkout creation to a server-backed Paddle preflight**
+   - Add a server function that uses the resolved price and customer email to create/preview a real Paddle transaction before opening the overlay.
+   - Return a clear app error if Paddle rejects the price/customer/domain before the user sees Paddle’s generic “Something went wrong”.
 
-Add a single `precheckPaddle(priceId)` helper that runs before any `Paddle.Checkout.open()` call and turns each failure into a specific, actionable toast + console line.
+3. **Tighten pricing-to-signup flow**
+   - Pricing button should only route to signup after price + environment are confirmed.
+   - Signup should open checkout only after account, role claim, notification email, and customer email are present.
+   - Pass consistent `customData`: `userId`, `role: manager`, selected plan.
 
-Steps it runs, in order:
+4. **Add visible diagnostics only when checkout fails**
+   - Show a clear support message with the specific failure reason.
+   - Keep customer-facing checkout UI clean when it works.
 
-1. `clientToken` is present and starts with `test_` or `live_` → otherwise toast: "Payments not configured (missing client token)."
-2. `initializePaddle()` resolves and `window.Paddle.Checkout` exists → otherwise toast: "Couldn't load Paddle. Check network / ad-blocker."
-3. `resolvePaddlePrice({ priceId, environment })` returns a `pri_…` ID → otherwise toast: `Price not found in {env}: {priceId}`.
-4. Returns `{ paddlePriceId, environment }` for the caller to pass to `Checkout.open()`.
+5. **Validate end to end**
+   - Test `/#pricing` → Starter free trial → manager signup → Paddle overlay opens.
+   - Test `/#pricing` → Pro → manager signup → Paddle overlay opens.
+   - Confirm Paddle transaction has customer/customData and is no longer stuck before payment.
+   - Confirm webhook route remains registered and live approval remains complete.
 
-Wire the pre-check into the two real entry points:
+## Stripe fallback, if Paddle still fails after this
 
-- `src/routes/index.tsx` → `handlePlanClick` (Pricing → Get Started / Start Free Trial). Run pre-check before either the signed-in `openCheckout` call or the navigate-to-signup branch, so we fail fast with a real reason instead of bouncing the user into a signup form for a broken flow.
-- `src/routes/signup.manager.tsx` → before the post-signup auto-`openCheckout`. Same pre-check.
+Do not switch immediately. Switching to built-in Stripe means:
 
-Also tighten `src/hooks/usePaddleCheckout.ts` so the `try/catch` actually catches `Paddle.Checkout.open()` errors (today it's fire-and-forget — Paddle's overlay errors never reach our catch). Wrap the `Paddle.Checkout.open` call and surface any synchronous throw.
+- Recreate products/prices under Stripe.
+- Replace Paddle SDK/open-checkout code.
+- Replace Paddle webhook processing with Stripe payment events.
+- Existing Paddle subscriptions/customers do not migrate automatically.
 
-Add `console.info` lines tagged `[paddle]` at each step (env, token prefix, resolved price ID, origin) so the next time it fails you can read exactly which gate tripped.
-
-## What you almost certainly need to do in Paddle
-
-Even with the pre-check, if the failure is "approved domains," only you can fix it. In the Paddle **sandbox** dashboard:
-
-- Checkout settings → **Default payment link**: set to `https://poppoffstats.com/checkout/success` (or your preferred URL).
-- Checkout settings → **Approved domains**: add
-  - `poppoffstats.com`
-  - `www.poppoffstats.com`
-  - `poppoff-radar-insight.lovable.app`
-  - `id-preview--af1ebe93-3732-42dc-b865-a7e858845056.lovable.app`
-  - `project--af1ebe93-3732-42dc-b865-a7e858845056-dev.lovable.app`
-- Repeat the same for the **live** account before going live.
-
-After the code change ships, click Get Started once more — the toast will now name the exact gate that's failing, and we can act on it.
-
-## Files changed
-
-- `src/lib/paddle.ts` — add `precheckPaddle(priceId)` exported helper; keep existing `initializePaddle` / `getPaddlePriceId`.
-- `src/hooks/usePaddleCheckout.ts` — call pre-check, catch overlay errors, return `{ ok, error }`.
-- `src/routes/index.tsx` — `handlePlanClick` uses pre-check; specific toasts.
-- `src/routes/signup.manager.tsx` — pre-check before post-signup `openCheckout`.
-
-## Out of scope
-
-- No changes to webhook handler, server functions, subscriptions table, or Paddle catalog.
-- No changes to auth/tenant/upload logic.
-- No demo data touched.
+If the Paddle fix above still fails after validation, I’ll propose a separate Stripe migration plan and only proceed after you approve the provider switch.
