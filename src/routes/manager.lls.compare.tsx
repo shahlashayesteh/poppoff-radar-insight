@@ -118,32 +118,33 @@ function ComparePage() {
         {data && (
           <>
             <div className="rounded-2xl border border-border bg-amber-50/60 p-3 text-xs text-foreground/80">
-              <strong>Benchmark window:</strong> both v1 and v2 use the prior <strong>{data.baselineWeeks} weeks</strong> of venue history for an apples-to-apples comparison.
+              <strong>Benchmark window:</strong> both v1 and v2 use the prior <strong>{data.baselineWeeks} weeks</strong> of venue history (weighted, fully-loaded labour where uploaded) for an apples-to-apples comparison.
             </div>
 
             <div className="grid md:grid-cols-2 gap-4">
               <ModelCard title="v1 (production)" version={data.venue.active_model_version} accent="var(--muted-foreground)">
-                <Row label="Adjusted LLS" value={fmtLls(data.comparison.v1.adjusted_lls)} />
-                <Row label="Base LLS" value={fmtLls(data.comparison.v1.base_lls)} />
-                <Row label="Weekly RPC" value={fmtLls(data.comparison.v1.weekly_rpc)} />
-                <Row label={`Benchmark Adj LLS (prior ${data.baselineWeeks}w)`} value={fmtLls(data.comparison.v1.benchmark_adjusted_lls)} />
-                <Row label="Performance gap" value={fmtPct(data.comparison.v1.performance_gap)} />
+                <Row label="Adjusted LLS" tooltip={{ name: "Adjusted LLS", formula: "Σ net_sales / Σ(labor_cost × OF) [weighted]", sourceFields: ["net_sales","labor_cost","opportunity_factor"], provenance: "derived" }} value={fmtLls(data.comparison.v1.adjusted_lls)} />
+                <Row label="Base LLS" tooltip={{ name: "Base LLS", formula: "Σ net_sales / Σ labor_cost", sourceFields: ["net_sales","labor_cost"], provenance: "derived" }} value={fmtLls(data.comparison.v1.base_lls)} />
+                <Row label="Weekly RPC" tooltip={{ name: "Weekly RPC", formula: "Σ net_sales / Σ covers_served", sourceFields: ["net_sales","covers_served"], provenance: "derived" }} value={fmtLls(data.comparison.v1.weekly_rpc)} />
+                <Row label={`Benchmark Adj LLS (prior ${data.baselineWeeks}w)`} tooltip={{ name: "Venue benchmark", formula: "Σ net_sales / Σ(labor_cost × OF) across venue", sourceFields: ["net_sales","labor_cost","opportunity_factor"], provenance: "derived", benchmark: { period: `prior ${data.baselineWeeks} weeks`, scope: "venue", basis: "weighted adjusted LLS", weighted: true } }} value={fmtLls(data.comparison.v1.benchmark_adjusted_lls)} />
+                <Row label="Performance gap" tooltip={{ name: "Performance gap", formula: "(adjusted_lls / venue_benchmark) − 1", sourceFields: ["adjusted_lls","venue_benchmark"], provenance: "derived" }} value={fmtPct(data.comparison.v1.performance_gap)} />
                 <Row label="RAG" value={<span style={{ color: ragColour(data.comparison.v1.rag) }} className="font-semibold uppercase text-xs">{data.comparison.v1.rag ?? "—"}</span>} />
                 <Row label="Shifts" value={String(data.v1_totals.shifts)} />
               </ModelCard>
 
               <ModelCard title="v2 (shadow)" version="lls-v2.0.0" accent="#0ea5e9">
-                <Row label="Adjusted LLS" value={fmtLls(data.comparison.v2.adjusted_lls)} />
-                <Row label="Base LLS" value={fmtLls(data.comparison.v2.base_lls)} />
-                <Row label="Weekly RPC" value={fmtLls(data.comparison.v2.weekly_rpc)} />
-                <Row label={`Comparable Adj LLS (prior ${data.baselineWeeks}w)`} value={fmtLls(data.comparison.v2.comparable_adjusted_lls)} />
-                <Row label="Performance gap" value={fmtPct(data.comparison.v2.performance_gap)} />
+                <Row label="Adjusted LLS" tooltip={{ name: "Adjusted LLS (v2)", formula: "Σ net_sales / Σ(labor_cost × OF) [weighted, v2 matching]", sourceFields: ["net_sales","labor_cost","opportunity_factor"], provenance: "derived" }} value={fmtLls(data.comparison.v2.adjusted_lls)} />
+                <Row label="Base LLS" tooltip={{ name: "Base LLS", formula: "Σ net_sales / Σ labor_cost", sourceFields: ["net_sales","labor_cost"], provenance: "derived" }} value={fmtLls(data.comparison.v2.base_lls)} />
+                <Row label="Weekly RPC" tooltip={{ name: "Weekly RPC", formula: "Σ net_sales / Σ covers_served", sourceFields: ["net_sales","covers_served"], provenance: "derived" }} value={fmtLls(data.comparison.v2.weekly_rpc)} />
+                <Row label={`Comparable Adj LLS (prior ${data.baselineWeeks}w)`} tooltip={{ name: "Comparable adjusted LLS", formula: "Σ net_sales / Σ(labor_cost × OF) across venue, same-week comparable", sourceFields: ["net_sales","labor_cost","opportunity_factor"], provenance: "derived", benchmark: { period: `prior ${data.baselineWeeks} weeks`, scope: "venue", basis: "same-week comparable weighted adjusted LLS", weighted: true } }} value={fmtLls(data.comparison.v2.comparable_adjusted_lls)} />
+                <Row label="Performance gap" tooltip={{ name: "Performance gap", formula: "(adjusted_lls / comparable_benchmark) − 1", sourceFields: ["adjusted_lls","comparable_benchmark"], provenance: "derived" }} value={fmtPct(data.comparison.v2.performance_gap)} />
                 <Row label="RAG" value={<span style={{ color: ragColour(data.comparison.v2.rag) }} className="font-semibold uppercase text-xs">{data.comparison.v2.rag}</span>} />
-                <Row label="Expected sales (modelled)" value={fmtMoney(data.comparison.v2.expected_sales)} />
-                <Row label="Modelled revenue opportunity" value={fmtMoney(data.comparison.v2.modelled_revenue_opportunity)} />
+                <Row label={<span className="inline-flex items-center gap-1.5">Expected sales <ModelledValueLabel kind="modelled" /></span>} tooltip={{ name: "Expected sales", description: "Modelled £ sales the venue would expect given this server's shifts.", formula: "Σ (expected_rph_per_shift × hours)", sourceFields: ["expected_rph","hours"], provenance: "derived", notes: ["Modelled value — not realised revenue."] }} value={fmtMoney(data.comparison.v2.expected_sales)} />
+                <Row label={<span className="inline-flex items-center gap-1.5">Modelled revenue opportunity <ModelledValueLabel kind="modelled" /></span>} tooltip={{ name: "Modelled revenue opportunity", description: "Modelled £ uplift if the server matched the venue benchmark on the same shifts.", formula: "Σ (expected_sales − actual_sales) where actual < expected", sourceFields: ["expected_sales","net_sales"], provenance: "derived", notes: ["Directional model — not guaranteed revenue."] }} value={fmtMoney(data.comparison.v2.modelled_revenue_opportunity)} />
                 <Row label="Shifts" value={`${data.v2_totals.shifts} (${data.v2_totals.needs_review} review · ${data.v2_totals.single_sided} single-sided · ${data.v2_totals.cross_daypart} cross-daypart)`} />
               </ModelCard>
             </div>
+
 
 
             <div className="rounded-2xl border border-border bg-white p-5 space-y-3">
