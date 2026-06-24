@@ -214,6 +214,10 @@ export interface ServerShiftCell {
   rota_test_priority: number;
   positive_lift_gate: 0 | 1;
   cell_label: CellLabel;
+  /** Short, visible reason phrase shown in the cell (one line). */
+  primary_reason: string;
+  /** Compact label code shown to managers (e.g. "Best lift", "Peak fit"). */
+  cell_label_text: string;
   reasons: string[];
   warnings: string[];
 }
@@ -222,6 +226,8 @@ export interface ServerRecommendation {
   server_id: string;
   server_name: string;
   recommendation_type: RecommendationType;
+  /** All recommendation types that apply to this (server, shift) pair. */
+  recommendation_types: RecommendationType[];
   best_fit_shift: string;
   current_pattern: string;
   why: string;
@@ -232,11 +238,28 @@ export interface ServerRecommendation {
   rota_test_priority: number;
   schedule_feasibility: number;
   requires_confirmation: boolean;
+  /** Whether the test is a swap within the observed pattern or an extra shift. */
+  test_style: "swap" | "extra" | "requires_confirmation";
+  /** Plain-English breakdown used by the explanation panel. */
+  explanation: {
+    current_baseline: string;
+    projected_result: string;
+    modelled_marginal_lift: string;
+    confidence: string;
+    observed_pattern: string;
+    operational_note: string;
+  };
 }
 
 export interface SchedulingLeverageResult {
   matrix_scope: MatrixScope;
   outlet_inferred_from_file: string | null;
+  outlet_basis: OutletBasis;
+  /** Period the matrix is computed over. */
+  period: { start: string; end: string; weeks: number };
+  /** Whether the manager's selected week has matched shifts. */
+  selected_week_has_shifts: boolean | null;
+  selected_week_start: string | null;
   shift_types: ShiftTypeBaseline[];
   servers: { id: string; name: string; pattern: ServerWorkingPattern }[];
   matrix: ServerShiftCell[];
