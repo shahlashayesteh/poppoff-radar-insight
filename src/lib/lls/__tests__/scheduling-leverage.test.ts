@@ -222,7 +222,9 @@ describe("Scheduling Leverage v2", () => {
     rows.push(row({ server_id: "Star", day: 1, daypart: "lunch", outlet: "V", gross_sales: 1500, covers: 48, shift_date: "2026-05-12" }));
     const out = computeSchedulingLeverage(rows);
     // The matrix at least produces an underused recommendation OR highlights it
-    const hasUnder = out.recommendations.some((r) => r.recommendation_type === "underused_capability") || out.highlights.most_underused != null;
+    const hasUnder =
+      out.recommendations.some((r) => r.recommendation_types.includes("underused_capability")) ||
+      out.highlights.most_underused != null;
     expect(hasUnder).toBe(true);
   });
 
