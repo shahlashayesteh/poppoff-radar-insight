@@ -698,3 +698,82 @@ export const getWeeklyScorecard = createServerFn({ method: "POST" })
     return computeWeeklyScorecardFromRows((shifts ?? []) as ScorecardInputRow[], ws, thresholds);
   });
 
+// ---------- scheduling leverage matrix ----------
+//
+// Manager-only intelligence. Pulls a longer window of shifts (default 12
+// weeks) and runs the canonical scheduling-leverage engine. Server routes
+// must NOT call this — gated by the auth middleware + manager venue lookup.
+
+import {
+  computeSchedulingLeverage,
+  type LeverageShiftRow,
+  type SchedulingLeverageResult,
+} from "@/lib/lls/scheduling-leverage";
+
+export type { SchedulingLeverageResult } from "@/lib/lls/scheduling-leverage";
+
+export const getSchedulingLeverage = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { weekStart: string; weeks?: number }) =>
+    z
+      .object({
+        weekStart: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        weeks: z.number().int().min(2).max(26).optional(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }): Promise<SchedulingLeverageResult> => {
+    const { supabase, userId } = context;
+    const venueId = await getManagerVenueId(supabase, userId);
+    const weeks = data.weeks ?? 12;
+
+    const ws = data.weekStart;
+    const wsDate = new Date(ws + "T00:00:00");
+    const weekEnd = new Date(wsDate);
+    weekEnd.setDate(weekEnd.getDate() + 7);
+    const start = new Date(wsDate);
+    start.setDate(start.getDate() - 7 * weeks);
+    const iso = (d: Date) => d.toISOString().slice(0, 10);
+
+    const { data: shifts, error } = await supabase
+      .from("shifts")
+      .select(
+        "server_id, server_name, shift_date, day_of_week, daypart, gross_sales, covers_served, labor_cost, opportunity_factor, shift_start_time, shift_end_time",
+      )
+      .eq("venue_id", venueId)
+      .gte("shift_date", iso(start))
+      .lt("shift_date", iso(weekEnd));
+    if (error) throw new Error(error.message);
+
+    const rows: LeverageShiftRow[] = (shifts ?? []).map((r: any) => {
+      // best-effort hours from start/end times (v1 schema does not store hours).
+      let hours: number | null = null;
+      if (r.shift_start_time && r.shift_end_time) {
+        const [h1, m1] = String(r.shift_start_time).split(":").map(Number);
+        const [h2, m2] = String(r.shift_end_time).split(":").map(Number);
+        if ([h1, m1, h2, m2].every((n) => Number.isFinite(n))) {
+          let mins = h2 * 60 + m2 - (h1 * 60 + m1);
+          if (mins < 0) mins += 24 * 60;
+          hours = mins / 60;
+        }
+      }
+      return {
+        server_id: r.server_id,
+        server_name: r.server_name ?? r.server_id,
+        shift_date: r.shift_date,
+        day_of_week: r.day_of_week,
+        daypart: r.daypart,
+        outlet: null,
+        gross_sales: r.gross_sales != null ? Number(r.gross_sales) : null,
+        net_sales: null,
+        covers: r.covers_served != null ? Number(r.covers_served) : null,
+        hours,
+        labor_cost: r.labor_cost != null ? Number(r.labor_cost) : null,
+        opportunity_factor: r.opportunity_factor != null ? Number(r.opportunity_factor) : 1,
+      };
+    });
+
+    return computeSchedulingLeverage(rows);
+  });
+
+

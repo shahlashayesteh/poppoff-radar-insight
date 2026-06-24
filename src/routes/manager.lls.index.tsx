@@ -33,11 +33,14 @@ import {
   saveColumnMapping,
   listRecentBatches,
   rollbackBatch,
+  getSchedulingLeverage,
   type ScorecardResult,
+  type SchedulingLeverageResult,
   type Daypart,
 } from "@/lib/lls.functions";
 import { Upload, ChevronLeft, ChevronRight, AlertTriangle, TrendingUp, TrendingDown, Trash2, Gauge, Sparkles } from "lucide-react";
 import { MetricTooltip, DataQualityChip } from "@/components/metrics";
+import { SchedulingLeverageMatrix } from "@/components/lls/scheduling-leverage-matrix";
 
 export const Route = createFileRoute("/manager/lls/")({ component: LlsPage });
 
@@ -179,6 +182,7 @@ function LaborBasisBadge({ basis }: { basis: LaborBasisLocal }) {
 function LlsPage() {
   const [weekStart, setWeekStart] = useState(toISODate(getMondayOfWeek()));
   const [scorecard, setScorecard] = useState<ScorecardResult | null>(null);
+  const [leverage, setLeverage] = useState<SchedulingLeverageResult | null>(null);
   const [grid, setGrid] = useState<Record<number, Record<Daypart, number>> | null>(null);
   const [batches, setBatches] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -204,6 +208,7 @@ function LlsPage() {
   const persistMapping = useServerFn(saveColumnMapping);
   const fetchBatches = useServerFn(listRecentBatches);
   const doRollback = useServerFn(rollbackBatch);
+  const fetchLeverage = useServerFn(getSchedulingLeverage);
 
   const refresh = async () => {
     setLoading(true);
@@ -216,6 +221,11 @@ function LlsPage() {
       setScorecard(sc);
       setGrid(of.grid);
       setBatches(bs.batches);
+      // Scheduling leverage uses a longer window — fire-and-forget so the
+      // main scorecard renders quickly even if leverage is slow.
+      fetchLeverage({ data: { weekStart, weeks: 12 } })
+        .then(setLeverage)
+        .catch(() => setLeverage(null));
     } catch (e: any) {
       toast.error(e?.message ?? "Failed to load");
     } finally {
@@ -689,6 +699,13 @@ function LlsPage() {
             </div>
           </div>
         )}
+
+        {/* Scheduling Leverage Matrix — manager-only intelligence */}
+        {leverage && leverage.matrix.length > 0 && (
+          <SchedulingLeverageMatrix data={leverage} />
+        )}
+
+
 
         {/* Opportunity Factor editor */}
         <div className="mt-6 rounded-2xl bg-white border border-border p-6">
