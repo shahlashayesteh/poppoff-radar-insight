@@ -38,9 +38,10 @@ import {
   type SchedulingLeverageResult,
   type Daypart,
 } from "@/lib/lls.functions";
-import { Upload, ChevronLeft, ChevronRight, AlertTriangle, TrendingUp, TrendingDown, Trash2, Gauge, Sparkles } from "lucide-react";
+import { Upload, ChevronLeft, ChevronRight, AlertTriangle, TrendingUp, TrendingDown, Trash2, Gauge, Sparkles, Info } from "lucide-react";
 import { MetricTooltip, DataQualityChip } from "@/components/metrics";
 import { SchedulingLeverageMatrix } from "@/components/lls/scheduling-leverage-matrix";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 export const Route = createFileRoute("/manager/lls/")({ component: LlsPage });
 
@@ -630,12 +631,16 @@ function LlsPage() {
                       </MetricTooltip>
                     </th>
 
-                    <th className="text-left py-2 pl-3">Operator meaning</th>
+                    <th className="text-center py-2 pl-3">Status</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {scorecard.servers.map((s) => (
-                    <tr key={s.serverId} className="border-b border-border/50">
+                  {scorecard.servers.map((s) => {
+                    const statusLabel = s.rag_status === "green" ? "Strong"
+                      : s.rag_status === "amber" ? "Average"
+                      : s.rag_status === "red" ? "Weak" : "—";
+                    return (
+                    <tr key={s.serverId} className="border-b border-border/50 hover:bg-muted/20">
                       <td className="py-2 pr-3 font-semibold">
                         {s.serverName}
                         {s.lowSample && (
@@ -661,9 +666,29 @@ function LlsPage() {
                         {s.venue_benchmark != null ? s.venue_benchmark.toFixed(2) : "—"}
                       </td>
                       <td className="text-right py-2 px-2 font-semibold">{formatGap(s.performance_gap)}</td>
-                      <td className="py-2 pl-3 text-xs text-muted-foreground">{s.operator_meaning}</td>
+                      <td className="py-2 pl-3 text-center">
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <button className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold ${bandBg(s.rag_status, false)} hover:opacity-80`}>
+                              {statusLabel}
+                              <Info className="h-3 w-3 opacity-70" />
+                            </button>
+                          </PopoverTrigger>
+                          <PopoverContent side="left" align="start" className="w-80 text-xs">
+                            <div className="font-semibold text-sm mb-1">{s.serverName} — {statusLabel}</div>
+                            <div className="text-muted-foreground">{s.operator_meaning}</div>
+                            <div className="mt-3 grid grid-cols-2 gap-x-3 gap-y-1 text-[11px]">
+                              <div>Adj. LLS: <span className="font-semibold">{s.weekly_adjusted_lls?.toFixed(2) ?? "—"}</span></div>
+                              <div>Benchmark: <span className="font-semibold">{s.venue_benchmark?.toFixed(2) ?? "—"}</span></div>
+                              <div>Gap: <span className="font-semibold">{formatGap(s.performance_gap)}</span></div>
+                              <div>Shifts: <span className="font-semibold">{s.shifts_worked}</span></div>
+                            </div>
+                          </PopoverContent>
+                        </Popover>
+                      </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
