@@ -116,15 +116,15 @@ function SignUpManager() {
       </header>
       <div className="flex-1 grid place-items-center px-6 py-12">
         <div className="w-full max-w-md rounded-3xl bg-white border border-border p-8">
-          <h1 className="font-display text-3xl font-extrabold tracking-tight">Set up your account</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Payment received. Just a few details to finish.</p>
+          <h1 className="font-display text-3xl font-extrabold tracking-tight">Start your free trial</h1>
+          <p className="mt-1 text-sm text-muted-foreground">Create your account, then enter card details for the 30-day free trial. Cancel anytime.</p>
           <form onSubmit={submit} className="mt-6 space-y-3">
             <input className="w-full rounded-xl border border-border px-4 py-3 text-sm" placeholder="Full name" value={fullName} onChange={(e) => setFullName(e.target.value)} required />
             <input className="w-full rounded-xl border border-border px-4 py-3 text-sm" placeholder="Business / venue name" value={businessName} onChange={(e) => setBusinessName(e.target.value)} required />
             <input className="w-full rounded-xl border border-border px-4 py-3 text-sm" type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required />
             <input className="w-full rounded-xl border border-border px-4 py-3 text-sm" type="password" placeholder="Password (min 8 chars)" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} />
             <button disabled={loading} className="w-full rounded-xl py-3 text-sm font-bold text-white disabled:opacity-60" style={{ background: "var(--brand-orange)" }}>
-              {loading ? "Creating…" : "Create account"}
+              {loading ? "Creating…" : "Continue to payment"}
             </button>
           </form>
         </div>
