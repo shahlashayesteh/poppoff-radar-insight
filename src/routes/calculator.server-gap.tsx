@@ -3,7 +3,7 @@ import { useCallback, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { cn } from "@/lib/utils";
-import { parseFile, type ParseResult } from "@/lib/server-gap/parse";
+import { parseFile, type ParseResult, setDefaultDateFormat, lastParseHadAmbiguousDates, type DateFormat } from "@/lib/server-gap/parse";
 import {
   mergeRows,
   normaliseLabour,
@@ -17,6 +17,10 @@ import {
   computeShiftMetrics,
   computeTeamBenchmark,
   projectPeriod,
+  clampTradingWeeks,
+  TRADING_WEEKS_MIN,
+  TRADING_WEEKS_MAX,
+  DEFAULT_RECOVERABILITY_FACTOR,
   type Period,
 } from "@/lib/server-gap/calc";
 import { buildWarnings } from "@/lib/server-gap/warnings";
@@ -77,12 +81,30 @@ function ServerGapPage() {
   const [labourFile, setLabourFile] = useState<{ name: string; result: ParseResult } | null>(null);
   const [parseError, setParseError] = useState<string | null>(null);
   const [currency, setCurrency] = useState<"£" | "$">("£");
+  const [dateFormat, setDateFormat] = useState<DateFormat>("uk");
   const [period, setPeriod] = useState<Period>("monthly");
   const [basis, setBasis] = useState<SalesBasis>("net");
+  const [tradingWeeks, setTradingWeeks] = useState<number>(52);
+  const [lens, setLens] = useState<"revenue" | "gp">("revenue");
+  const [gpMargin, setGpMargin] = useState<0.6 | 0.7 | 0.8>(0.7);
+  const [recoverability, setRecoverability] = useState<number>(DEFAULT_RECOVERABILITY_FACTOR);
   const [showPreview, setShowPreview] = useState(false);
+
+  // Keep date-parser default aligned with market selection.
+  const onCurrencyChange = useCallback((v: "£" | "$") => {
+    setCurrency(v);
+    const fmt: DateFormat = v === "$" ? "us" : "uk";
+    setDateFormat(fmt);
+    setDefaultDateFormat(fmt);
+  }, []);
+  const onDateFormatChange = useCallback((v: DateFormat) => {
+    setDateFormat(v);
+    setDefaultDateFormat(v);
+  }, []);
 
   const handleFile = useCallback(async (kind: UploadKind, file: File) => {
     setParseError(null);
+    setDefaultDateFormat(dateFormat);
     try {
       const result = await parseFile(file);
       if (kind === "sales") setSalesFile({ name: file.name, result });
@@ -90,7 +112,7 @@ function ServerGapPage() {
     } catch (e) {
       setParseError(`Couldn't parse ${file.name}: ${(e as Error).message}`);
     }
-  }, []);
+  }, [dateFormat]);
 
   // Sales-basis auto-selection on upload
   const salesHasGross = salesFile?.result.detected.has("gross_sales") ?? false;
@@ -106,6 +128,7 @@ function ServerGapPage() {
   const analysis = useMemo(() => {
     if (!salesFile || !labourFile) return null;
 
+    setDefaultDateFormat(dateFormat);
     const sN = normaliseSales(salesFile.result.rows);
     const lN = normaliseLabour(labourFile.result.rows);
     const hasSalesStartTimes = sN.rows.some((r) => r.startMin != null);
@@ -113,8 +136,9 @@ function ServerGapPage() {
     const shifts = computeShiftMetrics(merge.matched);
     const servers = computeServerMetrics(shifts);
     const team = computeTeamBenchmark(shifts);
-    const ranked = attachGap(servers, team);
-    const recoverable = computeRecoverable(ranked);
+    const ranked = attachGap(servers, team, { recoverabilityFactor: recoverability });
+    const tw = clampTradingWeeks(tradingWeeks);
+    const recoverable = computeRecoverable(ranked, { tradingWeeks: tw });
 
     // observed weeks span
     const dates = shifts.map((s) => s.date).sort();
@@ -124,7 +148,9 @@ function ServerGapPage() {
       const b = new Date(dates[dates.length - 1]);
       weeks = Math.max(1, (+b - +a) / (1000 * 60 * 60 * 24 * 7) + 1 / 7);
     }
-    const projected = projectPeriod(recoverable.weekly, period, weeks);
+    const projected = projectPeriod(recoverable.weekly, period, weeks, tw);
+    const lensFactor = lens === "gp" ? gpMargin : 1;
+    const ambiguousDates = lastParseHadAmbiguousDates();
 
     const warnings = buildWarnings({
       salesRowsTotal: salesFile.result.rows.length,
@@ -147,8 +173,8 @@ function ServerGapPage() {
       unmatchedSales: merge.unmatchedSales,
     });
 
-    return { sN, lN, merge, shifts, servers, team, ranked, recoverable, projected, warnings, confidence, weeks };
-  }, [salesFile, labourFile, effectiveBasis, period]);
+    return { sN, lN, merge, shifts, servers, team, ranked, recoverable, projected, warnings, confidence, weeks, lensFactor, ambiguousDates, tradingWeeks: tw };
+  }, [salesFile, labourFile, effectiveBasis, period, recoverability, tradingWeeks, lens, gpMargin, dateFormat]);
 
   return (
     <div className="mx-auto max-w-[1100px] px-6 pb-24 pt-10">
@@ -175,20 +201,37 @@ function ServerGapPage() {
           </p>
         </section>
 
-        {/* Currency selector */}
-        <div className="mt-8 flex flex-wrap items-center gap-2.5">
-          <span className="mr-1 font-mono text-xs uppercase tracking-[0.14em] text-muted-foreground">
-            Currency
-          </span>
-          <ToggleGroup
-            type="single"
-            value={currency}
-            onValueChange={(v) => v && setCurrency(v as "£" | "$")}
-            variant="outline"
-          >
-            <ToggleGroupItem value="£" className="rounded-full px-4">UK (£)</ToggleGroupItem>
-            <ToggleGroupItem value="$" className="rounded-full px-4">US ($)</ToggleGroupItem>
-          </ToggleGroup>
+        {/* Market + date-format selectors */}
+        <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3">
+          <div className="flex items-center gap-2.5">
+            <span className="mr-1 font-mono text-xs uppercase tracking-[0.14em] text-muted-foreground">
+              Currency
+            </span>
+            <ToggleGroup
+              type="single"
+              value={currency}
+              onValueChange={(v) => v && onCurrencyChange(v as "£" | "$")}
+              variant="outline"
+            >
+              <ToggleGroupItem value="£" className="rounded-full px-4">UK (£)</ToggleGroupItem>
+              <ToggleGroupItem value="$" className="rounded-full px-4">US ($)</ToggleGroupItem>
+            </ToggleGroup>
+          </div>
+          <div className="flex items-center gap-2.5">
+            <span className="font-mono text-xs uppercase tracking-[0.14em] text-muted-foreground">
+              Date format
+            </span>
+            <ToggleGroup
+              type="single"
+              value={dateFormat}
+              onValueChange={(v) => v && onDateFormatChange(v as DateFormat)}
+              variant="outline"
+            >
+              <ToggleGroupItem value="uk" className="rounded-full px-3">DD/MM</ToggleGroupItem>
+              <ToggleGroupItem value="us" className="rounded-full px-3">MM/DD</ToggleGroupItem>
+            </ToggleGroup>
+            <span className="text-[11px] text-muted-foreground">ISO YYYY-MM-DD always wins.</span>
+          </div>
         </div>
 
         {/* How this works — explainer */}
@@ -325,6 +368,62 @@ function ServerGapPage() {
                 </ToggleGroup>
               </div>
             )}
+            <div className="flex items-center gap-2.5">
+              <span className="font-mono text-xs uppercase tracking-[0.14em] text-muted-foreground">Impact lens</span>
+              <ToggleGroup
+                type="single"
+                value={lens}
+                onValueChange={(v) => v && setLens(v as "revenue" | "gp")}
+                variant="outline"
+              >
+                <ToggleGroupItem value="revenue" className="rounded-full px-3">Revenue</ToggleGroupItem>
+                <ToggleGroupItem value="gp" className="rounded-full px-3">Gross profit</ToggleGroupItem>
+              </ToggleGroup>
+              {lens === "gp" && (
+                <ToggleGroup
+                  type="single"
+                  value={String(gpMargin)}
+                  onValueChange={(v) => v && setGpMargin(Number(v) as 0.6 | 0.7 | 0.8)}
+                  variant="outline"
+                >
+                  <ToggleGroupItem value="0.6" className="rounded-full px-3">60%</ToggleGroupItem>
+                  <ToggleGroupItem value="0.7" className="rounded-full px-3">70%</ToggleGroupItem>
+                  <ToggleGroupItem value="0.8" className="rounded-full px-3">80%</ToggleGroupItem>
+                </ToggleGroup>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="font-mono text-xs uppercase tracking-[0.14em] text-muted-foreground" htmlFor="trading-weeks">
+                Trading weeks/yr
+              </label>
+              <input
+                id="trading-weeks"
+                type="number"
+                min={TRADING_WEEKS_MIN}
+                max={TRADING_WEEKS_MAX}
+                value={tradingWeeks}
+                onChange={(e) => setTradingWeeks(clampTradingWeeks(Number(e.target.value)))}
+                className="w-16 rounded-md border border-border bg-background px-2 py-1 text-sm tabular-nums"
+              />
+              <span className="text-[11px] text-muted-foreground">({TRADING_WEEKS_MIN}–{TRADING_WEEKS_MAX})</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="font-mono text-xs uppercase tracking-[0.14em] text-muted-foreground" htmlFor="recov-factor">
+                Recoverability
+              </label>
+              <input
+                id="recov-factor"
+                type="number"
+                min={0.1} max={1} step={0.05}
+                value={recoverability}
+                onChange={(e) => {
+                  const n = Number(e.target.value);
+                  if (isFinite(n) && n > 0 && n <= 1) setRecoverability(n);
+                }}
+                className="w-16 rounded-md border border-border bg-background px-2 py-1 text-sm tabular-nums"
+              />
+              <span className="text-[11px] text-muted-foreground">default 0.50</span>
+            </div>
             <button
               type="button"
               onClick={() => setShowPreview((v) => !v)}
@@ -481,7 +580,7 @@ function ServerGapPage() {
                             {nf1.format(s.gapPct * 100)}%
                           </td>
                           <td className="px-3 py-2.5">
-                            <RankPill rank={s.rank} />
+                            <RankPill band={s.rankBand} />
                           </td>
                         </tr>
                       ))}
@@ -510,6 +609,13 @@ function ServerGapPage() {
                 projected={analysis.projected}
                 currency={currency}
                 weeks={analysis.weeks}
+                lens={lens}
+                gpMargin={gpMargin}
+                lensFactor={analysis.lensFactor}
+                recoverability={recoverability}
+                tradingWeeks={analysis.tradingWeeks}
+                ambiguousDates={analysis.ambiguousDates}
+                dateFormat={dateFormat}
               />
             )}
 
@@ -570,13 +676,15 @@ function ConfidencePill({ level }: { level: "High" | "Medium" | "Low" }) {
   );
 }
 
-function RankPill({ rank }: { rank: "above" | "tracking" | "below" }) {
+function RankPill({ band }: { band: import("@/lib/server-gap/calc").RankBand }) {
   const map = {
-    above: { label: "Outperforming", cls: "bg-emerald-500/15 text-emerald-500" },
-    tracking: { label: "Tracking", cls: "bg-brand-orange/15 text-brand-orange" },
-    below: { label: "Below benchmark", cls: "bg-destructive/15 text-destructive" },
+    strong:        { label: "Strong",        cls: "bg-emerald-500/20 text-emerald-500" },
+    outperforming: { label: "Outperforming", cls: "bg-emerald-500/10 text-emerald-500" },
+    tracking:      { label: "On track",      cls: "bg-foreground/10 text-foreground" },
+    watch:         { label: "Watch",         cls: "bg-brand-orange/15 text-brand-orange" },
+    priority:      { label: "Priority",      cls: "bg-destructive/15 text-destructive" },
   } as const;
-  const m = map[rank];
+  const m = map[band];
   return (
     <span className={cn("inline-block rounded-full px-2.5 py-1 text-[11px] font-semibold", m.cls)}>
       {m.label}
@@ -812,6 +920,13 @@ function RecoverableSection({
   projected,
   currency,
   weeks,
+  lens,
+  gpMargin,
+  lensFactor,
+  recoverability,
+  tradingWeeks,
+  ambiguousDates,
+  dateFormat,
 }: {
   ranked: ReturnType<typeof attachGap>;
   weekly: number;
@@ -820,8 +935,20 @@ function RecoverableSection({
   projected: { label: string; value: number };
   currency: string;
   weeks: number;
+  lens: "revenue" | "gp";
+  gpMargin: number;
+  lensFactor: number;
+  recoverability: number;
+  tradingWeeks: number;
+  ambiguousDates: boolean;
+  dateFormat: DateFormat;
 }) {
   const below = ranked.filter((s) => s.recoverableWeekly > 0);
+  const wk = weekly * lensFactor;
+  const mo = monthly * lensFactor;
+  const yr = annual * lensFactor;
+  const projVal = projected.value * lensFactor;
+  const lensSuffix = lens === "gp" ? ` (GP @ ${Math.round(gpMargin * 100)}%)` : "";
   return (
     <section className="mt-10 rounded-md border border-border bg-card p-6">
       <h2 className="font-display text-2xl font-bold uppercase tracking-tight inline-flex items-center gap-2">
@@ -829,26 +956,43 @@ function RecoverableSection({
         <ModelledValueLabel kind="directional" />
         <MetricTooltip
           name="Recoverable opportunity"
-          description="Directional projection of weekly £ uplift if below-benchmark servers reached the team average on the same shifts. Not guaranteed revenue."
-          formula="Σ ((team_adj_rph − server_adj_rph) × server_adj_hours)  for below-benchmark servers"
+          description="Directional projection of £/$ uplift if below-benchmark servers reached the team average on the same shifts. Modelled at the selected recoverability factor — never guaranteed revenue."
+          formula="Σ max(0, team_adj_rph − server_adj_rph) × server_adj_hours × recoverability_factor"
           sourceFields={["adjusted_rph", "team_adjusted_rph", "adjusted_hours"]}
           provenance="derived"
-          notes={["Conservative: targets team avg, not top performer.", "Modelled value — not realised revenue."]}
+          notes={[
+            `Recoverability factor: ${recoverability.toFixed(2)} (default 0.50, matches manager LLS engine).`,
+            `Annualisation: weekly × ${tradingWeeks} trading weeks (monthly = annual / 12).`,
+            lens === "gp"
+              ? `Gross-profit lens applied: revenue × ${Math.round(gpMargin * 100)}%.`
+              : "Revenue lens. Switch to Gross Profit to model margin.",
+            "Endogenous benchmark: if performance improves, the benchmark may move too.",
+            "Modelled value — not realised revenue.",
+          ]}
         />
       </h2>
       <p className="mt-2 text-sm text-muted-foreground">
-        If every below-benchmark server reached the team average (not the top performer) — same hours, same
-        shifts. Conservative by design.
+        Modelled at <strong className="text-foreground">{Math.round(recoverability * 100)}% recoverability</strong>
+        {" "}— consistent with the manager LLS engine. {lens === "gp" ? `Gross-profit lens at ${Math.round(gpMargin * 100)}%.` : "Revenue lens."}
       </p>
       <div className="mt-5 grid gap-3 sm:grid-cols-3">
-        <Metric label="Per week" value={money0(currency, weekly)} modelled />
-        <Metric label="Per month" value={money0(currency, monthly)} modelled />
-        <Metric label="Per year" value={money0(currency, annual)} emphasis modelled />
+        <Metric label={`Per week${lensSuffix}`} value={money0(currency, wk)} modelled />
+        <Metric label={`Per month${lensSuffix}`} value={money0(currency, mo)} modelled />
+        <Metric label={`Per year${lensSuffix}`} value={money0(currency, yr)} emphasis modelled />
       </div>
       <p className="mt-4 text-xs text-muted-foreground">
-        Selected period: <strong className="text-foreground">{money0(currency, projected.value)}</strong>{" "}
-        {projected.label}. Data span observed: {nf1.format(weeks)} week(s).
+        Selected period: <strong className="text-foreground">{money0(currency, projVal)}</strong>{" "}
+        {projected.label}. Data span observed: {nf1.format(weeks)} week(s). Annualised over {tradingWeeks} trading weeks.
       </p>
+      <p className="mt-2 text-[11px] italic text-muted-foreground">
+        Recoverable opportunity is modelled against the current team benchmark. If performance improves, the
+        benchmark may also move — treat these figures as directional, not contractual.
+      </p>
+      {ambiguousDates && (
+        <p className="mt-2 text-[11px] text-brand-orange">
+          Ambiguous dates parsed using {dateFormat === "us" ? "US (MM/DD)" : "UK (DD/MM)"} format. Switch the Date format toggle above if this looks wrong.
+        </p>
+      )}
 
       {below.length > 0 && (
         <div className="mt-5 border-t border-border pt-4">
@@ -860,7 +1004,7 @@ function RecoverableSection({
               <li key={s.key} className="flex justify-between gap-3">
                 <span>{s.display}</span>
                 <span className="tabular-nums text-muted-foreground">
-                  +{money0(currency, s.recoverableWeekly)}/week
+                  +{money0(currency, s.recoverableWeekly * lensFactor)}/week
                 </span>
               </li>
             ))}

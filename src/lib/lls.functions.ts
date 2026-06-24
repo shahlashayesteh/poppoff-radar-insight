@@ -511,7 +511,7 @@ function safeDiv(num: number, den: number): number | null {
 function ragFromGap(gap: number | null): "green" | "amber" | "red" | "none" {
   const band = engineRagBand(gap ?? undefined);
   if (band === "insufficient_data") return "none";
-  if (band === "strong") return "green";
+  if (band === "strong" || band === "outperforming") return "green";
   if (band === "priority") return "red";
   return "amber";
 }

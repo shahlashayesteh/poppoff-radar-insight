@@ -38,8 +38,9 @@ export type HoursBasis =
 
 export type RagBand =
   | "strong" // > +10% vs benchmark
+  | "outperforming" // +5% .. +10%
   | "tracking" // ±5%
-  | "monitor" // −5% .. −10%
+  | "monitor" // −5% .. −10% (a.k.a. "watch")
   | "priority" // < −10%
   | "insufficient_data";
 
