@@ -208,6 +208,7 @@ function LlsPage() {
   const persistMapping = useServerFn(saveColumnMapping);
   const fetchBatches = useServerFn(listRecentBatches);
   const doRollback = useServerFn(rollbackBatch);
+  const fetchLeverage = useServerFn(getSchedulingLeverage);
 
   const refresh = async () => {
     setLoading(true);
@@ -220,6 +221,11 @@ function LlsPage() {
       setScorecard(sc);
       setGrid(of.grid);
       setBatches(bs.batches);
+      // Scheduling leverage uses a longer window — fire-and-forget so the
+      // main scorecard renders quickly even if leverage is slow.
+      fetchLeverage({ data: { weekStart, weeks: 12 } })
+        .then(setLeverage)
+        .catch(() => setLeverage(null));
     } catch (e: any) {
       toast.error(e?.message ?? "Failed to load");
     } finally {
