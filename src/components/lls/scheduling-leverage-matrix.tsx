@@ -76,11 +76,10 @@ function HighlightCard({
           <div className="font-display text-lg font-bold leading-tight">{rec.server_name}</div>
           <div className="text-sm">{rec.best_fit_shift}</div>
           <div className="text-xs text-muted-foreground">{rec.why}</div>
-          <div className="mt-1 flex items-center gap-3 text-xs">
-            <ModelledValueLabel variant="modelled">
-              Modelled lift {fmtMoney(rec.modelled_opportunity)}
-            </ModelledValueLabel>
-            <span className="text-muted-foreground">Confidence: {confidenceLabel(rec.confidence)}</span>
+          <div className="mt-1 flex flex-wrap items-center gap-2 text-xs">
+            <span>Modelled lift {fmtMoney(rec.modelled_opportunity)}</span>
+            <ModelledValueLabel kind="modelled" />
+            <span className="text-muted-foreground">· Confidence: {confidenceLabel(rec.confidence)}</span>
           </div>
         </>
       ) : (
