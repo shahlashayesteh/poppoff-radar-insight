@@ -208,16 +208,19 @@ function ServerGapPage() {
         <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3">
           <div className="flex items-center gap-2.5">
             <span className="mr-1 font-mono text-xs uppercase tracking-[0.14em] text-muted-foreground">
-              Currency
+              Market
             </span>
             <ToggleGroup
               type="single"
-              value={currency}
-              onValueChange={(v) => v && onCurrencyChange(v as "£" | "$")}
+              value={market}
+              onValueChange={(v) => v && onMarketChange(v as MarketId)}
               variant="outline"
             >
-              <ToggleGroupItem value="£" className="rounded-full px-4">UK (£)</ToggleGroupItem>
-              <ToggleGroupItem value="$" className="rounded-full px-4">US ($)</ToggleGroupItem>
+              {MARKET_ORDER.map((m) => (
+                <ToggleGroupItem key={m} value={m} className="rounded-full px-4">
+                  {MARKETS[m].label}
+                </ToggleGroupItem>
+              ))}
             </ToggleGroup>
           </div>
           <div className="flex items-center gap-2.5">
