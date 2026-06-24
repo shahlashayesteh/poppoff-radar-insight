@@ -1,49 +1,58 @@
-## Root cause found
+# Migrate from Paddle to Stripe
 
-Paddle itself is connected: test and live products/prices exist, live go-live checks are completed, and webhooks are registered.
+Paddle checkout has repeatedly failed end-to-end despite trial parity fixes and pre-checks. Switching to Lovable's built-in (seamless) Stripe integration — no API keys to manage, same managed webhook/subscription flow as Paddle.
 
-The failure is coming from the checkout transaction state, not from missing catalog or approval:
+## Step 1 — You disconnect Paddle (manual, ~1 min)
 
-- The newest test checkout attempts are creating Paddle transactions successfully.
-- Those transactions remain in `draft` with no payment attempts.
-- For the current Pro plan, the test price has **no 30-day trial period**, while live does have the trial.
-- The app is opening checkout without a strong `customer.email`/`customData` path when started from the pricing page for unauthenticated users.
-- The current pre-check proves token + price resolution, but it does not prove Paddle can actually create a valid checkout session with the same customer/price/trial requirements.
+Stripe and Paddle can't both be active. From the payments dashboard, open the three-dots menu in the top-right and choose **Disconnect Paddle**.
 
-## Recommended fix before switching provider
+<presentation-actions><presentation-open-payments>Open payments dashboard</presentation-open-payments></presentation-actions>
 
-Keep Paddle for now and make the checkout flow deterministic:
+Tell me once it's disconnected and I'll continue with everything below.
 
-1. **Restore trial parity in Paddle catalog**
-   - Update the test Pro price to include the same 30-day card-required trial as live.
-   - Confirm Starter and Pro both resolve in test and live.
+## Step 2 — Enable Stripe (seamless)
 
-2. **Move checkout creation to a server-backed Paddle preflight**
-   - Add a server function that uses the resolved price and customer email to create/preview a real Paddle transaction before opening the overlay.
-   - Return a clear app error if Paddle rejects the price/customer/domain before the user sees Paddle’s generic “Something went wrong”.
+I'll run `enable_stripe_payments`. No account signup, no secret keys, no webhook URLs to paste. Lovable manages the Stripe account, keys, and webhook endpoint.
 
-3. **Tighten pricing-to-signup flow**
-   - Pricing button should only route to signup after price + environment are confirmed.
-   - Signup should open checkout only after account, role claim, notification email, and customer email are present.
-   - Pass consistent `customData`: `userId`, `role: manager`, selected plan.
+## Step 3 — Recreate the catalog
 
-4. **Add visible diagnostics only when checkout fails**
-   - Show a clear support message with the specific failure reason.
-   - Keep customer-facing checkout UI clean when it works.
+Existing Paddle products/prices do NOT migrate. I'll recreate them in Stripe test with the same IDs your code already uses, so the checkout call sites barely change:
 
-5. **Validate end to end**
-   - Test `/#pricing` → Starter free trial → manager signup → Paddle overlay opens.
-   - Test `/#pricing` → Pro → manager signup → Paddle overlay opens.
-   - Confirm Paddle transaction has customer/customData and is no longer stuck before payment.
-   - Confirm webhook route remains registered and live approval remains complete.
+- `starter_plan` → `starter_monthly` ($X/mo, 30-day trial)
+- `pro_plan` → `pro_monthly` ($Y/mo, 30-day trial)
 
-## Stripe fallback, if Paddle still fails after this
+Recurring intervals, trial days, and `quantity_min=1, quantity_max=1` will match the current Paddle setup. When you publish, Lovable auto-syncs the catalog to live Stripe.
 
-Do not switch immediately. Switching to built-in Stripe means:
+## Step 4 — Replace Paddle code with Stripe
 
-- Recreate products/prices under Stripe.
-- Replace Paddle SDK/open-checkout code.
-- Replace Paddle webhook processing with Stripe payment events.
-- Existing Paddle subscriptions/customers do not migrate automatically.
+Files to remove or rewrite:
+- `src/lib/paddle.ts`, `src/lib/paddle.server.ts` → delete
+- `src/hooks/usePaddleCheckout.ts` → replace with `useStripeCheckout`
+- `src/utils/payments.functions.ts` → rewrite for Stripe price resolution
+- `src/routes/api/public/*` Paddle webhook → replaced by Lovable-managed Stripe webhook
+- `src/routes/checkout.retry.tsx`, `src/routes/signup.manager.tsx`, `src/routes/index.tsx` (pricing CTA) → swap `openCheckout` to Stripe hook
+- `PaymentTestModeBanner` → keep (same pattern works for Stripe test mode)
 
-If the Paddle fix above still fails after validation, I’ll propose a separate Stripe migration plan and only proceed after you approve the provider switch.
+## Step 5 — Subscriptions table
+
+Existing `subscriptions` schema stays — same columns work for Stripe (`environment`, `price_id`, `product_id`, `current_period_end`, status, etc.). The managed Stripe webhook writes into it the same way Paddle did. Old Paddle rows in the table are stale; I'll leave them (no live subscribers) or clear them — your call.
+
+## Step 6 — End-to-end test
+
+1. `/#pricing` → Get Started → manager signup → Stripe Checkout opens
+2. Pay with test card `4242 4242 4242 4242`
+3. Confirm `subscriptions` row inserted with `environment='sandbox'`, correct `price_id`, active status
+4. Confirm dashboard gating works via `useSubscription`
+
+## Technical notes
+
+- Lovable's seamless Stripe uses Stripe Checkout (hosted page), not the Paddle-style overlay. Same UX pattern: button click → redirect → `successUrl` back to app.
+- `customData` equivalent in Stripe is `metadata` on the Checkout Session — I'll pass `userId` and `role` the same way.
+- Going live: same one-click flow as Paddle. No re-verification needed beyond Stripe's standard onboarding (handled by Lovable).
+
+## Risk
+
+- Any in-flight Paddle test transactions are abandoned (none are real money).
+- If you already had **live** paying customers on Paddle, they'd need to re-subscribe on Stripe. Based on the dashboard you don't, so this is clean.
+
+Reply **go** after you've disconnected Paddle and I'll execute Steps 2–6 in one pass.
