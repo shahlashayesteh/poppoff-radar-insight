@@ -170,7 +170,7 @@ function Page() {
             </div>
           </div>
           <div className="rounded-2xl bg-white border border-border p-4">
-            <div className="text-xs text-muted-foreground">Total uplift</div>
+            <div className="text-xs text-muted-foreground">Total uplift <span className="opacity-70">(modelled)</span></div>
             <div className="font-display text-2xl font-extrabold mt-1">
               {totalUplift === null ? "—" : `£${totalUplift}`}
             </div>
