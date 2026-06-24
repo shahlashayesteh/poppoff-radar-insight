@@ -398,7 +398,7 @@ function ServerDashboard() {
                 if (pulse?.catch && uplift !== null) {
                   reward = `Could move you above ${pulse.catch.name}`;
                 } else if (uplift !== null && uplift >= 30) {
-                  reward = `Roughly £${uplift} in uplift`;
+                  reward = `Roughly £${uplift} modelled uplift`;
                 } else if (pulse?.watch) {
                   reward = `Protects your rank from ${pulse.watch.name}`;
                 } else if (myRank && myRank > 1) {
