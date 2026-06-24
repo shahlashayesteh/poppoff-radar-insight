@@ -13,9 +13,14 @@ export const Route = createFileRoute("/sitemap.xml")({
   server: {
     handlers: {
       GET: async () => {
+        // Phase 1: canonical public routes only. Legacy /demo/manager-dashboard
+        // and /demo/server-scorecard now redirect to /demo/manager and
+        // /demo/server respectively, so they are excluded from the sitemap to
+        // keep SEO output aligned with live, indexable URLs.
         const entries: SitemapEntry[] = [
           { path: "/", changefreq: "weekly", priority: "1.0" },
-          { path: "/contact", changefreq: "monthly", priority: "0.8" },
+          { path: "/contact", changefreq: "monthly", priority: "0.9" },
+          { path: "/calculator", changefreq: "monthly", priority: "0.7" },
           { path: "/privacy", changefreq: "yearly", priority: "0.3" },
           { path: "/terms", changefreq: "yearly", priority: "0.3" },
           { path: "/restaurant-server-performance-software", changefreq: "monthly", priority: "0.7" },
@@ -23,8 +28,8 @@ export const Route = createFileRoute("/sitemap.xml")({
           { path: "/hospitality-performance-software", changefreq: "monthly", priority: "0.7" },
           { path: "/restaurant-leaderboard-software", changefreq: "monthly", priority: "0.7" },
           { path: "/restaurant-upselling-software", changefreq: "monthly", priority: "0.7" },
-          { path: "/demo/manager-dashboard", changefreq: "monthly", priority: "0.6" },
-          { path: "/demo/server-scorecard", changefreq: "monthly", priority: "0.6" },
+          { path: "/demo/manager", changefreq: "monthly", priority: "0.6" },
+          { path: "/demo/server", changefreq: "monthly", priority: "0.6" },
         ];
 
         const urls = entries.map((e) =>

@@ -8,13 +8,13 @@ import { toast } from "sonner";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "PoppOff — Every shift. Every win." },
-      { name: "description", content: "Personal stats, streaks, and milestones for restaurant servers. Turn your numbers into momentum and more money in your pocket." },
-      { property: "og:title", content: "PoppOff — Every shift. Every win." },
-      { property: "og:description", content: "Personal stats, streaks, and milestones for restaurant servers." },
+      { title: "PoppOff — The Revenue Gap Platform for Restaurant Groups" },
+      { name: "description", content: "PoppOff turns POS data into a quantified Revenue Gap — by server, shift, and venue — so multi-site restaurant groups can close the gap with weekly coaching and clear targets. Book a free Revenue Gap Audit." },
+      { property: "og:title", content: "PoppOff — The Revenue Gap Platform for Restaurant Groups" },
+      { property: "og:description", content: "Quantify the revenue gap hiding in your POS data. Per-server, per-shift, per-venue. Built for multi-site hospitality operators and CFOs." },
       { property: "og:url", content: "https://poppoffstats.com/" },
-      { name: "twitter:title", content: "PoppOff — Every shift. Every win." },
-      { name: "twitter:description", content: "Personal stats, streaks, and milestones for restaurant servers." },
+      { name: "twitter:title", content: "PoppOff — The Revenue Gap Platform for Restaurant Groups" },
+      { name: "twitter:description", content: "Quantify the revenue gap hiding in your POS data. Per-server, per-shift, per-venue." },
     ],
     links: [
       { rel: "canonical", href: "https://poppoffstats.com/" },
@@ -151,9 +151,8 @@ function Landing() {
           </nav>
           <div className="flex items-center gap-2">
             <Link to="/signin" className="rounded-xl px-3 py-2 text-sm font-semibold border border-border hover:border-foreground">Sign in</Link>
-            <Link to="/signup" className="rounded-xl px-3 py-2 text-sm font-bold text-white" style={{ background: "var(--brand-green)" }}>Sign up</Link>
-            <Link to="/demo/manager" className="rounded-xl px-3 py-2 text-sm font-bold text-white hidden sm:inline-flex" style={{ background: "var(--brand-orange)" }}>See Demo</Link>
-            <Link to="/calculator" className="rounded-xl px-3 py-2 text-sm font-bold border-2 border-foreground hidden sm:inline-flex">Floor check</Link>
+            <Link to="/contact" className="rounded-xl px-3 py-2 text-sm font-bold text-white hidden sm:inline-flex" style={{ background: "var(--brand-orange)" }}>Book audit</Link>
+            <Link to="/demo/manager" className="rounded-xl px-3 py-2 text-sm font-bold border-2 border-foreground hidden sm:inline-flex">See demo</Link>
           </div>
         </div>
       </header>
@@ -162,33 +161,35 @@ function Landing() {
       <section className="px-6 pt-14 pb-20">
         <div className="mx-auto max-w-7xl grid lg:grid-cols-2 gap-10 items-center">
           <div>
-            <h1 className="font-display font-extrabold tracking-tight text-4xl sm:text-5xl md:text-6xl lg:text-7xl leading-[1.02]">
-              <span className="block">PoppOff</span>
-              <span className="block">makes <span style={{ color: "var(--foreground)" }}>server performance</span> <span style={{ color: "var(--brand-green)" }}>visible</span>.</span>
+            <div className="inline-flex items-center gap-2 rounded-full border border-border px-3 py-1 text-[11px] font-semibold tracking-wide uppercase text-foreground/70">
+              <ShieldCheck className="h-3.5 w-3.5 text-brand-green" />
+              Built for multi-site hospitality groups
+            </div>
+            <h1 className="mt-4 font-display font-extrabold tracking-tight text-4xl sm:text-5xl md:text-6xl lg:text-7xl leading-[1.02]">
+              <span className="block">Close the</span>
+              <span className="block"><span style={{ color: "var(--brand-green)" }}>revenue gap</span> hiding in your <span style={{ color: "var(--brand-orange)" }}>POS data</span>.</span>
             </h1>
             <p className="mt-6 text-base md:text-lg text-foreground/75 max-w-xl">
-              PoppOff turns POS data into server scorecards, coaching insights, and clear targets so every shift becomes more visible, more focused, and more profitable.
+              PoppOff turns the data your POS already captures into a quantified Revenue Gap — by server, shift, category and venue — then drives a weekly coaching cadence that closes it. Defensible numbers your CFO, ops director and floor team can all act on.
             </p>
             <div className="mt-6 font-display font-extrabold tracking-tight text-lg md:text-xl leading-snug">
               <div style={{ color: "var(--brand-green)" }}>Visibility changes behaviour.</div>
               <div style={{ color: "var(--brand-orange)" }}>Behaviour improves performance.</div>
-              <div style={{ color: "var(--brand-green)" }}>Performance increases revenue.</div>
-            </div>
-            <div className="mt-6 inline-flex items-center gap-3 rounded-xl border-l-4 pl-4 py-1" style={{ borderColor: "var(--brand-orange)" }}>
-              <p className="font-display text-lg md:text-xl font-extrabold tracking-tight">
-                PoppOff <span style={{ color: "var(--brand-orange)" }}>every shift.</span> Every win.
-              </p>
+              <div style={{ color: "var(--brand-green)" }}>Performance closes the revenue gap.</div>
             </div>
             <div className="mt-8 flex flex-wrap gap-3">
-              <Link to="/demo/manager" className="rounded-xl px-6 py-3 text-sm font-bold text-white inline-flex items-center gap-2" style={{ background: "var(--brand-orange)" }}>
-                See Demo
+              <Link to="/contact" className="rounded-xl px-6 py-3 text-sm font-bold text-white inline-flex items-center gap-2" style={{ background: "var(--brand-orange)" }}>
+                Book a Revenue Gap Audit
               </Link>
-              <a href="#pricing" className="rounded-xl px-6 py-3 text-sm font-bold border-2 border-foreground inline-flex items-center gap-2">
-                Start Your Pilot
+              <Link to="/demo/manager" className="rounded-xl px-6 py-3 text-sm font-bold border-2 border-foreground inline-flex items-center gap-2">
+                See the demo
+              </Link>
+              <a href="#pricing" className="rounded-xl px-6 py-3 text-sm font-bold text-foreground/70 hover:text-foreground inline-flex items-center gap-2">
+                Or start a pilot →
               </a>
             </div>
             <p className="mt-6 text-sm text-foreground/70 max-w-md">
-              Designed to help servers improve performance — turning sales data into coaching, motivation, and revenue growth.
+              Free audit. No POS integration required to start. Findings are yours whether you become a customer or not.
             </p>
           </div>
 
@@ -322,11 +323,10 @@ function Landing() {
           style={{ background: "color-mix(in oklab, var(--brand-green) 10%, white)" }}>
           <div className="inline-flex items-center gap-2 text-sm">
             <ShieldCheck className="h-4 w-4 text-brand-green" />
-            <span className="font-semibold">Helping restaurants turn sales data into coaching, motivation, and revenue growth.</span>
+            <span className="font-semibold">Free Revenue Gap Audit — quantified findings, no integration required.</span>
           </div>
           <div className="inline-flex items-center gap-3">
-            <span className="text-sm font-bold text-brand-green">Ready to see your team win?</span>
-            <Link to="/demo/manager" className="rounded-xl px-4 py-2 text-sm font-bold text-white" style={{ background: "var(--brand-orange)" }}>See Demo</Link>
+            <Link to="/contact" className="rounded-xl px-4 py-2 text-sm font-bold text-white" style={{ background: "var(--brand-orange)" }}>Book my audit</Link>
           </div>
         </div>
       </section>
@@ -335,18 +335,20 @@ function Landing() {
       <section id="how" className="px-6 py-20 bg-canvas">
         <div className="mx-auto max-w-6xl">
           <div className="text-xs uppercase tracking-widest text-brand-green font-bold">How it works</div>
-          <h2 className="mt-2 font-display text-4xl md:text-5xl font-extrabold tracking-tight">Sales data in. Wins out.</h2>
+          <h2 className="mt-2 font-display text-4xl md:text-5xl font-extrabold tracking-tight">From POS export to closed revenue gap — in five steps.</h2>
+          <p className="mt-4 max-w-3xl text-foreground/75">Built for multi-site groups. The same five-step loop runs every week, on every site, with a clear audit trail your CFO and ops director can defend.</p>
           <ol className="mt-10 grid md:grid-cols-5 gap-4">
             {[
-              "Manager uploads weekly sales data.",
-              "PoppOff identifies revenue gaps, opportunities and focus items for each server.",
-              "Each server gets personalised scorecards, targets, leaderboards and coaching insights.",
-              "Servers see clear daily and weekly focus areas, targets and progress.",
-              "Managers simply track performance, engagement and uplift.",
+              { t: "Ingest", d: "Drop in your POS export. We map covers, items, voids, discounts and server attribution with a full audit trail." },
+              { t: "Quantify", d: "The Revenue Gap engine compares each server, shift and venue against top-quartile performance to size the opportunity in £." },
+              { t: "Prioritise", d: "Managers get a weekly priorities list ranked by expected uplift — wine attach, dessert mix, upsell on covers > 4, and more." },
+              { t: "Coach", d: "Servers see their own scorecard, streaks and one focus item. Managers run the same cadence every week, every site." },
+              { t: "Verify", d: "Next week's export closes the loop: gap movement, uplift realised vs forecast, and a defensible group-level rollup." },
             ].map((step, i) => (
-              <li key={i} className="rounded-2xl bg-white border border-border p-5">
+              <li key={step.t} className="rounded-2xl bg-white border border-border p-5">
                 <div className="font-display text-3xl font-extrabold" style={{ color: i % 2 ? "var(--brand-orange)" : "var(--brand-green)" }}>0{i + 1}</div>
-                <p className="mt-3 text-sm">{step}</p>
+                <div className="mt-2 font-bold text-sm">{step.t}</div>
+                <p className="mt-2 text-sm text-foreground/75">{step.d}</p>
               </li>
             ))}
           </ol>
@@ -356,12 +358,16 @@ function Landing() {
       {/* Pricing */}
       <section id="pricing" className="px-6 py-20">
         <div className="mx-auto max-w-6xl">
-          <h2 className="font-display text-4xl md:text-5xl font-extrabold tracking-tight">Simple, transparent pricing</h2>
+          <div className="text-xs uppercase tracking-widest text-brand-green font-bold">Pricing</div>
+          <h2 className="mt-2 font-display text-4xl md:text-5xl font-extrabold tracking-tight">From single sites to national groups.</h2>
+          <p className="mt-4 max-w-3xl text-foreground/75">
+            Most operators start with a free Revenue Gap Audit, then run a paid pilot on one or two sites before rolling out across the estate. Pricing scales by venue, not by user — every server, manager and head office seat is included.
+          </p>
           <div className="mt-10 grid md:grid-cols-3 gap-5">
             {[
-              { name: "Starter", price: "£99", priceId: "poppoff_starter_monthly", note: "/ month", featured: false, features: ["1 venue", "30-day free trial", "Personal server scorecards", "All coaching", "Menu intelligence"], cta: "Start Free Trial", action: "checkout" as const },
-              { name: "Pro", price: "£199", priceId: "poppoff_pro_monthly", note: "/ month", featured: true, badge: "Most Popular", features: ["Up to 3 venues", "Everything in Starter", "Weekly win priorities", "Advanced insights", "Priority support"], cta: "Get Started", action: "checkout" as const },
-              { name: "Enterprise", price: "Contact us", priceId: "", note: "4+ venues", featured: false, features: ["Unlimited venues", "Custom onboarding", "Dedicated success manager", "SLA & SSO available"], cta: "Let's Talk", action: "mailto" as const },
+              { name: "Starter", price: "£99", priceId: "poppoff_starter_monthly", note: "/ venue / month", featured: false, features: ["Single venue", "30-day free trial", "Per-server scorecards", "Weekly coaching priorities", "Menu intelligence"], cta: "Start a pilot", action: "checkout" as const },
+              { name: "Group", price: "£199", priceId: "poppoff_pro_monthly", note: "/ venue / month", featured: true, badge: "Most Popular", features: ["Up to 3 venues", "Everything in Starter", "Cross-site benchmarking", "Revenue Gap rollups", "Priority support"], cta: "Start a group pilot", action: "checkout" as const },
+              { name: "Enterprise", price: "Custom", priceId: "", note: "4+ venues", featured: false, features: ["Unlimited venues", "POS data migration & onboarding", "SSO, SAML, audit logs", "Dedicated success manager", "Commercial SLA"], cta: "Talk to us", action: "contact" as const },
             ].map((p) => (
               <div key={p.name} className={`relative rounded-2xl border-2 p-6 ${p.featured ? "border-brand-orange" : "border-border bg-white"}`}>
                 {p.featured && (
@@ -372,13 +378,13 @@ function Landing() {
                 <ul className="mt-5 space-y-2 text-sm">
                   {p.features.map((f) => <li key={f} className="flex items-center gap-2"><Check className="h-4 w-4 text-brand-green" />{f}</li>)}
                 </ul>
-                {p.action === "mailto" ? (
-                  <a
-                    href="mailto:hello@poppoffstats.com"
-                    className={`mt-6 block w-full text-center rounded-xl py-3 text-sm font-bold border-2 border-brand-orange text-brand-orange`}
+                {p.action === "contact" ? (
+                  <Link
+                    to="/contact"
+                    className="mt-6 block w-full text-center rounded-xl py-3 text-sm font-bold border-2 border-brand-orange text-brand-orange"
                   >
                     {p.cta}
-                  </a>
+                  </Link>
                 ) : (
                   <button
                     onClick={() => handlePlanClick(p.priceId)}
@@ -392,9 +398,10 @@ function Landing() {
               </div>
             ))}
           </div>
-          <p className="mt-6 text-xs text-muted-foreground">No contract. Cancel anytime.</p>
+          <p className="mt-6 text-xs text-muted-foreground">No contract. Cancel anytime. Enterprise terms available for multi-site groups.</p>
         </div>
       </section>
+
 
       {/* Closing benefits */}
       <section id="about" className="px-6 py-16 bg-canvas border-t border-border">
@@ -424,7 +431,7 @@ function Landing() {
             <span className="text-muted-foreground">© 2026 PoppOff. All rights reserved.</span>
           </div>
           <nav className="flex items-center gap-6 text-muted-foreground">
-            <a href="mailto:hello@poppoffstats.com" className="hover:text-foreground">Contact</a>
+            <Link to="/contact" className="hover:text-foreground">Book audit</Link>
             <Link to="/privacy" className="hover:text-foreground">Privacy Policy</Link>
             <Link to="/terms" className="hover:text-foreground">Terms of Service</Link>
           </nav>
