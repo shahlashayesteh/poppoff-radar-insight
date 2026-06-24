@@ -549,7 +549,7 @@ export function computeSchedulingLeverage(
   let outlet_basis: OutletBasis;
   if (anyOutletInRows) {
     matrix_scope = "outlet_scoped";
-    outlet_basis = opts.outletBasis === "venue_fallback" ? "uploaded" : (opts.outletBasis ?? "uploaded");
+    outlet_basis = opts.outletBasis ?? "uploaded";
   } else if (opts.outletInferredFromFile && opts.outletInferredFromFile.trim()) {
     outlet_inferred_from_file = opts.outletInferredFromFile.trim();
     rows = rowsIn.map((r) => ({ ...r, outlet: outlet_inferred_from_file }));
