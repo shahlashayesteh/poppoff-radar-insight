@@ -208,14 +208,18 @@ function ModelCard({
   );
 }
 
-function Row({ label, value }: { label: string; value: React.ReactNode }) {
+function Row({ label, value, tooltip }: { label: React.ReactNode; value: React.ReactNode; tooltip?: React.ComponentProps<typeof MetricTooltip> }) {
   return (
     <div className="flex items-center justify-between py-2 text-sm">
-      <span className="text-muted-foreground">{label}</span>
+      <span className="text-muted-foreground inline-flex items-center gap-1.5">
+        {label}
+        {tooltip ? <MetricTooltip {...tooltip} /> : null}
+      </span>
       <span className="font-semibold tabular-nums">{value}</span>
     </div>
   );
 }
+
 
 function ConfidenceBadge({ label, band }: { label: string; band: string }) {
   return (
