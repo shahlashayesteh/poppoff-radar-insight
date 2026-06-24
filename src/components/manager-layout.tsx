@@ -35,7 +35,7 @@ const items: NavItem[] = [
   { to: "/manager/coaching", label: "Coaching", icon: Target },
   { to: "/manager/lls", label: "Labor Leverage", icon: Gauge },
   { to: "/manager/reports", label: "Reports", icon: FileBarChart },
-  { to: "/settings", label: "Settings", icon: SettingsIcon },
+  { to: "/manager/settings", label: "Settings", icon: SettingsIcon },
 ];
 
 export function ManagerLayout({ children }: { children: React.ReactNode }) {
