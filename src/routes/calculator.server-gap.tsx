@@ -622,6 +622,7 @@ function ServerGapPage() {
                 tradingWeeks={analysis.tradingWeeks}
                 ambiguousDates={analysis.ambiguousDates}
                 dateFormat={dateFormat}
+                market={market}
               />
             )}
 
