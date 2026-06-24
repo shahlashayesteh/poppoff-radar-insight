@@ -745,7 +745,7 @@ export function computeSchedulingLeverage(
     const allMyCells = matrix.filter((c) => c.server_id === id);
     const strongOverall = cells.some((c) => c.fit_score >= 70);
     const mismatch = allMyCells.find(
-      (c) => strongOverall && c.fit_score < 50 && c.current_allocation_share >= 0.25,
+      (c) => strongOverall && c.fit_score < 60 && c.current_allocation_share >= 0.25,
     );
     if (mismatch)
       recommendations.push(
