@@ -545,14 +545,19 @@ export function computeSchedulingLeverage(
   let outlet_inferred_from_file: string | null = null;
   let rows: LeverageShiftRow[] = rowsIn;
   let matrix_scope: MatrixScope;
+  // Outlet priority: uploaded column > filename inference > venue fallback > missing
+  let outlet_basis: OutletBasis;
   if (anyOutletInRows) {
     matrix_scope = "outlet_scoped";
+    outlet_basis = opts.outletBasis === "venue_fallback" ? "uploaded" : (opts.outletBasis ?? "uploaded");
   } else if (opts.outletInferredFromFile && opts.outletInferredFromFile.trim()) {
     outlet_inferred_from_file = opts.outletInferredFromFile.trim();
     rows = rowsIn.map((r) => ({ ...r, outlet: outlet_inferred_from_file }));
     matrix_scope = "single_outlet_inferred";
+    outlet_basis = opts.outletBasis ?? "inferred_from_filename";
   } else {
     matrix_scope = "daypart_only";
+    outlet_basis = opts.outletBasis ?? "missing";
   }
 
   // ---- data quality ----
