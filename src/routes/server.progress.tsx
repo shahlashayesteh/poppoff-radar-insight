@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import { ServerLayout } from "@/components/server-layout";
 import { supabase } from "@/integrations/supabase/client";
 import { claimServerCsvData } from "@/lib/server-data";
+import { useRoleGate } from "@/lib/auth-gate";
+import { getActiveVenueIdForUser } from "@/lib/active-venue";
 import { Flame, Award } from "lucide-react";
 
 export const Route = createFileRoute("/server/progress")({ component: ServerProgress });
