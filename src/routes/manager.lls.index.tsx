@@ -714,6 +714,7 @@ function LlsPage() {
               <p className="text-xs text-muted-foreground">
                 File: <span className="font-mono">{pendingFile.filename}</span> · {pendingFile.rows.length} rows · {pendingSource} upload
               </p>
+              {pendingSource === "labor" && <LaborBasisBadge basis={laborBasis} />}
               {needsConfirm.size > 0 && (
                 <div>
                   <div className="text-xs uppercase tracking-wide text-muted-foreground mb-2">Needs your confirmation</div>
