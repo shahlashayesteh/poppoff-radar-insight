@@ -462,19 +462,49 @@ function LlsPage() {
             label="Venue Benchmark"
             value={scorecard?.venue_benchmark != null ? `${scorecard.venue_benchmark.toFixed(2)}x weekly LLS` : "—"}
             helper="Venue weekly LLS used as the benchmark for this scorecard."
+            tooltip={{
+              name: "Venue Benchmark",
+              description:
+                "Weighted weekly adjusted LLS across all servers at the venue. Used as the reference each server is compared against.",
+              formula: "Σ net_sales / Σ(labor_cost × opportunity_factor)  [weighted, shift-level OF]",
+              sourceFields: ["net_sales", "labor_cost", "opportunity_factor"],
+              provenance: "derived",
+              basisLabel: laborBasis === "fully_loaded" ? "Fully loaded labour cost" : laborBasis === "wage" ? "Wage cost only" : laborBasis === "derived" ? "Hours × rate (wage approx.)" : undefined,
+              benchmark: {
+                period: "current week",
+                scope: "venue",
+                basis: "weighted adjusted LLS",
+                weighted: true,
+              },
+            }}
           />
           <SummaryCard
             label="Benchmark WoW Trend"
             value={scorecard?.venue_benchmark_trend_pct != null ? `${scorecard.venue_benchmark_trend_pct > 0 ? "+" : ""}${scorecard.venue_benchmark_trend_pct.toFixed(1)}%` : "—"}
             trend={scorecard?.venue_benchmark_trend_pct ?? null}
             helper="How the venue benchmark changed versus last week."
+            tooltip={{
+              name: "Benchmark WoW Trend",
+              description: "% change in the venue weekly adjusted LLS vs. the prior week.",
+              formula: "(benchmark_this_week / benchmark_last_week) − 1",
+              sourceFields: ["net_sales", "labor_cost", "opportunity_factor"],
+              provenance: "derived",
+            }}
           />
           <SummaryCard
             label="Servers Tracked"
             value={String(scorecard?.servers.length ?? 0)}
             helper="Servers with both sales and labor data this week."
+            tooltip={{
+              name: "Servers Tracked",
+              description: "Servers that have at least one shift this week with both sales and labour data.",
+              formula: "count(distinct server where sales_rows > 0 AND labor_rows > 0)",
+              sourceFields: ["server_id", "net_sales", "labor_cost"],
+              provenance: "derived",
+            }}
           />
         </div>
+
 
         {/* Upload card */}
         <div className="mt-6 rounded-2xl bg-white border border-border p-6">
