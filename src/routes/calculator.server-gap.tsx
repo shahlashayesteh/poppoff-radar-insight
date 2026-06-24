@@ -128,6 +128,7 @@ function ServerGapPage() {
   const analysis = useMemo(() => {
     if (!salesFile || !labourFile) return null;
 
+    setDefaultDateFormat(dateFormat);
     const sN = normaliseSales(salesFile.result.rows);
     const lN = normaliseLabour(labourFile.result.rows);
     const hasSalesStartTimes = sN.rows.some((r) => r.startMin != null);
@@ -135,8 +136,9 @@ function ServerGapPage() {
     const shifts = computeShiftMetrics(merge.matched);
     const servers = computeServerMetrics(shifts);
     const team = computeTeamBenchmark(shifts);
-    const ranked = attachGap(servers, team);
-    const recoverable = computeRecoverable(ranked);
+    const ranked = attachGap(servers, team, { recoverabilityFactor: recoverability });
+    const tw = clampTradingWeeks(tradingWeeks);
+    const recoverable = computeRecoverable(ranked, { tradingWeeks: tw });
 
     // observed weeks span
     const dates = shifts.map((s) => s.date).sort();
@@ -146,7 +148,9 @@ function ServerGapPage() {
       const b = new Date(dates[dates.length - 1]);
       weeks = Math.max(1, (+b - +a) / (1000 * 60 * 60 * 24 * 7) + 1 / 7);
     }
-    const projected = projectPeriod(recoverable.weekly, period, weeks);
+    const projected = projectPeriod(recoverable.weekly, period, weeks, tw);
+    const lensFactor = lens === "gp" ? gpMargin : 1;
+    const ambiguousDates = lastParseHadAmbiguousDates();
 
     const warnings = buildWarnings({
       salesRowsTotal: salesFile.result.rows.length,
@@ -169,8 +173,8 @@ function ServerGapPage() {
       unmatchedSales: merge.unmatchedSales,
     });
 
-    return { sN, lN, merge, shifts, servers, team, ranked, recoverable, projected, warnings, confidence, weeks };
-  }, [salesFile, labourFile, effectiveBasis, period]);
+    return { sN, lN, merge, shifts, servers, team, ranked, recoverable, projected, warnings, confidence, weeks, lensFactor, ambiguousDates, tradingWeeks: tw };
+  }, [salesFile, labourFile, effectiveBasis, period, recoverability, tradingWeeks, lens, gpMargin, dateFormat]);
 
   return (
     <div className="mx-auto max-w-[1100px] px-6 pb-24 pt-10">
