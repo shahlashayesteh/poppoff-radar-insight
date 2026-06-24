@@ -137,39 +137,60 @@ export function computeTeamBenchmark(shifts: ShiftMetric[]): TeamBenchmark {
   };
 }
 
-export function attachGap(servers: ServerMetric[], team: TeamBenchmark): ServerWithGap[] {
+export function attachGap(
+  servers: ServerMetric[],
+  team: TeamBenchmark,
+  opts: { recoverabilityFactor?: number } = {},
+): ServerWithGap[] {
+  const recoverability = opts.recoverabilityFactor ?? DEFAULT_RECOVERABILITY_FACTOR;
   return servers
     .map((s) => {
       const gapAbsRPH = s.adjustedRPH - team.adjustedRPH;
-      // Canonical performance gap + RAG bands from the metrics engine.
       const gapPct = enginePerformanceGap(s.adjustedRPH, team.adjustedRPH).value ?? 0;
-      // Calculator UI uses a 3-band rank label; project the canonical
-      // 4-band engine output: strong→above, tracking→tracking,
-      // monitor|priority→below. ±5% threshold preserved.
       const band = engineRagBand(gapPct);
-      const rank: ServerWithGap["rank"] =
-        band === "strong" ? "above"
+      const rankBand: RankBand =
+        band === "strong" ? "strong"
+        : band === "outperforming" ? "outperforming"
         : band === "tracking" ? "tracking"
+        : band === "monitor" ? "watch"
+        : band === "priority" ? "priority"
+        : "tracking";
+      const rank: ServerWithGap["rank"] =
+        rankBand === "strong" || rankBand === "outperforming" ? "above"
+        : rankBand === "tracking" ? "tracking"
         : "below";
-      const recoverableWeekly = Math.max(0, -gapAbsRPH) * s.totalAdjustedHours;
-      return { ...s, gapAbsRPH, gapPct, rank, recoverableWeekly };
+      // FIX F1 — match canonical manager engine: only a conservative share of
+      // the modelled gap is realistically recoverable.
+      const recoverableWeekly = Math.max(0, -gapAbsRPH) * s.totalAdjustedHours * recoverability;
+      return { ...s, gapAbsRPH, gapPct, rank, rankBand, recoverableWeekly };
     })
-    // RANK ONLY BY OPPORTUNITY-ADJUSTED RPH
     .sort((a, b) => b.adjustedRPH - a.adjustedRPH);
 }
 
 
-export function computeRecoverable(servers: ServerWithGap[]): {
+export function computeRecoverable(
+  servers: ServerWithGap[],
+  opts: { tradingWeeks?: number } = {},
+): {
   weekly: number;
   monthly: number;
   annual: number;
 } {
+  const tradingWeeks = clampTradingWeeks(opts.tradingWeeks ?? 52);
   const weekly = servers.reduce((a, b) => a + b.recoverableWeekly, 0);
+  const annual = weekly * tradingWeeks;
   return {
     weekly,
-    monthly: weekly * (52 / 12),
-    annual: weekly * 52,
+    annual,
+    monthly: annual / 12,
   };
+}
+
+export const TRADING_WEEKS_MIN = 44;
+export const TRADING_WEEKS_MAX = 52;
+export function clampTradingWeeks(n: number): number {
+  if (!isFinite(n)) return 52;
+  return Math.min(TRADING_WEEKS_MAX, Math.max(TRADING_WEEKS_MIN, Math.round(n)));
 }
 
 export type Period = "weekly" | "monthly" | "custom";
