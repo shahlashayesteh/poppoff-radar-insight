@@ -70,7 +70,7 @@ type StatProps = {
   label: string;
   value: string | number;
   sub?: string;
-  tooltip?: React.ComponentProps<typeof MetricTooltip>;
+  tooltip?: ComponentProps<typeof MetricTooltip>;
 };
 
 const Stat = ({ icon: Icon, tone, label, value, sub, tooltip }: StatProps) => (
