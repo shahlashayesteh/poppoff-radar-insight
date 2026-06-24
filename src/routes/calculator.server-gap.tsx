@@ -609,6 +609,13 @@ function ServerGapPage() {
                 projected={analysis.projected}
                 currency={currency}
                 weeks={analysis.weeks}
+                lens={lens}
+                gpMargin={gpMargin}
+                lensFactor={analysis.lensFactor}
+                recoverability={recoverability}
+                tradingWeeks={analysis.tradingWeeks}
+                ambiguousDates={analysis.ambiguousDates}
+                dateFormat={dateFormat}
               />
             )}
 
