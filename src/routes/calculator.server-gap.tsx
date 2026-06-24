@@ -920,6 +920,13 @@ function RecoverableSection({
   projected,
   currency,
   weeks,
+  lens,
+  gpMargin,
+  lensFactor,
+  recoverability,
+  tradingWeeks,
+  ambiguousDates,
+  dateFormat,
 }: {
   ranked: ReturnType<typeof attachGap>;
   weekly: number;
@@ -928,8 +935,20 @@ function RecoverableSection({
   projected: { label: string; value: number };
   currency: string;
   weeks: number;
+  lens: "revenue" | "gp";
+  gpMargin: number;
+  lensFactor: number;
+  recoverability: number;
+  tradingWeeks: number;
+  ambiguousDates: boolean;
+  dateFormat: DateFormat;
 }) {
   const below = ranked.filter((s) => s.recoverableWeekly > 0);
+  const wk = weekly * lensFactor;
+  const mo = monthly * lensFactor;
+  const yr = annual * lensFactor;
+  const projVal = projected.value * lensFactor;
+  const lensSuffix = lens === "gp" ? ` (GP @ ${Math.round(gpMargin * 100)}%)` : "";
   return (
     <section className="mt-10 rounded-md border border-border bg-card p-6">
       <h2 className="font-display text-2xl font-bold uppercase tracking-tight inline-flex items-center gap-2">
@@ -937,26 +956,43 @@ function RecoverableSection({
         <ModelledValueLabel kind="directional" />
         <MetricTooltip
           name="Recoverable opportunity"
-          description="Directional projection of weekly £ uplift if below-benchmark servers reached the team average on the same shifts. Not guaranteed revenue."
-          formula="Σ ((team_adj_rph − server_adj_rph) × server_adj_hours)  for below-benchmark servers"
+          description="Directional projection of £/$ uplift if below-benchmark servers reached the team average on the same shifts. Modelled at the selected recoverability factor — never guaranteed revenue."
+          formula="Σ max(0, team_adj_rph − server_adj_rph) × server_adj_hours × recoverability_factor"
           sourceFields={["adjusted_rph", "team_adjusted_rph", "adjusted_hours"]}
           provenance="derived"
-          notes={["Conservative: targets team avg, not top performer.", "Modelled value — not realised revenue."]}
+          notes={[
+            `Recoverability factor: ${recoverability.toFixed(2)} (default 0.50, matches manager LLS engine).`,
+            `Annualisation: weekly × ${tradingWeeks} trading weeks (monthly = annual / 12).`,
+            lens === "gp"
+              ? `Gross-profit lens applied: revenue × ${Math.round(gpMargin * 100)}%.`
+              : "Revenue lens. Switch to Gross Profit to model margin.",
+            "Endogenous benchmark: if performance improves, the benchmark may move too.",
+            "Modelled value — not realised revenue.",
+          ]}
         />
       </h2>
       <p className="mt-2 text-sm text-muted-foreground">
-        If every below-benchmark server reached the team average (not the top performer) — same hours, same
-        shifts. Conservative by design.
+        Modelled at <strong className="text-foreground">{Math.round(recoverability * 100)}% recoverability</strong>
+        {" "}— consistent with the manager LLS engine. {lens === "gp" ? `Gross-profit lens at ${Math.round(gpMargin * 100)}%.` : "Revenue lens."}
       </p>
       <div className="mt-5 grid gap-3 sm:grid-cols-3">
-        <Metric label="Per week" value={money0(currency, weekly)} modelled />
-        <Metric label="Per month" value={money0(currency, monthly)} modelled />
-        <Metric label="Per year" value={money0(currency, annual)} emphasis modelled />
+        <Metric label={`Per week${lensSuffix}`} value={money0(currency, wk)} modelled />
+        <Metric label={`Per month${lensSuffix}`} value={money0(currency, mo)} modelled />
+        <Metric label={`Per year${lensSuffix}`} value={money0(currency, yr)} emphasis modelled />
       </div>
       <p className="mt-4 text-xs text-muted-foreground">
-        Selected period: <strong className="text-foreground">{money0(currency, projected.value)}</strong>{" "}
-        {projected.label}. Data span observed: {nf1.format(weeks)} week(s).
+        Selected period: <strong className="text-foreground">{money0(currency, projVal)}</strong>{" "}
+        {projected.label}. Data span observed: {nf1.format(weeks)} week(s). Annualised over {tradingWeeks} trading weeks.
       </p>
+      <p className="mt-2 text-[11px] italic text-muted-foreground">
+        Recoverable opportunity is modelled against the current team benchmark. If performance improves, the
+        benchmark may also move — treat these figures as directional, not contractual.
+      </p>
+      {ambiguousDates && (
+        <p className="mt-2 text-[11px] text-brand-orange">
+          Ambiguous dates parsed using {dateFormat === "us" ? "US (MM/DD)" : "UK (DD/MM)"} format. Switch the Date format toggle above if this looks wrong.
+        </p>
+      )}
 
       {below.length > 0 && (
         <div className="mt-5 border-t border-border pt-4">
@@ -968,7 +1004,7 @@ function RecoverableSection({
               <li key={s.key} className="flex justify-between gap-3">
                 <span>{s.display}</span>
                 <span className="tabular-nums text-muted-foreground">
-                  +{money0(currency, s.recoverableWeekly)}/week
+                  +{money0(currency, s.recoverableWeekly * lensFactor)}/week
                 </span>
               </li>
             ))}
