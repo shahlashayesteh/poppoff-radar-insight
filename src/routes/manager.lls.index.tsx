@@ -654,6 +654,13 @@ function LlsPage() {
           />
         </div>
 
+        {/* Phase 20A — Opportunity Factor v2 preview (read-only) */}
+        {scorecard?.opportunity_factor_preview ? (
+          <OfV2PreviewCard preview={scorecard.opportunity_factor_preview} />
+        ) : null}
+
+
+
 
         {/* Upload card */}
         <div className="mt-6 rounded-2xl bg-white border border-border p-6">
