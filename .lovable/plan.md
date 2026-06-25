@@ -1,66 +1,67 @@
-## What's actually happening
 
-The 115 "duplicates" are **not** leftovers from your earlier re-uploads. Each upload creates a separate batch, and the duplicate check only looks within a single batch — it never compares against prior batches.
+# PoppOff — Complete Site Audit
 
-The real cause is the dedupe key in `src/lib/imports/validation.ts`:
+I'll deliver a single comprehensive audit document at `docs/site-audit.md` (and summarize key sections in chat). It will walk the entire site route-by-route with: what the page does, who it's for, what data it needs, the exact equations/calculations, where the numbers come from, guards/entitlements applied, and what it links/routes to next.
 
-```text
-key = (server_id OR server_name) | shift_date | shift_start_time
-```
+## Structure of the deliverable
 
-Your sales CSV has no `shift_start_time` column, so for every server who worked **two shifts on the same date** (e.g. brunch + dinner), the key collapses to `name|date|` and the second row gets flagged as a duplicate. That's why ~1 in 3 rows tripped it — it's a false positive, not real duplication.
+### 1. Site map and navigation graph
+- All 70+ routes grouped by area: Public marketing, Auth, Calculators, Demo (manager + server), Manager app, Server app, API/webhooks, Legal.
+- A navigation graph showing how a manager moves between Dashboard → Team → Individual → LLS → Imports → Priorities → Coaching → Menu → Reports → ROI → Pilot → Adoption → Settings, and how server users move between Welcome → Stats → Progress → Leaderboard → Coaching → Rewards → Menu → Profile.
+- Role gating per route (public / authenticated / paid manager / server / org-scoped).
 
-The "missing revenue centre" flag is also noise for a single-outlet venue with no revenue-centre config.
+### 2. Manager app — page-by-page breakdown
+For each of the manager routes (`/manager/index`, `team`, `server/$id`, `lls/index`, `lls/compare`, `imports`, `imports/$batchId`, `priorities`, `coaching`, `menu`, `reports`, `roi`, `pilot`, `adoption`, `data-onboarding`, `settings`) I'll document:
+- **Purpose** in one paragraph.
+- **Inputs**: which server functions it calls, which tables it reads, which active-venue context is required.
+- **Guards**: `requirePaidManagerEntitlement`, `assertVenueAccess`, org membership.
+- **Calculations**: every formula used on the page, with variables defined and source columns named. Examples that will be fully documented:
+  - LLS v2 weighted score (Sum/Sum, never average-of-averages), RAG band thresholds, parity vs v1.
+  - Opportunity Factor v2 evaluation: clamps `[0.75, 1.35]`, inputs (daypart sales, real clock hours preferred over cost-proxy hours), preview-only delta vs v1.
+  - Real Hours sourcing priority: `clock_hours` > `scheduled_hours` > derived `cost / wage_rate`.
+  - Sales basis normalisation: gross → net (tax/VAT/service/tips stripped per provenance flags).
+  - Labour basis normalisation: gross wage vs fully-loaded cost.
+  - Shift-match / Historical Shift Match Intelligence equation (sales-per-daypart slot fit).
+  - ROI engine: modelled improvement opportunity = `gap_to_target_revenue × 0.30` (recoverability factor), confidence tier from data-quality score.
+  - Adoption score, Data Quality readiness score, Pilot readiness score (component checklists and weights).
+  - Identity resolver priority: Exact source ID > Alias > Name; ambiguity rule.
+- **Provenance/Reliability badges** shown on each metric (Measured / Derived / Estimated / Modelled / Contextual).
+- **Outbound links/deep-links** (e.g. Reports → Imports batch, LLS → Trace drawer).
 
-## Plan
+### 3. Server app — page-by-page breakdown
+For `/server/index`, `welcome`, `stats`, `progress`, `leaderboard`, `coaching`, `rewards`, `menu`, `profile`:
+- **Purpose** and motivational framing.
+- **Inputs**: server-scoped server functions only; venue scoped via `getActiveVenueIdForUser`.
+- **Calculations**:
+  - Personal stats: covers, sales totals, items-per-cover, attach rate (from shifts scoped to that employee only).
+  - Progress trend: rolling 4-week personal deltas.
+  - Leaderboard: venue-scoped ranking metric and tie-break.
+  - Coaching focus areas: AI suggestion → manager-approved priorities (`sent_to_servers` status only).
+  - Rewards / momentum board: 7 badge unlock rules and thresholds.
+- **Strict isolation**: confirm no LLS, ROI, labour cost, or manager intelligence is reachable.
 
-### 1. Fix the dedupe key (root cause)
+### 4. Demo routes
+Each `/demo/*` route documented with: which canonical fixture in `src/lib/sample-data.ts` it pulls from, what the public sales journey (`/demo/journey`) sequences, and how it differs from the authenticated equivalent.
 
-In `src/lib/imports/validation.ts`:
+### 5. Public marketing, calculators, auth
+- Landing (`/`), feature pages (hospitality-performance-software, leaderboard, sales-coaching, server-performance, upselling), `/contact` (Revenue Gap Audit form + spam protection), `/calculator` and `/calculator/server-gap` (flagship lead magnet — full formula documented), legal pages, sitemap, redirects.
+- Auth: `/login`, `/signin`, `/signup`, `/signup/manager`, `/join`, `/checkout/success`, `/checkout/retry`.
 
-- Include `source_kind` (sales vs labour) in the key so the two files never collide with each other.
-- When `shift_start_time` is missing, fall back to `(amount + hours)` as a tiebreaker instead of treating all same-day rows for one server as duplicates.
-- Add a unit test covering "same server, same date, two shifts, no start time" → must produce zero duplicates.
+### 6. API & server functions
+- Public endpoints under `src/routes/api/public/*` (contact form, webhooks).
+- Server-function modules (`lls.functions.ts`, `imports.functions.ts`, `manager-data.functions.ts`, `manager-trace.functions.ts`, `roi.functions.ts`, `adoption.functions.ts`, `onboarding.functions.ts`) — each function listed with input schema, guards, and returned shape.
 
-Expected outcome: the 115 false-positive duplicates drop to 0 (or to a small genuine number, which would be a real data problem worth surfacing).
+### 7. Data model & equation reference (appendix)
+- Tables touched: `venues`, `organisations`, `organisation_memberships`, `shifts`, `shifts_v2`, `shift_import_batches_v2`, `shift_staging_rows`, `employee_master`, `source_employee_ids`, `employee_identity_merges`, `menu_item_suggestions`, weekly priorities + audit events, `opportunity_factor_assessments`, `payment_events`, `user_roles`.
+- Canonical equation list in one place, cross-referenced from each page section.
+- Reliability registry (33 fields) with classification per field.
 
-### 2. Silence "missing revenue centre" when the venue has no revenue centres configured
+## Method
+- Read every route file and its server-function dependencies (in parallel batches via a subagent to avoid context bloat).
+- Cross-check equations against the test suites in `src/lib/lls/__tests__/`, `src/lib/imports/__tests__/`, and `src/lib/__tests__/` so the documented formulas match what's actually shipped.
+- Note any drift between docs in code comments and actual behaviour.
 
-In `validateRows` (`src/lib/imports/validation.ts`) and the batch-defaults inference (`src/lib/imports/defaults.ts`):
+## Deliverable
+`docs/site-audit.md` (one self-contained file, ~30–60 pages of structured markdown with anchored sections), plus a short in-chat executive summary highlighting the 5–10 most important equations and any inconsistencies found during the audit.
 
-- If the venue has no revenue-centre dimension declared in `batch_defaults` or `venue_settings`, suppress the `missing_revenue_centre` reason entirely instead of flagging every row.
-- Keep it as an optional advisory only for multi-revenue-centre venues.
-
-### 3. Honest toast wording
-
-In `src/routes/manager.lls.index.tsx` (the staged-summary toast):
-
-- Replace the current breakdown with a tiered message:
-  - If `accepted == total` and only auto-detected context flags remain: `"Staged 362/362 rows · ready to commit. Auto-detected: outlet=Fight, sales basis=gross. Review in Imports."`
-  - If real issues exist (true duplicates, ambiguous identity, bad dates): list only those, with counts.
-- Stop counting `missing_revenue_centre` as an "advisory flag" once #2 lands.
-
-### 4. Cross-batch duplicate awareness (optional, lightweight)
-
-In `src/lib/imports.functions.ts`, during staging, compare each row's `(venue_id, source_kind, server_id|name, date, start_time)` against already-committed rows in `shifts_v2` and against rows in other **unrolled-back** batches. Mark those as `duplicate_status = 'duplicate_candidate'` so the commit step naturally skips them. This means if you ever do re-upload the same file, the system handles it cleanly instead of silently double-counting.
-
-### 5. Verify
-
-- Run the existing 838-test suite plus the new dedupe-key test.
-- Re-stage your two CSVs (no DB migration needed) and confirm the toast reads cleanly.
-
-## Files touched
-
-- `src/lib/imports/validation.ts` — dedupe key, suppress revenue-centre noise
-- `src/lib/imports/defaults.ts` — expose `hasRevenueCentres` flag
-- `src/lib/imports.functions.ts` — cross-batch duplicate check during staging
-- `src/routes/manager.lls.index.tsx` — tiered toast wording
-- `src/lib/imports/__tests__/validation.test.ts` — new regression tests
-
-No schema migration required.
-
-## Out of scope
-
-- Changing LLS formulas or commit logic.
-- Touching server-side game mechanics.
-- Reworking the import detail page beyond what the toast change implies.
+No application code will change — this is documentation only.
