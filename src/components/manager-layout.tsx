@@ -40,6 +40,7 @@ const items: NavItem[] = [
   { to: "/manager/reports", label: "Reports", icon: FileBarChart },
   { to: "/manager/roi", label: "Enterprise ROI", icon: Sparkles },
   { to: "/manager/pilot", label: "Pilot Readiness", icon: Rocket },
+  { to: "/manager/adoption", label: "Adoption", icon: HelpCircle },
   { to: "/manager/settings", label: "Settings", icon: SettingsIcon },
 ];
 
