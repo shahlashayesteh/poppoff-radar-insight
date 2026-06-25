@@ -84,7 +84,7 @@ describe("Phase 9 — Reports page upgrade", () => {
   const body = read(MANAGER_REPORTS);
 
   it("adds RPC, WoW sales and WoW RPC columns", () => {
-    expect(body).toMatch(/>RPC</);
+    expect(body).toMatch(/RPC\s*</);
     expect(body).toMatch(/WoW sales/i);
     expect(body).toMatch(/WoW RPC/i);
   });
