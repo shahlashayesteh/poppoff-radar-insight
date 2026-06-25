@@ -63,7 +63,7 @@ export const getLlsComparison = createServerFn({ method: "POST" })
   .handler(async ({ data, context }): Promise<ComparisonPayload> => {
     const { supabase, userId } = context;
     await requirePaidManagerEntitlement(supabase, userId);
-    const venue = await resolveVenue(supabase, userId);
+    const venue = await resolveVenue(supabase, userId, data.venueId);
     if (!venue.lls_compare_mode) {
       throw new Error("Comparison mode is not enabled for this venue.");
     }
