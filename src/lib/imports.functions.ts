@@ -1,4 +1,4 @@
-// Phase 6 — Import staging server functions.
+// Phase 6 + Phase 7 — Import staging + identity resolution server functions.
 // All uploads route through staging first; manager approval is required before
 // rows reach public.shifts. Reads RLS-protected; writes go through SECURITY
 // DEFINER RPCs (commit/rollback/approve) or scoped inserts under the
@@ -7,6 +7,11 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { validateRows, type RawImportRow, type SourceKind } from "@/lib/imports/validation";
+import {
+  resolveIdentityIndexed, indexDirectory, normaliseName, summarise,
+  type IdentityDirectory, type EmployeeRecord, type SourceIdLink, type AliasLink,
+} from "@/lib/imports/identity";
+
 
 // ---- venue resolver (same deterministic policy as lls.functions.ts) ----
 async function getManagerVenueId(supabase: any, userId: string): Promise<string> {
