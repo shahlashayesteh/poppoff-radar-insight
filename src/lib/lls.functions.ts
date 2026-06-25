@@ -403,11 +403,13 @@ export const suggestOpportunityFactors = createServerFn({ method: "POST" })
 
 export const rollbackBatch = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { batchId: string }) => z.object({ batchId: z.string().uuid() }).parse(d))
+  .inputValidator((d: { batchId: string; venueId?: string }) =>
+    z.object({ batchId: z.string().uuid(), ...OptionalVenue }).parse(d),
+  )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     await requirePaidManagerEntitlement(supabase, userId, "import");
-    const venueId = await getManagerVenueId(supabase, userId);
+    const venueId = await getManagerVenueId(supabase, userId, data.venueId);
 
     // Verify batch belongs to this venue
     const { data: batch } = await supabase
