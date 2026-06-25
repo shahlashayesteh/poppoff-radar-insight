@@ -305,7 +305,7 @@ function LlsPage() {
     // Saved per-venue mapping wins over auto if its headers still exist.
     let saved: Record<string, string> = {};
     try {
-      const r = await loadMapping({ data: { sourceType: source } });
+      const r = await loadMapping({ data: { sourceType: source, venueId } });
       for (const [k, v] of Object.entries(r.mapping ?? {})) {
         if (typeof v === "string" && parsed.headers.includes(v)) saved[k] = v;
       }
