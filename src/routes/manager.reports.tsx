@@ -19,6 +19,8 @@ import { Download } from "lucide-react";
 import { PaidManagerGate } from "@/components/manager/PaidManagerGate";
 import { getManagerReportsData } from "@/lib/manager-data.functions";
 
+import { useVerifyPaidManagerAccess } from "@/hooks/use-verify-paid-manager-access";
+
 export const Route = createFileRoute("/manager/reports")({
   component: () => (
     <PaidManagerGate feature="reports">
