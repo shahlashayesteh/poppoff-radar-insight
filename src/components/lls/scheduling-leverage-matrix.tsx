@@ -390,6 +390,45 @@ export function SchedulingLeverageMatrix({ data, currency = "£" }: { data: Sche
         )}
       </div>
 
+      {/* Phase 20A — OF v2 preview chip (read-only) */}
+      {data.opportunity_factor_preview ? (
+        <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[11px]">
+          <span className="text-muted-foreground">Opportunity Factor:</span>
+          <ScopeChip>
+            {data.opportunity_factor_preview.opportunity_factor_version === "v2_preview"
+              ? "v2 preview"
+              : "v1 (fallback)"}
+          </ScopeChip>
+          <ScopeChip
+            tone={
+              data.opportunity_factor_preview.confidence === "high"
+                ? "ok"
+                : data.opportunity_factor_preview.confidence === "low"
+                  ? "warn"
+                  : "default"
+            }
+          >
+            Confidence · {data.opportunity_factor_preview.confidence}
+          </ScopeChip>
+          {data.opportunity_factor_preview.materially_different ? (
+            <ScopeChip tone="warn">v2 would materially change opportunity</ScopeChip>
+          ) : null}
+          {data.opportunity_factor_preview.inputs_excluded.length > 0 ? (
+            <ScopeChip>
+              Excluded · {data.opportunity_factor_preview.inputs_excluded.slice(0, 3).join(", ")}
+              {data.opportunity_factor_preview.inputs_excluded.length > 3 ? "…" : ""}
+            </ScopeChip>
+          ) : null}
+          {data.opportunity_factor_preview.fallback_reason ? (
+            <ScopeChip tone="warn">
+              Fallback · {data.opportunity_factor_preview.fallback_reason.replace(/_/g, " ")}
+            </ScopeChip>
+          ) : null}
+        </div>
+      ) : null}
+
+
+
       {/* Highlight cards — compact, no paragraphs */}
       <div className="mt-5 grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <HighlightCard currency={currency} title="Best overall leverage" tooltip="Highest Marginal Deployment Value with positive modelled lift." rec={h.best_overall_leverage} onView={(r) => setDrawer({ kind: "rec", rec: r })} />

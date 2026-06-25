@@ -525,6 +525,13 @@ export type ScorecardServer = {
   lowSample: boolean;
 };
 
+import {
+  buildOfV2Preview,
+  type OpportunityFactorPreview,
+} from "@/lib/lls/opportunity-factor-v2-preview";
+
+export type { OpportunityFactorPreview } from "@/lib/lls/opportunity-factor-v2-preview";
+
 export type ScorecardResult = {
   weekStart: string;
   thresholds: { green: number; amber: number };
@@ -533,6 +540,12 @@ export type ScorecardResult = {
   venue_benchmark_prev: number | null;
   venue_benchmark_trend_pct: number | null;
   toReview: Array<{ serverId: string; serverName: string; reasons: string[] }>;
+  /**
+   * Phase 20A — controlled OF v2 preview. Returned for manager-facing
+   * surfaces only. NEVER mutates committed shift values; Adjusted LLS
+   * shown to managers is still computed from stored opportunity_factor.
+   */
+  opportunity_factor_preview?: OpportunityFactorPreview | null;
 };
 
 function safeDiv(num: number, den: number): number | null {
@@ -745,7 +758,58 @@ export const getWeeklyScorecard = createServerFn({ method: "POST" })
       .lt("shift_date", iso(weekEnd));
     if (error) throw new Error(error.message);
 
-    return computeWeeklyScorecardFromRows((shifts ?? []) as ScorecardInputRow[], ws, thresholds);
+    // Phase 20A — pull 12 weeks of history for OF v2 preview computation.
+    // Preview is read-only and does NOT mutate stored shift values.
+    const previewStart = new Date(wsDate);
+    previewStart.setDate(previewStart.getDate() - 7 * 12);
+    const { data: previewHistory } = await supabase
+      .from("shifts")
+      .select("shift_date, day_of_week, daypart, gross_sales, covers_served, labor_cost, opportunity_factor")
+      .eq("venue_id", venueId)
+      .gte("shift_date", iso(previewStart))
+      .lt("shift_date", iso(weekEnd));
+
+    const result = computeWeeklyScorecardFromRows(
+      (shifts ?? []) as ScorecardInputRow[],
+      ws,
+      thresholds,
+    );
+
+    // Build the OF v2 preview. Failures are non-fatal — never crash the LLS page.
+    try {
+      const toWeekStart = (date: string): string => {
+        const d = new Date(date + "T00:00:00");
+        const day = d.getDay();
+        const diff = day === 0 ? -6 : 1 - day;
+        d.setDate(d.getDate() + diff);
+        return d.toISOString().slice(0, 10);
+      };
+      const historyRows = ((previewHistory ?? []) as any[]).map((r) => ({
+        shift_date: r.shift_date as string,
+        week_start: toWeekStart(r.shift_date as string),
+        day_of_week: Number(r.day_of_week),
+        daypart: (r.daypart as string | null) ?? null,
+        outlet: null,
+        gross_sales: r.gross_sales != null ? Number(r.gross_sales) : null,
+        covers: r.covers_served != null ? Number(r.covers_served) : null,
+        labor_cost: r.labor_cost != null ? Number(r.labor_cost) : null,
+        opportunity_factor:
+          r.opportunity_factor != null ? Number(r.opportunity_factor) : null,
+      }));
+      const selectedWeek = historyRows.filter((r) => r.week_start === ws);
+      result.opportunity_factor_preview = buildOfV2Preview({
+        venueId,
+        weekStart: ws,
+        history: historyRows,
+        selectedWeek,
+        salesBasis: "gross", // v1 schema only stores gross
+        laborHoursEstimated: true, // hours unavailable in v1 scorecard query
+      });
+    } catch {
+      result.opportunity_factor_preview = null;
+    }
+
+    return result;
   });
 
 // ---------- scheduling leverage matrix ----------
@@ -847,13 +911,51 @@ export const getSchedulingLeverage = createServerFn({ method: "POST" })
       (r) => r.shift_date >= ws && r.shift_date < iso(weekEnd) && (r.gross_sales != null || r.labor_cost != null),
     );
 
-    return computeSchedulingLeverage(rows, {
+    const leverage = computeSchedulingLeverage(rows, {
       // V1 has no outlet column — engine treats the venue name as a fallback.
       outletBasis: "venue_fallback",
       period: { start: iso(start), end: iso(weekEnd), weeks },
       selectedWeekHasShifts,
       selectedWeekStart: ws,
     });
+
+    // Phase 20A — attach OF v2 preview metadata. Read-only; does NOT change
+    // any baseline, matrix cell or recommendation. Failures are non-fatal.
+    try {
+      const toWeekStart = (date: string): string => {
+        const d = new Date(date + "T00:00:00");
+        const day = d.getDay();
+        const diff = day === 0 ? -6 : 1 - day;
+        d.setDate(d.getDate() + diff);
+        return d.toISOString().slice(0, 10);
+      };
+      const historyRows = rows.map((r) => ({
+        shift_date: r.shift_date,
+        week_start: toWeekStart(r.shift_date),
+        day_of_week: r.day_of_week,
+        daypart: r.daypart ?? null,
+        outlet: r.outlet ?? null,
+        gross_sales: r.gross_sales,
+        net_sales: r.net_sales ?? null,
+        covers: r.covers,
+        hours: r.hours ?? null,
+        labor_cost: r.labor_cost,
+        opportunity_factor: r.opportunity_factor,
+      }));
+      const selectedWeek = historyRows.filter((r) => r.week_start === ws);
+      leverage.opportunity_factor_preview = buildOfV2Preview({
+        venueId,
+        weekStart: ws,
+        history: historyRows,
+        selectedWeek,
+        salesBasis: "gross",
+        laborHoursEstimated: !rows.some((r) => typeof r.hours === "number" && r.hours > 0),
+      });
+    } catch {
+      leverage.opportunity_factor_preview = null;
+    }
+
+    return leverage;
   });
 
 
