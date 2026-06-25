@@ -8,8 +8,15 @@ import { Brain, Sparkles, Wand2, ChevronRight, Plus, Trash2, FileText, Upload, C
 import { getMondayOfWeek, toISODate } from "@/lib/week";
 import { toast } from "sonner";
 import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
+import { PaidManagerGate } from "@/components/manager/PaidManagerGate";
 
-export const Route = createFileRoute("/manager/menu")({ component: MenuIntel });
+export const Route = createFileRoute("/manager/menu")({
+  component: () => (
+    <PaidManagerGate feature="menu intelligence">
+      <MenuIntel />
+    </PaidManagerGate>
+  ),
+});
 
 type ParsedItem = { name: string; category?: string; price?: string; pairing?: string; priority?: string };
 type Menu = { id: string; menu_text: string; parsed_items: ParsedItem[] | null; uploaded_at: string };
