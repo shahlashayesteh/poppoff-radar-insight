@@ -61,12 +61,18 @@ type Row = {
   duplicate_status: string;
   excluded_from_canonical: boolean;
   identity_status: string;
+  identity_confidence: number | null;
+  manual_review_required?: boolean;
+  manager_confirmed_match?: boolean;
+  identity_candidates?: Array<{ employee_id: string; display_name: string; reason: string }>;
   status_reason: string | null;
   status_evidence: Record<string, unknown>;
   service_date: string | null;
   reported_identity_name: string | null;
   reported_identity_id: string | null;
 };
+
+type Employee = { id: string; display_name: string; pos_employee_id: string | null; labour_employee_id: string | null };
 
 function ImportBatchDetail() {
   const { batchId } = Route.useParams();
@@ -75,11 +81,18 @@ function ImportBatchDetail() {
   const doApprove = useServerFn(approveImportBatch);
   const doCommit = useServerFn(commitImportBatch);
   const doRollback = useServerFn(rollbackImportBatch);
+  const doConfirm = useServerFn(confirmIdentityMatch);
+  const doCreate = useServerFn(createEmployeeIdentity);
+  const doAlias = useServerFn(linkIdentityAlias);
+  const doExclude = useServerFn(excludeStagingRow);
+  const fetchEmployees = useServerFn(listVenueEmployees);
 
   const [batch, setBatch] = useState<Batch | null>(null);
   const [rows, setRows] = useState<Row[]>([]);
+  const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+
 
   const load = useCallback(async () => {
     try {
