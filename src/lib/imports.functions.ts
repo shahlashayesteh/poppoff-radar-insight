@@ -157,24 +157,30 @@ export const stageImport = createServerFn({ method: "POST" })
       const reportedName = (r.server_name ?? "").toString().trim() || null;
       const reportedId = (r.server_id ?? "").toString().trim() || null;
       const dateValid = r.shift_date && /^\d{4}-\d{2}-\d{2}$/.test(r.shift_date);
-      const dupKey = [reportedId ?? reportedName ?? "", r.shift_date ?? "", r.shift_start_time ?? ""].join("|").toLowerCase();
+      const hash = rowHashes[i];
+      const inBatchDup = v.duplicateOfIndex != null;
+      const crossBatchDup = crossBatchDupSet.has(hash);
+      const isDup = inBatchDup || crossBatchDup;
+      const reasonsWithCross = crossBatchDup && !v.reasons.includes("duplicate_row")
+        ? [...v.reasons, "duplicate_of_prior_batch"]
+        : v.reasons;
       return {
         venue_id: venueId,
         batch_id: batchId,
         source_kind: sourceKind,
         source_row_index: i,
         raw_row: r as any,
-        raw_row_hash: dupKey,
+        raw_row_hash: hash,
         service_date: dateValid ? r.shift_date : null,
         reported_identity_id: reportedId,
         reported_identity_name: reportedName,
         reconciliation_status: rejected
           ? "excluded_invalid"
-          : (v.duplicateOfIndex != null ? "duplicate_pending" : "pending"),
-        duplicate_status: v.duplicateOfIndex != null ? "duplicate_candidate" : "unique",
+          : (isDup ? "duplicate_pending" : "pending"),
+        duplicate_status: isDup ? "duplicate_candidate" : "unique",
         excluded_from_canonical: rejected,
-        status_reason: v.reasons.join(",") || null,
-        status_evidence: { reasons: v.reasons, ...(v.evidence as Record<string, unknown>) } as any,
+        status_reason: reasonsWithCross.join(",") || null,
+        status_evidence: { reasons: reasonsWithCross, cross_batch_duplicate: crossBatchDup, ...(v.evidence as Record<string, unknown>) } as any,
       };
     });
 
