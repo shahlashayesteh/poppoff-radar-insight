@@ -44,6 +44,7 @@ import { Route as ManagerReportsRouteImport } from './routes/manager.reports'
 import { Route as ManagerPrioritiesRouteImport } from './routes/manager.priorities'
 import { Route as ManagerMenuRouteImport } from './routes/manager.menu'
 import { Route as ManagerLlsRouteImport } from './routes/manager.lls'
+import { Route as ManagerImportsRouteImport } from './routes/manager.imports'
 import { Route as ManagerCoachingRouteImport } from './routes/manager.coaching'
 import { Route as EmailUnsubscribeRouteImport } from './routes/email/unsubscribe'
 import { Route as DemoServerScorecardRouteImport } from './routes/demo.server-scorecard'
@@ -53,10 +54,12 @@ import { Route as CheckoutRetryRouteImport } from './routes/checkout.retry'
 import { Route as CalculatorServerGapRouteImport } from './routes/calculator.server-gap'
 import { Route as ManagerServerIndexRouteImport } from './routes/manager.server.index'
 import { Route as ManagerLlsIndexRouteImport } from './routes/manager.lls.index'
+import { Route as ManagerImportsIndexRouteImport } from './routes/manager.imports.index'
 import { Route as DemoServerIndexRouteImport } from './routes/demo.server.index'
 import { Route as DemoManagerIndexRouteImport } from './routes/demo.manager.index'
 import { Route as ManagerServerIdRouteImport } from './routes/manager.server.$id'
 import { Route as ManagerLlsCompareRouteImport } from './routes/manager.lls.compare'
+import { Route as ManagerImportsBatchIdRouteImport } from './routes/manager.imports.$batchId'
 import { Route as LovableEmailSuppressionRouteImport } from './routes/lovable/email/suppression'
 import { Route as DemoServerWelcomeRouteImport } from './routes/demo.server.welcome'
 import { Route as DemoServerStatsRouteImport } from './routes/demo.server.stats'
@@ -256,6 +259,11 @@ const ManagerLlsRoute = ManagerLlsRouteImport.update({
   path: '/manager/lls',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ManagerImportsRoute = ManagerImportsRouteImport.update({
+  id: '/manager/imports',
+  path: '/manager/imports',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ManagerCoachingRoute = ManagerCoachingRouteImport.update({
   id: '/manager/coaching',
   path: '/manager/coaching',
@@ -301,6 +309,11 @@ const ManagerLlsIndexRoute = ManagerLlsIndexRouteImport.update({
   path: '/',
   getParentRoute: () => ManagerLlsRoute,
 } as any)
+const ManagerImportsIndexRoute = ManagerImportsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ManagerImportsRoute,
+} as any)
 const DemoServerIndexRoute = DemoServerIndexRouteImport.update({
   id: '/demo/server/',
   path: '/demo/server/',
@@ -320,6 +333,11 @@ const ManagerLlsCompareRoute = ManagerLlsCompareRouteImport.update({
   id: '/compare',
   path: '/compare',
   getParentRoute: () => ManagerLlsRoute,
+} as any)
+const ManagerImportsBatchIdRoute = ManagerImportsBatchIdRouteImport.update({
+  id: '/$batchId',
+  path: '/$batchId',
+  getParentRoute: () => ManagerImportsRoute,
 } as any)
 const LovableEmailSuppressionRoute = LovableEmailSuppressionRouteImport.update({
   id: '/lovable/email/suppression',
@@ -440,6 +458,7 @@ export interface FileRoutesByFullPath {
   '/demo/server-scorecard': typeof DemoServerScorecardRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/manager/coaching': typeof ManagerCoachingRoute
+  '/manager/imports': typeof ManagerImportsRouteWithChildren
   '/manager/lls': typeof ManagerLlsRouteWithChildren
   '/manager/menu': typeof ManagerMenuRoute
   '/manager/priorities': typeof ManagerPrioritiesRoute
@@ -471,10 +490,12 @@ export interface FileRoutesByFullPath {
   '/demo/server/stats': typeof DemoServerStatsRoute
   '/demo/server/welcome': typeof DemoServerWelcomeRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
+  '/manager/imports/$batchId': typeof ManagerImportsBatchIdRoute
   '/manager/lls/compare': typeof ManagerLlsCompareRoute
   '/manager/server/$id': typeof ManagerServerIdRoute
   '/demo/manager/': typeof DemoManagerIndexRoute
   '/demo/server/': typeof DemoServerIndexRoute
+  '/manager/imports/': typeof ManagerImportsIndexRoute
   '/manager/lls/': typeof ManagerLlsIndexRoute
   '/manager/server/': typeof ManagerServerIndexRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
@@ -536,10 +557,12 @@ export interface FileRoutesByTo {
   '/demo/server/stats': typeof DemoServerStatsRoute
   '/demo/server/welcome': typeof DemoServerWelcomeRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
+  '/manager/imports/$batchId': typeof ManagerImportsBatchIdRoute
   '/manager/lls/compare': typeof ManagerLlsCompareRoute
   '/manager/server/$id': typeof ManagerServerIdRoute
   '/demo/manager': typeof DemoManagerIndexRoute
   '/demo/server': typeof DemoServerIndexRoute
+  '/manager/imports': typeof ManagerImportsIndexRoute
   '/manager/lls': typeof ManagerLlsIndexRoute
   '/manager/server': typeof ManagerServerIndexRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
@@ -574,6 +597,7 @@ export interface FileRoutesById {
   '/demo/server-scorecard': typeof DemoServerScorecardRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/manager/coaching': typeof ManagerCoachingRoute
+  '/manager/imports': typeof ManagerImportsRouteWithChildren
   '/manager/lls': typeof ManagerLlsRouteWithChildren
   '/manager/menu': typeof ManagerMenuRoute
   '/manager/priorities': typeof ManagerPrioritiesRoute
@@ -605,10 +629,12 @@ export interface FileRoutesById {
   '/demo/server/stats': typeof DemoServerStatsRoute
   '/demo/server/welcome': typeof DemoServerWelcomeRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
+  '/manager/imports/$batchId': typeof ManagerImportsBatchIdRoute
   '/manager/lls/compare': typeof ManagerLlsCompareRoute
   '/manager/server/$id': typeof ManagerServerIdRoute
   '/demo/manager/': typeof DemoManagerIndexRoute
   '/demo/server/': typeof DemoServerIndexRoute
+  '/manager/imports/': typeof ManagerImportsIndexRoute
   '/manager/lls/': typeof ManagerLlsIndexRoute
   '/manager/server/': typeof ManagerServerIndexRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
@@ -644,6 +670,7 @@ export interface FileRouteTypes {
     | '/demo/server-scorecard'
     | '/email/unsubscribe'
     | '/manager/coaching'
+    | '/manager/imports'
     | '/manager/lls'
     | '/manager/menu'
     | '/manager/priorities'
@@ -675,10 +702,12 @@ export interface FileRouteTypes {
     | '/demo/server/stats'
     | '/demo/server/welcome'
     | '/lovable/email/suppression'
+    | '/manager/imports/$batchId'
     | '/manager/lls/compare'
     | '/manager/server/$id'
     | '/demo/manager/'
     | '/demo/server/'
+    | '/manager/imports/'
     | '/manager/lls/'
     | '/manager/server/'
     | '/api/public/payments/webhook'
@@ -740,10 +769,12 @@ export interface FileRouteTypes {
     | '/demo/server/stats'
     | '/demo/server/welcome'
     | '/lovable/email/suppression'
+    | '/manager/imports/$batchId'
     | '/manager/lls/compare'
     | '/manager/server/$id'
     | '/demo/manager'
     | '/demo/server'
+    | '/manager/imports'
     | '/manager/lls'
     | '/manager/server'
     | '/api/public/payments/webhook'
@@ -777,6 +808,7 @@ export interface FileRouteTypes {
     | '/demo/server-scorecard'
     | '/email/unsubscribe'
     | '/manager/coaching'
+    | '/manager/imports'
     | '/manager/lls'
     | '/manager/menu'
     | '/manager/priorities'
@@ -808,10 +840,12 @@ export interface FileRouteTypes {
     | '/demo/server/stats'
     | '/demo/server/welcome'
     | '/lovable/email/suppression'
+    | '/manager/imports/$batchId'
     | '/manager/lls/compare'
     | '/manager/server/$id'
     | '/demo/manager/'
     | '/demo/server/'
+    | '/manager/imports/'
     | '/manager/lls/'
     | '/manager/server/'
     | '/api/public/payments/webhook'
@@ -845,6 +879,7 @@ export interface RootRouteChildren {
   DemoServerScorecardRoute: typeof DemoServerScorecardRoute
   EmailUnsubscribeRoute: typeof EmailUnsubscribeRoute
   ManagerCoachingRoute: typeof ManagerCoachingRoute
+  ManagerImportsRoute: typeof ManagerImportsRouteWithChildren
   ManagerLlsRoute: typeof ManagerLlsRouteWithChildren
   ManagerMenuRoute: typeof ManagerMenuRoute
   ManagerPrioritiesRoute: typeof ManagerPrioritiesRoute
@@ -1132,6 +1167,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ManagerLlsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/manager/imports': {
+      id: '/manager/imports'
+      path: '/manager/imports'
+      fullPath: '/manager/imports'
+      preLoaderRoute: typeof ManagerImportsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/manager/coaching': {
       id: '/manager/coaching'
       path: '/manager/coaching'
@@ -1195,6 +1237,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ManagerLlsIndexRouteImport
       parentRoute: typeof ManagerLlsRoute
     }
+    '/manager/imports/': {
+      id: '/manager/imports/'
+      path: '/'
+      fullPath: '/manager/imports/'
+      preLoaderRoute: typeof ManagerImportsIndexRouteImport
+      parentRoute: typeof ManagerImportsRoute
+    }
     '/demo/server/': {
       id: '/demo/server/'
       path: '/demo/server'
@@ -1222,6 +1271,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/manager/lls/compare'
       preLoaderRoute: typeof ManagerLlsCompareRouteImport
       parentRoute: typeof ManagerLlsRoute
+    }
+    '/manager/imports/$batchId': {
+      id: '/manager/imports/$batchId'
+      path: '/$batchId'
+      fullPath: '/manager/imports/$batchId'
+      preLoaderRoute: typeof ManagerImportsBatchIdRouteImport
+      parentRoute: typeof ManagerImportsRoute
     }
     '/lovable/email/suppression': {
       id: '/lovable/email/suppression'
@@ -1379,6 +1435,20 @@ const SignupRouteChildren: SignupRouteChildren = {
 const SignupRouteWithChildren =
   SignupRoute._addFileChildren(SignupRouteChildren)
 
+interface ManagerImportsRouteChildren {
+  ManagerImportsBatchIdRoute: typeof ManagerImportsBatchIdRoute
+  ManagerImportsIndexRoute: typeof ManagerImportsIndexRoute
+}
+
+const ManagerImportsRouteChildren: ManagerImportsRouteChildren = {
+  ManagerImportsBatchIdRoute: ManagerImportsBatchIdRoute,
+  ManagerImportsIndexRoute: ManagerImportsIndexRoute,
+}
+
+const ManagerImportsRouteWithChildren = ManagerImportsRoute._addFileChildren(
+  ManagerImportsRouteChildren,
+)
+
 interface ManagerLlsRouteChildren {
   ManagerLlsCompareRoute: typeof ManagerLlsCompareRoute
   ManagerLlsIndexRoute: typeof ManagerLlsIndexRoute
@@ -1417,6 +1487,7 @@ const rootRouteChildren: RootRouteChildren = {
   DemoServerScorecardRoute: DemoServerScorecardRoute,
   EmailUnsubscribeRoute: EmailUnsubscribeRoute,
   ManagerCoachingRoute: ManagerCoachingRoute,
+  ManagerImportsRoute: ManagerImportsRouteWithChildren,
   ManagerLlsRoute: ManagerLlsRouteWithChildren,
   ManagerMenuRoute: ManagerMenuRoute,
   ManagerPrioritiesRoute: ManagerPrioritiesRoute,
