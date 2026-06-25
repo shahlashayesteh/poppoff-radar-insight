@@ -900,46 +900,109 @@ export type Database = {
       }
       shift_import_batches_v2: {
         Row: {
+          accepted_count: number
+          approved_at: string | null
+          approved_by: string | null
+          committed_at: string | null
+          committed_shift_ids: string[]
+          covers_total: number | null
           created_at: string
+          error_message: string | null
+          file_hash: string | null
+          gross_total: number | null
           id: string
+          import_type: string | null
           is_active: boolean
+          labour_basis_summary: Json
+          labour_total: number | null
+          net_total: number | null
           notes: string | null
+          rejected_count: number
+          rolled_back_at: string | null
+          rolled_back_by: string | null
           row_count: number
+          sales_basis_summary: Json
           source_filename: string | null
           source_kind: string
+          source_system: string | null
+          status: string
           superseded_at: string | null
           superseded_by_batch_id: string | null
           updated_at: string
           uploaded_by: string | null
+          validation_summary: Json
           venue_id: string
+          warning_count: number
         }
         Insert: {
+          accepted_count?: number
+          approved_at?: string | null
+          approved_by?: string | null
+          committed_at?: string | null
+          committed_shift_ids?: string[]
+          covers_total?: number | null
           created_at?: string
+          error_message?: string | null
+          file_hash?: string | null
+          gross_total?: number | null
           id?: string
+          import_type?: string | null
           is_active?: boolean
+          labour_basis_summary?: Json
+          labour_total?: number | null
+          net_total?: number | null
           notes?: string | null
+          rejected_count?: number
+          rolled_back_at?: string | null
+          rolled_back_by?: string | null
           row_count?: number
+          sales_basis_summary?: Json
           source_filename?: string | null
           source_kind: string
+          source_system?: string | null
+          status?: string
           superseded_at?: string | null
           superseded_by_batch_id?: string | null
           updated_at?: string
           uploaded_by?: string | null
+          validation_summary?: Json
           venue_id: string
+          warning_count?: number
         }
         Update: {
+          accepted_count?: number
+          approved_at?: string | null
+          approved_by?: string | null
+          committed_at?: string | null
+          committed_shift_ids?: string[]
+          covers_total?: number | null
           created_at?: string
+          error_message?: string | null
+          file_hash?: string | null
+          gross_total?: number | null
           id?: string
+          import_type?: string | null
           is_active?: boolean
+          labour_basis_summary?: Json
+          labour_total?: number | null
+          net_total?: number | null
           notes?: string | null
+          rejected_count?: number
+          rolled_back_at?: string | null
+          rolled_back_by?: string | null
           row_count?: number
+          sales_basis_summary?: Json
           source_filename?: string | null
           source_kind?: string
+          source_system?: string | null
+          status?: string
           superseded_at?: string | null
           superseded_by_batch_id?: string | null
           updated_at?: string
           uploaded_by?: string | null
+          validation_summary?: Json
           venue_id?: string
+          warning_count?: number
         }
         Relationships: [
           {
@@ -1213,6 +1276,7 @@ export type Database = {
           daypart: string
           final_lls: number | null
           gross_sales: number | null
+          import_batch_v2_id: string | null
           labor_batch_id: string | null
           labor_cost: number | null
           opportunity_factor: number | null
@@ -1235,6 +1299,7 @@ export type Database = {
           daypart: string
           final_lls?: number | null
           gross_sales?: number | null
+          import_batch_v2_id?: string | null
           labor_batch_id?: string | null
           labor_cost?: number | null
           opportunity_factor?: number | null
@@ -1257,6 +1322,7 @@ export type Database = {
           daypart?: string
           final_lls?: number | null
           gross_sales?: number | null
+          import_batch_v2_id?: string | null
           labor_batch_id?: string | null
           labor_cost?: number | null
           opportunity_factor?: number | null
@@ -1272,6 +1338,13 @@ export type Database = {
           venue_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "shifts_import_batch_v2_id_fkey"
+            columns: ["import_batch_v2_id"]
+            isOneToOne: false
+            referencedRelation: "shift_import_batches_v2"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "shifts_labor_batch_id_fkey"
             columns: ["labor_batch_id"]
@@ -2239,10 +2312,12 @@ export type Database = {
       is_venue_member: { Args: { _venue_id: string }; Returns: boolean }
       join_venue_with_code: { Args: { _code: string }; Returns: string }
       latest_venue_stats_week: { Args: { p_venue_id: string }; Returns: string }
+      lls_v2_approve_batch: { Args: { _batch_id: string }; Returns: Json }
       lls_v2_authorise_single_sided: {
         Args: { _justification: string; _staging_row_id: string }
         Returns: undefined
       }
+      lls_v2_commit_batch: { Args: { _batch_id: string }; Returns: Json }
       lls_v2_ingest_batch: {
         Args: { _payload: Json; _venue_id: string }
         Returns: string
@@ -2264,6 +2339,7 @@ export type Database = {
         Args: { _decision: Json; _staging_row_id: string }
         Returns: undefined
       }
+      lls_v2_rollback_batch: { Args: { _batch_id: string }; Returns: Json }
       lls_v2_run_reconciliation: {
         Args: { _batch_id: string; _venue_id: string }
         Returns: Json

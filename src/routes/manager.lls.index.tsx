@@ -24,7 +24,6 @@ import {
 } from "@/components/ui/select";
 import { getMondayOfWeek, toISODate, formatWeekRange, previousMonday } from "@/lib/week";
 import {
-  importShifts,
   getWeeklyScorecard,
   getOpportunityFactors,
   updateOpportunityFactor,
@@ -38,6 +37,9 @@ import {
   type SchedulingLeverageResult,
   type Daypart,
 } from "@/lib/lls.functions";
+import { stageImport, latestPendingImportBatch } from "@/lib/imports.functions";
+import { hashFileContent } from "@/lib/imports/hash";
+import { Link } from "@tanstack/react-router";
 import { Upload, ChevronLeft, ChevronRight, AlertTriangle, TrendingUp, TrendingDown, Trash2, Gauge, Sparkles, Info } from "lucide-react";
 import { MetricTooltip, DataQualityChip, SalesBasisBadge, GrossEstimateWarning } from "@/components/metrics";
 import { SchedulingLeverageMatrix } from "@/components/lls/scheduling-leverage-matrix";
@@ -224,7 +226,9 @@ function LlsPage() {
   const fetchOF = useServerFn(getOpportunityFactors);
   const updateOF = useServerFn(updateOpportunityFactor);
   const suggestOF = useServerFn(suggestOpportunityFactors);
-  const doImport = useServerFn(importShifts);
+  const doStage = useServerFn(stageImport);
+  const fetchPending = useServerFn(latestPendingImportBatch);
+  const [pendingBatch, setPendingBatch] = useState<{ id: string; status: string; source_filename: string | null } | null>(null);
   const loadMapping = useServerFn(getColumnMapping);
   const persistMapping = useServerFn(saveColumnMapping);
   const fetchBatches = useServerFn(listRecentBatches);
@@ -258,6 +262,12 @@ function LlsPage() {
     void refresh();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [weekStart]);
+
+  useEffect(() => {
+    fetchPending()
+      .then((r) => setPendingBatch((r.batch as any) ?? null))
+      .catch(() => {});
+  }, [fetchPending]);
 
   const fieldsForSource = pendingSource === "sales" ? SALES_FIELDS : LABOR_FIELDS;
 
@@ -376,13 +386,22 @@ function LlsPage() {
     setLoading(true);
     try {
       await persistMapping({ data: { sourceType: source, mapping: map } });
-      const res = await doImport({
-        data: { sourceType: source, filename: file.filename, rows },
+      // Phase 6: upload no longer writes direct to public.shifts.
+      // Stage the rows first; manager must approve in /manager/imports before LLS changes.
+      const fileHash = await hashFileContent(JSON.stringify({ filename: file.filename, rows }));
+      const res = await doStage({
+        data: {
+          sourceKind: source === "sales" ? "sales" : "labor",
+          filename: file.filename,
+          fileHash,
+          rows: rows as any,
+        },
       });
-      const base = opts.toastMessage
-        ? `${opts.toastMessage} Imported ${res.imported} shifts`
-        : `Imported ${res.imported} shifts`;
-      toast.success(`${base}${res.errors.length ? ` (${res.errors.length} errors)` : ""}`);
+      const summary = res.summary;
+      toast.success(
+        `Staged ${summary.accepted + summary.warnings}/${rows.length} rows · ${summary.rejected} rejected · ${summary.warnings} warnings. Review in Imports before it affects LLS.`,
+      );
+      setPendingBatch({ id: res.batchId, status: "needs_review", source_filename: file.filename });
       setMappingOpen(false);
       setPendingFile(null);
       setNeedsConfirm(new Set());
@@ -469,6 +488,20 @@ function LlsPage() {
   return (
     <ManagerLayout>
       <div className="px-8 py-8 max-w-7xl">
+        {pendingBatch ? (
+          <div className="mb-4 rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 flex items-center justify-between gap-3">
+            <span>
+              Import staged ({pendingBatch.source_filename ?? "no filename"}). Review data quality before it affects LLS.
+            </span>
+            <Link
+              to="/manager/imports/$batchId"
+              params={{ batchId: pendingBatch.id }}
+              className="font-semibold underline underline-offset-2"
+            >
+              Review batch →
+            </Link>
+          </div>
+        ) : null}
         <div className="text-xs uppercase tracking-widest text-muted-foreground">Manager · Labor Leverage</div>
         <div className="mt-2 flex items-center justify-between gap-4 flex-wrap">
           <div>
