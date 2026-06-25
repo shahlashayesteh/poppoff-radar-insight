@@ -488,6 +488,20 @@ function LlsPage() {
   return (
     <ManagerLayout>
       <div className="px-8 py-8 max-w-7xl">
+        {pendingBatch ? (
+          <div className="mb-4 rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 flex items-center justify-between gap-3">
+            <span>
+              Import staged ({pendingBatch.source_filename ?? "no filename"}). Review data quality before it affects LLS.
+            </span>
+            <Link
+              to="/manager/imports/$batchId"
+              params={{ batchId: pendingBatch.id }}
+              className="font-semibold underline underline-offset-2"
+            >
+              Review batch →
+            </Link>
+          </div>
+        ) : null}
         <div className="text-xs uppercase tracking-widest text-muted-foreground">Manager · Labor Leverage</div>
         <div className="mt-2 flex items-center justify-between gap-4 flex-wrap">
           <div>
