@@ -528,6 +528,10 @@ function ManagerDashboard() {
           <div className="text-sm text-muted-foreground">{formatWeekRange(displayWeekStart)}</div>
         </div>
 
+        {/* Phase 9 — Operations status: import quality, identity quality, basis confidence. */}
+        <OperationsStatusStrip />
+
+
         {/* Join code + CSV upload */}
         <div className="mt-6 grid lg:grid-cols-2 gap-4">
           <div
