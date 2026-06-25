@@ -8,8 +8,14 @@ import { Badge } from "@/components/ui/badge";
 import { ManagerLayout } from "@/components/manager-layout";
 import { useEntitlement, statusLabel } from "@/lib/entitlements";
 
+import { PaidManagerGate } from "@/components/manager/PaidManagerGate";
+
 export const Route = createFileRoute("/manager/imports/")({
-  component: ImportsListPage,
+  component: () => (
+    <PaidManagerGate feature="imports">
+      <ImportsListPage />
+    </PaidManagerGate>
+  ),
 });
 
 type Batch = {
