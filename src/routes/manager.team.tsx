@@ -12,9 +12,16 @@ import {
 import { engineRagFromPerf } from "@/lib/metrics/server-rag";
 import { MetricTooltip, ModelledValueLabel } from "@/components/metrics";
 import { OperationsStatusStrip } from "@/components/manager/operations-status-strip";
+import { PaidManagerGate } from "@/components/manager/PaidManagerGate";
 
 
-export const Route = createFileRoute("/manager/team")({ component: TeamPage });
+export const Route = createFileRoute("/manager/team")({
+  component: () => (
+    <PaidManagerGate feature="team analytics">
+      <TeamPage />
+    </PaidManagerGate>
+  ),
+});
 
 type Member = { id: string; full_name: string | null };
 
