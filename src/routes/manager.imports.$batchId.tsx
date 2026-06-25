@@ -1,4 +1,4 @@
-// Phase 6 — Import batch detail + Data Quality panel + approval/commit/rollback.
+// Phase 6 + Phase 7 — Import batch detail + Data Quality + Identity Quality.
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, useCallback } from "react";
 import { useServerFn } from "@tanstack/react-start";
@@ -7,7 +7,13 @@ import {
   approveImportBatch,
   commitImportBatch,
   rollbackImportBatch,
+  confirmIdentityMatch,
+  createEmployeeIdentity,
+  linkIdentityAlias,
+  excludeStagingRow,
+  listVenueEmployees,
 } from "@/lib/imports.functions";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
