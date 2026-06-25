@@ -382,6 +382,7 @@ export const approveImportBatch = createServerFn({ method: "POST" })
   .inputValidator((d: z.input<typeof BatchIdInput>) => BatchIdInput.parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
+    await requirePaidManagerEntitlement(supabase, userId);
     const venueId = await getManagerVenueId(supabase, userId, data.venueId);
     await assertBatchInVenue(supabase, data.batchId, venueId);
     const { error } = await supabase.rpc("lls_v2_approve_batch" as never, { _batch_id: data.batchId } as never);
