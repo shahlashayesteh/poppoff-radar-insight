@@ -504,6 +504,17 @@ function LlsPage() {
     setWeekStart(toISODate(d));
   };
 
+  // Phase 16A: short-circuit before fetching anything venue-scoped.
+  if (active.status !== "ready") {
+    return (
+      <ManagerLayout>
+        <div className="px-8 py-8 max-w-7xl">
+          <NoVenueState status={active.status} venues={active.venues} />
+        </div>
+      </ManagerLayout>
+    );
+  }
+
   return (
     <ManagerLayout>
       <div className="px-8 py-8 max-w-7xl">
