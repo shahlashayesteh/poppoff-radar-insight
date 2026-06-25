@@ -209,8 +209,10 @@ d('No v1 surface was modified', () => {
         AND table_name IN ('shifts','shift_import_batches','venue_opportunity_factors')
       GROUP BY table_name ORDER BY table_name;`)
     // Phase 6 added one nullable FK column to shifts so committed batches can be rolled back.
-    // shift_import_batches (v1) and venue_opportunity_factors are unchanged.
-    expect(out).toContain('shifts:21')
+    // Phase 18 added 9 nullable provenance columns (sales_basis, labor_basis, reliability_class,
+    // identity_match_method, identity_match_confidence, source_system, source_row_hash,
+    // provenance, imported_at). v1 calculation surface is untouched.
+    expect(out).toContain('shifts:30')
     expect(out).toContain('shift_import_batches:9')
     expect(out).toContain('venue_opportunity_factors:7')
   })
