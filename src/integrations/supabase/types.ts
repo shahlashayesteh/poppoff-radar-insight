@@ -618,6 +618,62 @@ export type Database = {
           },
         ]
       }
+      organisation_memberships: {
+        Row: {
+          created_at: string
+          id: string
+          organisation_id: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          organisation_id: string
+          role: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          organisation_id?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organisation_memberships_organisation_id_fkey"
+            columns: ["organisation_id"]
+            isOneToOne: false
+            referencedRelation: "organisations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organisations: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          owner_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          owner_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          owner_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       payment_events: {
         Row: {
           created_at: string
@@ -2480,6 +2536,7 @@ export type Database = {
           lls_v2_baseline_weeks: number
           manager_id: string
           name: string
+          organisation_id: string | null
           updated_at: string
         }
         Insert: {
@@ -2491,6 +2548,7 @@ export type Database = {
           lls_v2_baseline_weeks?: number
           manager_id: string
           name: string
+          organisation_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -2502,9 +2560,18 @@ export type Database = {
           lls_v2_baseline_weeks?: number
           manager_id?: string
           name?: string
+          organisation_id?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "venues_organisation_id_fkey"
+            columns: ["organisation_id"]
+            isOneToOne: false
+            referencedRelation: "organisations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       weekly_priorities: {
         Row: {
@@ -2641,6 +2708,16 @@ export type Database = {
           total_servers: number
         }[]
       }
+      get_my_accessible_venues: {
+        Args: never
+        Returns: {
+          access_source: string
+          id: string
+          join_code: string
+          name: string
+          organisation_id: string
+        }[]
+      }
       get_my_manager_venue: {
         Args: never
         Returns: {
@@ -2752,6 +2829,10 @@ export type Database = {
         Args: { _user_id: string; _venue_id: string; _week_start: string }
         Returns: undefined
       }
+      user_can_access_venue: {
+        Args: { _user_id: string; _venue_id: string }
+        Returns: boolean
+      }
       venue_weekly_leaderboard: {
         Args: { p_venue_id: string; p_week_start: string }
         Returns: {
@@ -2765,7 +2846,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "manager" | "server"
+      app_role: "manager" | "server" | "head_office"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2893,7 +2974,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["manager", "server"],
+      app_role: ["manager", "server", "head_office"],
     },
   },
 } as const

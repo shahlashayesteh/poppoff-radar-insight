@@ -11,6 +11,9 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { requirePaidManagerEntitlement } from "@/lib/entitlements-guard";
+// Phase 16 — validate the requested venue belongs to the caller before any read.
+import { assertVenueAccess } from "@/lib/venue-access";
+
 
 /**
  * Lightweight verification endpoint. Returns "ok" if the caller is entitled,
@@ -33,6 +36,7 @@ export const listMenuSuggestions = createServerFn({ method: "POST" })
   .inputValidator((d: z.input<typeof VenueInput>) => VenueInput.parse(d))
   .handler(async ({ data, context }) => {
     await requirePaidManagerEntitlement(context.supabase, context.userId);
+    await assertVenueAccess(context.supabase, context.userId, data.venueId);
     const { data: rows, error } = await context.supabase
       .from("menu_item_suggestions")
       .select("id,item_name,category,price,margin,ai_reason,status,source_file,rejected_reason")
@@ -47,6 +51,7 @@ export const listVenueMenus = createServerFn({ method: "POST" })
   .inputValidator((d: z.input<typeof VenueInput>) => VenueInput.parse(d))
   .handler(async ({ data, context }) => {
     await requirePaidManagerEntitlement(context.supabase, context.userId);
+    await assertVenueAccess(context.supabase, context.userId, data.venueId);
     const { data: rows, error } = await context.supabase
       .from("venue_menu")
       .select("id, menu_text, parsed_items, uploaded_at")
@@ -68,6 +73,7 @@ export const listWeeklyPriorities = createServerFn({ method: "POST" })
   .inputValidator((d: z.input<typeof PrioritiesInput>) => PrioritiesInput.parse(d))
   .handler(async ({ data, context }) => {
     await requirePaidManagerEntitlement(context.supabase, context.userId);
+    await assertVenueAccess(context.supabase, context.userId, data.venueId);
     let query = context.supabase
       .from("weekly_priorities")
       .select("*")
@@ -93,6 +99,7 @@ export const listCoachingPriorities = createServerFn({ method: "POST" })
   .inputValidator((d: z.input<typeof CoachingInput>) => CoachingInput.parse(d))
   .handler(async ({ data, context }) => {
     await requirePaidManagerEntitlement(context.supabase, context.userId);
+    await assertVenueAccess(context.supabase, context.userId, data.venueId);
     let query = context.supabase
       .from("weekly_priorities")
       .select(
@@ -117,6 +124,7 @@ export const getTeamAnalytics = createServerFn({ method: "POST" })
   .inputValidator((d: z.input<typeof TeamInput>) => TeamInput.parse(d))
   .handler(async ({ data, context }) => {
     await requirePaidManagerEntitlement(context.supabase, context.userId);
+    await assertVenueAccess(context.supabase, context.userId, data.venueId);
     const { supabase } = context;
 
     const { data: vm } = await supabase
@@ -163,6 +171,7 @@ export const getManagerReportsData = createServerFn({ method: "POST" })
   .inputValidator((d: z.input<typeof VenueInput>) => VenueInput.parse(d))
   .handler(async ({ data, context }) => {
     await requirePaidManagerEntitlement(context.supabase, context.userId);
+    await assertVenueAccess(context.supabase, context.userId, data.venueId);
     const { data: rows, error } = await context.supabase
       .from("server_stats")
       .select("week_start, total_covers, total_sales")
