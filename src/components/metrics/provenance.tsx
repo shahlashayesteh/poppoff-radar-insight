@@ -52,12 +52,23 @@ export const PROVENANCE_DESCRIPTION: Record<Provenance, string> = {
 };
 
 export const LABOR_BASIS_LABEL: Record<LaborBasis, string> = {
-  fully_loaded: "Fully loaded labour cost",
-  total: "Total labour cost",
-  wage_plus_oncost: "Wage cost + employer on-cost",
-  wage_only: "Wage cost only (not fully loaded)",
-  rate_times_hours: "Derived: hourly rate × hours (wage approximation)",
+  fully_loaded: "Fully loaded labour",
+  total: "Total labour",
+  wage_plus_oncost: "Wage + employer on-cost",
+  wage_only: "Wage only",
+  rate_times_hours: "Hours × rate (estimate)",
+  mixed: "Mixed labour basis",
+  unknown: "Unknown labour basis",
   none: "No labour cost basis",
+};
+
+export const SALES_BASIS_LABEL: Record<import("@/lib/metrics/types").SalesBasis, string> = {
+  net_sales_source: "Net sales",
+  net_sales_derived: "Net (derived from gross − leakage)",
+  gross_sales_source: "Gross sales",
+  gross_used_as_net_estimate: "Gross used as net estimate",
+  mixed: "Mixed sales basis",
+  unknown: "Unknown basis",
 };
 
 const PROVENANCE_TONE: Record<Provenance, string> = {
