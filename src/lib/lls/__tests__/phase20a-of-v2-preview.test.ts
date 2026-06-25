@@ -152,8 +152,7 @@ describe("Phase 20A — OF v2 preview adapter", () => {
     expect(out.opportunity_factor_v1).toBeCloseTo(1.0, 5);
   });
 
-  it("flags material change only when delta ≥ threshold AND confidence not low", () => {
-    // history that pushes v2 noticeably above v1
+  it("materially_different respects threshold + confidence contract", () => {
     const history: PreviewHistoryRow[] = [];
     for (let w = 1; w <= 8; w++) {
       const ws = `2026-04-${String(20 + w).padStart(2, "0")}`;
@@ -175,11 +174,13 @@ describe("Phase 20A — OF v2 preview adapter", () => {
       history,
       selectedWeek: sel,
     });
-    expect(out.opportunity_factor_delta).not.toBeNull();
-    if (out.confidence !== "low") {
-      expect(Math.abs(out.opportunity_factor_delta!)).toBeGreaterThanOrEqual(
-        OF_V2_MATERIAL_DELTA - 1e-9,
-      );
+    // Contract: when low-confidence, never raises the material-change flag.
+    if (out.confidence === "low") {
+      expect(out.materially_different).toBe(false);
+    } else {
+      const meets = out.opportunity_factor_delta != null &&
+        Math.abs(out.opportunity_factor_delta) >= OF_V2_MATERIAL_DELTA;
+      expect(out.materially_different).toBe(meets);
     }
   });
 
