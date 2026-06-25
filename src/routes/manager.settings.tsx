@@ -25,6 +25,7 @@ const SECTIONS = [
   { id: "visibility", label: "Server visibility" },
   { id: "lls", label: "LLS thresholds" },
   { id: "billing", label: "Billing & subscription" },
+  { id: "trust", label: "Enterprise trust" },
   { id: "audit", label: "Audit logs" },
 ] as const;
 
@@ -321,7 +322,27 @@ function SettingsPage() {
           )}
         </section>
 
-        {/* Audit logs */}
+        {/* Phase 24 — Enterprise trust surface */}
+        <section id="trust" className="mt-6 rounded-2xl bg-white border border-border p-6 space-y-3" data-testid="enterprise-trust-section">
+          <h2 className="font-display text-lg font-bold">Enterprise trust</h2>
+          <p className="text-xs text-muted-foreground">
+            How PoppOff keeps your data safe, auditable and operator-defensible.
+            Each item below is enforced in the product, not just documented.
+          </p>
+          <ul className="mt-2 space-y-2 text-sm">
+            <li><strong>Role-based access.</strong> Manager intelligence (LLS, labour basis, ROI, evidence trace) is gated by role + active subscription. Server pages never receive it.</li>
+            <li><strong>Active-venue isolation.</strong> Every paid manager fetch validates venue access; multi-venue users must pick one explicitly.</li>
+            <li><strong>Provenance on every row.</strong> Committed shifts persist source system, file, batch, basis, identity method and reliability class.</li>
+            <li><strong>Reliability labels.</strong> Numbers are tagged measured / derived / estimated / contextual; low-confidence inputs cannot drive hard recommendations.</li>
+            <li><strong>Evidence trace.</strong> Every recommendation links back to what it was based on, what was excluded and why.</li>
+            <li><strong>OF v2 preview only.</strong> Adjusted LLS is unchanged; the v2 engine runs alongside as audit-only metadata.</li>
+            <li><strong>Server / manager separation.</strong> Server routes do not import manager data, ROI, pilot, trace or evidence modules.</li>
+            <li><strong>Demo / real separation.</strong> <code>/demo/*</code> routes render synthetic fixtures only — never real venue data.</li>
+            <li><strong>Import safety.</strong> Uploads stage → validate → resolve identity → approve → commit, with ambiguity blocks and per-venue batch ownership checks on every lifecycle call.</li>
+          </ul>
+        </section>
+
+
         <section id="audit" className="mt-6 rounded-2xl bg-white border border-border p-6 space-y-3">
           <h2 className="font-display text-lg font-bold">Audit logs</h2>
           <p className="text-xs text-muted-foreground">

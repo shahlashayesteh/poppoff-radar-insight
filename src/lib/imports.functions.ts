@@ -12,7 +12,7 @@ import {
   type IdentityDirectory, type EmployeeRecord, type SourceIdLink, type AliasLink,
 } from "@/lib/imports/identity";
 // Phase 12A — Shared entitlement guard (was inlined in Phase 12).
-import { requireImportEntitlement } from "@/lib/entitlements-guard";
+import { requireImportEntitlement, requirePaidManagerEntitlement } from "@/lib/entitlements-guard";
 
 
 // ---- venue resolver (Phase 16: organisation-aware, membership-validated) ----
@@ -382,6 +382,7 @@ export const approveImportBatch = createServerFn({ method: "POST" })
   .inputValidator((d: z.input<typeof BatchIdInput>) => BatchIdInput.parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
+    await requirePaidManagerEntitlement(supabase, userId);
     const venueId = await getManagerVenueId(supabase, userId, data.venueId);
     await assertBatchInVenue(supabase, data.batchId, venueId);
     const { error } = await supabase.rpc("lls_v2_approve_batch" as never, { _batch_id: data.batchId } as never);
@@ -412,6 +413,7 @@ export const rollbackImportBatch = createServerFn({ method: "POST" })
   .inputValidator((d: z.input<typeof BatchIdInput>) => BatchIdInput.parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
+    await requirePaidManagerEntitlement(supabase, userId, "import");
     const venueId = await getManagerVenueId(supabase, userId, data.venueId);
     await assertBatchInVenue(supabase, data.batchId, venueId);
     const { data: res, error } = await supabase.rpc(
