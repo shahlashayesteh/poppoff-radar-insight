@@ -643,16 +643,20 @@ export const excludeStagingRow = createServerFn({ method: "POST" })
   });
 
 // Directory list for the manager UI (employees + aliases).
-export const listVenueEmployees = createServerFn({ method: "GET" })
+// Phase 16A — accepts optional venueId so multi-venue managers can scope.
+export const listVenueEmployees = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
+  .inputValidator((d: { venueId?: string } | undefined) =>
+    z.object(OptionalVenue).parse(d ?? {}),
+  )
+  .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const venueId = await getManagerVenueId(supabase, userId);
-    const { data, error } = await supabase
+    const venueId = await getManagerVenueId(supabase, userId, data.venueId);
+    const { data: rows, error } = await supabase
       .from("employee_master")
       .select("id, display_name, normalised_name, pos_employee_id, labour_employee_id, status")
       .eq("venue_id", venueId)
       .order("display_name", { ascending: true });
     if (error) throw new Error(error.message);
-    return { employees: data ?? [] };
+    return { employees: rows ?? [] };
   });
