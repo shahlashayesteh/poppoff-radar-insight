@@ -45,6 +45,7 @@ type Priority = {
 function Page() {
   useRoleGate("manager");
   useVerifyPaidManagerAccess();
+  const active = useActiveVenue();
   const fetchCoaching = useServerFn(listCoachingPriorities);
 
   const [venueId, setVenueId] = useState<string | null>(null);
