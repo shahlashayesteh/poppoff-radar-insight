@@ -90,17 +90,33 @@ function MenuIntel() {
     const items = (latest.parsed_items ?? []).filter((it) => it.name?.trim());
     if (items.length === 0) { toast.error("No parsed items in latest menu"); return; }
     const { data: u } = await supabase.auth.getUser();
-    const rows = items.slice(0, 200).map((it) => ({
-      venue_id: venueId,
-      item_name: it.name.trim(),
-      category: it.category ?? null,
-      price: it.price ? Number(String(it.price).replace(/[^0-9.]/g, "")) || null : null,
-      ai_reason: it.pairing ? `Pairs with ${it.pairing}` : it.priority ? `AI flagged ${it.priority}` : null,
-      source_menu_id: latest.id,
-      source_file: (latest.menu_text || "").split("\n")[0]?.replace(/^#\s*/, "") || null,
-      status: "ai_suggested" as const,
-      created_by: u.user?.id ?? null,
-    }));
+    const rows = items.slice(0, 200).map((it) => {
+      // Phase 18A — persist evidence at suggestion creation. Menu items are
+      // derived from the uploaded menu file (a measured artefact), not from
+      // POS sales, so we record that explicitly. Sections / SevenRooms data
+      // are contextual-only and never enter based_on.
+      const evidence = buildRecommendationEvidence({
+        based_on: ["menu_document"],
+        excluded_contextual_fields: ["sevenrooms_section"],
+        explanation_basis: it.pairing
+          ? `Suggested from latest menu (pairs with ${it.pairing}).`
+          : "Suggested from latest menu upload.",
+        source_metrics: { source_menu_id: latest.id },
+      });
+      return {
+        venue_id: venueId,
+        item_name: it.name.trim(),
+        category: it.category ?? null,
+        price: it.price ? Number(String(it.price).replace(/[^0-9.]/g, "")) || null : null,
+        ai_reason: it.pairing ? `Pairs with ${it.pairing}` : it.priority ? `AI flagged ${it.priority}` : null,
+        source_menu_id: latest.id,
+        source_file: (latest.menu_text || "").split("\n")[0]?.replace(/^#\s*/, "") || null,
+        status: "ai_suggested" as const,
+        created_by: u.user?.id ?? null,
+        evidence: evidence as never,
+        recommendation_confidence: recommendationConfidence(evidence),
+      };
+    });
     const { data: inserted, error } = await supabase.from("menu_item_suggestions").insert(rows).select("id");
     if (error) { toast.error(error.message); return; }
     for (const r of inserted ?? []) await logSugAudit(venueId, r.id, null, "ai_suggested", "Staged from latest menu");
