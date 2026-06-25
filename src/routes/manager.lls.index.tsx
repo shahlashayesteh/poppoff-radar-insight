@@ -47,6 +47,8 @@ import { MARKETS, MARKET_ORDER, type MarketId } from "@/lib/markets";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useRoleGate } from "@/lib/auth-gate";
 import { PaidManagerGate } from "@/components/manager/PaidManagerGate";
+import { useActiveVenue } from "@/hooks/use-active-venue";
+import { NoVenueState } from "@/components/manager/no-venue-state";
 
 export const Route = createFileRoute("/manager/lls/")({
   component: () => (
