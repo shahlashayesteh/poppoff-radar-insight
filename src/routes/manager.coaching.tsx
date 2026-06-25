@@ -15,6 +15,8 @@ import { toast } from "sonner";
 import { PaidManagerGate } from "@/components/manager/PaidManagerGate";
 import { useVerifyPaidManagerAccess } from "@/hooks/use-verify-paid-manager-access";
 import { listCoachingPriorities } from "@/lib/manager-data.functions";
+import { getRecommendationTrace } from "@/lib/manager-trace.functions";
+import { ManagerTraceDrawer, type TracePayload } from "@/components/manager/manager-trace-drawer";
 import { useActiveVenue } from "@/hooks/use-active-venue";
 import { NoVenueState } from "@/components/manager/no-venue-state";
 import { EvidenceBasis } from "@/components/reliability";
@@ -48,6 +50,8 @@ function Page() {
   useVerifyPaidManagerAccess();
   const active = useActiveVenue();
   const fetchCoaching = useServerFn(listCoachingPriorities);
+  const fetchRecTrace = useServerFn(getRecommendationTrace);
+  const [recTrace, setRecTrace] = useState<TracePayload>({ kind: "loading" });
 
   const [venueId, setVenueId] = useState<string | null>(null);
   const [priorities, setPriorities] = useState<Priority[]>([]);
@@ -137,12 +141,28 @@ function Page() {
             <ul className="mt-3 grid sm:grid-cols-2 gap-2 text-sm">
               {[...sent, ...approved].map((p) => (
                 <li key={p.id} className="rounded-xl border border-border px-3 py-2">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-semibold">{p.title || p.item_name}</span>
                     <span className="text-[10px] uppercase tracking-wider rounded px-1.5 py-0.5"
                       style={{ background: "color-mix(in oklab, var(--brand-green) 14%, white)", color: "var(--brand-green)" }}>
                       {p.status === "sent_to_servers" ? "live" : "approved"}
                     </span>
+                    <ManagerTraceDrawer
+                      label="Evidence"
+                      title={`Priority · ${p.title || p.item_name}`}
+                      payload={recTrace}
+                      onOpen={async () => {
+                        if (!venueId) return;
+                        setRecTrace({ kind: "loading" });
+                        try {
+                          const res = await fetchRecTrace({ data: { venueId, recordType: "weekly_priority", recordId: p.id } });
+                          if (!res.found) setRecTrace({ kind: "empty", message: "No evidence recorded." });
+                          else setRecTrace({ kind: "recommendation", recordType: "weekly_priority", evidence: res.evidence, created_at: res.created_at });
+                        } catch (e: any) {
+                          setRecTrace({ kind: "error", message: e?.message ?? "Failed to load evidence" });
+                        }
+                      }}
+                    />
                   </div>
                   {p.reason && <div className="text-xs text-muted-foreground mt-1">{p.reason}</div>}
                   {p.expected_impact && (

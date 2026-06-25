@@ -19,6 +19,8 @@ import {
 import { Download } from "lucide-react";
 import { PaidManagerGate } from "@/components/manager/PaidManagerGate";
 import { getManagerReportsData } from "@/lib/manager-data.functions";
+import { getReportsTrace } from "@/lib/manager-trace.functions";
+import { ManagerTraceDrawer, type TracePayload } from "@/components/manager/manager-trace-drawer";
 import { useActiveVenue } from "@/hooks/use-active-venue";
 import { NoVenueState } from "@/components/manager/no-venue-state";
 
@@ -89,8 +91,10 @@ function Page() {
   useVerifyPaidManagerAccess();
   const active = useActiveVenue();
   const fetchReports = useServerFn(getManagerReportsData);
+  const fetchReportsTrace = useServerFn(getReportsTrace);
   const [weeks, setWeeks] = useState<WeekRow[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const [reportsTrace, setReportsTrace] = useState<TracePayload>({ kind: "loading" });
 
   useEffect(() => {
     if (active.status !== "ready" || !active.venueId) return;
@@ -141,13 +145,30 @@ function Page() {
               <Link to="/manager/lls" className="underline">LLS workspace</Link>.
             </p>
           </div>
-          <button
-            onClick={() => downloadCsv(weeks)}
-            disabled={weeks.length === 0}
-            className="inline-flex items-center gap-2 rounded-xl border border-border bg-white px-3 py-2 text-sm font-semibold disabled:opacity-50"
-          >
-            <Download className="h-4 w-4" /> Export CSV
-          </button>
+          <div className="flex items-center gap-2">
+            <ManagerTraceDrawer
+              label="Trace source"
+              title="Reports evidence"
+              payload={reportsTrace}
+              onOpen={async () => {
+                if (!active.venueId) return;
+                setReportsTrace({ kind: "loading" });
+                try {
+                  const res = await fetchReportsTrace({ data: { venueId: active.venueId } });
+                  setReportsTrace({ kind: "reports", sampled: res.sampled, tally: res.tally });
+                } catch (e: any) {
+                  setReportsTrace({ kind: "error", message: e?.message ?? "Failed to load trace" });
+                }
+              }}
+            />
+            <button
+              onClick={() => downloadCsv(weeks)}
+              disabled={weeks.length === 0}
+              className="inline-flex items-center gap-2 rounded-xl border border-border bg-white px-3 py-2 text-sm font-semibold disabled:opacity-50"
+            >
+              <Download className="h-4 w-4" /> Export CSV
+            </button>
+          </div>
         </div>
 
         <OperationsStatusStrip />

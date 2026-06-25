@@ -23,6 +23,8 @@ import { PaidManagerGate } from "@/components/manager/PaidManagerGate";
 import { useActiveVenue } from "@/hooks/use-active-venue";
 import { NoVenueState } from "@/components/manager/no-venue-state";
 import { ReliabilityBadge } from "@/components/reliability";
+import { ManagerTraceDrawer, type TracePayload } from "@/components/manager/manager-trace-drawer";
+import { getImportTrace } from "@/lib/manager-trace.functions";
 
 export const Route = createFileRoute("/manager/imports/$batchId")({
   component: () => (
@@ -94,6 +96,8 @@ function ImportBatchDetail() {
   const doAlias = useServerFn(linkIdentityAlias);
   const doExclude = useServerFn(excludeStagingRow);
   const fetchEmployees = useServerFn(listVenueEmployees);
+  const fetchImportTrace = useServerFn(getImportTrace);
+  const [importTrace, setImportTrace] = useState<TracePayload>({ kind: "loading" });
 
   const active = useActiveVenue();
   const venueId = active.venueId ?? undefined;
@@ -213,8 +217,27 @@ function ImportBatchDetail() {
               {batch.source_kind} · {batch.source_system ?? "unknown source"} · uploaded {new Date(batch.created_at).toLocaleString()}
             </p>
           </div>
-          <Badge>{batch.status.replace(/_/g, " ")}</Badge>
+          <div className="flex items-center gap-2">
+            <ManagerTraceDrawer
+              label="Trace source"
+              title={`Import batch · ${batch.source_filename ?? batch.id}`}
+              payload={importTrace}
+              onOpen={async () => {
+                if (!venueId) return;
+                setImportTrace({ kind: "loading" });
+                try {
+                  const res = await fetchImportTrace({ data: { venueId, batchId } });
+                  if (!res.found) setImportTrace({ kind: "empty", message: "Batch not found." });
+                  else setImportTrace({ kind: "import", batch: res.batch, sampleRows: res.sampleRows });
+                } catch (e: any) {
+                  setImportTrace({ kind: "error", message: e?.message ?? "Failed to load trace" });
+                }
+              }}
+            />
+            <Badge>{batch.status.replace(/_/g, " ")}</Badge>
+          </div>
         </div>
+
 
         {batch.file_hash && (
           <p className="text-xs text-muted-foreground font-mono break-all">

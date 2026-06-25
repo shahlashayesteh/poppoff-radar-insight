@@ -12,6 +12,8 @@ import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
 import { PaidManagerGate } from "@/components/manager/PaidManagerGate";
 import { useVerifyPaidManagerAccess } from "@/hooks/use-verify-paid-manager-access";
 import { listWeeklyPriorities } from "@/lib/manager-data.functions";
+import { getRecommendationTrace } from "@/lib/manager-trace.functions";
+import { ManagerTraceDrawer, type TracePayload } from "@/components/manager/manager-trace-drawer";
 import { useActiveVenue } from "@/hooks/use-active-venue";
 import { NoVenueState } from "@/components/manager/no-venue-state";
 import { EvidenceBasis } from "@/components/reliability";
@@ -89,6 +91,9 @@ function Priorities() {
   useVerifyPaidManagerAccess();
   const active = useActiveVenue();
   const fetchPriorities = useServerFn(listWeeklyPriorities);
+
+  const fetchRecTrace = useServerFn(getRecommendationTrace);
+  const [recTrace, setRecTrace] = useState<TracePayload>({ kind: "loading" });
 
   const [venueId, setVenueId] = useState<string | null>(null);
   const [items, setItems] = useState<Priority[]>([]);
@@ -319,6 +324,22 @@ function Priorities() {
                     )}
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
+                    <ManagerTraceDrawer
+                      label="Evidence"
+                      title={`Priority · ${it.title || it.item_name}`}
+                      payload={recTrace}
+                      onOpen={async () => {
+                        if (!venueId) return;
+                        setRecTrace({ kind: "loading" });
+                        try {
+                          const res = await fetchRecTrace({ data: { venueId, recordType: "weekly_priority", recordId: it.id } });
+                          if (!res.found) setRecTrace({ kind: "empty", message: "No evidence recorded for this priority." });
+                          else setRecTrace({ kind: "recommendation", recordType: "weekly_priority", evidence: res.evidence, created_at: res.created_at });
+                        } catch (e: any) {
+                          setRecTrace({ kind: "error", message: e?.message ?? "Failed to load evidence" });
+                        }
+                      }}
+                    />
                     {it.status === "ai_suggested" && (
                       <>
                         <button disabled={busy === it.id} onClick={() => transition(it, "approved")} className="text-xs font-semibold rounded-lg px-3 py-1.5 text-white" style={{ background: "var(--brand-green)" }}>

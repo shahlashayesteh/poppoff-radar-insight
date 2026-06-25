@@ -50,6 +50,8 @@ import { useRoleGate } from "@/lib/auth-gate";
 import { PaidManagerGate } from "@/components/manager/PaidManagerGate";
 import { useActiveVenue } from "@/hooks/use-active-venue";
 import { NoVenueState } from "@/components/manager/no-venue-state";
+import { ManagerTraceDrawer, type TracePayload } from "@/components/manager/manager-trace-drawer";
+import { getLlsTrace, getOfV2AssessmentTrace } from "@/lib/manager-trace.functions";
 
 export const Route = createFileRoute("/manager/lls/")({
   component: () => (
@@ -268,6 +270,12 @@ function LlsPage() {
   const fetchBatches = useServerFn(listRecentBatches);
   const doRollback = useServerFn(rollbackBatch);
   const fetchLeverage = useServerFn(getSchedulingLeverage);
+  const fetchLlsTrace = useServerFn(getLlsTrace);
+  const fetchOfV2Trace = useServerFn(getOfV2AssessmentTrace);
+
+  // Phase 21 — manager trace drawers (lazy-loaded on open).
+  const [llsTrace, setLlsTrace] = useState<TracePayload>({ kind: "loading" });
+  const [ofV2Trace, setOfV2Trace] = useState<TracePayload>({ kind: "loading" });
 
   const venueId = active.venueId ?? undefined;
 
@@ -656,8 +664,28 @@ function LlsPage() {
 
         {/* Phase 20A — Opportunity Factor v2 preview (read-only) */}
         {scorecard?.opportunity_factor_preview ? (
-          <OfV2PreviewCard preview={scorecard.opportunity_factor_preview} />
+          <div className="mt-4">
+            <div className="flex justify-end mb-1">
+              <ManagerTraceDrawer
+                label="Trace OF v2 source"
+                title={`OF v2 preview · ${weekStart}`}
+                payload={ofV2Trace}
+                onOpen={async () => {
+                  if (!venueId) return;
+                  setOfV2Trace({ kind: "loading" });
+                  try {
+                    const res = await fetchOfV2Trace({ data: { venueId, weekStart } });
+                    setOfV2Trace({ kind: "ofv2", weekStart: res.weekStart, overall: res.overall, byDaypart: res.byDaypart, byDayOfWeek: res.byDayOfWeek });
+                  } catch (e: any) {
+                    setOfV2Trace({ kind: "error", message: e?.message ?? "Failed to load OF v2 trace" });
+                  }
+                }}
+              />
+            </div>
+            <OfV2PreviewCard preview={scorecard.opportunity_factor_preview} />
+          </div>
         ) : null}
+
 
 
 
@@ -705,7 +733,24 @@ function LlsPage() {
 
         {/* Scorecard */}
         <div className="mt-6 rounded-2xl bg-white border border-border p-6">
-          <h2 className="font-display text-lg font-bold">Weekly scorecard</h2>
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="font-display text-lg font-bold">Weekly scorecard</h2>
+            <ManagerTraceDrawer
+              label="View evidence"
+              title={`Weekly scorecard evidence · ${weekStart}`}
+              payload={llsTrace}
+              onOpen={async () => {
+                if (!venueId) return;
+                setLlsTrace({ kind: "loading" });
+                try {
+                  const res = await fetchLlsTrace({ data: { venueId, weekStart } });
+                  setLlsTrace({ kind: "lls", weekStart: res.weekStart, sampleCount: res.sampleCount, reliabilityTally: res.reliabilityTally, samples: res.samples as any });
+                } catch (e: any) {
+                  setLlsTrace({ kind: "error", message: e?.message ?? "Failed to load trace" });
+                }
+              }}
+            />
+          </div>
           {scorecard?.servers.length ? (
             <div className="mt-4 overflow-x-auto">
               <table className="w-full text-sm">
@@ -872,7 +917,26 @@ function LlsPage() {
 
         {/* Scheduling Leverage Matrix — manager-only intelligence */}
         {leverage && leverage.matrix.length > 0 && (
-          <SchedulingLeverageMatrix data={leverage} currency={MARKETS[displayMarket].currencySymbol} />
+          <div className="mt-6">
+            <div className="flex justify-end mb-1">
+              <ManagerTraceDrawer
+                label="Trace OF v2 source"
+                title={`Scheduling Leverage · OF v2 preview · ${weekStart}`}
+                payload={ofV2Trace}
+                onOpen={async () => {
+                  if (!venueId) return;
+                  setOfV2Trace({ kind: "loading" });
+                  try {
+                    const res = await fetchOfV2Trace({ data: { venueId, weekStart } });
+                    setOfV2Trace({ kind: "ofv2", weekStart: res.weekStart, overall: res.overall, byDaypart: res.byDaypart, byDayOfWeek: res.byDayOfWeek });
+                  } catch (e: any) {
+                    setOfV2Trace({ kind: "error", message: e?.message ?? "Failed to load OF v2 trace" });
+                  }
+                }}
+              />
+            </div>
+            <SchedulingLeverageMatrix data={leverage} currency={MARKETS[displayMarket].currencySymbol} />
+          </div>
         )}
 
 
