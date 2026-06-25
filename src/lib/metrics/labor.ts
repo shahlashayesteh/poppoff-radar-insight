@@ -13,6 +13,24 @@ export interface LaborInput {
   clock_out?: string | null;
   unpaid_break_minutes?: number | null;
   scheduled_hours?: number | null;
+  /** Explicit override — uploader / venue setting declares the labour basis. */
+  labor_basis?: LaborBasis | null;
+}
+
+/**
+ * Aggregate labour basis across rows.
+ * Returns "mixed" if rows span more than one materially different basis,
+ * so manager UI can block, segment, or warn against unsafe aggregation.
+ */
+export function aggregateLaborBasis(bases: Array<LaborBasis | null | undefined>): LaborBasis {
+  const seen = new Set<LaborBasis>();
+  for (const b of bases) {
+    if (!b || b === "none" || b === "unknown") continue;
+    seen.add(b);
+  }
+  if (seen.size === 0) return "unknown";
+  if (seen.size === 1) return [...seen][0];
+  return "mixed";
 }
 
 const isNum = (v: unknown): v is number => typeof v === "number" && isFinite(v);
