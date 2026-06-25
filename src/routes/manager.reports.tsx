@@ -86,27 +86,24 @@ function downloadCsv(rows: WeekRow[]) {
 function Page() {
   useRoleGate("manager");
   useVerifyPaidManagerAccess();
+  const active = useActiveVenue();
   const fetchReports = useServerFn(getManagerReportsData);
   const [weeks, setWeeks] = useState<WeekRow[]>([]);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
+    if (active.status !== "ready" || !active.venueId) return;
+    const venueId = active.venueId;
     (async () => {
-      const venue = await getManagerVenue();
-      const v = venue?.id;
-      if (!v) {
-        setLoaded(true);
-        return;
-      }
       try {
-        const res = await fetchReports({ data: { venueId: v } });
+        const res = await fetchReports({ data: { venueId } });
         setWeeks((res?.weeks ?? []) as WeekRow[]);
       } catch {
         setWeeks([]);
       }
       setLoaded(true);
     })();
-  }, [fetchReports]);
+  }, [fetchReports, active.status, active.venueId]);
 
   const currentWeek = toISODate(getMondayOfWeek());
 
@@ -119,6 +116,16 @@ function Page() {
       previous: prev ?? null,
     };
   }, [weeks]);
+
+  if (active.status !== "ready") {
+    return (
+      <ManagerLayout>
+        <div className="px-8 py-8 max-w-5xl">
+          <NoVenueState status={active.status} venues={active.venues} />
+        </div>
+      </ManagerLayout>
+    );
+  }
 
   return (
     <ManagerLayout>
