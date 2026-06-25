@@ -46,8 +46,15 @@ import { SchedulingLeverageMatrix } from "@/components/lls/scheduling-leverage-m
 import { MARKETS, MARKET_ORDER, type MarketId } from "@/lib/markets";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useRoleGate } from "@/lib/auth-gate";
+import { PaidManagerGate } from "@/components/manager/PaidManagerGate";
 
-export const Route = createFileRoute("/manager/lls/")({ component: LlsPage });
+export const Route = createFileRoute("/manager/lls/")({
+  component: () => (
+    <PaidManagerGate feature="LLS scheduling intelligence">
+      <LlsPage />
+    </PaidManagerGate>
+  ),
+});
 
 const DAYPARTS: Daypart[] = ["breakfast", "brunch", "lunch", "dinner", "late"];
 const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
