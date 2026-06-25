@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { ManagerLayout } from "@/components/manager-layout";
 import { supabase } from "@/integrations/supabase/client";
 import { getManagerVenue } from "@/lib/manager-venue";
@@ -10,6 +11,7 @@ import { toast } from "sonner";
 import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
 import { PaidManagerGate } from "@/components/manager/PaidManagerGate";
 import { useVerifyPaidManagerAccess } from "@/hooks/use-verify-paid-manager-access";
+import { listMenuSuggestions, listVenueMenus } from "@/lib/manager-data.functions";
 
 export const Route = createFileRoute("/manager/menu")({
   component: () => (
