@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { ManagerLayout } from "@/components/manager-layout";
 import { supabase } from "@/integrations/supabase/client";
 import { getManagerVenue } from "@/lib/manager-venue";
@@ -14,6 +15,7 @@ import { MetricTooltip, ModelledValueLabel } from "@/components/metrics";
 import { OperationsStatusStrip } from "@/components/manager/operations-status-strip";
 import { PaidManagerGate } from "@/components/manager/PaidManagerGate";
 import { useVerifyPaidManagerAccess } from "@/hooks/use-verify-paid-manager-access";
+import { getTeamAnalytics } from "@/lib/manager-data.functions";
 
 
 export const Route = createFileRoute("/manager/team")({
