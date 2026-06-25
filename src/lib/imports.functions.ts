@@ -15,19 +15,16 @@ import {
 import { requireImportEntitlement } from "@/lib/entitlements-guard";
 
 
-// ---- venue resolver (same deterministic policy as lls.functions.ts) ----
-async function getManagerVenueId(supabase: any, userId: string): Promise<string> {
-  const { data, error } = await supabase
-    .from("venues")
-    .select("id, created_at")
-    .eq("manager_id", userId)
-    .order("created_at", { ascending: true })
-    .order("id", { ascending: true });
-  if (error) throw new Error(error.message);
-  const rows = (data ?? []) as Array<{ id: string }>;
-  if (rows.length === 0) throw new Error("No venue found for this manager");
-  return rows[0].id;
+// ---- venue resolver (Phase 16: organisation-aware, membership-validated) ----
+import { resolveManagerVenueId } from "@/lib/venue-access";
+async function getManagerVenueId(
+  supabase: any,
+  userId: string,
+  requestedVenueId?: string | null,
+): Promise<string> {
+  return resolveManagerVenueId(supabase, userId, requestedVenueId);
 }
+
 
 const RawRowSchema = z
   .object({
