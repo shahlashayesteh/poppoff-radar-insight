@@ -40,6 +40,8 @@ type Priority = {
 
 function Page() {
   useRoleGate("manager");
+  useVerifyPaidManagerAccess();
+
   const [venueId, setVenueId] = useState<string | null>(null);
   const [priorities, setPriorities] = useState<Priority[]>([]);
   const [insights, setInsights] = useState<string>("");
