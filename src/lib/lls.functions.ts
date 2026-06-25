@@ -468,13 +468,13 @@ export const listRecentBatches = createServerFn({ method: "POST" })
     const { supabase, userId } = context;
     await requirePaidManagerEntitlement(supabase, userId);
     const venueId = await getManagerVenueId(supabase, userId, data.venueId);
-    const { data } = await supabase
+    const { data: rows } = await supabase
       .from("shift_import_batches")
       .select("id, source_type, filename, row_count, status, created_at")
       .eq("venue_id", venueId)
       .order("created_at", { ascending: false })
       .limit(10);
-    return { batches: data ?? [] };
+    return { batches: rows ?? [] };
   });
 
 // ---------- weekly scorecard ----------
