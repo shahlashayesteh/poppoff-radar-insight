@@ -3,8 +3,8 @@ import { describe, it, expect } from "vitest";
 import { readFileSync } from "fs";
 import { join } from "path";
 
-const root = join(__dirname, "../..");
-const settings = readFileSync(join(root, "routes/manager.settings.tsx"), "utf-8");
+const src = join(__dirname, "../..");
+const settings = readFileSync(join(src, "routes/manager.settings.tsx"), "utf-8");
 
 describe("manager.settings.tsx structure", () => {
   const requiredSections = [
