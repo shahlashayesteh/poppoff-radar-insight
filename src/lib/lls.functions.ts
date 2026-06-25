@@ -326,6 +326,7 @@ export const suggestOpportunityFactors = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { supabase, userId } = context;
+    await requirePaidManagerEntitlement(supabase, userId);
     const venueId = await getManagerVenueId(supabase, userId);
 
     const { data: rows, error } = await supabase
