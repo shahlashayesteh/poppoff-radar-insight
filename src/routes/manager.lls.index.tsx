@@ -469,7 +469,7 @@ function LlsPage() {
   const generateSuggestedFactors = async () => {
     setLoading(true);
     try {
-      const res = await suggestOF();
+      const res = await suggestOF({ data: { venueId } });
       if (!res.enoughData) {
         toast.info(
           `Suggested factors need at least 20 completed historical shifts. This venue currently has ${res.totalCompleted ?? 0} completed shifts. Start with 1.0 and refine after more uploads.`,
@@ -480,7 +480,7 @@ function LlsPage() {
       for (let dow = 0; dow < 7; dow++) {
         for (const dp of DAYPARTS) {
           const f = res.suggestions[dow][dp];
-          await updateOF({ data: { dayOfWeek: dow, daypart: dp, factor: f, weekStart } });
+          await updateOF({ data: { dayOfWeek: dow, daypart: dp, factor: f, weekStart, venueId } });
         }
       }
       if (res.lowConfidence) {
