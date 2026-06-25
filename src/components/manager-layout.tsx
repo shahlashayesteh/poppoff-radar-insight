@@ -10,6 +10,7 @@ import {
   FileBarChart,
   Sparkles,
   Gauge,
+  Rocket,
   Settings as SettingsIcon,
   LogOut,
   HelpCircle,
@@ -38,6 +39,7 @@ const items: NavItem[] = [
   { to: "/manager/lls", label: "Labor Leverage", icon: Gauge },
   { to: "/manager/reports", label: "Reports", icon: FileBarChart },
   { to: "/manager/roi", label: "Enterprise ROI", icon: Sparkles },
+  { to: "/manager/pilot", label: "Pilot Readiness", icon: Rocket },
   { to: "/manager/settings", label: "Settings", icon: SettingsIcon },
 ];
 
