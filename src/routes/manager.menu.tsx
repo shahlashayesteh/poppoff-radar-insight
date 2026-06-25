@@ -42,6 +42,8 @@ const MAX_MENUS = 10;
 function MenuIntel() {
   useRoleGate("manager");
   useVerifyPaidManagerAccess();
+  const fetchSuggestions = useServerFn(listMenuSuggestions);
+  const fetchMenus = useServerFn(listVenueMenus);
 
   const [venueId, setVenueId] = useState<string | null>(null);
   const [menus, setMenus] = useState<Menu[]>([]);
