@@ -248,7 +248,7 @@ function LlsPage() {
   const doRollback = useServerFn(rollbackBatch);
   const fetchLeverage = useServerFn(getSchedulingLeverage);
 
-  const venueId = active.venueId;
+  const venueId = active.venueId ?? undefined;
 
   const refresh = async () => {
     if (!venueId) return;
