@@ -31,6 +31,7 @@ import type {
   MetricResult,
   Provenance,
   LaborBasis,
+  SalesBasis,
 } from "@/lib/metrics/types";
 
 /* ----------------------------------------------------------------- *
