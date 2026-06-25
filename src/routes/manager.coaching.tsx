@@ -50,6 +50,8 @@ function Page() {
   useVerifyPaidManagerAccess();
   const active = useActiveVenue();
   const fetchCoaching = useServerFn(listCoachingPriorities);
+  const fetchRecTrace = useServerFn(getRecommendationTrace);
+  const [recTrace, setRecTrace] = useState<TracePayload>({ kind: "loading" });
 
   const [venueId, setVenueId] = useState<string | null>(null);
   const [priorities, setPriorities] = useState<Priority[]>([]);
