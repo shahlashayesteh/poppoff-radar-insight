@@ -101,8 +101,10 @@ function ServerView() {
             <div className="text-xs uppercase tracking-widest text-muted-foreground">Server</div>
             <h1 className="font-display text-4xl font-extrabold tracking-tight mt-1">{name}</h1>
             <div className="text-xs text-muted-foreground mt-1">{formatWeekRange(displayWeekStart)}</div>
+            <ProvenanceLegend />
           </div>
         </div>
+
 
         <div className="mt-8 grid md:grid-cols-4 gap-4">
           <div className="rounded-2xl bg-white border border-border p-5">
