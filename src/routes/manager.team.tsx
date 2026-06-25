@@ -28,6 +28,8 @@ type Member = { id: string; full_name: string | null };
 
 function TeamPage() {
   useRoleGate("manager");
+  useVerifyPaidManagerAccess();
+
   const [members, setMembers] = useState<Member[]>([]);
   const [perf, setPerf] = useState<VenuePerformance | null>(null);
   const [loginCounts, setLoginCounts] = useState<Record<string, number>>({});
