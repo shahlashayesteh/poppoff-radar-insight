@@ -132,11 +132,8 @@ describe("Phase 4 — Labour basis", () => {
 });
 
 describe("Phase 4 — server-page guard", () => {
-  it("server-facing routes do not import labour basis badges", () => {
-    // Sanity: the metrics provenance module exports labour badges; server
-    // routes must not import them. This is enforced by code review +
-    // ESLint-style audit. Here we only assert the export shape.
-    const mod = require("@/components/metrics");
+  it("server-facing routes do not import labour basis badges", async () => {
+    const mod = await import("@/components/metrics");
     expect(typeof mod.LaborBasisBadge).toBe("function");
     expect(typeof mod.SalesBasisBadge).toBe("function");
     expect(typeof mod.GrossEstimateWarning).toBe("function");
