@@ -525,6 +525,13 @@ export type ScorecardServer = {
   lowSample: boolean;
 };
 
+import {
+  buildOfV2Preview,
+  type OpportunityFactorPreview,
+} from "@/lib/lls/opportunity-factor-v2-preview";
+
+export type { OpportunityFactorPreview } from "@/lib/lls/opportunity-factor-v2-preview";
+
 export type ScorecardResult = {
   weekStart: string;
   thresholds: { green: number; amber: number };
@@ -533,6 +540,12 @@ export type ScorecardResult = {
   venue_benchmark_prev: number | null;
   venue_benchmark_trend_pct: number | null;
   toReview: Array<{ serverId: string; serverName: string; reasons: string[] }>;
+  /**
+   * Phase 20A — controlled OF v2 preview. Returned for manager-facing
+   * surfaces only. NEVER mutates committed shift values; Adjusted LLS
+   * shown to managers is still computed from stored opportunity_factor.
+   */
+  opportunity_factor_preview?: OpportunityFactorPreview | null;
 };
 
 function safeDiv(num: number, den: number): number | null {
