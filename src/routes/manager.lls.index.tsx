@@ -917,7 +917,26 @@ function LlsPage() {
 
         {/* Scheduling Leverage Matrix — manager-only intelligence */}
         {leverage && leverage.matrix.length > 0 && (
-          <SchedulingLeverageMatrix data={leverage} currency={MARKETS[displayMarket].currencySymbol} />
+          <div className="mt-6">
+            <div className="flex justify-end mb-1">
+              <ManagerTraceDrawer
+                label="Trace OF v2 source"
+                title={`Scheduling Leverage · OF v2 preview · ${weekStart}`}
+                payload={ofV2Trace}
+                onOpen={async () => {
+                  if (!venueId) return;
+                  setOfV2Trace({ kind: "loading" });
+                  try {
+                    const res = await fetchOfV2Trace({ data: { venueId, weekStart } });
+                    setOfV2Trace({ kind: "ofv2", weekStart: res.weekStart, overall: res.overall, byDaypart: res.byDaypart, byDayOfWeek: res.byDayOfWeek });
+                  } catch (e: any) {
+                    setOfV2Trace({ kind: "error", message: e?.message ?? "Failed to load OF v2 trace" });
+                  }
+                }}
+              />
+            </div>
+            <SchedulingLeverageMatrix data={leverage} currency={MARKETS[displayMarket].currencySymbol} />
+          </div>
         )}
 
 
