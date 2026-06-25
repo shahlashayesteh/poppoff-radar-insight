@@ -18,17 +18,31 @@ import { aggregate, type ShiftRow as MetricsShiftRow } from "@/lib/metrics/lls";
 
 // ---------- types ----------
 
-export interface RoiShiftRow extends MetricsShiftRow {
+// Production-shape row read straight from the `shifts` table. We map this
+// into the canonical metrics engine row internally so the engine still
+// owns LLS arithmetic.
+export interface RoiShiftRow {
   shift_date: string;
+  gross_sales?: number | null;
+  net_sales?: number | null;
+  labor_cost?: number | null;          // shifts.labor_cost → engine.total_labor_cost
+  opportunity_factor?: number | null;
   covers_served?: number | null;
-  // Optional real-hours signal from shifts_v2 if available.
   real_hours?: number | null;
-  // Provenance flags lifted from the shifts table.
   sales_basis?: string | null;
   labor_basis?: string | null;
   reliability_class?: string | null;
   identity_match_method?: string | null;
   identity_match_confidence?: number | null;
+}
+
+function toEngineRow(r: RoiShiftRow): MetricsShiftRow {
+  return {
+    gross_sales: r.gross_sales ?? null,
+    net_sales: r.net_sales ?? null,
+    total_labor_cost: r.labor_cost ?? null,
+    opportunity_factor: r.opportunity_factor ?? null,
+  };
 }
 
 export interface PeriodMetrics {
