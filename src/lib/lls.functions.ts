@@ -528,9 +528,79 @@ export type ScorecardServer = {
 import {
   buildOfV2Preview,
   type OpportunityFactorPreview,
+  type PreviewHistoryRow,
 } from "@/lib/lls/opportunity-factor-v2-preview";
+import {
+  buildAssessmentRows,
+  persistAssessmentRows,
+} from "@/lib/lls/opportunity-factor-assessments";
 
 export type { OpportunityFactorPreview } from "@/lib/lls/opportunity-factor-v2-preview";
+
+/**
+ * Phase 20C — derive real hours per (service_date, daypart) from shifts_v2
+ * so OF v2 preview can prefer paid / clock / labour-export hours over the
+ * labour-cost proxy. Returns a map keyed by `${date}|${daypart}`.
+ */
+type V2HoursPick = { hours: number; source: "clock_hours" | "labour_export_hours" };
+function buildV2HoursLookup(
+  shiftsV2: Array<{
+    service_date: string;
+    dominant_daypart: string | null;
+    labor_span_hours: number | null;
+    service_duration_hours: number | null;
+    clock_in: string | null;
+    clock_out: string | null;
+  }>,
+): Map<string, V2HoursPick> {
+  const acc = new Map<string, { clock: number; export_: number }>();
+  for (const r of shiftsV2) {
+    if (!r.service_date || !r.dominant_daypart) continue;
+    const key = `${r.service_date}|${r.dominant_daypart}`;
+    const cur = acc.get(key) ?? { clock: 0, export_: 0 };
+    // Clock-derived hours: prefer labor_span_hours when clock_in & clock_out present.
+    if (r.clock_in && r.clock_out && typeof r.labor_span_hours === "number" && r.labor_span_hours > 0) {
+      cur.clock += r.labor_span_hours;
+    } else if (typeof r.service_duration_hours === "number" && r.service_duration_hours > 0) {
+      cur.export_ += r.service_duration_hours;
+    } else if (typeof r.labor_span_hours === "number" && r.labor_span_hours > 0) {
+      // labor_span_hours without clock_in/out -> treat as labour_export_hours.
+      cur.export_ += r.labor_span_hours;
+    }
+    acc.set(key, cur);
+  }
+  const out = new Map<string, V2HoursPick>();
+  for (const [k, v] of acc) {
+    if (v.clock > 0) out.set(k, { hours: v.clock, source: "clock_hours" });
+    else if (v.export_ > 0) out.set(k, { hours: v.export_, source: "labour_export_hours" });
+  }
+  return out;
+}
+
+/** Apply v2-derived hours onto v1 preview history rows (per date+daypart). */
+function attachV2Hours(
+  rows: PreviewHistoryRow[],
+  lookup: Map<string, V2HoursPick>,
+): PreviewHistoryRow[] {
+  if (lookup.size === 0) return rows;
+  // Count how many v1 rows share each key, so we can apportion hours evenly.
+  const counts = new Map<string, number>();
+  for (const r of rows) {
+    const key = `${r.shift_date}|${r.daypart ?? ""}`;
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+  return rows.map((r) => {
+    const key = `${r.shift_date}|${r.daypart ?? ""}`;
+    const pick = lookup.get(key);
+    if (!pick) return r;
+    const n = counts.get(key) ?? 1;
+    const per = pick.hours / Math.max(1, n);
+    if (pick.source === "clock_hours") {
+      return { ...r, clock_hours: per };
+    }
+    return { ...r, labour_export_hours: per };
+  });
+}
 
 export type ScorecardResult = {
   weekStart: string;
