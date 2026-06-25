@@ -1157,6 +1157,31 @@ function OfV2PreviewCard({
           </div>
         </div>
       </div>
+      {/* Phase 20B — hours-source + decision-grade chips */}
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <span className="text-[11px] px-2 py-0.5 rounded-full border bg-slate-50 text-slate-700 border-slate-200">
+          hours: {preview.hours_source.replace(/_/g, " ")}
+        </span>
+        <span
+          className={`text-[11px] px-2 py-0.5 rounded-full border font-semibold ${
+            preview.decision_grade === "manager_analysis"
+              ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+              : preview.decision_grade === "manager_review"
+                ? "bg-amber-50 text-amber-700 border-amber-200"
+                : preview.decision_grade === "preview_only"
+                  ? "bg-violet-50 text-violet-700 border-violet-200"
+                  : "bg-rose-50 text-rose-700 border-rose-200"
+          }`}
+        >
+          {preview.decision_grade === "manager_analysis"
+            ? "Decision-grade · manager analysis"
+            : preview.decision_grade === "manager_review"
+              ? "Candidate insight · manager review"
+              : preview.decision_grade === "preview_only"
+                ? "Preview only — no hard recommendation"
+                : "Not for decision — missing hours / fallback"}
+        </span>
+      </div>
       <p className="mt-3 text-xs text-muted-foreground">{preview.operator_explanation}</p>
       {preview.inputs_excluded.length > 0 ? (
         <p className="mt-2 text-[11px] text-muted-foreground">
@@ -1171,11 +1196,70 @@ function OfV2PreviewCard({
           ))}
         </ul>
       ) : null}
-      {preview.confidence === "low" ? (
+      {preview.confidence === "low" || !preview.can_drive_hard_recommendation ? (
         <p className="mt-2 text-[11px] text-rose-700">
-          Low confidence — no hard deployment recommendations are made from this preview.
+          No hard deployment recommendations are made from this preview.
         </p>
       ) : null}
+
+      {/* Phase 20B — per-daypart / per-day-of-week preview grid */}
+      {(preview.buckets.by_daypart.length > 0 || preview.buckets.by_day_of_week.length > 0) && (
+        <div className="mt-4 grid sm:grid-cols-2 gap-3">
+          {preview.buckets.by_daypart.length > 0 && (
+            <BucketGrid title="By daypart" buckets={preview.buckets.by_daypart} fmt={fmt} />
+          )}
+          {preview.buckets.by_day_of_week.length > 0 && (
+            <BucketGrid title="By day of week" buckets={preview.buckets.by_day_of_week} fmt={fmt} />
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function BucketGrid({
+  title,
+  buckets,
+  fmt,
+}: {
+  title: string;
+  buckets: Array<import("@/lib/lls/opportunity-factor-v2-preview").OpportunityFactorPreviewBucket>;
+  fmt: (v: number | null | undefined) => string;
+}) {
+  return (
+    <div className="rounded-xl border border-border bg-slate-50/50 p-3">
+      <div className="text-[11px] uppercase tracking-wide text-muted-foreground font-semibold">{title}</div>
+      <div className="mt-2 space-y-1.5">
+        {buckets.map((b) => {
+          const gradeTone =
+            b.decision_grade === "manager_analysis"
+              ? "bg-emerald-100 text-emerald-800"
+              : b.decision_grade === "manager_review"
+                ? "bg-amber-100 text-amber-800"
+                : b.decision_grade === "preview_only"
+                  ? "bg-violet-100 text-violet-800"
+                  : "bg-rose-100 text-rose-800";
+          const gradeLabel =
+            b.decision_grade === "manager_analysis"
+              ? "decision"
+              : b.decision_grade === "manager_review"
+                ? "review"
+                : b.decision_grade === "preview_only"
+                  ? "preview"
+                  : "n/a";
+          return (
+            <div key={`${b.axis}-${b.key}`} className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px]">
+              <span className="font-mono w-12 truncate" title={b.key}>{b.key}</span>
+              <span className="font-semibold tabular-nums">v2 {fmt(b.opportunity_factor_v2)}</span>
+              <span className="text-muted-foreground tabular-nums">v1 {fmt(b.opportunity_factor_v1)}</span>
+              <span className="text-muted-foreground">conf · {b.confidence}</span>
+              <span className="text-muted-foreground">n={b.comparable_count}</span>
+              <span className="text-muted-foreground">hours · {b.hours_source.replace(/_/g, " ")}</span>
+              <span className={`px-1.5 rounded ${gradeTone} font-semibold`}>{gradeLabel}</span>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
