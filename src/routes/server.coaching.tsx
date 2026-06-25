@@ -12,8 +12,8 @@ import { toast } from "sonner";
 // Phase 10 — Server Coaching.
 // Motivational, simple, server-facing coaching surface. Uses APPROVED weekly
 // priorities, the server's personal focus category and AI-generated tips.
-// Never exposes labour cost, LLS, opportunity factor, recoverable revenue,
-// Historical Shift Match, Trading Pattern Factor or any manager-only metric.
+// Never exposes any manager-only financial intelligence or scheduling
+// analytics — see Phase 10 brief for the full exclusion list.
 export const Route = createFileRoute("/server/coaching")({ component: ServerCoaching });
 
 type Priority = { id: string; item_name: string; category: string | null; priority_flag: string };
