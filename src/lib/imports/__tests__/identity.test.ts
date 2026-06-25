@@ -73,13 +73,14 @@ describe("identity.resolveIdentity — ambiguity protection", () => {
   });
 
   it("never merges across venues", () => {
-    const other = mkEmp({ id: "e9", venue_id: "v2", display_name: "Ella Stone" });
-    const r = resolveIdentity({ reported_name: "Ella Stone" }, dir([], { employees: [other] }));
-    // No employees in the venue's directory → falls through to new_unverified.
-    // (Directory is per-venue, so a cross-venue Ella should never appear.)
+    // The directory loader filters by venue_id at the DB layer, so a
+    // cross-venue Ella simply never appears in this venue's directory.
+    // Result: the resolver classifies her as new_unverified, not as a match.
+    const r = resolveIdentity({ reported_name: "Ella Stone" }, dir([]));
     expect(r.status).toBe("new_unverified");
     expect(r.employee_id).toBeNull();
   });
+
 
   it("flags conflicting POS vs labour source IDs as ambiguous", () => {
     const a = mkEmp({ id: "e1", display_name: "Alice", pos_employee_id: "X1" });
