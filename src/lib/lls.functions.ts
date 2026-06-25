@@ -213,17 +213,18 @@ type ShiftRowInput = z.infer<typeof ShiftRowInput>;
 
 export const importShifts = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { sourceType: "sales" | "labor"; filename?: string; rows: ShiftRowInput[] }) =>
+  .inputValidator((d: { sourceType: "sales" | "labor"; filename?: string; rows: ShiftRowInput[]; venueId?: string }) =>
     z.object({
       sourceType: z.enum(["sales", "labor"]),
       filename: z.string().optional(),
       rows: z.array(ShiftRowInput).min(1).max(10000),
+      ...OptionalVenue,
     }).parse(d),
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     await requirePaidManagerEntitlement(supabase, userId, "import");
-    const venueId = await getManagerVenueId(supabase, userId);
+    const venueId = await getManagerVenueId(supabase, userId, data.venueId);
 
     // Create batch
     const { data: batch, error: batchErr } = await supabase
