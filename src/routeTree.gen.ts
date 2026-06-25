@@ -40,6 +40,7 @@ import { Route as ServerLeaderboardRouteImport } from './routes/server.leaderboa
 import { Route as ServerCoachingRouteImport } from './routes/server.coaching'
 import { Route as ManagerTeamRouteImport } from './routes/manager.team'
 import { Route as ManagerSettingsRouteImport } from './routes/manager.settings'
+import { Route as ManagerRoiRouteImport } from './routes/manager.roi'
 import { Route as ManagerReportsRouteImport } from './routes/manager.reports'
 import { Route as ManagerPrioritiesRouteImport } from './routes/manager.priorities'
 import { Route as ManagerMenuRouteImport } from './routes/manager.menu'
@@ -237,6 +238,11 @@ const ManagerTeamRoute = ManagerTeamRouteImport.update({
 const ManagerSettingsRoute = ManagerSettingsRouteImport.update({
   id: '/manager/settings',
   path: '/manager/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ManagerRoiRoute = ManagerRoiRouteImport.update({
+  id: '/manager/roi',
+  path: '/manager/roi',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ManagerReportsRoute = ManagerReportsRouteImport.update({
@@ -463,6 +469,7 @@ export interface FileRoutesByFullPath {
   '/manager/menu': typeof ManagerMenuRoute
   '/manager/priorities': typeof ManagerPrioritiesRoute
   '/manager/reports': typeof ManagerReportsRoute
+  '/manager/roi': typeof ManagerRoiRoute
   '/manager/settings': typeof ManagerSettingsRoute
   '/manager/team': typeof ManagerTeamRoute
   '/server/coaching': typeof ServerCoachingRoute
@@ -530,6 +537,7 @@ export interface FileRoutesByTo {
   '/manager/menu': typeof ManagerMenuRoute
   '/manager/priorities': typeof ManagerPrioritiesRoute
   '/manager/reports': typeof ManagerReportsRoute
+  '/manager/roi': typeof ManagerRoiRoute
   '/manager/settings': typeof ManagerSettingsRoute
   '/manager/team': typeof ManagerTeamRoute
   '/server/coaching': typeof ServerCoachingRoute
@@ -602,6 +610,7 @@ export interface FileRoutesById {
   '/manager/menu': typeof ManagerMenuRoute
   '/manager/priorities': typeof ManagerPrioritiesRoute
   '/manager/reports': typeof ManagerReportsRoute
+  '/manager/roi': typeof ManagerRoiRoute
   '/manager/settings': typeof ManagerSettingsRoute
   '/manager/team': typeof ManagerTeamRoute
   '/server/coaching': typeof ServerCoachingRoute
@@ -675,6 +684,7 @@ export interface FileRouteTypes {
     | '/manager/menu'
     | '/manager/priorities'
     | '/manager/reports'
+    | '/manager/roi'
     | '/manager/settings'
     | '/manager/team'
     | '/server/coaching'
@@ -742,6 +752,7 @@ export interface FileRouteTypes {
     | '/manager/menu'
     | '/manager/priorities'
     | '/manager/reports'
+    | '/manager/roi'
     | '/manager/settings'
     | '/manager/team'
     | '/server/coaching'
@@ -813,6 +824,7 @@ export interface FileRouteTypes {
     | '/manager/menu'
     | '/manager/priorities'
     | '/manager/reports'
+    | '/manager/roi'
     | '/manager/settings'
     | '/manager/team'
     | '/server/coaching'
@@ -884,6 +896,7 @@ export interface RootRouteChildren {
   ManagerMenuRoute: typeof ManagerMenuRoute
   ManagerPrioritiesRoute: typeof ManagerPrioritiesRoute
   ManagerReportsRoute: typeof ManagerReportsRoute
+  ManagerRoiRoute: typeof ManagerRoiRoute
   ManagerSettingsRoute: typeof ManagerSettingsRoute
   ManagerTeamRoute: typeof ManagerTeamRoute
   ServerCoachingRoute: typeof ServerCoachingRoute
@@ -1137,6 +1150,13 @@ declare module '@tanstack/react-router' {
       path: '/manager/settings'
       fullPath: '/manager/settings'
       preLoaderRoute: typeof ManagerSettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/manager/roi': {
+      id: '/manager/roi'
+      path: '/manager/roi'
+      fullPath: '/manager/roi'
+      preLoaderRoute: typeof ManagerRoiRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/manager/reports': {
@@ -1492,6 +1512,7 @@ const rootRouteChildren: RootRouteChildren = {
   ManagerMenuRoute: ManagerMenuRoute,
   ManagerPrioritiesRoute: ManagerPrioritiesRoute,
   ManagerReportsRoute: ManagerReportsRoute,
+  ManagerRoiRoute: ManagerRoiRoute,
   ManagerSettingsRoute: ManagerSettingsRoute,
   ManagerTeamRoute: ManagerTeamRoute,
   ServerCoachingRoute: ServerCoachingRoute,
@@ -1530,3 +1551,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
