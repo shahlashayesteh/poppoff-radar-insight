@@ -1084,6 +1084,103 @@ function SummaryCard({ label, value, band, trend, helper, tooltip }: { label: st
   );
 }
 
+// Phase 20A — Opportunity Factor v2 preview card. Read-only. Does NOT
+// change Adjusted LLS values shown to managers — those are still computed
+// from stored opportunity_factor (v1). When OF v2 cannot safely compute,
+// the v1 Trading Pattern Factor remains in use and the badge says so.
+function OfV2PreviewCard({
+  preview,
+}: {
+  preview: import("@/lib/lls/opportunity-factor-v2-preview").OpportunityFactorPreview;
+}) {
+  const fmt = (v: number | null | undefined) =>
+    typeof v === "number" && Number.isFinite(v) ? v.toFixed(3) : "—";
+  const versionLabel =
+    preview.opportunity_factor_version === "v2_preview"
+      ? "v2 preview"
+      : preview.opportunity_factor_version === "v2"
+        ? "v2 active"
+        : "v1 (fallback)";
+  const confTone =
+    preview.confidence === "high"
+      ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+      : preview.confidence === "medium"
+        ? "bg-amber-50 text-amber-700 border-amber-200"
+        : "bg-rose-50 text-rose-700 border-rose-200";
+  return (
+    <div className="mt-6 rounded-2xl bg-white border border-border p-5">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-xs uppercase tracking-wide text-muted-foreground">
+          Opportunity Factor
+        </span>
+        <span className="text-[11px] px-2 py-0.5 rounded-full border bg-slate-50 text-slate-700 border-slate-200 font-semibold">
+          {versionLabel}
+        </span>
+        <span className={`text-[11px] px-2 py-0.5 rounded-full border font-semibold ${confTone}`}>
+          confidence: {preview.confidence}
+        </span>
+        <span className="text-[11px] px-2 py-0.5 rounded-full border bg-slate-50 text-slate-700 border-slate-200">
+          basis: {preview.basis}
+        </span>
+        {preview.materially_different ? (
+          <span className="text-[11px] px-2 py-0.5 rounded-full border bg-violet-50 text-violet-700 border-violet-200 font-semibold">
+            v2 would materially change opportunity assessment
+          </span>
+        ) : null}
+      </div>
+      <div className="mt-3 grid sm:grid-cols-3 gap-3 text-sm">
+        <div>
+          <div className="text-[11px] uppercase text-muted-foreground">Applied (v1)</div>
+          <div className="text-2xl font-bold font-display">{fmt(preview.opportunity_factor_v1)}</div>
+          <div className="text-[11px] text-muted-foreground">
+            Used in current Adjusted LLS · committed values unchanged
+          </div>
+        </div>
+        <div>
+          <div className="text-[11px] uppercase text-muted-foreground">v2 preview</div>
+          <div className="text-2xl font-bold font-display">{fmt(preview.opportunity_factor_v2)}</div>
+          <div className="text-[11px] text-muted-foreground">
+            Read-only · comparison level {preview.comparison_level} · {preview.comparable_count} comparable periods
+          </div>
+        </div>
+        <div>
+          <div className="text-[11px] uppercase text-muted-foreground">Δ (v2 − v1)</div>
+          <div className="text-2xl font-bold font-display">
+            {preview.opportunity_factor_delta == null
+              ? "—"
+              : `${preview.opportunity_factor_delta >= 0 ? "+" : "−"}${Math.abs(preview.opportunity_factor_delta).toFixed(3)}`}
+          </div>
+          <div className="text-[11px] text-muted-foreground">
+            {preview.fallback_reason
+              ? `Fallback: ${preview.fallback_reason.replace(/_/g, " ")}`
+              : "No fallback — using v2 preview"}
+          </div>
+        </div>
+      </div>
+      <p className="mt-3 text-xs text-muted-foreground">{preview.operator_explanation}</p>
+      {preview.inputs_excluded.length > 0 ? (
+        <p className="mt-2 text-[11px] text-muted-foreground">
+          <span className="font-semibold">Inputs excluded from scoring:</span>{" "}
+          {preview.inputs_excluded.join(", ")}
+        </p>
+      ) : null}
+      {preview.warnings.length > 0 ? (
+        <ul className="mt-2 list-disc list-inside text-[11px] text-amber-700">
+          {preview.warnings.map((w, i) => (
+            <li key={i}>{w}</li>
+          ))}
+        </ul>
+      ) : null}
+      {preview.confidence === "low" ? (
+        <p className="mt-2 text-[11px] text-rose-700">
+          Low confidence — no hard deployment recommendations are made from this preview.
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+
 
 function UploadZone({ label, sublabel, onFile }: { label: string; sublabel: string; onFile: (f: File) => void }) {
   const [drag, setDrag] = useState(false);
