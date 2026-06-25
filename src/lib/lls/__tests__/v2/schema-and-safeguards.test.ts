@@ -201,14 +201,16 @@ d('RLS — every new table has SELECT policy scoped by is_venue_manager', () => 
 })
 
 d('No v1 surface was modified', () => {
-  test('v1 tables untouched (presence + column count snapshot)', () => {
+  test('v1 tables untouched except Phase 6 governance link (import_batch_v2_id on shifts)', () => {
     const out = psql(`
       SELECT table_name||':'||count(*)::text
       FROM information_schema.columns
       WHERE table_schema='public'
         AND table_name IN ('shifts','shift_import_batches','venue_opportunity_factors')
       GROUP BY table_name ORDER BY table_name;`)
-    expect(out).toContain('shifts:20')
+    // Phase 6 added one nullable FK column to shifts so committed batches can be rolled back.
+    // shift_import_batches (v1) and venue_opportunity_factors are unchanged.
+    expect(out).toContain('shifts:21')
     expect(out).toContain('shift_import_batches:9')
     expect(out).toContain('venue_opportunity_factors:7')
   })
