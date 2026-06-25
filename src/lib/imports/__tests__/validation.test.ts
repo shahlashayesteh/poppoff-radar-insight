@@ -59,6 +59,51 @@ describe("validateRows — duplicates", () => {
     expect(r.summary.duplicates).toBe(1);
     expect(r.rows[1].duplicateOfIndex).toBe(0);
   });
+
+  it("does NOT flag two real shifts on the same date when start_time is missing but amounts differ", () => {
+    // Sales POS exports often aggregate per server per day with no start_time.
+    // Legacy key collapsed these into "duplicates"; the tiebreaker prevents that.
+    const brunch = baseSale({ shift_start_time: null, gross_sales: 400, net_sales: 360, covers_served: 20 });
+    const dinner = baseSale({ shift_start_time: null, gross_sales: 900, net_sales: 820, covers_served: 45 });
+    const r = validateRows([brunch, dinner], "sales");
+    expect(r.summary.duplicates).toBe(0);
+  });
+
+  it("DOES still flag true duplicates when start_time is missing and amounts match exactly", () => {
+    const a = baseSale({ shift_start_time: null });
+    const b = baseSale({ shift_start_time: null });
+    const r = validateRows([a, b], "sales");
+    expect(r.summary.duplicates).toBe(1);
+  });
+
+  it("sales and labour rows for the same server/date never collide", () => {
+    const sale = baseSale({ shift_start_time: null });
+    const labor: RawImportRow = {
+      server_name: "Alice", shift_date: "2026-06-01", shift_start_time: null, labor_cost: 200,
+    };
+    const sR = validateRows([sale], "sales");
+    const lR = validateRows([labor], "labor");
+    expect(sR.summary.duplicates).toBe(0);
+    expect(lR.summary.duplicates).toBe(0);
+  });
+});
+
+describe("validateRows — context-warning suppression", () => {
+  it("suppresses missing_revenue_centre when no row in the batch declares one and no default is set", () => {
+    const rows = [
+      baseSale({ revenue_centre: null }),
+      baseSale({ revenue_centre: null, shift_date: "2026-06-02" }),
+    ];
+    const r = validateRows(rows, "sales");
+    expect(r.summary.missingRevenueCentre).toBe(0);
+    expect(r.rows.every((row) => !row.reasons.includes("missing_revenue_centre"))).toBe(true);
+  });
+
+  it("still warns missing_revenue_centre when SOME rows have one (mixed → real signal)", () => {
+    const rows = [baseSale({ revenue_centre: "Bar" }), baseSale({ revenue_centre: null, shift_date: "2026-06-02" })];
+    const r = validateRows(rows, "sales");
+    expect(r.summary.missingRevenueCentre).toBe(1);
+  });
 });
 
 describe("validateRows — totals and basis mode", () => {
