@@ -4,6 +4,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requirePaidManagerEntitlement } from "@/lib/entitlements-guard";
 import { buildComparison, type V1WeeklyView, type V2WeeklyView } from "./comparison";
 import { benchmarkConfidence, resultConfidence, lowerBand, ragStatus } from "./confidence";
 import { performanceGap, modelledRevenueOpportunity } from "./calculations";
