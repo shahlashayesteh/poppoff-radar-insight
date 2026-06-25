@@ -459,7 +459,7 @@ function LlsPage() {
     const clamped = Math.min(1.4, Math.max(0.7, value));
     setGrid((g) => (g ? { ...g, [dow]: { ...g[dow], [dp]: clamped } } : g));
     try {
-      await updateOF({ data: { dayOfWeek: dow, daypart: dp, factor: clamped, weekStart } });
+      await updateOF({ data: { dayOfWeek: dow, daypart: dp, factor: clamped, weekStart, venueId } });
       await refresh();
     } catch (e: any) {
       toast.error(e?.message ?? "Failed to update factor");
