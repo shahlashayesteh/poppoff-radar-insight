@@ -143,6 +143,13 @@ function MenuIntel() {
     // When sending to servers, also create a weekly_priorities row so it surfaces to the team.
     if (next === "sent_to_servers") {
       const week = toISODate(getMondayOfWeek());
+      // Phase 18A — carry forward evidence: this priority traces back to the
+      // approved menu suggestion (a manager-reviewed artefact).
+      const evidence = buildRecommendationEvidence({
+        based_on: ["menu_document", "manager_approval"],
+        explanation_basis: `Sent from approved menu suggestion: ${s.item_name}.`,
+        source_metrics: { source_suggestion_id: s.id },
+      });
       await supabase.from("weekly_priorities").insert({
         venue_id: venueId, week_start: week,
         item_name: s.item_name, category: s.category,
@@ -151,6 +158,8 @@ function MenuIntel() {
         status: "sent_to_servers",
         approved_by: u.user?.id ?? null, approved_at: now, sent_to_servers_at: now,
         source_suggestion_id: s.id,
+        evidence: evidence as never,
+        recommendation_confidence: recommendationConfidence(evidence),
       });
     }
     setBusySug(null);
