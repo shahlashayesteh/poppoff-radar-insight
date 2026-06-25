@@ -637,7 +637,7 @@ function LlsPage() {
                       onClick={async () => {
                         if (!confirm("Roll back this batch?")) return;
                         try {
-                          await doRollback({ data: { batchId: b.id } });
+                          await doRollback({ data: { batchId: b.id, venueId } });
                           toast.success("Batch rolled back");
                           await refresh();
                         } catch (e: any) {
