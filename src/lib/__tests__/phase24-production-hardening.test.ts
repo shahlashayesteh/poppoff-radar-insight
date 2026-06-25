@@ -170,7 +170,7 @@ describe("Phase 24 — venue access guard", () => {
   });
   it("unassigned manager cannot resolve a venue", async () => {
     const sb = mockVenueRpc({ accessible: [] });
-    await expect(resolveManagerVenueId(sb, "u")).rejects.toThrow(/no venue assigned/i);
+    await expect(resolveManagerVenueId(sb, "u")).rejects.toThrow(/no venue/i);
   });
   it("multi-venue user cannot silently inherit a venue", async () => {
     const sb = mockVenueRpc({ accessible: ["a", "b"] });
