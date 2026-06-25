@@ -47,6 +47,7 @@ export const v2SupersedeBatch = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { batch_id: string }) => d)
   .handler(async ({ data, context }) => {
+    await requirePaidManagerEntitlement(context.supabase, context.userId, "import");
     const { error } = await context.supabase.rpc("lls_v2_supersede_batch", { _batch_id: data.batch_id });
     if (error) throw new Error(error.message);
     return { ok: true };
