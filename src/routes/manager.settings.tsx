@@ -25,6 +25,7 @@ const SECTIONS = [
   { id: "visibility", label: "Server visibility" },
   { id: "lls", label: "LLS thresholds" },
   { id: "billing", label: "Billing & subscription" },
+  { id: "trust", label: "Enterprise trust" },
   { id: "audit", label: "Audit logs" },
 ] as const;
 
