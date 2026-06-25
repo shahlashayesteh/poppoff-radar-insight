@@ -270,8 +270,9 @@ function LlsPage() {
     }
     const fieldsRO = source === "sales" ? SALES_FIELDS : LABOR_FIELDS;
     const fields = [...fieldsRO];
-    const { mapping: auto, ambiguous, laborBasis: detectedBasis } = autoMap(parsed.headers, fields, parsed.rows.slice(0, 25));
+    const { mapping: auto, ambiguous, laborBasis: detectedBasis, salesBasis: detectedSalesBasis } = autoMap(parsed.headers, fields, parsed.rows.slice(0, 25));
     if (source === "labor") setLaborBasis(detectedBasis);
+    if (source === "sales") setSalesBasis(detectedSalesBasis);
 
     // Saved per-venue mapping wins over auto if its headers still exist.
     let saved: Record<string, string> = {};
