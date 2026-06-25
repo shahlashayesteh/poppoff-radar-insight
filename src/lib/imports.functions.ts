@@ -390,7 +390,8 @@ export const commitImportBatch = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: z.input<typeof BatchIdInput>) => BatchIdInput.parse(d))
   .handler(async ({ data, context }) => {
-    const { supabase } = context;
+    const { supabase, userId } = context;
+    await requireImportEntitlement(supabase, userId);
     const { data: res, error } = await supabase.rpc(
       "lls_v2_commit_batch" as never,
       { _batch_id: data.batchId } as never,
