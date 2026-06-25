@@ -447,15 +447,21 @@ function LlsPage() {
       });
       const summary = res.summary;
       const inferred = (res as any).inferredReasons as string[] | undefined;
-      const sumParts: string[] = [];
-      if (summary.missingOutlet) sumParts.push(`missing outlet (${summary.missingOutlet})`);
-      if (summary.missingRevenueCentre) sumParts.push(`missing revenue centre (${summary.missingRevenueCentre})`);
-      if (summary.grossOnlyRows) sumParts.push(`gross-only sales (${summary.grossOnlyRows})`);
-      if (summary.unknownSalesBasis) sumParts.push(`unknown sales basis (${summary.unknownSalesBasis})`);
-      if (summary.unknownLaborBasis) sumParts.push(`unknown labour basis (${summary.unknownLaborBasis})`);
-      if (summary.duplicates) sumParts.push(`duplicates (${summary.duplicates})`);
-      const headline = `Staged ${summary.accepted + summary.warnings}/${rows.length} rows · ${summary.rejected} rejected${summary.warnings ? ` · ${summary.warnings} advisory flag${summary.warnings === 1 ? "" : "s"}` : " · all clean"}.`;
-      const detail = sumParts.length ? `Heads-up: ${sumParts.slice(0, 3).join(", ")}.` : null;
+      // Real data problems (block-worthy, even if currently advisory): bad identity,
+      // bad date, gross-only without basis, ambiguous identity, and TRUE duplicates.
+      // Cosmetic / context flags (silenced when batch defaults cover them) are not headlined.
+      const realIssues: string[] = [];
+      if (summary.duplicates) realIssues.push(`possible duplicates (${summary.duplicates})`);
+      if (summary.grossOnlyRows) realIssues.push(`gross-only sales (${summary.grossOnlyRows})`);
+      if (summary.unknownSalesBasis) realIssues.push(`unknown sales basis (${summary.unknownSalesBasis})`);
+      if (summary.unknownLaborBasis) realIssues.push(`unknown labour basis (${summary.unknownLaborBasis})`);
+
+      const total = summary.accepted + summary.warnings + summary.rejected;
+      const staged = summary.accepted + summary.warnings;
+      const headline = realIssues.length === 0 && summary.rejected === 0
+        ? `Staged ${staged}/${total} rows · ready to commit.`
+        : `Staged ${staged}/${total} rows · ${summary.rejected} rejected${realIssues.length ? "" : " · all clean"}.`;
+      const detail = realIssues.length ? `Needs review: ${realIssues.slice(0, 3).join(", ")}.` : null;
       const inferredLine = inferred && inferred.length ? `Auto-detected: ${inferred.join("; ")}.` : null;
       toast.success(
         [headline, detail, inferredLine, "Review in Imports before it affects LLS."].filter(Boolean).join(" "),
