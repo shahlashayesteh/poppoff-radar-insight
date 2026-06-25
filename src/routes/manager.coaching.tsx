@@ -11,7 +11,15 @@ import { toast } from "sonner";
 // Phase 11 — Manager Coaching surfaces operational workflow status:
 // what is sent to servers, what is approved but unsent, what still needs
 // manager review. This is the manager-only "truth behind the game".
-export const Route = createFileRoute("/manager/coaching")({ component: Page });
+import { PaidManagerGate } from "@/components/manager/PaidManagerGate";
+
+export const Route = createFileRoute("/manager/coaching")({
+  component: () => (
+    <PaidManagerGate feature="coaching workflow">
+      <Page />
+    </PaidManagerGate>
+  ),
+});
 
 type Status = "ai_suggested" | "approved" | "sent_to_servers" | "rejected" | "archived";
 
