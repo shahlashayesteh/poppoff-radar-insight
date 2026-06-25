@@ -97,7 +97,28 @@ function inferBasis(mode: SourceKind, _r: RawImportRow, declared: string | null)
   return { basis: "unknown", known: false };
 }
 
-export function validateRows(rows: RawImportRow[], sourceKind: SourceKind): ValidationResult {
+/**
+ * Per-batch defaults declared once by the manager (or auto-inferred at staging time).
+ * When a default is present, a per-row warning about the same missing context is suppressed
+ * — the value is treated as known from batch context. Real data problems (duplicates,
+ * missing identity, bad dates) are NEVER suppressed by defaults.
+ */
+export type BatchDefaults = {
+  outlet?: string | null;
+  revenue_centre?: string | null;
+  sales_basis?: string | null;   // 'net' | 'gross' | 'gross_with_tax'
+  labour_basis?: string | null;  // 'wages_only' | 'wages_plus_oncosts' | 'fully_loaded'
+};
+
+export function validateRows(
+  rows: RawImportRow[],
+  sourceKind: SourceKind,
+  defaults: BatchDefaults = {},
+): ValidationResult {
+  const dOutlet = trimOrNull(defaults.outlet);
+  const dRC = trimOrNull(defaults.revenue_centre);
+  const dSalesBasis = trimOrNull(defaults.sales_basis);
+  const dLabourBasis = trimOrNull(defaults.labour_basis);
   const out: ValidatedRow[] = [];
   const seen = new Map<string, number>();
   let accepted = 0, rejected = 0, warnings = 0, duplicates = 0;
