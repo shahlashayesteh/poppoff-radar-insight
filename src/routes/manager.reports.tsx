@@ -91,8 +91,10 @@ function Page() {
   useVerifyPaidManagerAccess();
   const active = useActiveVenue();
   const fetchReports = useServerFn(getManagerReportsData);
+  const fetchReportsTrace = useServerFn(getReportsTrace);
   const [weeks, setWeeks] = useState<WeekRow[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const [reportsTrace, setReportsTrace] = useState<TracePayload>({ kind: "loading" });
 
   useEffect(() => {
     if (active.status !== "ready" || !active.venueId) return;
