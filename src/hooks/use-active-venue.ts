@@ -35,8 +35,12 @@ export type ActiveVenueState = {
 export function useActiveVenue(): ActiveVenueState {
   // Router invalidation key — VenueSelector triggers router.invalidate()
   // on change so this hook re-resolves the active venue automatically.
+  // Use location.href (a string) so this selector never coerces a search
+  // params object to a primitive — that previously threw
+  // "Cannot convert object to primitive value" and bubbled up as a manager
+  // route crash whenever a search object lacked a safe toString.
   const invKey = useRouterState({
-    select: (s) => `${s.location.pathname}::${s.resolvedLocation?.search ?? ""}`,
+    select: (s) => s.location.href,
   });
   const [state, setState] = useState<ActiveVenueState>({
     status: "loading",
