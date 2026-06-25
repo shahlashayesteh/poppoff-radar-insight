@@ -44,6 +44,7 @@ const MAX_MENUS = 10;
 function MenuIntel() {
   useRoleGate("manager");
   useVerifyPaidManagerAccess();
+  const active = useActiveVenue();
   const fetchSuggestions = useServerFn(listMenuSuggestions);
   const fetchMenus = useServerFn(listVenueMenus);
 
