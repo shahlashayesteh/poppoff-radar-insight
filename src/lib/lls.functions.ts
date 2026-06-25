@@ -214,6 +214,7 @@ export const importShifts = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
+    await requirePaidManagerEntitlement(supabase, userId, "import");
     const venueId = await getManagerVenueId(supabase, userId);
 
     // Create batch
