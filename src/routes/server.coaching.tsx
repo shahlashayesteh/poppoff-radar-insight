@@ -96,8 +96,14 @@ function ServerCoaching() {
       setWeekStart(ws);
 
       const [{ data: pr }, { data: ack }, p] = await Promise.all([
-        supabase.from("weekly_priorities").select("id,item_name,category,priority_flag")
-          .eq("venue_id", v).eq("week_start", ws),
+        // Phase 11 — servers only see APPROVED or SENT_TO_SERVERS priorities
+        // and never archived rows. RLS enforces this; we also filter explicitly
+        // so the intent is visible at the call site.
+        supabase.from("weekly_priorities")
+          .select("id,item_name,category,priority_flag,status")
+          .eq("venue_id", v).eq("week_start", ws)
+          .in("status", ["approved", "sent_to_servers"])
+          .is("archived_at", null),
         supabase.from("server_focus_acks").select("id")
           .eq("user_id", u.user.id).eq("venue_id", v).eq("week_start", ws).maybeSingle(),
         loadServerPerformance({ venueId: v, userId: u.user.id, weekStart: ws }),
