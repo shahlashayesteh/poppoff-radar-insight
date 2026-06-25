@@ -15,6 +15,8 @@ import { toast } from "sonner";
 import { PaidManagerGate } from "@/components/manager/PaidManagerGate";
 import { useVerifyPaidManagerAccess } from "@/hooks/use-verify-paid-manager-access";
 import { listCoachingPriorities } from "@/lib/manager-data.functions";
+import { getRecommendationTrace } from "@/lib/manager-trace.functions";
+import { ManagerTraceDrawer, type TracePayload } from "@/components/manager/manager-trace-drawer";
 import { useActiveVenue } from "@/hooks/use-active-venue";
 import { NoVenueState } from "@/components/manager/no-venue-state";
 import { EvidenceBasis } from "@/components/reliability";
