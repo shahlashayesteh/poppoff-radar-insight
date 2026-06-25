@@ -380,13 +380,22 @@ function LlsPage() {
     setLoading(true);
     try {
       await persistMapping({ data: { sourceType: source, mapping: map } });
-      const res = await doImport({
-        data: { sourceType: source, filename: file.filename, rows },
+      // Phase 6: upload no longer writes direct to public.shifts.
+      // Stage the rows first; manager must approve in /manager/imports before LLS changes.
+      const fileHash = await hashFileContent(JSON.stringify({ filename: file.filename, rows }));
+      const res = await doStage({
+        data: {
+          sourceKind: source === "sales" ? "sales" : "labor",
+          filename: file.filename,
+          fileHash,
+          rows: rows as any,
+        },
       });
-      const base = opts.toastMessage
-        ? `${opts.toastMessage} Imported ${res.imported} shifts`
-        : `Imported ${res.imported} shifts`;
-      toast.success(`${base}${res.errors.length ? ` (${res.errors.length} errors)` : ""}`);
+      const summary = res.summary;
+      toast.success(
+        `Staged ${summary.accepted + summary.warnings}/${rows.length} rows · ${summary.rejected} rejected · ${summary.warnings} warnings. Review in Imports before it affects LLS.`,
+      );
+      setPendingBatch({ id: res.batchId, status: "needs_review", source_filename: file.filename });
       setMappingOpen(false);
       setPendingFile(null);
       setNeedsConfirm(new Set());
