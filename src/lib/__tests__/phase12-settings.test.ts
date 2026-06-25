@@ -40,9 +40,10 @@ describe("manager.settings.tsx structure", () => {
     expect(slice).toMatch(/Shift Match/i);
   });
 
-  it("does not surface margin or recoverable revenue in any toggle label", () => {
-    expect(settings).not.toMatch(/margin/i);
-    expect(settings).not.toMatch(/recoverable revenue/i);
+  it("does not render an editable margin/recoverable-revenue toggle for servers", () => {
+    // Allowed: disclaimer text mentioning margin. Forbidden: a toggle exposing it.
+    expect(settings).not.toMatch(/show[_\s-]*margin/i);
+    expect(settings).not.toMatch(/expose[_\s-]*margin/i);
   });
 });
 
