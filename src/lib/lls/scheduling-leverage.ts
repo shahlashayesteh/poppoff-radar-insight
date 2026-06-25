@@ -289,6 +289,12 @@ export interface SchedulingLeverageResult {
     cross_outlet_recommendations_enabled: boolean;
     notes: string[];
   };
+  /**
+   * Phase 20A — controlled OF v2 preview attached by the manager server
+   * function. Engine itself does NOT compute it; populated by callers.
+   * Read-only — does NOT change any baseline / matrix / recommendation.
+   */
+  opportunity_factor_preview?: import("./opportunity-factor-v2-preview").OpportunityFactorPreview | null;
 }
 
 // ---------- helpers ----------
