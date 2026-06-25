@@ -42,6 +42,7 @@ import { hashFileContent } from "@/lib/imports/hash";
 import { Link } from "@tanstack/react-router";
 import { Upload, ChevronLeft, ChevronRight, AlertTriangle, TrendingUp, TrendingDown, Trash2, Gauge, Sparkles, Info } from "lucide-react";
 import { MetricTooltip, DataQualityChip, SalesBasisBadge, GrossEstimateWarning } from "@/components/metrics";
+import { ReliabilityBadge } from "@/components/reliability";
 import { SchedulingLeverageMatrix } from "@/components/lls/scheduling-leverage-matrix";
 import { MARKETS, MARKET_ORDER, type MarketId } from "@/lib/markets";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -543,7 +544,31 @@ function LlsPage() {
             </p>
             <div className="mt-2 flex items-center gap-2 flex-wrap">
               <LaborBasisBadge basis={laborBasis} />
+              <ReliabilityBadge
+                field={
+                  laborBasis === "fully_loaded" || laborBasis === "total" || laborBasis === "wage_plus_oncost" || laborBasis === "wage_only"
+                    ? "labour_wage_cost_known_basis"
+                    : laborBasis === "rate_times_hours"
+                      ? "hours_times_rate_labour"
+                      : "labour_wage_cost_unknown_basis"
+                }
+                prefix="Labour basis"
+              />
               <SalesBasisBadge basis={salesBasis ?? undefined} />
+              <ReliabilityBadge
+                field={
+                  salesBasis === "net_sales_source" || salesBasis === "gross_sales_source"
+                    ? "pos_check_total"
+                    : salesBasis === "net_sales_derived"
+                      ? "rpc"
+                      : salesBasis === "gross_used_as_net_estimate" || salesBasis === "mixed"
+                        ? "gross_used_as_net"
+                        : "unknown"
+                }
+                prefix="Sales basis"
+              />
+              <ReliabilityBadge field="lls_base" prefix="LLS" />
+              <ReliabilityBadge field="pos_server_id" prefix="Server ID" />
             </div>
             {salesBasis === "gross_used_as_net_estimate" ? (
               <GrossEstimateWarning className="mt-3 max-w-xl" />
