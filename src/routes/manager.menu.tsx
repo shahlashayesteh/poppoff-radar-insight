@@ -724,6 +724,22 @@ function MenuIntel() {
                     )}
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
+                    <ManagerTraceDrawer
+                      label="Evidence"
+                      title={`Menu suggestion · ${s.item_name}`}
+                      payload={recTrace}
+                      onOpen={async () => {
+                        if (!venueId) return;
+                        setRecTrace({ kind: "loading" });
+                        try {
+                          const res = await fetchRecTrace({ data: { venueId, recordType: "menu_suggestion", recordId: s.id } });
+                          if (!res.found) setRecTrace({ kind: "empty", message: "No evidence recorded for this suggestion." });
+                          else setRecTrace({ kind: "recommendation", recordType: "menu_suggestion", evidence: res.evidence, created_at: res.created_at });
+                        } catch (e: any) {
+                          setRecTrace({ kind: "error", message: e?.message ?? "Failed to load evidence" });
+                        }
+                      }}
+                    />
                     {s.status === "ai_suggested" && (
                       <>
                         <button disabled={busySug === s.id} onClick={() => transitionSug(s, "approved")} className="text-xs font-semibold rounded-lg px-3 py-1.5 text-white" style={{ background: "var(--brand-green)" }}>
