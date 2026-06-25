@@ -1010,6 +1010,7 @@ const LLS_FIELD_TO_CANONICAL: Record<string, CanonicalField> = {
 };
 
 export type LaborBasis = "fully_loaded" | "wage" | "derived" | null;
+export type SalesBasisLocal = "net_sales_source" | "gross_used_as_net_estimate" | null;
 
 function autoMap(
   headers: string[],
@@ -1019,6 +1020,7 @@ function autoMap(
   mapping: Record<string, string>;
   ambiguous: Set<string>;
   laborBasis: LaborBasis;
+  salesBasis: SalesBasisLocal;
 } {
   const canonicalNeeded = fields
     .map((f) => LLS_FIELD_TO_CANONICAL[f.key])
@@ -1031,13 +1033,11 @@ function autoMap(
   const mapping: Record<string, string> = {};
   const ambiguous = new Set<string>();
   let laborBasis: LaborBasis = null;
+  let salesBasis: SalesBasisLocal = null;
   for (const f of fields) {
     const canon = LLS_FIELD_TO_CANONICAL[f.key];
     if (!canon) continue;
     let m = det.mappings[canon];
-    // Labor cost: PREFER fully-loaded labour cost when present; fall back
-    // to gross wage cost. Never silently treat wage cost as fully loaded —
-    // the basis is tracked separately and surfaced in the UI.
     if (canon === "labor_cost") {
       const fullyLoaded = det.mappings.fully_loaded_labor_cost;
       const wage = det.mappings.labor_cost;
@@ -1049,13 +1049,24 @@ function autoMap(
         laborBasis = "wage";
       }
     }
-    // Gross sales: fall back to net sales if needed.
-    if (!m && canon === "gross_sales") m = det.mappings.net_sales;
+    // Sales: prefer net_sales when uploaded; otherwise treat gross as net
+    // estimate (Phase 4 — never silently relabel gross as net).
+    if (canon === "gross_sales") {
+      const net = det.mappings.net_sales;
+      const gross = det.mappings.gross_sales;
+      if (net) {
+        m = net;
+        salesBasis = "net_sales_source";
+      } else if (gross) {
+        m = gross;
+        salesBasis = "gross_used_as_net_estimate";
+      }
+    }
     if (!m) continue;
     mapping[f.key] = m.header;
     if (m.confidence === "low") ambiguous.add(f.key);
   }
-  return { mapping, ambiguous, laborBasis };
+  return { mapping, ambiguous, laborBasis, salesBasis };
 }
 
 export const __test = { autoMap };
