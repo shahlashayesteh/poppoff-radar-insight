@@ -226,7 +226,9 @@ function LlsPage() {
   const fetchOF = useServerFn(getOpportunityFactors);
   const updateOF = useServerFn(updateOpportunityFactor);
   const suggestOF = useServerFn(suggestOpportunityFactors);
-  const doImport = useServerFn(importShifts);
+  const doStage = useServerFn(stageImport);
+  const fetchPending = useServerFn(latestPendingImportBatch);
+  const [pendingBatch, setPendingBatch] = useState<{ id: string; status: string; source_filename: string | null } | null>(null);
   const loadMapping = useServerFn(getColumnMapping);
   const persistMapping = useServerFn(saveColumnMapping);
   const fetchBatches = useServerFn(listRecentBatches);
