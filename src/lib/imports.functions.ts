@@ -262,9 +262,10 @@ export const stageImport = createServerFn({ method: "POST" })
         accepted: validation.summary.accepted,
         rejected: validation.summary.rejected,
         warnings: validation.summary.warnings,
-        identity: identitySummary,
-      },
+        identity: identitySummary as any,
+      } as any,
     });
+
 
     return {
       batchId,
