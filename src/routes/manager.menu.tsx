@@ -4,7 +4,7 @@ import { ManagerLayout } from "@/components/manager-layout";
 import { supabase } from "@/integrations/supabase/client";
 import { getManagerVenue } from "@/lib/manager-venue";
 import { useRoleGate } from "@/lib/auth-gate";
-import { Brain, Sparkles, Wand2, ChevronRight, Plus, Trash2, FileText, Upload } from "lucide-react";
+import { Brain, Sparkles, Wand2, ChevronRight, Plus, Trash2, FileText, Upload, CheckCircle2, Ban, Archive, Send } from "lucide-react";
 import { getMondayOfWeek, toISODate } from "@/lib/week";
 import { toast } from "sonner";
 import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
@@ -14,6 +14,18 @@ export const Route = createFileRoute("/manager/menu")({ component: MenuIntel });
 type ParsedItem = { name: string; category?: string; price?: string; pairing?: string; priority?: string };
 type Menu = { id: string; menu_text: string; parsed_items: ParsedItem[] | null; uploaded_at: string };
 type Pairing = { item: string; pair_with: string; why: string; priority?: string; category?: string };
+type SuggestionStatus = "ai_suggested" | "approved" | "sent_to_servers" | "rejected" | "archived";
+type Suggestion = {
+  id: string;
+  item_name: string;
+  category: string | null;
+  price: number | null;
+  margin: number | null;
+  ai_reason: string | null;
+  status: SuggestionStatus;
+  source_file: string | null;
+  rejected_reason: string | null;
+};
 
 const MAX_MENUS = 10;
 
@@ -32,6 +44,83 @@ function MenuIntel() {
   const [pendingMenu, setPendingMenu] = useState<Menu | null>(null);
   const [deletingMenu, setDeletingMenu] = useState(false);
   const [confirmRegen, setConfirmRegen] = useState(false);
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+  const [suggestionTab, setSuggestionTab] = useState<SuggestionStatus | "all">("ai_suggested");
+  const [busySug, setBusySug] = useState<string | null>(null);
+
+  const loadSuggestions = async (v: string) => {
+    const { data } = await supabase
+      .from("menu_item_suggestions")
+      .select("id,item_name,category,price,margin,ai_reason,status,source_file,rejected_reason")
+      .eq("venue_id", v)
+      .order("created_at", { ascending: false });
+    setSuggestions(((data ?? []) as unknown) as Suggestion[]);
+  };
+
+  const logSugAudit = async (v: string, id: string, from: string | null, to: string, note?: string) => {
+    const { data: u } = await supabase.auth.getUser();
+    await supabase.from("menu_intelligence_audit_events").insert({
+      venue_id: v, entity_type: "menu_suggestion", entity_id: id,
+      actor_user_id: u.user?.id ?? null, from_status: from, to_status: to, note: note ?? null,
+    });
+  };
+
+  const stageParsedItemsForReview = async () => {
+    if (!venueId || menus.length === 0) { toast.error("Upload a menu first"); return; }
+    const latest = menus[0];
+    const items = (latest.parsed_items ?? []).filter((it) => it.name?.trim());
+    if (items.length === 0) { toast.error("No parsed items in latest menu"); return; }
+    const { data: u } = await supabase.auth.getUser();
+    const rows = items.slice(0, 200).map((it) => ({
+      venue_id: venueId,
+      item_name: it.name.trim(),
+      category: it.category ?? null,
+      price: it.price ? Number(String(it.price).replace(/[^0-9.]/g, "")) || null : null,
+      ai_reason: it.pairing ? `Pairs with ${it.pairing}` : it.priority ? `AI flagged ${it.priority}` : null,
+      source_menu_id: latest.id,
+      source_file: (latest.menu_text || "").split("\n")[0]?.replace(/^#\s*/, "") || null,
+      status: "ai_suggested" as const,
+      created_by: u.user?.id ?? null,
+    }));
+    const { data: inserted, error } = await supabase.from("menu_item_suggestions").insert(rows).select("id");
+    if (error) { toast.error(error.message); return; }
+    for (const r of inserted ?? []) await logSugAudit(venueId, r.id, null, "ai_suggested", "Staged from latest menu");
+    toast.success(`Staged ${inserted?.length ?? 0} items for review`);
+    await loadSuggestions(venueId);
+  };
+
+  const transitionSug = async (s: Suggestion, next: SuggestionStatus, note?: string, extra: Record<string, unknown> = {}) => {
+    if (!venueId) return;
+    setBusySug(s.id);
+    const now = new Date().toISOString();
+    const { data: u } = await supabase.auth.getUser();
+    const patch: Record<string, unknown> = { status: next, ...extra };
+    if (next === "approved") { patch.approved_by = u.user?.id ?? null; patch.approved_at = now; }
+    if (next === "sent_to_servers") {
+      patch.sent_to_servers_at = now;
+      if (!patch.approved_at) { patch.approved_by = u.user?.id ?? null; patch.approved_at = now; }
+    }
+    if (next === "rejected") { patch.rejected_at = now; }
+    if (next === "archived") { patch.archived_at = now; }
+    const { error } = await supabase.from("menu_item_suggestions").update(patch as never).eq("id", s.id);
+    if (error) { toast.error(error.message); setBusySug(null); return; }
+    await logSugAudit(venueId, s.id, s.status, next, note);
+    // When sending to servers, also create a weekly_priorities row so it surfaces to the team.
+    if (next === "sent_to_servers") {
+      const week = toISODate(getMondayOfWeek());
+      await supabase.from("weekly_priorities").insert({
+        venue_id: venueId, week_start: week,
+        item_name: s.item_name, category: s.category,
+        title: s.item_name, reason: s.ai_reason,
+        priority_flag: "push",
+        status: "sent_to_servers",
+        approved_by: u.user?.id ?? null, approved_at: now, sent_to_servers_at: now,
+        source_suggestion_id: s.id,
+      });
+    }
+    setBusySug(null);
+    await loadSuggestions(venueId);
+  };
 
   const loadMenus = async (v: string) => {
     const { data } = await supabase.from("venue_menu").select("id, menu_text, parsed_items, uploaded_at").eq("venue_id", v).order("uploaded_at", { ascending: false }).limit(MAX_MENUS);
@@ -71,7 +160,7 @@ function MenuIntel() {
       const v = venue?.id;
       if (!v) return;
       setVenueId(v);
-      await Promise.all([loadMenus(v), loadPairings(v)]);
+      await Promise.all([loadMenus(v), loadPairings(v), loadSuggestions(v)]);
     })();
   }, []);
 
@@ -501,6 +590,98 @@ function MenuIntel() {
             </div>
           );
         })()}
+
+        {/* Menu Item Suggestions — manager-only approval workflow */}
+        <div className="mt-6 rounded-2xl bg-white border border-border p-5">
+          <div className="flex items-start justify-between gap-3 flex-wrap">
+            <div>
+              <h3 className="font-display font-bold inline-flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-brand-orange" /> Menu item suggestions
+              </h3>
+              <p className="text-xs text-muted-foreground mt-1">
+                AI-suggested items wait here for your review. Margin data stays manager-only. Servers never see suggestions until you Send to servers.
+              </p>
+            </div>
+            <button
+              onClick={stageParsedItemsForReview}
+              disabled={menus.length === 0}
+              className="rounded-xl px-3 py-1.5 text-xs font-bold text-white inline-flex items-center gap-2 disabled:opacity-50"
+              style={{ background: "var(--brand-green)" }}
+            >
+              <Plus className="h-3.5 w-3.5" /> Stage from latest menu
+            </button>
+          </div>
+
+          <div className="mt-4 flex gap-2 overflow-x-auto">
+            {(["ai_suggested","approved","sent_to_servers","rejected","archived","all"] as const).map((k) => {
+              const count = k === "all" ? suggestions.length : suggestions.filter((s) => s.status === k).length;
+              const active = suggestionTab === k;
+              return (
+                <button key={k} onClick={() => setSuggestionTab(k)}
+                  className="text-xs font-semibold rounded-full px-3 py-1.5 whitespace-nowrap border"
+                  style={{
+                    background: active ? "var(--brand-orange)" : "white",
+                    color: active ? "white" : "var(--foreground)",
+                    borderColor: active ? "var(--brand-orange)" : "var(--border)",
+                  }}>
+                  {k.replaceAll("_", " ")} ({count})
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="mt-3 divide-y divide-border border border-border rounded-xl overflow-hidden">
+            {(() => {
+              const visible = suggestionTab === "all" ? suggestions : suggestions.filter((s) => s.status === suggestionTab);
+              if (visible.length === 0) {
+                return <div className="px-4 py-6 text-sm text-muted-foreground text-center">No suggestions in this view.</div>;
+              }
+              return visible.map((s) => (
+                <div key={s.id} className="px-4 py-3 flex items-start justify-between gap-3 flex-wrap">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <div className="font-semibold">{s.item_name}</div>
+                      {s.category && <span className="text-[11px] text-muted-foreground">· {s.category}</span>}
+                      {s.price != null && <span className="text-[11px] text-muted-foreground">· £{Number(s.price).toFixed(2)}</span>}
+                      {s.margin != null && (
+                        <span className="text-[10px] font-bold rounded px-1.5 py-0.5"
+                          style={{ background: "color-mix(in oklab, var(--brand-orange) 14%, white)", color: "var(--brand-orange)" }}
+                          title="Manager-only — never shown to servers">
+                          margin {Number(s.margin).toFixed(0)}% · manager-only
+                        </span>
+                      )}
+                    </div>
+                    {s.ai_reason && <div className="text-xs text-muted-foreground mt-0.5">AI reason: {s.ai_reason}</div>}
+                    {s.rejected_reason && <div className="text-xs text-muted-foreground mt-0.5">Rejected: {s.rejected_reason}</div>}
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {s.status === "ai_suggested" && (
+                      <>
+                        <button disabled={busySug === s.id} onClick={() => transitionSug(s, "approved")} className="text-xs font-semibold rounded-lg px-3 py-1.5 text-white" style={{ background: "var(--brand-green)" }}>
+                          <CheckCircle2 className="h-3.5 w-3.5 inline -mt-0.5 mr-1" />Approve
+                        </button>
+                        <button disabled={busySug === s.id} onClick={() => transitionSug(s, "rejected", "Manager rejected AI suggestion")} className="text-xs font-semibold rounded-lg px-3 py-1.5 border border-border">
+                          <Ban className="h-3.5 w-3.5 inline -mt-0.5 mr-1" />Reject
+                        </button>
+                      </>
+                    )}
+                    {s.status === "approved" && (
+                      <button disabled={busySug === s.id} onClick={() => transitionSug(s, "sent_to_servers")} className="text-xs font-semibold rounded-lg px-3 py-1.5 text-white" style={{ background: "var(--brand-green)" }}>
+                        <Send className="h-3.5 w-3.5 inline -mt-0.5 mr-1" />Send to servers
+                      </button>
+                    )}
+                    {(s.status === "approved" || s.status === "sent_to_servers") && (
+                      <button disabled={busySug === s.id} onClick={() => transitionSug(s, "archived")} className="text-xs font-semibold rounded-lg px-3 py-1.5 border border-border">
+                        <Archive className="h-3.5 w-3.5 inline -mt-0.5 mr-1" />Archive
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ));
+            })()}
+          </div>
+        </div>
+
 
         <div className="mt-5 rounded-xl px-5 py-3 flex items-center justify-between flex-wrap gap-3"
           style={{ background: "color-mix(in oklab, var(--brand-green) 10%, white)" }}>

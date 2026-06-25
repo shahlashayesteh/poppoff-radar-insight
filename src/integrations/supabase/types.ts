@@ -487,6 +487,137 @@ export type Database = {
           },
         ]
       }
+      menu_intelligence_audit_events: {
+        Row: {
+          actor_user_id: string | null
+          created_at: string
+          entity_id: string
+          entity_type: string
+          from_status: string | null
+          id: string
+          note: string | null
+          to_status: string
+          venue_id: string
+        }
+        Insert: {
+          actor_user_id?: string | null
+          created_at?: string
+          entity_id: string
+          entity_type: string
+          from_status?: string | null
+          id?: string
+          note?: string | null
+          to_status: string
+          venue_id: string
+        }
+        Update: {
+          actor_user_id?: string | null
+          created_at?: string
+          entity_id?: string
+          entity_type?: string
+          from_status?: string | null
+          id?: string
+          note?: string | null
+          to_status?: string
+          venue_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "menu_intelligence_audit_events_venue_id_fkey"
+            columns: ["venue_id"]
+            isOneToOne: false
+            referencedRelation: "venues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      menu_item_suggestions: {
+        Row: {
+          ai_reason: string | null
+          approved_at: string | null
+          approved_by: string | null
+          archived_at: string | null
+          category: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          item_name: string
+          item_pos_id: string | null
+          margin: number | null
+          menu_period: string | null
+          price: number | null
+          rejected_at: string | null
+          rejected_reason: string | null
+          sent_to_servers_at: string | null
+          source_file: string | null
+          source_menu_id: string | null
+          status: string
+          updated_at: string
+          venue_id: string
+        }
+        Insert: {
+          ai_reason?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          archived_at?: string | null
+          category?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          item_name: string
+          item_pos_id?: string | null
+          margin?: number | null
+          menu_period?: string | null
+          price?: number | null
+          rejected_at?: string | null
+          rejected_reason?: string | null
+          sent_to_servers_at?: string | null
+          source_file?: string | null
+          source_menu_id?: string | null
+          status?: string
+          updated_at?: string
+          venue_id: string
+        }
+        Update: {
+          ai_reason?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          archived_at?: string | null
+          category?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          item_name?: string
+          item_pos_id?: string | null
+          margin?: number | null
+          menu_period?: string | null
+          price?: number | null
+          rejected_at?: string | null
+          rejected_reason?: string | null
+          sent_to_servers_at?: string | null
+          source_file?: string | null
+          source_menu_id?: string | null
+          status?: string
+          updated_at?: string
+          venue_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "menu_item_suggestions_source_menu_id_fkey"
+            columns: ["source_menu_id"]
+            isOneToOne: false
+            referencedRelation: "venue_menu"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "menu_item_suggestions_venue_id_fkey"
+            columns: ["venue_id"]
+            isOneToOne: false
+            referencedRelation: "venues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           business_name: string | null
@@ -2320,29 +2451,83 @@ export type Database = {
       }
       weekly_priorities: {
         Row: {
+          approved_at: string | null
+          approved_by: string | null
+          archived_at: string | null
           category: string | null
           created_at: string
+          created_by: string | null
+          end_date: string | null
+          expected_behaviour: string | null
+          expected_impact: string | null
+          expected_impact_basis: string
           id: string
           item_name: string
           priority_flag: string
+          reason: string | null
+          rejected_at: string | null
+          rejected_reason: string | null
+          sent_to_servers_at: string | null
+          server_group: string | null
+          source_menu_id: string | null
+          source_suggestion_id: string | null
+          start_date: string | null
+          status: string
+          title: string | null
           venue_id: string
           week_start: string
         }
         Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          archived_at?: string | null
           category?: string | null
           created_at?: string
+          created_by?: string | null
+          end_date?: string | null
+          expected_behaviour?: string | null
+          expected_impact?: string | null
+          expected_impact_basis?: string
           id?: string
           item_name: string
           priority_flag?: string
+          reason?: string | null
+          rejected_at?: string | null
+          rejected_reason?: string | null
+          sent_to_servers_at?: string | null
+          server_group?: string | null
+          source_menu_id?: string | null
+          source_suggestion_id?: string | null
+          start_date?: string | null
+          status?: string
+          title?: string | null
           venue_id: string
           week_start: string
         }
         Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          archived_at?: string | null
           category?: string | null
           created_at?: string
+          created_by?: string | null
+          end_date?: string | null
+          expected_behaviour?: string | null
+          expected_impact?: string | null
+          expected_impact_basis?: string
           id?: string
           item_name?: string
           priority_flag?: string
+          reason?: string | null
+          rejected_at?: string | null
+          rejected_reason?: string | null
+          sent_to_servers_at?: string | null
+          server_group?: string | null
+          source_menu_id?: string | null
+          source_suggestion_id?: string | null
+          start_date?: string | null
+          status?: string
+          title?: string | null
           venue_id?: string
           week_start?: string
         }
