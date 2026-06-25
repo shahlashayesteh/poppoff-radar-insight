@@ -152,10 +152,10 @@ export function validateRows(
       if (!trimOrNull(r.shift_start_time)) {
         reasons.push("missing_start_time"); missingStartTime++; status = "warning";
       }
-      if (!trimOrNull(r.outlet)) {
+      if (!trimOrNull(r.outlet) && !dOutlet) {
         reasons.push("missing_outlet"); missingOutlet++; status = status === "accepted" ? "warning" : status;
       }
-      if (!trimOrNull(r.revenue_centre)) {
+      if (!trimOrNull(r.revenue_centre) && !dRC) {
         reasons.push("missing_revenue_centre"); missingRevenueCentre++;
         status = status === "accepted" ? "warning" : status;
       }
@@ -163,12 +163,14 @@ export function validateRows(
       if (sourceKind === "sales") {
         const g = numOrNull(r.gross_sales);
         const n = numOrNull(r.net_sales);
-        if (g != null && n == null) {
+        // Only warn gross-only when there is no batch-level sales basis declaring how to treat it.
+        if (g != null && n == null && !dSalesBasis) {
           reasons.push("gross_only_no_net"); grossOnlyRows++;
           status = status === "accepted" ? "warning" : status;
           evidence.sales_basis_hint = "gross_used_as_net_estimate";
         }
-        const sb = inferBasis("sales", r, trimOrNull(r.sales_basis));
+        const declared = trimOrNull(r.sales_basis) ?? dSalesBasis;
+        const sb = inferBasis("sales", r, declared);
         if (!sb.known) {
           reasons.push("unknown_sales_basis"); unknownSalesBasis++;
           status = status === "accepted" ? "warning" : status;
@@ -180,7 +182,8 @@ export function validateRows(
         const c = numOrNull(r.covers_served);
         if (c != null) { covers += c; hasCovers = true; }
       } else {
-        const lb = inferBasis("labor", r, trimOrNull(r.labor_basis));
+        const declared = trimOrNull(r.labor_basis) ?? dLabourBasis;
+        const lb = inferBasis("labor", r, declared);
         if (!lb.known) {
           reasons.push("unknown_labor_basis"); unknownLaborBasis++;
           status = status === "accepted" ? "warning" : status;
