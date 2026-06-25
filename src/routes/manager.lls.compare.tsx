@@ -126,8 +126,9 @@ function ComparePage() {
               <strong className="text-foreground">Sales &amp; labour basis:</strong> v1 / v2 totals on this page are computed
               from venue-level sums. Per-row <em>sales_basis</em> (gross vs net) and <em>labour_basis</em> (wage / total /
               fully-loaded) badges, plus mixed-basis warnings, surface here once the import/schema phase persists those
-              columns. Until then, treat figures as <ModelledValueLabel value="modelled" /> at the basis the active
-              model declares (<code>{data.venue.active_model_version}</code>). <ModelledValueLabel kind="modelled" />
+              columns. Until then, treat figures as <ModelledValueLabel kind="modelled" /> at the basis the active
+              model declares (<code>{data.venue.active_model_version}</code>).
+
             </div>
 
 
