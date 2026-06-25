@@ -94,6 +94,31 @@ export const stageImport = createServerFn({ method: "POST" })
 
     const validation = validateRows(data.rows as RawImportRow[], sourceKind, inferred.defaults);
 
+    // Cross-batch duplicate awareness: any row whose hash matches a row already
+    // staged or committed for this venue + source_kind (in a non-rolled-back
+    // batch) is marked as duplicate_candidate so the commit step skips it
+    // cleanly. Prevents accidental double-counting on re-uploads of the same file.
+    const rowHashes = (data.rows as RawImportRow[]).map((r) => computeDupKey(r, sourceKind));
+    const uniqueHashes = Array.from(new Set(rowHashes));
+    const crossBatchDupSet = new Set<string>();
+    if (uniqueHashes.length) {
+      // Chunk to keep the IN-list reasonable.
+      const CHUNK = 500;
+      for (let i = 0; i < uniqueHashes.length; i += CHUNK) {
+        const slice = uniqueHashes.slice(i, i + CHUNK);
+        const { data: existing } = await supabase
+          .from("shift_staging_rows")
+          .select("raw_row_hash, batch_id, shift_import_batches_v2!inner(status)")
+          .eq("venue_id", venueId)
+          .eq("source_kind", sourceKind)
+          .in("raw_row_hash", slice)
+          .neq("shift_import_batches_v2.status", "rolled_back");
+        for (const row of (existing ?? []) as any[]) {
+          if (row?.raw_row_hash) crossBatchDupSet.add(row.raw_row_hash);
+        }
+      }
+    }
+
     // Create the batch (status = needs_review — manager must approve before commit)
     const { data: batch, error: bErr } = await supabase
       .from("shift_import_batches_v2")
