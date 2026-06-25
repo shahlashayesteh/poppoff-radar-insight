@@ -11,6 +11,7 @@ import {
 } from "@/lib/performance-engine";
 import { engineRagFromPerf } from "@/lib/metrics/server-rag";
 import { MetricTooltip, ModelledValueLabel } from "@/components/metrics";
+import { OperationsStatusStrip } from "@/components/manager/operations-status-strip";
 
 
 export const Route = createFileRoute("/manager/team")({ component: TeamPage });
