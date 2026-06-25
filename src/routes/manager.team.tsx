@@ -31,6 +31,7 @@ type Member = { id: string; full_name: string | null };
 function TeamPage() {
   useRoleGate("manager");
   useVerifyPaidManagerAccess();
+  const fetchTeam = useServerFn(getTeamAnalytics);
 
   const [members, setMembers] = useState<Member[]>([]);
   const [perf, setPerf] = useState<VenuePerformance | null>(null);
@@ -43,29 +44,28 @@ function TeamPage() {
       const venue = await getManagerVenue();
       const v = venue?.id;
       if (!v) return;
-      const { data: vm } = await supabase.from("venue_members").select("user_id").eq("venue_id", v);
-      const ids = (vm ?? []).map((x) => x.user_id);
-      let mems: Member[] = [];
-      if (ids.length) {
-        const { data: profs } = await supabase.from("profiles").select("id, full_name").in("id", ids);
-        mems = profs ?? [];
-      }
-      setMembers(mems);
       const visibleWeek = await latestStatsWeek(
         supabase.from("server_stats").select("week_start, created_at").eq("venue_id", v).order("created_at", { ascending: false }).order("week_start", { ascending: false }).limit(1),
         weekStart,
       );
       setDisplayWeekStart(visibleWeek);
+      let mems: Member[] = [];
+      let ids: string[] = [];
+      try {
+        const res = await fetchTeam({ data: { venueId: v, weekStart: visibleWeek } });
+        mems = (res?.members ?? []) as Member[];
+        ids = mems.map((m) => m.id);
+        setLoginCounts(res?.loginCounts ?? {});
+      } catch {
+        setLoginCounts({});
+      }
+      setMembers(mems);
       if (ids.length) {
         const venuePerf = await loadVenuePerformance({ venueId: v, weekStart: visibleWeek, userIds: ids });
         setPerf(venuePerf);
       }
-      const { data: lg } = await supabase.from("server_logins").select("user_id").eq("venue_id", v);
-      const counts: Record<string, number> = {};
-      for (const r of (lg ?? [])) counts[r.user_id] = (counts[r.user_id] || 0) + 1;
-      setLoginCounts(counts);
     })();
-  }, [weekStart]);
+  }, [weekStart, fetchTeam]);
 
   // Rank members by overall engine score, falling back to original order for
   // those without data so the team list stays stable.
