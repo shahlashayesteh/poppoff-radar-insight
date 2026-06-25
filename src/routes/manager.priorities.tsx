@@ -80,6 +80,8 @@ async function logAudit(
 
 function Priorities() {
   useRoleGate("manager");
+  useVerifyPaidManagerAccess();
+
   const [venueId, setVenueId] = useState<string | null>(null);
   const [items, setItems] = useState<Priority[]>([]);
   const [name, setName] = useState("");
