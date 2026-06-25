@@ -86,7 +86,7 @@ function numOrNull(n: unknown): number | null {
   return Number.isFinite(v) ? v : null;
 }
 
-function dupKey(r: RawImportRow, sourceKind: SourceKind): string {
+export function computeDupKey(r: RawImportRow, sourceKind: SourceKind): string {
   const sid = trimOrNull(r.server_id);
   const name = trimOrNull(r.server_name);
   const start = trimOrNull(r.shift_start_time);
@@ -112,6 +112,8 @@ function dupKey(r: RawImportRow, sourceKind: SourceKind): string {
         ].join(":");
   return [sourceKind, sid ?? name ?? "", r.shift_date ?? "", start ?? "", tiebreak].join("|").toLowerCase();
 }
+// Back-compat internal alias.
+const dupKey = computeDupKey;
 
 function inferBasis(mode: SourceKind, _r: RawImportRow, declared: string | null): { basis: string; known: boolean } {
   if (declared) return { basis: declared.toLowerCase(), known: true };
