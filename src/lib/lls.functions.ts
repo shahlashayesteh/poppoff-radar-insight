@@ -708,13 +708,16 @@ export function computeWeeklyScorecardFromRows(
 
 export const getWeeklyScorecard = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { weekStart: string }) =>
-    z.object({ weekStart: z.string().regex(/^\d{4}-\d{2}-\d{2}$/) }).parse(d),
+  .inputValidator((d: { weekStart: string; venueId?: string }) =>
+    z.object({
+      weekStart: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      ...OptionalVenue,
+    }).parse(d),
   )
   .handler(async ({ data, context }): Promise<ScorecardResult> => {
     const { supabase, userId } = context;
     await requirePaidManagerEntitlement(supabase, userId);
-    const venueId = await getManagerVenueId(supabase, userId);
+    const venueId = await getManagerVenueId(supabase, userId, data.venueId);
 
     const ws = data.weekStart;
     const wsDate = new Date(ws + "T00:00:00");
