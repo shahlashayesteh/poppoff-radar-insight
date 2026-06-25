@@ -6,6 +6,7 @@ import { listImportBatches } from "@/lib/imports.functions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ManagerLayout } from "@/components/manager-layout";
+import { useEntitlement, statusLabel } from "@/lib/entitlements";
 
 export const Route = createFileRoute("/manager/imports/")({
   component: ImportsListPage,
