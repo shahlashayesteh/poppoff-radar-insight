@@ -62,6 +62,13 @@ export type CanonicalField =
   // Tips & service
   | "tips"
   | "service_charge"
+  // Tax
+  | "tax"
+  | "vat"
+  // Currency / basis declarations
+  | "currency"
+  | "sales_basis"
+  | "labour_basis"
   // Payment
   | "payment_method"
   | "payment_total"
