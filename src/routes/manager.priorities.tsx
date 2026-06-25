@@ -199,6 +199,16 @@ function Priorities() {
   })();
   const visible = activeTab === "all" ? items : items.filter((i) => i.status === activeTab);
 
+  if (active.status !== "ready") {
+    return (
+      <ManagerLayout>
+        <div className="px-8 py-7">
+          <NoVenueState status={active.status} venues={active.venues} />
+        </div>
+      </ManagerLayout>
+    );
+  }
+
   return (
     <ManagerLayout>
       <div className="px-8 py-7">
