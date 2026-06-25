@@ -148,14 +148,17 @@ export function evaluateChecklist(
 
   const groups: ChecklistGroup[] = [
     { title: "Pilot setup", items: data },
-    { title: "Required data files", items: [...REQUIRED_DATA_FILES, CONTEXTUAL_NOTE] },
+    { title: "Required data files (reference)", items: [...REQUIRED_DATA_FILES, CONTEXTUAL_NOTE] },
   ];
 
-  const all = groups.flatMap((g) => g.items).filter((i) => !i.optional);
-  const ok = all.filter((i) => i.status === "ok").length;
-  const warn = all.filter((i) => i.status === "warn").length;
-  const missing = all.filter((i) => i.status === "missing").length;
-  const total = all.length || 1;
+  // Only the "Pilot setup" group contributes to readiness score — it reflects
+  // what was actually observed in the data. The "Required data files" group
+  // is a reference checklist for the operator and does not score.
+  const scored = data;
+  const ok = scored.filter((i) => i.status === "ok").length;
+  const warn = scored.filter((i) => i.status === "warn").length;
+  const missing = scored.filter((i) => i.status === "missing").length;
+  const total = scored.length || 1;
   const score = Math.round(((ok + warn * 0.5) / total) * 100);
   const readinessLevel: PilotChecklist["readinessLevel"] =
     missing === 0 && warn <= 1 ? "ready" : missing === 0 ? "almost" : "not_ready";
