@@ -459,12 +459,15 @@ export const rollbackBatch = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-export const listRecentBatches = createServerFn({ method: "GET" })
+export const listRecentBatches = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
+  .inputValidator((d: { venueId?: string } | undefined) =>
+    z.object(OptionalVenue).parse(d ?? {}),
+  )
+  .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     await requirePaidManagerEntitlement(supabase, userId);
-    const venueId = await getManagerVenueId(supabase, userId);
+    const venueId = await getManagerVenueId(supabase, userId, data.venueId);
     const { data } = await supabase
       .from("shift_import_batches")
       .select("id, source_type, filename, row_count, status, created_at")
