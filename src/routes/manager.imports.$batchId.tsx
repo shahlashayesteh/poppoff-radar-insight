@@ -564,3 +564,205 @@ function labourBasisToReliability(mode: unknown): string {
       return "unknown";
   }
 }
+
+// ---------------------------------------------------------------------------
+// BatchDefaultsCard — lets the manager declare outlet / RC / sales basis /
+// labour basis once per batch. Saving re-validates the staged rows and clears
+// the "missing optional context" warnings on a clean upload.
+// ---------------------------------------------------------------------------
+type DefaultsPayload = {
+  outlet: string | null;
+  revenue_centre: string | null;
+  sales_basis: "net" | "gross" | "gross_with_tax" | null;
+  labour_basis: "wages_only" | "wages_plus_oncosts" | "fully_loaded" | null;
+};
+
+function BatchDefaultsCard({
+  batch,
+  busy,
+  onSave,
+}: {
+  batch: Batch;
+  busy: boolean;
+  onSave: (next: DefaultsPayload) => void | Promise<void>;
+}) {
+  const d = (batch.batch_defaults ?? {}) as Record<string, unknown>;
+  const inferredReasons = Array.isArray((d as any).inferred_reasons)
+    ? ((d as any).inferred_reasons as string[])
+    : [];
+  const [outlet, setOutlet] = useState<string>((d.outlet as string) ?? "");
+  const [rc, setRc] = useState<string>((d.revenue_centre as string) ?? "");
+  const [salesBasis, setSalesBasis] = useState<string>((d.sales_basis as string) ?? "");
+  const [labourBasis, setLabourBasis] = useState<string>((d.labour_basis as string) ?? "");
+
+  const isSales = batch.source_kind === "sales";
+  const isLabour = batch.source_kind === "labor";
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Batch defaults</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3 text-sm">
+        <p className="text-xs text-muted-foreground">
+          Declare context once per upload. We use these defaults to stamp provenance on commit
+          and to clear advisory warnings about missing optional context. Real data problems
+          (duplicates, ambiguous identity, bad dates) are not affected.
+        </p>
+
+        {inferredReasons.length > 0 && (
+          <div className="rounded-md border border-emerald-200 bg-emerald-50/60 p-2 text-xs text-emerald-900">
+            <div className="font-medium">Auto-detected at upload:</div>
+            <ul className="list-disc list-inside">
+              {inferredReasons.map((r, i) => <li key={i}>{r}</li>)}
+            </ul>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <label className="text-xs">
+            <span className="text-muted-foreground">Default outlet</span>
+            <input
+              className="mt-1 w-full rounded border px-2 py-1 text-sm"
+              value={outlet}
+              placeholder="e.g. Riverside Bistro"
+              onChange={(e) => setOutlet(e.target.value)}
+            />
+          </label>
+          <label className="text-xs">
+            <span className="text-muted-foreground">Default revenue centre</span>
+            <input
+              className="mt-1 w-full rounded border px-2 py-1 text-sm"
+              value={rc}
+              placeholder="e.g. Main"
+              onChange={(e) => setRc(e.target.value)}
+            />
+          </label>
+
+          {isSales && (
+            <label className="text-xs">
+              <span className="text-muted-foreground">Sales basis</span>
+              <select
+                className="mt-1 w-full rounded border px-2 py-1 text-sm"
+                value={salesBasis}
+                onChange={(e) => setSalesBasis(e.target.value)}
+              >
+                <option value="">— pick one —</option>
+                <option value="net">net (post-discount, ex-tax)</option>
+                <option value="gross">gross (pre-tax, pre-discount)</option>
+                <option value="gross_with_tax">gross including tax</option>
+              </select>
+            </label>
+          )}
+
+          {isLabour && (
+            <label className="text-xs">
+              <span className="text-muted-foreground">Labour basis</span>
+              <select
+                className="mt-1 w-full rounded border px-2 py-1 text-sm"
+                value={labourBasis}
+                onChange={(e) => setLabourBasis(e.target.value)}
+              >
+                <option value="">— pick one —</option>
+                <option value="wages_only">wages only</option>
+                <option value="wages_plus_oncosts">wages + oncosts (NI / pension)</option>
+                <option value="fully_loaded">fully loaded (incl. on-cost & benefits)</option>
+              </select>
+            </label>
+          )}
+        </div>
+
+        <div className="flex justify-end">
+          <Button
+            size="sm"
+            disabled={busy}
+            onClick={() =>
+              onSave({
+                outlet: outlet.trim() || null,
+                revenue_centre: rc.trim() || null,
+                sales_basis: (salesBasis as DefaultsPayload["sales_basis"]) || null,
+                labour_basis: (labourBasis as DefaultsPayload["labour_basis"]) || null,
+              })
+            }
+          >
+            Save & re-validate
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// WarningBreakdownCard — explains what the warning count actually is.
+// Groups by reason with plain-English meaning and a "blocks commit?" tag.
+// ---------------------------------------------------------------------------
+const REASON_META: Record<string, { label: string; blocks: boolean; help: string }> = {
+  missing_outlet:           { label: "Missing outlet",           blocks: false, help: "Row had no outlet column. Set a default above to clear." },
+  missing_revenue_centre:   { label: "Missing revenue centre",   blocks: false, help: "Row had no revenue centre. Set a default above to clear." },
+  missing_start_time:       { label: "Missing start time",       blocks: false, help: "Daypart will be inferred from the date on commit." },
+  gross_only_no_net:        { label: "Gross-only sales",         blocks: false, help: "File contained gross_sales but no net_sales. LLS will tag this provenance honestly. Declare a sales basis above to silence." },
+  unknown_sales_basis:      { label: "Unknown sales basis",      blocks: false, help: "No sales_basis column. Declare one above so provenance is recorded." },
+  unknown_labor_basis:      { label: "Unknown labour basis",     blocks: false, help: "No labor_basis column. Declare one above so provenance is recorded." },
+  duplicate_row:            { label: "Duplicate rows",           blocks: true,  help: "Same server + date + start. Review and exclude if not real." },
+  missing_server_identity:  { label: "Missing server identity",  blocks: true,  help: "Row has neither a server name nor server id and is rejected." },
+  missing_shift_date:       { label: "Missing shift date",       blocks: true,  help: "Row has no date and is rejected." },
+  invalid_shift_date_format:{ label: "Invalid date format",      blocks: true,  help: "Date is not YYYY-MM-DD and is rejected." },
+};
+
+function WarningBreakdownCard({ batch, rows }: { batch: Batch; rows: Row[] }) {
+  const counts = new Map<string, number>();
+  for (const r of rows) {
+    if (!r.status_reason) continue;
+    for (const reason of r.status_reason.split(",").map((s) => s.trim()).filter(Boolean)) {
+      counts.set(reason, (counts.get(reason) ?? 0) + 1);
+    }
+  }
+  const total = batch.warning_count + batch.rejected_count;
+  if (total === 0) {
+    return (
+      <Card>
+        <CardHeader><CardTitle>Warning breakdown</CardTitle></CardHeader>
+        <CardContent className="text-sm text-emerald-700">No warnings or rejections. Safe to commit.</CardContent>
+      </Card>
+    );
+  }
+  const entries = Array.from(counts.entries()).sort((a, b) => b[1] - a[1]);
+  return (
+    <Card>
+      <CardHeader><CardTitle>Warning breakdown</CardTitle></CardHeader>
+      <CardContent className="text-xs">
+        <p className="text-muted-foreground mb-2">
+          Advisory flags are safe to commit. Only "blocks commit" rows must be resolved first.
+        </p>
+        <table className="w-full">
+          <thead>
+            <tr className="text-left text-muted-foreground">
+              <th className="pr-2 py-1">Reason</th>
+              <th className="pr-2 py-1">Rows</th>
+              <th className="pr-2 py-1">Effect</th>
+              <th className="py-1">What it means</th>
+            </tr>
+          </thead>
+          <tbody>
+            {entries.map(([reason, n]) => {
+              const meta = REASON_META[reason] ?? { label: reason, blocks: false, help: "See row detail below." };
+              return (
+                <tr key={reason} className="border-t align-top">
+                  <td className="pr-2 py-1 font-medium">{meta.label}</td>
+                  <td className="pr-2 py-1">{n}</td>
+                  <td className="pr-2 py-1">
+                    {meta.blocks
+                      ? <span className="text-rose-700">blocks commit</span>
+                      : <span className="text-amber-700">advisory</span>}
+                  </td>
+                  <td className="py-1 text-muted-foreground">{meta.help}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </CardContent>
+    </Card>
+  );
+}
