@@ -263,6 +263,12 @@ function LlsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [weekStart]);
 
+  useEffect(() => {
+    fetchPending()
+      .then((r) => setPendingBatch((r.batch as any) ?? null))
+      .catch(() => {});
+  }, [fetchPending]);
+
   const fieldsForSource = pendingSource === "sales" ? SALES_FIELDS : LABOR_FIELDS;
 
   const openUpload = async (source: "sales" | "labor", file: File) => {
