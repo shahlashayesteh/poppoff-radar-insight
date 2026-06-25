@@ -92,6 +92,9 @@ function Priorities() {
   const active = useActiveVenue();
   const fetchPriorities = useServerFn(listWeeklyPriorities);
 
+  const fetchRecTrace = useServerFn(getRecommendationTrace);
+  const [recTrace, setRecTrace] = useState<TracePayload>({ kind: "loading" });
+
   const [venueId, setVenueId] = useState<string | null>(null);
   const [items, setItems] = useState<Priority[]>([]);
   const [name, setName] = useState("");
