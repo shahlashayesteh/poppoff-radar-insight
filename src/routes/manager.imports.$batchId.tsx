@@ -96,17 +96,51 @@ function ImportBatchDetail() {
 
   const load = useCallback(async () => {
     try {
-      const res = await fetchDetail({ data: { batchId } });
+      const [res, emp] = await Promise.all([
+        fetchDetail({ data: { batchId } }),
+        fetchEmployees({}).catch(() => ({ employees: [] as Employee[] })),
+      ]);
       setBatch(res.batch as Batch);
       setRows((res.rows ?? []) as Row[]);
+      setEmployees((emp?.employees ?? []) as Employee[]);
     } catch (e: any) {
       toast.error(e?.message ?? "Failed to load batch");
     } finally {
       setLoading(false);
     }
-  }, [fetchDetail, batchId]);
+  }, [fetchDetail, fetchEmployees, batchId]);
 
   useEffect(() => { void load(); }, [load]);
+
+  // ---- Phase 7 manager identity actions ----
+  const onConfirm = async (stagingRowId: string, employeeMasterId: string) => {
+    setBusy(true);
+    try { await doConfirm({ data: { stagingRowId, employeeMasterId } }); toast.success("Match confirmed"); await load(); }
+    catch (e: any) { toast.error(e?.message ?? "Confirm failed"); }
+    finally { setBusy(false); }
+  };
+  const onCreate = async (stagingRowId: string, reportedName: string) => {
+    const name = prompt("New employee display name", reportedName || "");
+    if (!name) return;
+    setBusy(true);
+    try { await doCreate({ data: { stagingRowId, displayName: name } }); toast.success("Employee created"); await load(); }
+    catch (e: any) { toast.error(e?.message ?? "Create failed"); }
+    finally { setBusy(false); }
+  };
+  const onAlias = async (stagingRowId: string, employeeMasterId: string, aliasName: string) => {
+    setBusy(true);
+    try { await doAlias({ data: { stagingRowId, employeeMasterId, aliasName } }); toast.success("Alias linked"); await load(); }
+    catch (e: any) { toast.error(e?.message ?? "Alias failed"); }
+    finally { setBusy(false); }
+  };
+  const onExclude = async (stagingRowId: string) => {
+    if (!confirm("Exclude this row from the import?")) return;
+    setBusy(true);
+    try { await doExclude({ data: { stagingRowId } }); toast.success("Row excluded"); await load(); }
+    catch (e: any) { toast.error(e?.message ?? "Exclude failed"); }
+    finally { setBusy(false); }
+  };
+
 
   const onApprove = async () => {
     setBusy(true);
