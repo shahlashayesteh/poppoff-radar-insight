@@ -404,9 +404,11 @@ export function SchedulingLeverageMatrix({ data, currency = "£" }: { data: Sche
       {/* Shift match recommendations — clean table */}
       {data.recommendations.length > 0 && (
         <div className="mt-6">
-          <h3 className="font-display text-base font-bold">Shift match recommendations</h3>
+          <h3 className="font-display text-base font-bold">Suggested shift-match tests</h3>
           <p className="text-xs text-muted-foreground">
-            Top {data.recommendations.length} actions, ranked by rota-test priority. Click <em>Details</em> for full reasoning.
+            Top {data.recommendations.length} <em>suggested tests</em> based on historical shift data,
+            ranked by rota-test priority. Each requires manager review of availability, contracted hours
+            and outlet eligibility before any rota change.
           </p>
           <div className="mt-3 overflow-x-auto">
             <table className="w-full text-sm">
