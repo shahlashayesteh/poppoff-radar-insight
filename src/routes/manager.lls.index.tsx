@@ -215,6 +215,10 @@ function LlsPage() {
   // the UI can disclose whether LLS is computed against fully-loaded labour
   // cost or gross wage cost — never silently conflate the two.
   const [laborBasis, setLaborBasis] = useState<LaborBasis>(null);
+  // Phase 4: track sales basis from the most recent sales upload so the UI
+  // can disclose whether financial calculations are based on net sales or
+  // gross-as-net estimate — never silently relabel one as the other.
+  const [salesBasis, setSalesBasis] = useState<SalesBasisLocal>(null);
 
   const fetchScorecard = useServerFn(getWeeklyScorecard);
   const fetchOF = useServerFn(getOpportunityFactors);
