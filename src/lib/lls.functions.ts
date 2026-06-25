@@ -65,12 +65,21 @@ function hashServerId(name: string): string {
 
 // ---------- column mapping CRUD ----------
 
-export const getColumnMapping = createServerFn({ method: "GET" })
+// Phase 16A — all paid-manager LLS server functions now accept an optional
+// `venueId`. Single-venue callers may omit it; multi-venue / head-office
+// callers MUST pass it. The resolver throws `active_venue_required` when a
+// multi-venue caller forgets, so the UI prompts for a selection instead of
+// silently landing on the wrong venue.
+const OptionalVenue = { venueId: z.string().uuid().optional() } as const;
+
+export const getColumnMapping = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { sourceType: "sales" | "labor" }) => d)
+  .inputValidator((d: { sourceType: "sales" | "labor"; venueId?: string }) =>
+    z.object({ sourceType: z.enum(["sales", "labor"]), ...OptionalVenue }).parse(d),
+  )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const venueId = await getManagerVenueId(supabase, userId);
+    const venueId = await getManagerVenueId(supabase, userId, data.venueId);
     const { data: row } = await supabase
       .from("venue_column_mappings")
       .select("mapping")
@@ -82,10 +91,16 @@ export const getColumnMapping = createServerFn({ method: "GET" })
 
 export const saveColumnMapping = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { sourceType: "sales" | "labor"; mapping: Record<string, string> }) => d)
+  .inputValidator((d: { sourceType: "sales" | "labor"; mapping: Record<string, string>; venueId?: string }) =>
+    z.object({
+      sourceType: z.enum(["sales", "labor"]),
+      mapping: z.record(z.string(), z.string()),
+      ...OptionalVenue,
+    }).parse(d),
+  )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const venueId = await getManagerVenueId(supabase, userId);
+    const venueId = await getManagerVenueId(supabase, userId, data.venueId);
     const { error } = await supabase
       .from("venue_column_mappings")
       .upsert(
@@ -98,12 +113,15 @@ export const saveColumnMapping = createServerFn({ method: "POST" })
 
 // ---------- opportunity factors ----------
 
-export const getOpportunityFactors = createServerFn({ method: "GET" })
+export const getOpportunityFactors = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
+  .inputValidator((d: { venueId?: string } | undefined) =>
+    z.object(OptionalVenue).parse(d ?? {}),
+  )
+  .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const venueId = await getManagerVenueId(supabase, userId);
-    const { data, error } = await supabase
+    const venueId = await getManagerVenueId(supabase, userId, data.venueId);
+    const { data: rows, error } = await supabase
       .from("venue_opportunity_factors")
       .select("day_of_week, daypart, factor")
       .eq("venue_id", venueId);
@@ -115,23 +133,24 @@ export const getOpportunityFactors = createServerFn({ method: "GET" })
       grid[dow] = {} as Record<Daypart, number>;
       for (const dp of DAYPARTS) grid[dow][dp] = 1.0;
     }
-    for (const r of data ?? []) grid[r.day_of_week][r.daypart as Daypart] = Number(r.factor);
+    for (const r of rows ?? []) grid[r.day_of_week][r.daypart as Daypart] = Number(r.factor);
     return { grid };
   });
 
 export const updateOpportunityFactor = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { dayOfWeek: number; daypart: Daypart; factor: number; weekStart: string }) =>
+  .inputValidator((d: { dayOfWeek: number; daypart: Daypart; factor: number; weekStart: string; venueId?: string }) =>
     z.object({
       dayOfWeek: z.number().int().min(0).max(6),
       daypart: z.enum(DAYPARTS),
       factor: z.number().min(0.7).max(1.4),
       weekStart: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      ...OptionalVenue,
     }).parse(d),
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const venueId = await getManagerVenueId(supabase, userId);
+    const venueId = await getManagerVenueId(supabase, userId, data.venueId);
     const clamped = Math.min(1.4, Math.max(0.7, Number(data.factor)));
     const { error } = await supabase
       .from("venue_opportunity_factors")
@@ -157,19 +176,22 @@ export const updateOpportunityFactor = createServerFn({ method: "POST" })
 
 // ---------- thresholds ----------
 
-export const getLlsThresholds = createServerFn({ method: "GET" })
+export const getLlsThresholds = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
+  .inputValidator((d: { venueId?: string } | undefined) =>
+    z.object(OptionalVenue).parse(d ?? {}),
+  )
+  .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const venueId = await getManagerVenueId(supabase, userId);
-    const { data } = await supabase
+    const venueId = await getManagerVenueId(supabase, userId, data.venueId);
+    const { data: row } = await supabase
       .from("venue_settings")
       .select("lls_green_threshold, lls_amber_threshold")
       .eq("venue_id", venueId)
       .maybeSingle();
     return {
-      green: Number(data?.lls_green_threshold ?? 13.0),
-      amber: Number(data?.lls_amber_threshold ?? 10.0),
+      green: Number(row?.lls_green_threshold ?? 13.0),
+      amber: Number(row?.lls_amber_threshold ?? 10.0),
     };
   });
 
