@@ -532,15 +532,26 @@ export const createEmployeeIdentity = createServerFn({ method: "POST" })
     const { row, venueId } = await loadStagingRow(supabase, userId, data.stagingRowId);
     const normalised = data.displayName.trim().toLowerCase().replace(/\s+/g, " ");
 
+    // Phase 19: resolve organisation linkage from the venue so cross-venue
+    // eligibility decisions later have an anchor. Defaults to single-venue
+    // scope; cross-venue eligibility remains false until manager opts in.
+    const { data: venueRow } = await supabase
+      .from("venues")
+      .select("organisation_id")
+      .eq("id", venueId)
+      .maybeSingle();
+
     const { data: emp, error: iErr } = await supabase
       .from("employee_master")
       .insert({
         venue_id: venueId,
+        organisation_id: (venueRow as any)?.organisation_id ?? null,
         display_name: data.displayName.trim(),
         normalised_name: normalised,
         pos_employee_id: data.posEmployeeId ?? null,
         labour_employee_id: data.labourEmployeeId ?? null,
         manager_confirmed: true,
+        cross_venue_eligible: false,
         created_by: userId,
       })
       .select("id")
@@ -557,6 +568,21 @@ export const createEmployeeIdentity = createServerFn({ method: "POST" })
         confirmed_by: userId,
       });
     }
+
+    // Phase 19: merges/links audit trail.
+    await supabase.from("employee_identity_merges").insert({
+      venue_id: venueId,
+      action: "link_source_id",
+      primary_employee_id: emp.id,
+      payload: {
+        kind: "create",
+        display_name: data.displayName.trim(),
+        reported_id: row.reported_identity_id,
+        reported_name: row.reported_identity_name,
+        source_kind: row.source_kind,
+      },
+      performed_by: userId,
+    });
 
     await supabase
       .from("shift_staging_rows")
