@@ -80,9 +80,9 @@ export const stageImport = createServerFn({ method: "POST" })
         net_total: validation.totals.net_total,
         labour_total: validation.totals.labour_total,
         covers_total: validation.totals.covers_total,
-        sales_basis_summary: validation.salesBasis as unknown as Record<string, unknown>,
-        labour_basis_summary: validation.labourBasis as unknown as Record<string, unknown>,
-        validation_summary: validation.summary as unknown as Record<string, unknown>,
+        sales_basis_summary: validation.salesBasis as any,
+        labour_basis_summary: validation.labourBasis as any,
+        validation_summary: validation.summary as any,
         status: "needs_review",
       })
       .select("id")
