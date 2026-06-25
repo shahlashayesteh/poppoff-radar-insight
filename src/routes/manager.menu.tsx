@@ -38,6 +38,8 @@ const MAX_MENUS = 10;
 
 function MenuIntel() {
   useRoleGate("manager");
+  useVerifyPaidManagerAccess();
+
   const [venueId, setVenueId] = useState<string | null>(null);
   const [menus, setMenus] = useState<Menu[]>([]);
   const [text, setText] = useState("");
