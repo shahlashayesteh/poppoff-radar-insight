@@ -403,7 +403,7 @@ function LlsPage() {
     }
     setLoading(true);
     try {
-      await persistMapping({ data: { sourceType: source, mapping: map } });
+      await persistMapping({ data: { sourceType: source, mapping: map, venueId } });
       // Phase 6: upload no longer writes direct to public.shifts.
       // Stage the rows first; manager must approve in /manager/imports before LLS changes.
       const fileHash = await hashFileContent(JSON.stringify({ filename: file.filename, rows }));
@@ -413,6 +413,7 @@ function LlsPage() {
           filename: file.filename,
           fileHash,
           rows: rows as any,
+          venueId,
         },
       });
       const summary = res.summary;
