@@ -79,20 +79,28 @@ export const listWeeklyPriorities = createServerFn({ method: "POST" })
   });
 
 // ---------- Coaching workflow ----------
+//
+// Returns priorities for a venue, optionally filtered by week_start. Returns
+// all statuses so the coaching page can render its full workflow board
+// (sent / approved / pending / rejected / archived). Client filters by status.
+const CoachingInput = z.object({
+  venueId: z.string().min(1),
+  weekStart: z.string().nullable().optional(),
+});
 
 export const listCoachingPriorities = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: z.input<typeof VenueInput>) => VenueInput.parse(d))
+  .inputValidator((d: z.input<typeof CoachingInput>) => CoachingInput.parse(d))
   .handler(async ({ data, context }) => {
     await requirePaidManagerEntitlement(context.supabase, context.userId);
-    const { data: rows, error } = await context.supabase
+    let query = context.supabase
       .from("weekly_priorities")
       .select(
         "id,item_name,title,category,priority_flag,status,reason,expected_behaviour,expected_impact,expected_impact_basis",
       )
-      .eq("venue_id", data.venueId)
-      .in("status", ["ai_suggested", "approved", "sent_to_servers"])
-      .order("created_at", { ascending: false });
+      .eq("venue_id", data.venueId);
+    if (data.weekStart) query = query.eq("week_start", data.weekStart);
+    const { data: rows, error } = await query.order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
     return { rows: rows ?? [] };
   });
@@ -132,5 +140,64 @@ export const getTeamAnalytics = createServerFn({ method: "POST" })
       .eq("venue_id", data.venueId)
       .eq("week_start", data.weekStart);
 
-    return { members, stats: stats ?? [] };
+    const { data: logins } = await supabase
+      .from("server_logins")
+      .select("user_id")
+      .eq("venue_id", data.venueId);
+    const loginCounts: Record<string, number> = {};
+    for (const r of (logins ?? []) as Array<{ user_id: string }>) {
+      loginCounts[r.user_id] = (loginCounts[r.user_id] || 0) + 1;
+    }
+
+    return { members, stats: stats ?? [], loginCounts };
+  });
+
+// ---------- Reports (Phase 15) ----------
+//
+// Aggregates weekly venue performance (covers / sales / servers + WoW deltas)
+// server-side so /manager/reports does not do its own RLS read. Provenance
+// stays explicit: covers + sales are measured; rpc + wow are derived.
+
+export const getManagerReportsData = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: z.input<typeof VenueInput>) => VenueInput.parse(d))
+  .handler(async ({ data, context }) => {
+    await requirePaidManagerEntitlement(context.supabase, context.userId);
+    const { data: rows, error } = await context.supabase
+      .from("server_stats")
+      .select("week_start, total_covers, total_sales")
+      .eq("venue_id", data.venueId)
+      .order("week_start", { ascending: false });
+    if (error) throw new Error(error.message);
+
+    const grouped = new Map<string, { covers: number; sales: number; servers: number }>();
+    for (const r of (rows ?? []) as Array<{
+      week_start: string;
+      total_covers: number | null;
+      total_sales: number | null;
+    }>) {
+      const cur = grouped.get(r.week_start) || { covers: 0, sales: 0, servers: 0 };
+      cur.covers += r.total_covers || 0;
+      cur.sales += Number(r.total_sales || 0);
+      cur.servers += 1;
+      grouped.set(r.week_start, cur);
+    }
+    const sorted = Array.from(grouped.entries())
+      .map(([week_start, x]) => ({
+        week_start,
+        covers: x.covers,
+        sales: x.sales,
+        servers: x.servers,
+        rpc: x.covers > 0 ? x.sales / x.covers : 0,
+        wowSalesPct: null as number | null,
+        wowRpcPct: null as number | null,
+      }))
+      .sort((a, b) => (a.week_start < b.week_start ? 1 : -1));
+    for (let i = 0; i < sorted.length - 1; i++) {
+      const cur = sorted[i];
+      const prev = sorted[i + 1];
+      cur.wowSalesPct = prev.sales > 0 ? ((cur.sales - prev.sales) / prev.sales) * 100 : null;
+      cur.wowRpcPct = prev.rpc > 0 ? ((cur.rpc - prev.rpc) / prev.rpc) * 100 : null;
+    }
+    return { weeks: sorted };
   });
