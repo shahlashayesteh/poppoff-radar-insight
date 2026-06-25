@@ -147,6 +147,96 @@ export function LaborBasisBadge({
 }
 
 /* ----------------------- *
+ * SalesBasisBadge         *
+ * ----------------------- */
+
+export function SalesBasisBadge({
+  basis,
+  className,
+}: {
+  basis: SalesBasis | null | undefined;
+  className?: string;
+}) {
+  if (!basis || basis === "unknown") return null;
+  const label = SALES_BASIS_LABEL[basis];
+  const isClean = basis === "net_sales_source" || basis === "net_sales_derived";
+  const isEstimate = basis === "gross_used_as_net_estimate" || basis === "mixed";
+  const tone = isClean
+    ? "bg-brand-green/10 text-brand-green border-brand-green/30"
+    : isEstimate
+    ? "bg-brand-orange/10 text-brand-orange border-brand-orange/30"
+    : "bg-muted text-muted-foreground border-border";
+  return (
+    <span
+      data-testid="sales-basis-badge"
+      data-basis={basis}
+      className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-[11px] font-semibold ${tone} ${className ?? ""}`}
+      title="Sales basis used in this calculation. Gross is never silently relabelled as net."
+    >
+      <span className="uppercase tracking-wide text-[9px] opacity-70">
+        Sales basis
+      </span>
+      <span>{label}</span>
+    </span>
+  );
+}
+
+/* ----------------------- *
+ * GrossEstimateWarning    *
+ * ----------------------- */
+
+export function GrossEstimateWarning({ className }: { className?: string }) {
+  return (
+    <div
+      data-testid="gross-estimate-warning"
+      role="status"
+      className={`flex items-start gap-2 rounded-md border border-brand-orange/40 bg-brand-orange/10 px-3 py-2 text-[12px] text-brand-orange ${className ?? ""}`}
+    >
+      <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+      <span>
+        <strong className="font-semibold">Gross used as net estimate.</strong>{" "}
+        No discounts, comps, voids or refunds uploaded for this period — figures
+        are directional only. Upload leakage fields for a defensible net basis.
+      </span>
+    </div>
+  );
+}
+
+/* ----------------------- *
+ * MixedBasisWarning       *
+ * ----------------------- */
+
+export function MixedBasisWarning({
+  kind,
+  className,
+}: {
+  kind: "labour" | "sales";
+  className?: string;
+}) {
+  const label =
+    kind === "labour"
+      ? "Mixed labour basis across selected rows."
+      : "Mixed sales basis across selected rows.";
+  const detail =
+    kind === "labour"
+      ? "Some rows use fully loaded labour, others wage-only or hours×rate. Aggregating across mixed bases will distort labour %."
+      : "Some rows use net sales, others gross. Aggregating across mixed bases will distort revenue figures.";
+  return (
+    <div
+      data-testid="mixed-basis-warning"
+      data-kind={kind}
+      role="alert"
+      className={`flex items-start gap-2 rounded-md border border-brand-orange/40 bg-brand-orange/10 px-3 py-2 text-[12px] text-brand-orange ${className ?? ""}`}
+    >
+      <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+      <span>
+        <strong className="font-semibold">{label}</strong> {detail}
+      </span>
+    </div>
+  );
+}
+
+/* ----------------------- *
  * DataQualityChip         *
  * ----------------------- */
 
