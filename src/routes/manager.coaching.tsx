@@ -99,6 +99,16 @@ function Page() {
   const rejected = byStatus("rejected");
   const archived = byStatus("archived");
 
+  if (active.status !== "ready") {
+    return (
+      <ManagerLayout>
+        <div className="px-8 py-8 max-w-5xl">
+          <NoVenueState status={active.status} venues={active.venues} />
+        </div>
+      </ManagerLayout>
+    );
+  }
+
   return (
     <ManagerLayout>
       <div className="px-8 py-8 max-w-5xl">
