@@ -446,8 +446,20 @@ function LlsPage() {
         },
       });
       const summary = res.summary;
+      const inferred = (res as any).inferredReasons as string[] | undefined;
+      const sumParts: string[] = [];
+      if (summary.missingOutlet) sumParts.push(`missing outlet (${summary.missingOutlet})`);
+      if (summary.missingRevenueCentre) sumParts.push(`missing revenue centre (${summary.missingRevenueCentre})`);
+      if (summary.grossOnlyRows) sumParts.push(`gross-only sales (${summary.grossOnlyRows})`);
+      if (summary.unknownSalesBasis) sumParts.push(`unknown sales basis (${summary.unknownSalesBasis})`);
+      if (summary.unknownLaborBasis) sumParts.push(`unknown labour basis (${summary.unknownLaborBasis})`);
+      if (summary.duplicates) sumParts.push(`duplicates (${summary.duplicates})`);
+      const headline = `Staged ${summary.accepted + summary.warnings}/${rows.length} rows · ${summary.rejected} rejected${summary.warnings ? ` · ${summary.warnings} advisory flag${summary.warnings === 1 ? "" : "s"}` : " · all clean"}.`;
+      const detail = sumParts.length ? `Heads-up: ${sumParts.slice(0, 3).join(", ")}.` : null;
+      const inferredLine = inferred && inferred.length ? `Auto-detected: ${inferred.join("; ")}.` : null;
       toast.success(
-        `Staged ${summary.accepted + summary.warnings}/${rows.length} rows · ${summary.rejected} rejected · ${summary.warnings} warnings. Review in Imports before it affects LLS.`,
+        [headline, detail, inferredLine, "Review in Imports before it affects LLS."].filter(Boolean).join(" "),
+        { duration: 9000 },
       );
       setPendingBatch({ id: res.batchId, status: "needs_review", source_filename: file.filename });
       setMappingOpen(false);
