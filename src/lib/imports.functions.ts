@@ -97,14 +97,13 @@ export const stageImport = createServerFn({ method: "POST" })
       const reportedName = (r.server_name ?? "").toString().trim() || null;
       const reportedId = (r.server_id ?? "").toString().trim() || null;
       const dateValid = r.shift_date && /^\d{4}-\d{2}-\d{2}$/.test(r.shift_date);
-      // Build a deterministic raw_row_hash (per Phase 6 duplicate detection)
       const dupKey = [reportedId ?? reportedName ?? "", r.shift_date ?? "", r.shift_start_time ?? ""].join("|").toLowerCase();
       return {
         venue_id: venueId,
         batch_id: batchId,
         source_kind: sourceKind,
         source_row_index: i,
-        raw_row: r as unknown as Record<string, unknown>,
+        raw_row: r as any,
         raw_row_hash: dupKey,
         service_date: dateValid ? r.shift_date : null,
         reported_identity_id: reportedId,
@@ -115,7 +114,7 @@ export const stageImport = createServerFn({ method: "POST" })
         duplicate_status: v.duplicateOfIndex != null ? "duplicate_candidate" : "unique",
         excluded_from_canonical: rejected,
         status_reason: v.reasons.join(",") || null,
-        status_evidence: { reasons: v.reasons, ...(v.evidence as Record<string, unknown>) },
+        status_evidence: { reasons: v.reasons, ...(v.evidence as Record<string, unknown>) } as any,
       };
     });
 
