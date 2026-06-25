@@ -76,6 +76,16 @@ function TeamPage() {
   const rankById = Object.fromEntries(ranking.map((r) => [r.id, r.rank]));
   const sortedMembers = members.slice().sort((a, b) => (rankById[a.id] ?? 999) - (rankById[b.id] ?? 999));
 
+  if (active.status !== "ready") {
+    return (
+      <ManagerLayout>
+        <div className="px-8 py-8">
+          <NoVenueState status={active.status} venues={active.venues} />
+        </div>
+      </ManagerLayout>
+    );
+  }
+
   return (
     <ManagerLayout>
       <div className="px-8 py-8">
