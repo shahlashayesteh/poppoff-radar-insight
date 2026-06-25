@@ -86,11 +86,34 @@ function numOrNull(n: unknown): number | null {
   return Number.isFinite(v) ? v : null;
 }
 
-function dupKey(r: RawImportRow): string {
+export function computeDupKey(r: RawImportRow, sourceKind: SourceKind): string {
   const sid = trimOrNull(r.server_id);
   const name = trimOrNull(r.server_name);
-  return [sid ?? name ?? "", r.shift_date ?? "", r.shift_start_time ?? ""].join("|").toLowerCase();
+  const start = trimOrNull(r.shift_start_time);
+  // When start_time is missing (common in POS sales exports that aggregate per
+  // server per day), the legacy key (identity|date|"") collapsed multiple real
+  // shifts on the same date into "duplicates". Use a per-row signature
+  // (amount/hours, end-time, covers) as a tiebreaker so legitimate multi-shift
+  // days aren't false-flagged. Identical rows (true duplicates) still collide.
+  const tiebreak = start
+    ? ""
+    : sourceKind === "sales"
+      ? [
+          numOrNull(r.gross_sales) ?? "",
+          numOrNull(r.net_sales) ?? "",
+          numOrNull(r.covers_served) ?? "",
+          trimOrNull(r.shift_end_time) ?? "",
+          trimOrNull(r.daypart) ?? "",
+        ].join(":")
+      : [
+          numOrNull(r.labor_cost) ?? "",
+          trimOrNull(r.shift_end_time) ?? "",
+          trimOrNull(r.daypart) ?? "",
+        ].join(":");
+  return [sourceKind, sid ?? name ?? "", r.shift_date ?? "", start ?? "", tiebreak].join("|").toLowerCase();
 }
+// Back-compat internal alias.
+const dupKey = computeDupKey;
 
 function inferBasis(mode: SourceKind, _r: RawImportRow, declared: string | null): { basis: string; known: boolean } {
   if (declared) return { basis: declared.toLowerCase(), known: true };
@@ -119,6 +142,16 @@ export function validateRows(
   const dRC = trimOrNull(defaults.revenue_centre);
   const dSalesBasis = trimOrNull(defaults.sales_basis);
   const dLabourBasis = trimOrNull(defaults.labour_basis);
+
+  // Pre-scan: if NO row in the batch carries an outlet / revenue_centre AND no
+  // batch default is supplied, the venue clearly doesn't track that dimension
+  // — suppress the per-row warning entirely instead of flagging every row.
+  // (Real provenance is unaffected; this only quiets advisory noise.)
+  const anyOutletProvided = rows.some((r) => trimOrNull(r.outlet) != null);
+  const anyRCProvided = rows.some((r) => trimOrNull(r.revenue_centre) != null);
+  const suppressOutletWarn = !anyOutletProvided && !dOutlet;
+  const suppressRCWarn = !anyRCProvided && !dRC;
+
   const out: ValidatedRow[] = [];
   const seen = new Map<string, number>();
   let accepted = 0, rejected = 0, warnings = 0, duplicates = 0;
@@ -152,10 +185,10 @@ export function validateRows(
       if (!trimOrNull(r.shift_start_time)) {
         reasons.push("missing_start_time"); missingStartTime++; status = "warning";
       }
-      if (!trimOrNull(r.outlet) && !dOutlet) {
+      if (!suppressOutletWarn && !trimOrNull(r.outlet) && !dOutlet) {
         reasons.push("missing_outlet"); missingOutlet++; status = status === "accepted" ? "warning" : status;
       }
-      if (!trimOrNull(r.revenue_centre) && !dRC) {
+      if (!suppressRCWarn && !trimOrNull(r.revenue_centre) && !dRC) {
         reasons.push("missing_revenue_centre"); missingRevenueCentre++;
         status = status === "accepted" ? "warning" : status;
       }
@@ -194,7 +227,7 @@ export function validateRows(
       }
 
       // Duplicate detection (within this batch)
-      const key = dupKey(r);
+      const key = dupKey(r, sourceKind);
       if (seen.has(key)) {
         const firstIdx = seen.get(key)!;
         reasons.push("duplicate_row"); duplicates++;

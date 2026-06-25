@@ -1,64 +1,66 @@
-## Goal
+## What's actually happening
 
-Make sure managers uploading CSVs from **any POS system** never see a confusing "every row warned" message again — while keeping the data-trust guarantees from Phases 4/6/17 intact.
+The 115 "duplicates" are **not** leftovers from your earlier re-uploads. Each upload creates a separate batch, and the duplicate check only looks within a single batch — it never compares against prior batches.
 
-## Root cause (recap)
+The real cause is the dedupe key in `src/lib/imports/validation.ts`:
 
-The validator in `src/lib/imports/validation.ts` warns on every row that's missing optional context columns (`outlet`, `revenue_centre`, `net_sales`, `sales_basis`, `labor_basis`). Different POS exports name and split these differently:
+```text
+key = (server_id OR server_name) | shift_date | shift_start_time
+```
 
-- Toast, Square, Lightspeed, Aloha — call net sales "Net Sales", "Subtotal", "Net Revenue", or omit it entirely.
-- Outlet/RC is "Location", "Store", "RVC", "Department", or missing on single-site exports.
-- Basis labels are almost never explicit columns — they're a property of the report type, not a field.
+Your sales CSV has no `shift_start_time` column, so for every server who worked **two shifts on the same date** (e.g. brunch + dinner), the key collapses to `name|date|` and the second row gets flagged as a duplicate. That's why ~1 in 3 rows tripped it — it's a false positive, not real duplication.
 
-Your two CSVs hit all of these and produced 362 noisy warnings. Other POS exports will hit the same pattern unless we fix three layers.
+The "missing revenue centre" flag is also noise for a single-outlet venue with no revenue-centre config.
 
-## Plan — three coordinated changes (UI only, no calc/RLS/schema changes)
+## Plan
 
-### 1. Smarter post-upload toast and per-row warning rollup
-`src/routes/manager.lls.index.tsx` and `src/routes/manager.imports.$batchId.tsx`
-- Replace the raw warning count with a grouped summary built from `ValidationSummary` (already returned by `stageImportBatch`): e.g. `362 staged, 0 rejected. Heads-up: missing outlet (362), gross-only sales (181), unknown basis (362). Safe to commit.`
-- Add a "Warning breakdown" card on the batch page that groups warnings by reason with counts and a one-line plain-English explanation for each (what it means, whether it blocks commit, how to fix it at source).
+### 1. Fix the dedupe key (root cause)
 
-### 2. Per-batch defaults to silence noise that isn't really missing
-`src/routes/manager.imports.$batchId.tsx` + `src/lib/imports.functions.ts`
-- Add a small "Batch defaults" panel on the batch page that lets the manager declare, once per upload:
-  - **Default outlet** (defaults to the active venue's name — single-site users never see this warning again)
-  - **Default revenue centre** (optional, e.g. "Main")
-  - **Sales basis**: `net` / `gross` / `gross_with_tax` (declares what the file actually contains)
-  - **Labour basis**: `wages_only` / `wages_plus_oncosts` / `fully_loaded`
-- Saving the defaults re-runs `validateRows` against the staged data with those values pre-filled, and re-stamps `summary` + each row's reasons. Warnings that were only about "missing optional context" disappear; warnings about real data problems (duplicate rows, invalid dates, missing identity) stay.
-- The defaults are persisted on `shift_import_batches_v2` (existing JSONB column — no migration needed; I'll confirm before editing) and applied during commit so the canonical `shifts_v2` rows get correct provenance.
+In `src/lib/imports/validation.ts`:
 
-### 3. Auto-detect basis and outlet from filename / column shape
-`src/lib/import/column-intelligence.ts`
-- When `sales_basis` / `labor_basis` columns are absent, infer a default from filename hints (`net_sales`, `gross`, `wages`, `loaded`, POS vendor names) and from which numeric columns are present (e.g. only `gross_sales` ⇒ `gross`; `gross_sales` + `tax` + tip column ⇒ `gross_with_tax`).
-- When outlet/RC are absent and the venue has a single site, auto-apply the venue name as outlet at staging time so the warning never fires.
-- Surface what was inferred in the upload toast so it's auditable, not silent ("Detected: Toast export, sales basis = gross, outlet = Riverside Bistro").
+- Include `source_kind` (sales vs labour) in the key so the two files never collide with each other.
+- When `shift_start_time` is missing, fall back to `(amount + hours)` as a tiebreaker instead of treating all same-day rows for one server as duplicates.
+- Add a unit test covering "same server, same date, two shifts, no start time" → must produce zero duplicates.
 
-## What stays unchanged (deliberately)
+Expected outcome: the 115 false-positive duplicates drop to 0 (or to a small genuine number, which would be a real data problem worth surfacing).
 
-- Validation rules themselves — duplicates, missing identity, bad dates still reject or warn.
-- LLS formulas, provenance mapping, RLS policies.
-- The Phase 6 staging gate — nothing auto-commits.
-- Employee identity matching (Phase 7/19) — still blocks ambiguous commits.
+### 2. Silence "missing revenue centre" when the venue has no revenue centres configured
 
-## Why this generalises across POS systems
+In `validateRows` (`src/lib/imports/validation.ts`) and the batch-defaults inference (`src/lib/imports/defaults.ts`):
 
-The fix moves the burden from "every row must carry every optional column" to "the manager declares context once per file, and we infer what we can". That works whether the CSV came from Toast, Square, Lightspeed, Aloha, Revel, Clover, or a hand-rolled export — because every POS export has the same shape problem (numbers + identity, missing context).
+- If the venue has no revenue-centre dimension declared in `batch_defaults` or `venue_settings`, suppress the `missing_revenue_centre` reason entirely instead of flagging every row.
+- Keep it as an optional advisory only for multi-revenue-centre venues.
 
-## Files I'd touch
+### 3. Honest toast wording
 
-- `src/routes/manager.lls.index.tsx` — improved toast
-- `src/routes/manager.imports.$batchId.tsx` — warning breakdown + batch defaults panel
-- `src/lib/imports.functions.ts` — `applyBatchDefaults` server fn (guarded with `requirePaidManagerEntitlement` + `assertVenueAccess`), re-runs validation, updates batch row
-- `src/lib/imports/validation.ts` — accept optional `defaults` arg so context-only warnings are suppressed when defaults are declared
-- `src/lib/import/column-intelligence.ts` — filename + column-shape inference for basis and outlet
+In `src/routes/manager.lls.index.tsx` (the staged-summary toast):
 
-## What I will NOT do
+- Replace the current breakdown with a tiered message:
+  - If `accepted == total` and only auto-detected context flags remain: `"Staged 362/362 rows · ready to commit. Auto-detected: outlet=Fight, sales basis=gross. Review in Imports."`
+  - If real issues exist (true duplicates, ambiguous identity, bad dates): list only those, with counts.
+- Stop counting `missing_revenue_centre` as an "advisory flag" once #2 lands.
 
-- No DB schema changes (uses existing JSONB on `shift_import_batches_v2`; will verify before editing)
-- No new tables, no migration
-- No changes to LLS math or provenance derivation rules
-- No auto-commit, no silent merges
+### 4. Cross-batch duplicate awareness (optional, lightweight)
 
-Approve and I'll implement in this order: (3) inference → (2) batch defaults + re-validate → (1) toast and breakdown card, then verify against your two uploaded CSVs end-to-end.
+In `src/lib/imports.functions.ts`, during staging, compare each row's `(venue_id, source_kind, server_id|name, date, start_time)` against already-committed rows in `shifts_v2` and against rows in other **unrolled-back** batches. Mark those as `duplicate_status = 'duplicate_candidate'` so the commit step naturally skips them. This means if you ever do re-upload the same file, the system handles it cleanly instead of silently double-counting.
+
+### 5. Verify
+
+- Run the existing 838-test suite plus the new dedupe-key test.
+- Re-stage your two CSVs (no DB migration needed) and confirm the toast reads cleanly.
+
+## Files touched
+
+- `src/lib/imports/validation.ts` — dedupe key, suppress revenue-centre noise
+- `src/lib/imports/defaults.ts` — expose `hasRevenueCentres` flag
+- `src/lib/imports.functions.ts` — cross-batch duplicate check during staging
+- `src/routes/manager.lls.index.tsx` — tiered toast wording
+- `src/lib/imports/__tests__/validation.test.ts` — new regression tests
+
+No schema migration required.
+
+## Out of scope
+
+- Changing LLS formulas or commit logic.
+- Touching server-side game mechanics.
+- Reworking the import detail page beyond what the toast change implies.

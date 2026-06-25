@@ -6,7 +6,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { validateRows, type RawImportRow, type SourceKind, type BatchDefaults } from "@/lib/imports/validation";
+import { validateRows, computeDupKey, type RawImportRow, type SourceKind, type BatchDefaults } from "@/lib/imports/validation";
 import { inferBatchDefaults, SALES_BASIS_OPTIONS, LABOUR_BASIS_OPTIONS } from "@/lib/imports/defaults";
 import {
   resolveIdentityIndexed, indexDirectory, normaliseName, summarise,
@@ -94,6 +94,31 @@ export const stageImport = createServerFn({ method: "POST" })
 
     const validation = validateRows(data.rows as RawImportRow[], sourceKind, inferred.defaults);
 
+    // Cross-batch duplicate awareness: any row whose hash matches a row already
+    // staged or committed for this venue + source_kind (in a non-rolled-back
+    // batch) is marked as duplicate_candidate so the commit step skips it
+    // cleanly. Prevents accidental double-counting on re-uploads of the same file.
+    const rowHashes = (data.rows as RawImportRow[]).map((r) => computeDupKey(r, sourceKind));
+    const uniqueHashes = Array.from(new Set(rowHashes));
+    const crossBatchDupSet = new Set<string>();
+    if (uniqueHashes.length) {
+      // Chunk to keep the IN-list reasonable.
+      const CHUNK = 500;
+      for (let i = 0; i < uniqueHashes.length; i += CHUNK) {
+        const slice = uniqueHashes.slice(i, i + CHUNK);
+        const { data: existing } = await supabase
+          .from("shift_staging_rows")
+          .select("raw_row_hash, batch_id, shift_import_batches_v2!inner(status)")
+          .eq("venue_id", venueId)
+          .eq("source_kind", sourceKind)
+          .in("raw_row_hash", slice)
+          .neq("shift_import_batches_v2.status", "rolled_back");
+        for (const row of (existing ?? []) as any[]) {
+          if (row?.raw_row_hash) crossBatchDupSet.add(row.raw_row_hash);
+        }
+      }
+    }
+
     // Create the batch (status = needs_review — manager must approve before commit)
     const { data: batch, error: bErr } = await supabase
       .from("shift_import_batches_v2")
@@ -132,24 +157,30 @@ export const stageImport = createServerFn({ method: "POST" })
       const reportedName = (r.server_name ?? "").toString().trim() || null;
       const reportedId = (r.server_id ?? "").toString().trim() || null;
       const dateValid = r.shift_date && /^\d{4}-\d{2}-\d{2}$/.test(r.shift_date);
-      const dupKey = [reportedId ?? reportedName ?? "", r.shift_date ?? "", r.shift_start_time ?? ""].join("|").toLowerCase();
+      const hash = rowHashes[i];
+      const inBatchDup = v.duplicateOfIndex != null;
+      const crossBatchDup = crossBatchDupSet.has(hash);
+      const isDup = inBatchDup || crossBatchDup;
+      const reasonsWithCross = crossBatchDup && !v.reasons.includes("duplicate_row")
+        ? [...v.reasons, "duplicate_of_prior_batch"]
+        : v.reasons;
       return {
         venue_id: venueId,
         batch_id: batchId,
         source_kind: sourceKind,
         source_row_index: i,
         raw_row: r as any,
-        raw_row_hash: dupKey,
+        raw_row_hash: hash,
         service_date: dateValid ? r.shift_date : null,
         reported_identity_id: reportedId,
         reported_identity_name: reportedName,
         reconciliation_status: rejected
           ? "excluded_invalid"
-          : (v.duplicateOfIndex != null ? "duplicate_pending" : "pending"),
-        duplicate_status: v.duplicateOfIndex != null ? "duplicate_candidate" : "unique",
+          : (isDup ? "duplicate_pending" : "pending"),
+        duplicate_status: isDup ? "duplicate_candidate" : "unique",
         excluded_from_canonical: rejected,
-        status_reason: v.reasons.join(",") || null,
-        status_evidence: { reasons: v.reasons, ...(v.evidence as Record<string, unknown>) } as any,
+        status_reason: reasonsWithCross.join(",") || null,
+        status_evidence: { reasons: reasonsWithCross, cross_batch_duplicate: crossBatchDup, ...(v.evidence as Record<string, unknown>) } as any,
       };
     });
 
