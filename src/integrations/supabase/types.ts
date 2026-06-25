@@ -540,12 +540,14 @@ export type Database = {
           category: string | null
           created_at: string
           created_by: string | null
+          evidence: Json
           id: string
           item_name: string
           item_pos_id: string | null
           margin: number | null
           menu_period: string | null
           price: number | null
+          recommendation_confidence: string | null
           rejected_at: string | null
           rejected_reason: string | null
           sent_to_servers_at: string | null
@@ -563,12 +565,14 @@ export type Database = {
           category?: string | null
           created_at?: string
           created_by?: string | null
+          evidence?: Json
           id?: string
           item_name: string
           item_pos_id?: string | null
           margin?: number | null
           menu_period?: string | null
           price?: number | null
+          recommendation_confidence?: string | null
           rejected_at?: string | null
           rejected_reason?: string | null
           sent_to_servers_at?: string | null
@@ -586,12 +590,14 @@ export type Database = {
           category?: string | null
           created_at?: string
           created_by?: string | null
+          evidence?: Json
           id?: string
           item_name?: string
           item_pos_id?: string | null
           margin?: number | null
           menu_period?: string | null
           price?: number | null
+          recommendation_confidence?: string | null
           rejected_at?: string | null
           rejected_reason?: string | null
           sent_to_servers_at?: string | null
@@ -823,6 +829,7 @@ export type Database = {
       }
       server_coaching: {
         Row: {
+          evidence: Json
           generated_at: string
           id: string
           suggestions: Json
@@ -831,6 +838,7 @@ export type Database = {
           week_start: string
         }
         Insert: {
+          evidence?: Json
           generated_at?: string
           id?: string
           suggestions?: Json
@@ -839,6 +847,7 @@ export type Database = {
           week_start: string
         }
         Update: {
+          evidence?: Json
           generated_at?: string
           id?: string
           suggestions?: Json
@@ -1573,11 +1582,18 @@ export type Database = {
           daypart: string
           final_lls: number | null
           gross_sales: number | null
+          identity_match_confidence: number | null
+          identity_match_method: string | null
           import_batch_v2_id: string | null
+          imported_at: string | null
+          labor_basis: string | null
           labor_batch_id: string | null
           labor_cost: number | null
           opportunity_factor: number | null
+          provenance: Json
+          reliability_class: string | null
           rpc: number | null
+          sales_basis: string | null
           sales_batch_id: string | null
           server_id: string
           server_name: string | null
@@ -1585,6 +1601,8 @@ export type Database = {
           shift_end_time: string | null
           shift_id: string
           shift_start_time: string | null
+          source_row_hash: string | null
+          source_system: string | null
           updated_at: string
           venue_id: string
         }
@@ -1596,11 +1614,18 @@ export type Database = {
           daypart: string
           final_lls?: number | null
           gross_sales?: number | null
+          identity_match_confidence?: number | null
+          identity_match_method?: string | null
           import_batch_v2_id?: string | null
+          imported_at?: string | null
+          labor_basis?: string | null
           labor_batch_id?: string | null
           labor_cost?: number | null
           opportunity_factor?: number | null
+          provenance?: Json
+          reliability_class?: string | null
           rpc?: number | null
+          sales_basis?: string | null
           sales_batch_id?: string | null
           server_id: string
           server_name?: string | null
@@ -1608,6 +1633,8 @@ export type Database = {
           shift_end_time?: string | null
           shift_id?: string
           shift_start_time?: string | null
+          source_row_hash?: string | null
+          source_system?: string | null
           updated_at?: string
           venue_id: string
         }
@@ -1619,11 +1646,18 @@ export type Database = {
           daypart?: string
           final_lls?: number | null
           gross_sales?: number | null
+          identity_match_confidence?: number | null
+          identity_match_method?: string | null
           import_batch_v2_id?: string | null
+          imported_at?: string | null
+          labor_basis?: string | null
           labor_batch_id?: string | null
           labor_cost?: number | null
           opportunity_factor?: number | null
+          provenance?: Json
+          reliability_class?: string | null
           rpc?: number | null
+          sales_basis?: string | null
           sales_batch_id?: string | null
           server_id?: string
           server_name?: string | null
@@ -1631,6 +1665,8 @@ export type Database = {
           shift_end_time?: string | null
           shift_id?: string
           shift_start_time?: string | null
+          source_row_hash?: string | null
+          source_system?: string | null
           updated_at?: string
           venue_id?: string
         }
@@ -1679,13 +1715,18 @@ export type Database = {
           dominant_daypart: string | null
           gross_sales: number | null
           id: string
+          imported_at: string | null
           is_active: boolean
           is_single_sided: boolean
+          labor_basis: string | null
           labor_cost: number | null
           labor_span_hours: number | null
           match_method: string | null
           needs_review: boolean
           net_sales: number | null
+          provenance: Json
+          reliability_class: string | null
+          sales_basis: string | null
           scheduled_end: string | null
           scheduled_start: string | null
           service_date: string
@@ -1694,6 +1735,7 @@ export type Database = {
           service_duration_tier: string | null
           single_sided_authorised_by: string | null
           single_sided_justification: string | null
+          source_system: string | null
           status: string
           updated_at: string
           venue_id: string
@@ -1711,13 +1753,18 @@ export type Database = {
           dominant_daypart?: string | null
           gross_sales?: number | null
           id?: string
+          imported_at?: string | null
           is_active?: boolean
           is_single_sided?: boolean
+          labor_basis?: string | null
           labor_cost?: number | null
           labor_span_hours?: number | null
           match_method?: string | null
           needs_review?: boolean
           net_sales?: number | null
+          provenance?: Json
+          reliability_class?: string | null
+          sales_basis?: string | null
           scheduled_end?: string | null
           scheduled_start?: string | null
           service_date: string
@@ -1726,6 +1773,7 @@ export type Database = {
           service_duration_tier?: string | null
           single_sided_authorised_by?: string | null
           single_sided_justification?: string | null
+          source_system?: string | null
           status?: string
           updated_at?: string
           venue_id: string
@@ -1743,13 +1791,18 @@ export type Database = {
           dominant_daypart?: string | null
           gross_sales?: number | null
           id?: string
+          imported_at?: string | null
           is_active?: boolean
           is_single_sided?: boolean
+          labor_basis?: string | null
           labor_cost?: number | null
           labor_span_hours?: number | null
           match_method?: string | null
           needs_review?: boolean
           net_sales?: number | null
+          provenance?: Json
+          reliability_class?: string | null
+          sales_basis?: string | null
           scheduled_end?: string | null
           scheduled_start?: string | null
           service_date?: string
@@ -1758,6 +1811,7 @@ export type Database = {
           service_duration_tier?: string | null
           single_sided_authorised_by?: string | null
           single_sided_justification?: string | null
+          source_system?: string | null
           status?: string
           updated_at?: string
           venue_id?: string
@@ -2582,6 +2636,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           end_date: string | null
+          evidence: Json
           expected_behaviour: string | null
           expected_impact: string | null
           expected_impact_basis: string
@@ -2589,6 +2644,7 @@ export type Database = {
           item_name: string
           priority_flag: string
           reason: string | null
+          recommendation_confidence: string | null
           rejected_at: string | null
           rejected_reason: string | null
           sent_to_servers_at: string | null
@@ -2609,6 +2665,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           end_date?: string | null
+          evidence?: Json
           expected_behaviour?: string | null
           expected_impact?: string | null
           expected_impact_basis?: string
@@ -2616,6 +2673,7 @@ export type Database = {
           item_name: string
           priority_flag?: string
           reason?: string | null
+          recommendation_confidence?: string | null
           rejected_at?: string | null
           rejected_reason?: string | null
           sent_to_servers_at?: string | null
@@ -2636,6 +2694,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           end_date?: string | null
+          evidence?: Json
           expected_behaviour?: string | null
           expected_impact?: string | null
           expected_impact_basis?: string
@@ -2643,6 +2702,7 @@ export type Database = {
           item_name?: string
           priority_flag?: string
           reason?: string | null
+          recommendation_confidence?: string | null
           rejected_at?: string | null
           rejected_reason?: string | null
           sent_to_servers_at?: string | null
