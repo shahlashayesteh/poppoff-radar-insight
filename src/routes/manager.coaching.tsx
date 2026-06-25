@@ -12,6 +12,8 @@ import { toast } from "sonner";
 // what is sent to servers, what is approved but unsent, what still needs
 // manager review. This is the manager-only "truth behind the game".
 import { PaidManagerGate } from "@/components/manager/PaidManagerGate";
+import { useVerifyPaidManagerAccess } from "@/hooks/use-verify-paid-manager-access";
+
 
 export const Route = createFileRoute("/manager/coaching")({
   component: () => (
