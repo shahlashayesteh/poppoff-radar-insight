@@ -94,6 +94,9 @@ function ImportBatchDetail() {
   const doExclude = useServerFn(excludeStagingRow);
   const fetchEmployees = useServerFn(listVenueEmployees);
 
+  const active = useActiveVenue();
+  const venueId = active.venueId ?? undefined;
+
   const [batch, setBatch] = useState<Batch | null>(null);
   const [rows, setRows] = useState<Row[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -102,10 +105,11 @@ function ImportBatchDetail() {
 
 
   const load = useCallback(async () => {
+    if (!venueId) return;
     try {
       const [res, emp] = await Promise.all([
-        fetchDetail({ data: { batchId } }),
-        fetchEmployees({}).catch(() => ({ employees: [] as Employee[] })),
+        fetchDetail({ data: { batchId, venueId } }),
+        fetchEmployees({ data: { venueId } }).catch(() => ({ employees: [] as Employee[] })),
       ]);
       setBatch(res.batch as Batch);
       setRows((res.rows ?? []) as Row[]);
@@ -115,7 +119,7 @@ function ImportBatchDetail() {
     } finally {
       setLoading(false);
     }
-  }, [fetchDetail, fetchEmployees, batchId]);
+  }, [fetchDetail, fetchEmployees, batchId, venueId]);
 
   useEffect(() => { void load(); }, [load]);
 
