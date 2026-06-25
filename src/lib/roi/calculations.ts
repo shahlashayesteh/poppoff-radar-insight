@@ -125,7 +125,7 @@ export interface RoiReport {
 // ---------- core ----------
 
 export function computePeriodMetrics(rows: RoiShiftRow[]): PeriodMetrics {
-  const agg = aggregate(rows, { allowMixedLaborBasis: true });
+  const agg = aggregate(rows.map(toEngineRow), { allowMixedLaborBasis: true });
   let covers = 0;
   let sales = 0;
   let hours = 0;
