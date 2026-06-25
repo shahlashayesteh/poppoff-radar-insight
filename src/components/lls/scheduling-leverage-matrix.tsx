@@ -317,15 +317,27 @@ export function SchedulingLeverageMatrix({ data, currency = "£" }: { data: Sche
   const outletBasisTone: "ok" | "warn" =
     data.outlet_basis === "uploaded" || data.outlet_basis === "inferred_from_filename" ? "ok" : "warn";
 
+  const missingOutlet = data.outlet_basis === "venue_fallback" || data.outlet_basis === "missing";
+  const missingRotaData = true; // PoppOff has no contracted hours / availability / rest-rule feed yet
+
   return (
-    <div className="mt-6 rounded-2xl bg-white border border-border p-6">
+    <div
+      className="mt-6 rounded-2xl bg-white border border-border p-6"
+      data-testid="historical-shift-match-intelligence"
+    >
       {/* Heading */}
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
-          <h2 className="font-display text-lg font-bold">Scheduling Leverage Matrix</h2>
+          <div className="flex items-center gap-2 flex-wrap">
+            <h2 className="font-display text-lg font-bold">Historical Shift Match Intelligence</h2>
+            <Pill className="bg-amber-100 text-amber-800 border-amber-300">
+              Not full rota optimisation yet
+            </Pill>
+          </div>
           <p className="mt-1 text-xs text-muted-foreground max-w-2xl">
-            Where each server creates the most marginal commercial value vs. the current rota baseline.
-            Click any row or cell for the full reasoning.
+            Uses past shift data to suggest where server strengths may be underused.
+            Recommendations are suggested tests, not guaranteed outcomes — confirm availability,
+            contracted hours and outlet eligibility before changing the rota.
           </p>
         </div>
         <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
@@ -337,6 +349,20 @@ export function SchedulingLeverageMatrix({ data, currency = "£" }: { data: Sche
           )}
         </div>
       </div>
+
+      {missingRotaData && (
+        <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+          <strong>Data quality:</strong> no rota, availability, contracted-hours or rest-rule data yet.
+          Treat every recommendation as a <em>suggested test</em> a manager must approve, not a rota instruction.
+          Commercial lift figures are <em>estimated/modelled</em>, never guaranteed revenue.
+        </div>
+      )}
+      {missingOutlet && (
+        <div className="mt-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+          <strong>Outlet missing:</strong> outlet / revenue centre could not be confirmed from the upload.
+          Cross-outlet recommendations are blocked until outlet history or manager eligibility exists.
+        </div>
+      )}
 
       {data.selected_week_has_shifts === false && (
         <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
@@ -378,9 +404,11 @@ export function SchedulingLeverageMatrix({ data, currency = "£" }: { data: Sche
       {/* Shift match recommendations — clean table */}
       {data.recommendations.length > 0 && (
         <div className="mt-6">
-          <h3 className="font-display text-base font-bold">Shift match recommendations</h3>
+          <h3 className="font-display text-base font-bold">Suggested shift-match tests</h3>
           <p className="text-xs text-muted-foreground">
-            Top {data.recommendations.length} actions, ranked by rota-test priority. Click <em>Details</em> for full reasoning.
+            Top {data.recommendations.length} <em>suggested tests</em> based on historical shift data,
+            ranked by rota-test priority. Each requires manager review of availability, contracted hours
+            and outlet eligibility before any rota change.
           </p>
           <div className="mt-3 overflow-x-auto">
             <table className="w-full text-sm">

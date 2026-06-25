@@ -810,9 +810,24 @@ function LlsPage() {
 
 
         {/* Opportunity Factor editor */}
-        <div className="mt-6 rounded-2xl bg-white border border-border p-6">
+        <div className="mt-6 rounded-2xl bg-white border border-border p-6" data-testid="trading-pattern-factor-v1">
           <div className="flex items-start justify-between gap-3 flex-wrap">
-            <h2 className="font-display text-lg font-bold">Opportunity Factor grid</h2>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 className="font-display text-lg font-bold">Opportunity Factor grid</h2>
+                <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold bg-muted text-muted-foreground border-border">
+                  Trading Pattern Factor v1
+                </span>
+                <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold bg-amber-100 text-amber-800 border-amber-300">
+                  Sales / daypart only
+                </span>
+              </div>
+              <p className="mt-1 text-[11px] text-muted-foreground max-w-2xl">
+                v1 uses gross-sales and daypart only. Future versions will also consider covers, outlet,
+                section, role, booking mix, party size, table capacity, events, service intensity and
+                forecast demand. Confidence reflects how much of that data exists today.
+              </p>
+            </div>
             <Button variant="outline" size="sm" onClick={generateSuggestedFactors} disabled={loading}>
               <Sparkles className="h-4 w-4 mr-1.5" /> Generate suggested factors from venue data
             </Button>
