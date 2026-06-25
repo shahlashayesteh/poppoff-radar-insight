@@ -764,18 +764,19 @@ export type { SchedulingLeverageResult } from "@/lib/lls/scheduling-leverage";
 
 export const getSchedulingLeverage = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { weekStart: string; weeks?: number }) =>
+  .inputValidator((d: { weekStart: string; weeks?: number; venueId?: string }) =>
     z
       .object({
         weekStart: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
         weeks: z.number().int().min(2).max(26).optional(),
+        ...OptionalVenue,
       })
       .parse(d),
   )
   .handler(async ({ data, context }): Promise<SchedulingLeverageResult> => {
     const { supabase, userId } = context;
     await requirePaidManagerEntitlement(supabase, userId);
-    const venueId = await getManagerVenueId(supabase, userId);
+    const venueId = await getManagerVenueId(supabase, userId, data.venueId);
     const weeks = data.weeks ?? 12;
 
     const ws = data.weekStart;
