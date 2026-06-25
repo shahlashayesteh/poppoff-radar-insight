@@ -23,6 +23,8 @@ import { PaidManagerGate } from "@/components/manager/PaidManagerGate";
 import { useActiveVenue } from "@/hooks/use-active-venue";
 import { NoVenueState } from "@/components/manager/no-venue-state";
 import { ReliabilityBadge } from "@/components/reliability";
+import { ManagerTraceDrawer, type TracePayload } from "@/components/manager/manager-trace-drawer";
+import { getImportTrace } from "@/lib/manager-trace.functions";
 
 export const Route = createFileRoute("/manager/imports/$batchId")({
   component: () => (
