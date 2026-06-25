@@ -137,6 +137,13 @@ function Priorities() {
     // existing UX. AI-sourced rows can land as ai_suggested via the menu page.
     const { data: u } = await supabase.auth.getUser();
     const now = new Date().toISOString();
+    // Phase 18A — persist evidence at creation. Manager-authored priorities
+    // are "manager_judgement" — we record that explicitly rather than letting
+    // them masquerade as POS-derived intelligence.
+    const evidence = buildRecommendationEvidence({
+      based_on: ["manager_judgement"],
+      explanation_basis: "Manager-authored priority (not derived from POS data).",
+    });
     const { data: inserted, error } = await supabase.from("weekly_priorities").insert({
       venue_id: venueId,
       week_start: weekStart,
@@ -153,6 +160,8 @@ function Priorities() {
       approved_by: u.user?.id ?? null,
       approved_at: now,
       sent_to_servers_at: now,
+      evidence: evidence as never,
+      recommendation_confidence: recommendationConfidence(evidence),
     }).select("id").single();
     if (error) { toast.error(error.message); return; }
     if (inserted?.id) await logAudit(venueId, inserted.id, null, "sent_to_servers", "Manager-created priority");
