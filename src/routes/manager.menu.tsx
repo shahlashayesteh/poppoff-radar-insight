@@ -44,6 +44,83 @@ function MenuIntel() {
   const [pendingMenu, setPendingMenu] = useState<Menu | null>(null);
   const [deletingMenu, setDeletingMenu] = useState(false);
   const [confirmRegen, setConfirmRegen] = useState(false);
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+  const [suggestionTab, setSuggestionTab] = useState<SuggestionStatus | "all">("ai_suggested");
+  const [busySug, setBusySug] = useState<string | null>(null);
+
+  const loadSuggestions = async (v: string) => {
+    const { data } = await supabase
+      .from("menu_item_suggestions")
+      .select("id,item_name,category,price,margin,ai_reason,status,source_file,rejected_reason")
+      .eq("venue_id", v)
+      .order("created_at", { ascending: false });
+    setSuggestions(((data ?? []) as unknown) as Suggestion[]);
+  };
+
+  const logSugAudit = async (v: string, id: string, from: string | null, to: string, note?: string) => {
+    const { data: u } = await supabase.auth.getUser();
+    await supabase.from("menu_intelligence_audit_events").insert({
+      venue_id: v, entity_type: "menu_suggestion", entity_id: id,
+      actor_user_id: u.user?.id ?? null, from_status: from, to_status: to, note: note ?? null,
+    });
+  };
+
+  const stageParsedItemsForReview = async () => {
+    if (!venueId || menus.length === 0) { toast.error("Upload a menu first"); return; }
+    const latest = menus[0];
+    const items = (latest.parsed_items ?? []).filter((it) => it.name?.trim());
+    if (items.length === 0) { toast.error("No parsed items in latest menu"); return; }
+    const { data: u } = await supabase.auth.getUser();
+    const rows = items.slice(0, 200).map((it) => ({
+      venue_id: venueId,
+      item_name: it.name.trim(),
+      category: it.category ?? null,
+      price: it.price ? Number(String(it.price).replace(/[^0-9.]/g, "")) || null : null,
+      ai_reason: it.pairing ? `Pairs with ${it.pairing}` : it.priority ? `AI flagged ${it.priority}` : null,
+      source_menu_id: latest.id,
+      source_file: (latest.menu_text || "").split("\n")[0]?.replace(/^#\s*/, "") || null,
+      status: "ai_suggested" as const,
+      created_by: u.user?.id ?? null,
+    }));
+    const { data: inserted, error } = await supabase.from("menu_item_suggestions").insert(rows).select("id");
+    if (error) { toast.error(error.message); return; }
+    for (const r of inserted ?? []) await logSugAudit(venueId, r.id, null, "ai_suggested", "Staged from latest menu");
+    toast.success(`Staged ${inserted?.length ?? 0} items for review`);
+    await loadSuggestions(venueId);
+  };
+
+  const transitionSug = async (s: Suggestion, next: SuggestionStatus, note?: string, extra: Record<string, unknown> = {}) => {
+    if (!venueId) return;
+    setBusySug(s.id);
+    const now = new Date().toISOString();
+    const { data: u } = await supabase.auth.getUser();
+    const patch: Record<string, unknown> = { status: next, ...extra };
+    if (next === "approved") { patch.approved_by = u.user?.id ?? null; patch.approved_at = now; }
+    if (next === "sent_to_servers") {
+      patch.sent_to_servers_at = now;
+      if (!patch.approved_at) { patch.approved_by = u.user?.id ?? null; patch.approved_at = now; }
+    }
+    if (next === "rejected") { patch.rejected_at = now; }
+    if (next === "archived") { patch.archived_at = now; }
+    const { error } = await supabase.from("menu_item_suggestions").update(patch as never).eq("id", s.id);
+    if (error) { toast.error(error.message); setBusySug(null); return; }
+    await logSugAudit(venueId, s.id, s.status, next, note);
+    // When sending to servers, also create a weekly_priorities row so it surfaces to the team.
+    if (next === "sent_to_servers") {
+      const week = toISODate(getMondayOfWeek());
+      await supabase.from("weekly_priorities").insert({
+        venue_id: venueId, week_start: week,
+        item_name: s.item_name, category: s.category,
+        title: s.item_name, reason: s.ai_reason,
+        priority_flag: "push",
+        status: "sent_to_servers",
+        approved_by: u.user?.id ?? null, approved_at: now, sent_to_servers_at: now,
+        source_suggestion_id: s.id,
+      });
+    }
+    setBusySug(null);
+    await loadSuggestions(venueId);
+  };
 
   const loadMenus = async (v: string) => {
     const { data } = await supabase.from("venue_menu").select("id, menu_text, parsed_items, uploaded_at").eq("venue_id", v).order("uploaded_at", { ascending: false }).limit(MAX_MENUS);
