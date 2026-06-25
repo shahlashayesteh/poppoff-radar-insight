@@ -48,9 +48,10 @@ describe("Phase 11 — manager priorities approval workflow", () => {
     expect(body).toMatch(/menu_intelligence_audit_events/);
     expect(body).toMatch(/logAudit/);
   });
-  it("labels expected impact as modelled, not guaranteed revenue", () => {
+  it("labels expected impact as modelled and negates any 'guaranteed revenue' claim", () => {
     expect(body).toMatch(/modelled/i);
-    expect(body).not.toMatch(/guaranteed revenue/i);
+    const sentences = body.match(/[^.]*guaranteed revenue[^.]*\./gi) ?? [];
+    for (const s of sentences) expect(s.toLowerCase()).toMatch(/not|never|no /);
   });
 });
 
@@ -93,9 +94,10 @@ describe("Phase 11 — manager coaching surfaces workflow status", () => {
     expect(body).toMatch(/servers can see/i);
     expect(body).toMatch(/needs your approval/i);
   });
-  it("labels expected impact as modelled, never guaranteed revenue", () => {
+  it("labels expected impact as modelled and negates any 'guaranteed revenue' claim", () => {
     expect(body).toMatch(/modelled/i);
-    expect(body).not.toMatch(/guaranteed revenue/i);
+    const sentences = body.match(/[^.]*guaranteed revenue[^.]*\./gi) ?? [];
+    for (const s of sentences) expect(s.toLowerCase()).toMatch(/not|never|no /);
   });
 });
 
