@@ -6,7 +6,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { validateRows, type RawImportRow, type SourceKind, type BatchDefaults } from "@/lib/imports/validation";
+import { validateRows, computeDupKey, type RawImportRow, type SourceKind, type BatchDefaults } from "@/lib/imports/validation";
 import { inferBatchDefaults, SALES_BASIS_OPTIONS, LABOUR_BASIS_OPTIONS } from "@/lib/imports/defaults";
 import {
   resolveIdentityIndexed, indexDirectory, normaliseName, summarise,
