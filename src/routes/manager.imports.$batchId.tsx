@@ -63,6 +63,7 @@ type Batch = {
   uploaded_by: string | null;
   created_at: string;
   committed_shift_ids: string[] | null;
+  batch_defaults: Record<string, unknown> | null;
 };
 
 type Row = {
