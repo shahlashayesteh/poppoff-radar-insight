@@ -13,6 +13,7 @@ import { engineRagFromPerf } from "@/lib/metrics/server-rag";
 import { MetricTooltip, ModelledValueLabel } from "@/components/metrics";
 import { OperationsStatusStrip } from "@/components/manager/operations-status-strip";
 import { PaidManagerGate } from "@/components/manager/PaidManagerGate";
+import { useVerifyPaidManagerAccess } from "@/hooks/use-verify-paid-manager-access";
 
 
 export const Route = createFileRoute("/manager/team")({
