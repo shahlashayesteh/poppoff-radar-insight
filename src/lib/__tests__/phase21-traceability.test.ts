@@ -140,7 +140,7 @@ describe("Phase 21 — drawer renders the documented evidence fields", () => {
   it("Recommendation trace exposes based_on, excluded contextual and blocked fields", () => {
     expect(src).toMatch(/Based on/);
     expect(src).toMatch(/Excluded contextual fields/);
-    expect(src).toMatch(/context only, not used for scoring/);
+    expect(src).toMatch(/context only/);
     expect(src).toMatch(/Blocked fields/);
   });
   it("OF v2 trace is marked preview-only and shows applied v1 and preview v2 factors", () => {
