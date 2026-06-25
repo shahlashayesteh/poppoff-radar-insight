@@ -3,7 +3,7 @@
 // docs/lls/v1-frozen-spec.md §6). A failing test means v1 behaviour drifted
 // and must be re-approved before v2 work proceeds.
 
-import { describe, it, expect } from "bun:test";
+import { describe, it, expect } from "vitest";
 import {
   calculateLlsForShift,
   dayPartFromTime,

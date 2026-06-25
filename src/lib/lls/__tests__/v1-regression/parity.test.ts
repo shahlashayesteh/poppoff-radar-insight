@@ -5,7 +5,7 @@
 // math is a thin data-loading shim (venue lookup + supabase select); the
 // formulas under test live entirely inside the extracted pure helper.
 
-import { describe, it, expect } from "bun:test";
+import { describe, it, expect } from "vitest";
 import { computeWeeklyScorecardFromRows } from "@/lib/lls.functions";
 import { getWeeklyScorecardPure } from "./v1-pure";
 import {

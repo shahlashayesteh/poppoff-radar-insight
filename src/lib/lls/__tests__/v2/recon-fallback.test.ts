@@ -8,7 +8,7 @@
  *
  * Skipped automatically when PGHOST is not set.
  */
-import { describe, test, expect, beforeAll, afterAll } from 'bun:test'
+import { describe, test, expect, beforeAll, afterAll } from 'vitest'
 import { execFileSync } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
 
