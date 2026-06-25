@@ -45,12 +45,58 @@ export function normaliseStatus(input: EntitlementInput): SubscriptionStatus {
   return mapped;
 }
 
-/** Can the user access paid manager features (LLS, reports, coaching, imports)? */
+/** Phase 14 — past_due grace window in days. */
+export const PAST_DUE_GRACE_DAYS = 7;
+
+/** Returns true if a past_due subscription is still within the 7-day grace window. */
+export function isPastDueWithinGrace(
+  status: SubscriptionStatus,
+  currentPeriodEnd: string | null | undefined,
+): boolean {
+  if (status !== "past_due") return false;
+  if (!currentPeriodEnd) return false;
+  const end = new Date(currentPeriodEnd).getTime();
+  if (!Number.isFinite(end)) return false;
+  const cutoff = end + PAST_DUE_GRACE_DAYS * 86_400_000;
+  return Date.now() <= cutoff;
+}
+
+/** Days remaining in past_due grace (0 if expired, null if not past_due). */
+export function pastDueDaysRemaining(
+  status: SubscriptionStatus,
+  currentPeriodEnd: string | null | undefined,
+): number | null {
+  if (status !== "past_due") return null;
+  if (!currentPeriodEnd) return 0;
+  const end = new Date(currentPeriodEnd).getTime();
+  if (!Number.isFinite(end)) return 0;
+  const cutoff = end + PAST_DUE_GRACE_DAYS * 86_400_000;
+  const remainingMs = cutoff - Date.now();
+  if (remainingMs <= 0) return 0;
+  return Math.ceil(remainingMs / 86_400_000);
+}
+
+/**
+ * Pure status check (no grace) — kept for backwards compatibility and used
+ * directly by import policy. past_due is BLOCKED here.
+ */
 export function canAccessPaidManagerFeatures(status: SubscriptionStatus): boolean {
   return status === "active" || status === "enterprise" || status === "trialing";
 }
 
-/** Can the user import production data? Blocks cancelled/expired/unknown. */
+/**
+ * Phase 14 — grace-aware paid manager check. past_due within 7 days of
+ * current_period_end is allowed (with warning); past_due after grace is blocked.
+ */
+export function canAccessPaidManagerFeaturesWithGrace(
+  status: SubscriptionStatus,
+  currentPeriodEnd: string | null | undefined,
+): boolean {
+  if (canAccessPaidManagerFeatures(status)) return true;
+  return isPastDueWithinGrace(status, currentPeriodEnd);
+}
+
+/** Can the user import production data? Strict — no past_due grace for imports. */
 export function canImportProductionData(status: SubscriptionStatus): boolean {
   return status === "active" || status === "enterprise" || status === "trialing";
 }
@@ -82,6 +128,7 @@ export type EntitlementSnapshot = {
   canAccessPaid: boolean;
   canImport: boolean;
   showPastDueWarning: boolean;
+  pastDueGraceDaysRemaining: number | null;
 };
 
 /** Client hook — reads the latest subscription row for the signed-in user. */
@@ -95,6 +142,7 @@ export function useEntitlement(): EntitlementSnapshot {
     canAccessPaid: false,
     canImport: false,
     showPastDueWarning: false,
+    pastDueGraceDaysRemaining: null,
   });
 
   useEffect(() => {
@@ -119,15 +167,17 @@ export function useEntitlement(): EntitlementSnapshot {
         currentPeriodEnd: data?.current_period_end ?? null,
         cancelAtPeriodEnd: data?.cancel_at_period_end ?? false,
       });
+      const periodEnd = data?.current_period_end ?? null;
       setSnap({
         loading: false,
         status,
-        currentPeriodEnd: data?.current_period_end ?? null,
+        currentPeriodEnd: periodEnd,
         cancelAtPeriodEnd: !!data?.cancel_at_period_end,
         planId: data?.price_id ?? null,
-        canAccessPaid: canAccessPaidManagerFeatures(status),
+        canAccessPaid: canAccessPaidManagerFeaturesWithGrace(status, periodEnd),
         canImport: canImportProductionData(status),
         showPastDueWarning: shouldShowPastDueWarning(status),
+        pastDueGraceDaysRemaining: pastDueDaysRemaining(status, periodEnd),
       });
     })();
     return () => { cancelled = true; };
@@ -135,3 +185,4 @@ export function useEntitlement(): EntitlementSnapshot {
 
   return snap;
 }
+
