@@ -8,6 +8,6 @@ export const Route = createFileRoute("/manager/imports")({
 
 function ImportsLayout() {
   const gate = useRoleGate("manager");
-  if (!gate.ready) return null;
+  if (gate.role !== "manager") return null;
   return <Outlet />;
 }
