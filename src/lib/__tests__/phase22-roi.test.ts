@@ -197,10 +197,9 @@ describe("Phase 22 — server function safety", () => {
     expect(src).not.toMatch(/\.rpc\(/);
   });
 
-  it("scopes every shifts read by venue_id", () => {
-    const froms = src.match(/\.from\(/g) ?? [];
-    const venueScopes = src.match(/\.eq\("venue_id"/g) ?? [];
-    expect(venueScopes.length).toBeGreaterThanOrEqual(Math.max(1, froms.length - 1));
+  it("scopes shifts/shifts_v2 reads by venue_id (venues table is scoped by id)", () => {
+    expect(src).toMatch(/\.from\("shifts"\)[\s\S]{0,200}\.eq\("venue_id"/);
+    expect(src).toMatch(/\.from\("shifts_v2"\)[\s\S]{0,200}\.eq\("venue_id"/);
   });
 
   it("uses requireSupabaseAuth middleware", () => {
