@@ -591,6 +591,98 @@ function MenuIntel() {
           );
         })()}
 
+        {/* Menu Item Suggestions — manager-only approval workflow */}
+        <div className="mt-6 rounded-2xl bg-white border border-border p-5">
+          <div className="flex items-start justify-between gap-3 flex-wrap">
+            <div>
+              <h3 className="font-display font-bold inline-flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-brand-orange" /> Menu item suggestions
+              </h3>
+              <p className="text-xs text-muted-foreground mt-1">
+                AI-suggested items wait here for your review. Margin data stays manager-only. Servers never see suggestions until you Send to servers.
+              </p>
+            </div>
+            <button
+              onClick={stageParsedItemsForReview}
+              disabled={menus.length === 0}
+              className="rounded-xl px-3 py-1.5 text-xs font-bold text-white inline-flex items-center gap-2 disabled:opacity-50"
+              style={{ background: "var(--brand-green)" }}
+            >
+              <Plus className="h-3.5 w-3.5" /> Stage from latest menu
+            </button>
+          </div>
+
+          <div className="mt-4 flex gap-2 overflow-x-auto">
+            {(["ai_suggested","approved","sent_to_servers","rejected","archived","all"] as const).map((k) => {
+              const count = k === "all" ? suggestions.length : suggestions.filter((s) => s.status === k).length;
+              const active = suggestionTab === k;
+              return (
+                <button key={k} onClick={() => setSuggestionTab(k)}
+                  className="text-xs font-semibold rounded-full px-3 py-1.5 whitespace-nowrap border"
+                  style={{
+                    background: active ? "var(--brand-orange)" : "white",
+                    color: active ? "white" : "var(--foreground)",
+                    borderColor: active ? "var(--brand-orange)" : "var(--border)",
+                  }}>
+                  {k.replaceAll("_", " ")} ({count})
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="mt-3 divide-y divide-border border border-border rounded-xl overflow-hidden">
+            {(() => {
+              const visible = suggestionTab === "all" ? suggestions : suggestions.filter((s) => s.status === suggestionTab);
+              if (visible.length === 0) {
+                return <div className="px-4 py-6 text-sm text-muted-foreground text-center">No suggestions in this view.</div>;
+              }
+              return visible.map((s) => (
+                <div key={s.id} className="px-4 py-3 flex items-start justify-between gap-3 flex-wrap">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <div className="font-semibold">{s.item_name}</div>
+                      {s.category && <span className="text-[11px] text-muted-foreground">· {s.category}</span>}
+                      {s.price != null && <span className="text-[11px] text-muted-foreground">· £{Number(s.price).toFixed(2)}</span>}
+                      {s.margin != null && (
+                        <span className="text-[10px] font-bold rounded px-1.5 py-0.5"
+                          style={{ background: "color-mix(in oklab, var(--brand-orange) 14%, white)", color: "var(--brand-orange)" }}
+                          title="Manager-only — never shown to servers">
+                          margin {Number(s.margin).toFixed(0)}% · manager-only
+                        </span>
+                      )}
+                    </div>
+                    {s.ai_reason && <div className="text-xs text-muted-foreground mt-0.5">AI reason: {s.ai_reason}</div>}
+                    {s.rejected_reason && <div className="text-xs text-muted-foreground mt-0.5">Rejected: {s.rejected_reason}</div>}
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {s.status === "ai_suggested" && (
+                      <>
+                        <button disabled={busySug === s.id} onClick={() => transitionSug(s, "approved")} className="text-xs font-semibold rounded-lg px-3 py-1.5 text-white" style={{ background: "var(--brand-green)" }}>
+                          <CheckCircle2 className="h-3.5 w-3.5 inline -mt-0.5 mr-1" />Approve
+                        </button>
+                        <button disabled={busySug === s.id} onClick={() => transitionSug(s, "rejected", "Manager rejected AI suggestion")} className="text-xs font-semibold rounded-lg px-3 py-1.5 border border-border">
+                          <Ban className="h-3.5 w-3.5 inline -mt-0.5 mr-1" />Reject
+                        </button>
+                      </>
+                    )}
+                    {s.status === "approved" && (
+                      <button disabled={busySug === s.id} onClick={() => transitionSug(s, "sent_to_servers")} className="text-xs font-semibold rounded-lg px-3 py-1.5 text-white" style={{ background: "var(--brand-green)" }}>
+                        <Send className="h-3.5 w-3.5 inline -mt-0.5 mr-1" />Send to servers
+                      </button>
+                    )}
+                    {(s.status === "approved" || s.status === "sent_to_servers") && (
+                      <button disabled={busySug === s.id} onClick={() => transitionSug(s, "archived")} className="text-xs font-semibold rounded-lg px-3 py-1.5 border border-border">
+                        <Archive className="h-3.5 w-3.5 inline -mt-0.5 mr-1" />Archive
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ));
+            })()}
+          </div>
+        </div>
+
+
         <div className="mt-5 rounded-xl px-5 py-3 flex items-center justify-between flex-wrap gap-3"
           style={{ background: "color-mix(in oklab, var(--brand-green) 10%, white)" }}>
           <div className="text-sm">Weekly priorities are auto-generated from your menus when you upload stats.</div>
