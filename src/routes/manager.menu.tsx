@@ -63,12 +63,12 @@ function MenuIntel() {
   const [busySug, setBusySug] = useState<string | null>(null);
 
   const loadSuggestions = async (v: string) => {
-    const { data } = await supabase
-      .from("menu_item_suggestions")
-      .select("id,item_name,category,price,margin,ai_reason,status,source_file,rejected_reason")
-      .eq("venue_id", v)
-      .order("created_at", { ascending: false });
-    setSuggestions(((data ?? []) as unknown) as Suggestion[]);
+    try {
+      const res = await fetchSuggestions({ data: { venueId: v } });
+      setSuggestions((res?.rows ?? []) as unknown as Suggestion[]);
+    } catch {
+      setSuggestions([]);
+    }
   };
 
   const logSugAudit = async (v: string, id: string, from: string | null, to: string, note?: string) => {
