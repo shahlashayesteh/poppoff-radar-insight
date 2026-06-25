@@ -9,33 +9,19 @@ import { requirePaidManagerEntitlement } from "@/lib/entitlements-guard";
 const DAYPARTS = ["breakfast", "brunch", "lunch", "dinner", "late"] as const;
 export type Daypart = (typeof DAYPARTS)[number];
 
-async function getManagerVenueId(supabase: any, userId: string): Promise<string> {
-  // Deterministic resolution for single-venue managers.
-  // Order by (created_at, id) so the same manager always lands on the same
-  // venue across calls. Multi-venue managers must be migrated to explicit
-  // activeVenueId once tenant/organisation schema lands — that work is the
-  // multi-site schema phase and is tracked as a carried-forward risk. Until
-  // then we throw a clear error rather than silently picking a row when more
-  // than one venue is owned by the same manager.
-  const { data, error } = await supabase
-    .from("venues")
-    .select("id, created_at")
-    .eq("manager_id", userId)
-    .order("created_at", { ascending: true })
-    .order("id", { ascending: true });
-  if (error) throw new Error(error.message);
-  const rows = (data ?? []) as Array<{ id: string }>;
-  if (rows.length === 0) throw new Error("No venue found for this manager");
-  if (rows.length > 1) {
-    // Safely scoped: fall back to deterministic first-by-created_at but emit
-    // a server log so we can detect multi-venue managers in production before
-    // the multi-site phase ships. Do not change the LLS payload silently.
-    console.warn(
-      `[lls] manager ${userId} owns ${rows.length} venues; using earliest (${rows[0].id}). Multi-site selection lands in the tenant phase.`,
-    );
-  }
-  return rows[0].id;
+// Phase 16: organisation-aware, membership-validated venue resolver.
+// Single-venue callers omit `requestedVenueId` and the helper returns their
+// only accessible venue. Multi-venue/head-office callers MUST pass an active
+// venue id — silently picking the earliest venue is no longer allowed.
+import { resolveManagerVenueId } from "@/lib/venue-access";
+async function getManagerVenueId(
+  supabase: any,
+  userId: string,
+  requestedVenueId?: string | null,
+): Promise<string> {
+  return resolveManagerVenueId(supabase, userId, requestedVenueId);
 }
+
 
 function dayOfWeekISO(dateStr: string): number {
   // Returns 0 = Monday … 6 = Sunday (ISO)
