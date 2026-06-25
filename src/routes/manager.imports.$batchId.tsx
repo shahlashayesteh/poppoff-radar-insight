@@ -22,6 +22,7 @@ import { ManagerLayout } from "@/components/manager-layout";
 import { PaidManagerGate } from "@/components/manager/PaidManagerGate";
 import { useActiveVenue } from "@/hooks/use-active-venue";
 import { NoVenueState } from "@/components/manager/no-venue-state";
+import { ReliabilityBadge } from "@/components/reliability";
 
 export const Route = createFileRoute("/manager/imports/$batchId")({
   component: () => (
