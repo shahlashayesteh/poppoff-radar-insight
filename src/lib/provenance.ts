@@ -90,7 +90,7 @@ export function calculationSafety(cls: ReliabilityClass): ShiftProvenance["calcu
     case "estimated":
       return "warning";
     case "contextual":
-    case "blocked":
+    case "untrusted":
       return "blocked";
   }
 }
