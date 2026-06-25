@@ -12,7 +12,7 @@ import {
   type IdentityDirectory, type EmployeeRecord, type SourceIdLink, type AliasLink,
 } from "@/lib/imports/identity";
 // Phase 12A — Shared entitlement guard (was inlined in Phase 12).
-import { requireImportEntitlement } from "@/lib/entitlements-guard";
+import { requireImportEntitlement, requirePaidManagerEntitlement } from "@/lib/entitlements-guard";
 
 
 // ---- venue resolver (Phase 16: organisation-aware, membership-validated) ----
