@@ -466,3 +466,56 @@ function Stat({ label, value, tone }: { label: string; value: string | number; t
     </div>
   );
 }
+
+function StatWithReliability({
+  label,
+  value,
+  field,
+}: {
+  label: string;
+  value: string | number;
+  field: string;
+}) {
+  return (
+    <div>
+      <div className="text-muted-foreground">{label}</div>
+      <div className="font-semibold flex items-center gap-1.5 flex-wrap">
+        <span>{value}</span>
+        <ReliabilityBadge field={field} />
+      </div>
+    </div>
+  );
+}
+
+function salesBasisToReliability(mode: unknown): string {
+  switch (mode) {
+    case "net_sales_source":
+    case "gross_sales_source":
+      return "pos_check_total";
+    case "net_sales_derived":
+      return "rpc";
+    case "gross_used_as_net_estimate":
+      return "gross_used_as_net";
+    case "mixed":
+      return "gross_used_as_net";
+    default:
+      return "unknown";
+  }
+}
+
+function labourBasisToReliability(mode: unknown): string {
+  switch (mode) {
+    case "fully_loaded":
+    case "total":
+    case "wage_plus_oncost":
+    case "wage_only":
+      return "labour_wage_cost_known_basis";
+    case "rate_times_hours":
+      return "hours_times_rate_labour";
+    case "mixed":
+    case "unknown":
+      return "labour_wage_cost_unknown_basis";
+    default:
+      return "unknown";
+  }
+}
