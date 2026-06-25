@@ -618,6 +618,51 @@ export type Database = {
           },
         ]
       }
+      payment_events: {
+        Row: {
+          created_at: string
+          environment: string
+          error: string | null
+          event_id: string
+          event_type: string
+          id: string
+          processed_at: string | null
+          provider: string
+          raw_payload: Json
+          retry_count: number
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          environment: string
+          error?: string | null
+          event_id: string
+          event_type: string
+          id?: string
+          processed_at?: string | null
+          provider?: string
+          raw_payload: Json
+          retry_count?: number
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          environment?: string
+          error?: string | null
+          event_id?: string
+          event_type?: string
+          id?: string
+          processed_at?: string | null
+          provider?: string
+          raw_payload?: Json
+          retry_count?: number
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           business_name: string | null
@@ -2353,12 +2398,16 @@ export type Database = {
           cover_capacity: number | null
           created_at: string
           cuisine: string | null
+          currency: string | null
           green_threshold: number
           head_office_aggregated_only: boolean
           id: string
+          labor_system: string | null
           lls_amber_threshold: number
           lls_green_threshold: number
           managers_see_estimated_uplift: boolean
+          market: string | null
+          pos_system: string | null
           premium_mains_on: boolean
           send_weekly_push_notifications: boolean
           servers_see_percentages_only: boolean
@@ -2372,12 +2421,16 @@ export type Database = {
           cover_capacity?: number | null
           created_at?: string
           cuisine?: string | null
+          currency?: string | null
           green_threshold?: number
           head_office_aggregated_only?: boolean
           id?: string
+          labor_system?: string | null
           lls_amber_threshold?: number
           lls_green_threshold?: number
           managers_see_estimated_uplift?: boolean
+          market?: string | null
+          pos_system?: string | null
           premium_mains_on?: boolean
           send_weekly_push_notifications?: boolean
           servers_see_percentages_only?: boolean
@@ -2391,12 +2444,16 @@ export type Database = {
           cover_capacity?: number | null
           created_at?: string
           cuisine?: string | null
+          currency?: string | null
           green_threshold?: number
           head_office_aggregated_only?: boolean
           id?: string
+          labor_system?: string | null
           lls_amber_threshold?: number
           lls_green_threshold?: number
           managers_see_estimated_uplift?: boolean
+          market?: string | null
+          pos_system?: string | null
           premium_mains_on?: boolean
           send_weekly_push_notifications?: boolean
           servers_see_percentages_only?: boolean
