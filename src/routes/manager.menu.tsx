@@ -51,6 +51,8 @@ function MenuIntel() {
   const active = useActiveVenue();
   const fetchSuggestions = useServerFn(listMenuSuggestions);
   const fetchMenus = useServerFn(listVenueMenus);
+  const fetchRecTrace = useServerFn(getRecommendationTrace);
+  const [recTrace, setRecTrace] = useState<TracePayload>({ kind: "loading" });
 
   const [venueId, setVenueId] = useState<string | null>(null);
   const [menus, setMenus] = useState<Menu[]>([]);
