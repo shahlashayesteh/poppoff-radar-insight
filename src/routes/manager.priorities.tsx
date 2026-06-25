@@ -12,6 +12,8 @@ import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
 import { PaidManagerGate } from "@/components/manager/PaidManagerGate";
 import { useVerifyPaidManagerAccess } from "@/hooks/use-verify-paid-manager-access";
 import { listWeeklyPriorities } from "@/lib/manager-data.functions";
+import { useActiveVenue } from "@/hooks/use-active-venue";
+import { NoVenueState } from "@/components/manager/no-venue-state";
 
 
 export const Route = createFileRoute("/manager/priorities")({
