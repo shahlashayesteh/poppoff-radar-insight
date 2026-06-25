@@ -49,9 +49,13 @@ describe("manager.settings.tsx structure", () => {
 
 describe("imports server functions gate by entitlement", () => {
   const importsFn = readFileSync(join(src, "lib/imports.functions.ts"), "utf-8");
-  it("stageImport guards via requireImportEntitlement", () => {
+  const guardFn = readFileSync(join(src, "lib/entitlements-guard.ts"), "utf-8");
+  it("stageImport guards via requireImportEntitlement (shared guard, Phase 12A)", () => {
     expect(importsFn).toMatch(/requireImportEntitlement/);
-    expect(importsFn).toMatch(/canImportProductionData/);
+    // After Phase 12A the gate lives in entitlements-guard.ts (shared with LLS,
+    // reports, menu, coaching, priorities, team).
+    expect(guardFn).toMatch(/canImportProductionData/);
+    expect(guardFn).toMatch(/canAccessPaidManagerFeatures/);
   });
   it("imports list page surfaces import-blocked banner", () => {
     const idx = readFileSync(join(src, "routes/manager.imports.index.tsx"), "utf-8");
