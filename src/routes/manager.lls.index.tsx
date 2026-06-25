@@ -270,6 +270,12 @@ function LlsPage() {
   const fetchBatches = useServerFn(listRecentBatches);
   const doRollback = useServerFn(rollbackBatch);
   const fetchLeverage = useServerFn(getSchedulingLeverage);
+  const fetchLlsTrace = useServerFn(getLlsTrace);
+  const fetchOfV2Trace = useServerFn(getOfV2AssessmentTrace);
+
+  // Phase 21 — manager trace drawers (lazy-loaded on open).
+  const [llsTrace, setLlsTrace] = useState<TracePayload>({ kind: "loading" });
+  const [ofV2Trace, setOfV2Trace] = useState<TracePayload>({ kind: "loading" });
 
   const venueId = active.venueId ?? undefined;
 
