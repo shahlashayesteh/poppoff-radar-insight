@@ -1,6 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+// Phase 12A — paid-feature entitlement guard applied to manager LLS handlers.
+import { requirePaidManagerEntitlement } from "@/lib/entitlements-guard";
 
 // ---------- shared helpers ----------
 
