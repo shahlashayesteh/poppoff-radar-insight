@@ -215,7 +215,7 @@ export function validateRows(
       }
 
       // Duplicate detection (within this batch)
-      const key = dupKey(r);
+      const key = dupKey(r, sourceKind);
       if (seen.has(key)) {
         const firstIdx = seen.get(key)!;
         reasons.push("duplicate_row"); duplicates++;
