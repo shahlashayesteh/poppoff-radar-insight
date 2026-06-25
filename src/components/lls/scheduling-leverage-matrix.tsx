@@ -424,6 +424,34 @@ export function SchedulingLeverageMatrix({ data, currency = "£" }: { data: Sche
               Fallback · {data.opportunity_factor_preview.fallback_reason.replace(/_/g, " ")}
             </ScopeChip>
           ) : null}
+          <ScopeChip>
+            Hours · {data.opportunity_factor_preview.hours_source.replace(/_/g, " ")}
+          </ScopeChip>
+          <ScopeChip
+            tone={
+              data.opportunity_factor_preview.decision_grade === "manager_analysis"
+                ? "ok"
+                : data.opportunity_factor_preview.decision_grade === "not_for_decision"
+                  ? "warn"
+                  : "default"
+            }
+          >
+            {data.opportunity_factor_preview.decision_grade === "manager_analysis"
+              ? "Decision-grade"
+              : data.opportunity_factor_preview.decision_grade === "manager_review"
+                ? "Candidate insight"
+                : data.opportunity_factor_preview.decision_grade === "preview_only"
+                  ? "Preview only"
+                  : "Not for decision"}
+          </ScopeChip>
+          {data.opportunity_factor_preview.buckets &&
+          (data.opportunity_factor_preview.buckets.by_daypart.length > 0 ||
+            data.opportunity_factor_preview.buckets.by_day_of_week.length > 0) ? (
+            <ScopeChip>
+              Buckets · {data.opportunity_factor_preview.buckets.by_daypart.length} daypart ·{" "}
+              {data.opportunity_factor_preview.buckets.by_day_of_week.length} DOW
+            </ScopeChip>
+          ) : null}
         </div>
       ) : null}
 
