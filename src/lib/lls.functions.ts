@@ -911,13 +911,51 @@ export const getSchedulingLeverage = createServerFn({ method: "POST" })
       (r) => r.shift_date >= ws && r.shift_date < iso(weekEnd) && (r.gross_sales != null || r.labor_cost != null),
     );
 
-    return computeSchedulingLeverage(rows, {
+    const leverage = computeSchedulingLeverage(rows, {
       // V1 has no outlet column — engine treats the venue name as a fallback.
       outletBasis: "venue_fallback",
       period: { start: iso(start), end: iso(weekEnd), weeks },
       selectedWeekHasShifts,
       selectedWeekStart: ws,
     });
+
+    // Phase 20A — attach OF v2 preview metadata. Read-only; does NOT change
+    // any baseline, matrix cell or recommendation. Failures are non-fatal.
+    try {
+      const toWeekStart = (date: string): string => {
+        const d = new Date(date + "T00:00:00");
+        const day = d.getDay();
+        const diff = day === 0 ? -6 : 1 - day;
+        d.setDate(d.getDate() + diff);
+        return d.toISOString().slice(0, 10);
+      };
+      const historyRows = rows.map((r) => ({
+        shift_date: r.shift_date,
+        week_start: toWeekStart(r.shift_date),
+        day_of_week: r.day_of_week,
+        daypart: r.daypart ?? null,
+        outlet: r.outlet ?? null,
+        gross_sales: r.gross_sales,
+        net_sales: r.net_sales ?? null,
+        covers: r.covers,
+        hours: r.hours ?? null,
+        labor_cost: r.labor_cost,
+        opportunity_factor: r.opportunity_factor,
+      }));
+      const selectedWeek = historyRows.filter((r) => r.week_start === ws);
+      leverage.opportunity_factor_preview = buildOfV2Preview({
+        venueId,
+        weekStart: ws,
+        history: historyRows,
+        selectedWeek,
+        salesBasis: "gross",
+        laborHoursEstimated: !rows.some((r) => typeof r.hours === "number" && r.hours > 0),
+      });
+    } catch {
+      leverage.opportunity_factor_preview = null;
+    }
+
+    return leverage;
   });
 
 
