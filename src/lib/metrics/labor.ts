@@ -49,6 +49,28 @@ const isNum = (v: unknown): v is number => typeof v === "number" && isFinite(v);
 export function laborCost(
   input: LaborInput,
 ): MetricResult<number | null> & { basis: LaborBasis } {
+  // Explicit override — uploader / venue setting declares the basis.
+  // Only honour when matching field is present, otherwise fall through.
+  if (input.labor_basis === "fully_loaded" && isNum(input.fully_loaded_labor_cost)) {
+    return {
+      value: input.fully_loaded_labor_cost,
+      basis: "fully_loaded",
+      provenance: "uploaded",
+      formula: "fully_loaded_labor_cost (explicit basis override)",
+      sourceFields: ["fully_loaded_labor_cost", "labor_basis"],
+    };
+  }
+  if (input.labor_basis === "wage_only" && (isNum(input.gross_wage_cost) || isNum(input.wage_cost))) {
+    const wage = isNum(input.gross_wage_cost) ? input.gross_wage_cost : (input.wage_cost as number);
+    return {
+      value: wage,
+      basis: "wage_only",
+      provenance: "uploaded",
+      formula: "wage cost (explicit basis override — wage only)",
+      sourceFields: [isNum(input.gross_wage_cost) ? "gross_wage_cost" : "wage_cost", "labor_basis"],
+      notes: ["Wage cost only — excludes employer on-costs"],
+    };
+  }
   if (isNum(input.fully_loaded_labor_cost)) {
     return {
       value: input.fully_loaded_labor_cost,
