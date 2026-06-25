@@ -303,13 +303,23 @@ async function loadIdentityDirectory(supabase: any, venueId: string): Promise<Id
 }
 
 
+// Phase 16A — optional `venueId` everywhere. Single-venue managers can omit;
+// multi-venue / head-office callers MUST supply it. Batch-scoped operations
+// re-validate that the targeted batch belongs to the resolved venue so a
+// caller cannot drive the SECURITY DEFINER commit/rollback RPC against a
+// batch in another venue even if they hold its UUID.
+const OptionalVenue = { venueId: z.string().uuid().optional() } as const;
+
 // ---- list batches ----
-export const listImportBatches = createServerFn({ method: "GET" })
+export const listImportBatches = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
+  .inputValidator((d: { venueId?: string } | undefined) =>
+    z.object(OptionalVenue).parse(d ?? {}),
+  )
+  .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const venueId = await getManagerVenueId(supabase, userId);
-    const { data, error } = await supabase
+    const venueId = await getManagerVenueId(supabase, userId, data.venueId);
+    const { data: rows, error } = await supabase
       .from("shift_import_batches_v2")
       .select(
         "id, source_kind, source_filename, source_system, file_hash, import_type, status, row_count, accepted_count, rejected_count, warning_count, gross_total, net_total, labour_total, covers_total, uploaded_by, approved_by, approved_at, committed_at, rolled_back_at, error_message, created_at",
@@ -318,18 +328,18 @@ export const listImportBatches = createServerFn({ method: "GET" })
       .order("created_at", { ascending: false })
       .limit(100);
     if (error) throw new Error(error.message);
-    return { batches: data ?? [] };
+    return { batches: rows ?? [] };
   });
 
 // ---- get batch detail ----
-const BatchIdInput = z.object({ batchId: z.string().uuid() });
+const BatchIdInput = z.object({ batchId: z.string().uuid(), ...OptionalVenue });
 
-export const getImportBatchDetail = createServerFn({ method: "GET" })
+export const getImportBatchDetail = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: z.input<typeof BatchIdInput>) => BatchIdInput.parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const venueId = await getManagerVenueId(supabase, userId);
+    const venueId = await getManagerVenueId(supabase, userId, data.venueId);
     const { data: batch, error } = await supabase
       .from("shift_import_batches_v2")
       .select("*")
@@ -352,12 +362,28 @@ export const getImportBatchDetail = createServerFn({ method: "GET" })
     return { batch, rows: rows ?? [] };
   });
 
+// Verify the batch is owned by the resolved venue before delegating to the
+// SECURITY DEFINER lifecycle RPCs. Without this guard, a multi-venue manager
+// could pass a batch UUID from venue B while their active venue is A.
+async function assertBatchInVenue(supabase: any, batchId: string, venueId: string) {
+  const { data: row, error } = await supabase
+    .from("shift_import_batches_v2")
+    .select("id")
+    .eq("id", batchId)
+    .eq("venue_id", venueId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!row) throw new Error("Batch not found in selected venue");
+}
+
 // ---- approve only (no commit) ----
 export const approveImportBatch = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: z.input<typeof BatchIdInput>) => BatchIdInput.parse(d))
   .handler(async ({ data, context }) => {
-    const { supabase } = context;
+    const { supabase, userId } = context;
+    const venueId = await getManagerVenueId(supabase, userId, data.venueId);
+    await assertBatchInVenue(supabase, data.batchId, venueId);
     const { error } = await supabase.rpc("lls_v2_approve_batch" as never, { _batch_id: data.batchId } as never);
     if (error) throw new Error(error.message);
     return { ok: true };
@@ -370,6 +396,8 @@ export const commitImportBatch = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     await requireImportEntitlement(supabase, userId);
+    const venueId = await getManagerVenueId(supabase, userId, data.venueId);
+    await assertBatchInVenue(supabase, data.batchId, venueId);
     const { data: res, error } = await supabase.rpc(
       "lls_v2_commit_batch" as never,
       { _batch_id: data.batchId } as never,
@@ -383,7 +411,9 @@ export const rollbackImportBatch = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: z.input<typeof BatchIdInput>) => BatchIdInput.parse(d))
   .handler(async ({ data, context }) => {
-    const { supabase } = context;
+    const { supabase, userId } = context;
+    const venueId = await getManagerVenueId(supabase, userId, data.venueId);
+    await assertBatchInVenue(supabase, data.batchId, venueId);
     const { data: res, error } = await supabase.rpc(
       "lls_v2_rollback_batch" as never,
       { _batch_id: data.batchId } as never,
@@ -393,12 +423,15 @@ export const rollbackImportBatch = createServerFn({ method: "POST" })
   });
 
 // ---- the latest needs-review batch (for the LLS banner) ----
-export const latestPendingImportBatch = createServerFn({ method: "GET" })
+export const latestPendingImportBatch = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
+  .inputValidator((d: { venueId?: string } | undefined) =>
+    z.object(OptionalVenue).parse(d ?? {}),
+  )
+  .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const venueId = await getManagerVenueId(supabase, userId);
-    const { data, error } = await supabase
+    const venueId = await getManagerVenueId(supabase, userId, data.venueId);
+    const { data: row, error } = await supabase
       .from("shift_import_batches_v2")
       .select("id, source_kind, source_filename, status, created_at, accepted_count, rejected_count, warning_count")
       .eq("venue_id", venueId)
@@ -407,7 +440,7 @@ export const latestPendingImportBatch = createServerFn({ method: "GET" })
       .limit(1)
       .maybeSingle();
     if (error) throw new Error(error.message);
-    return { batch: data ?? null };
+    return { batch: row ?? null };
   });
 
 // ============================================================
