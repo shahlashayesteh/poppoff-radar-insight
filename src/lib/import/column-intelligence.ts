@@ -459,6 +459,16 @@ const FIELDS: FieldDef[] = [
   { field: "tips", exact: ["tips", "tip", "gratuity", "gratuities", "cashtips", "cardtips"], any: ["tip", "tips", "gratuity"], pattern: "number" },
   { field: "service_charge", exact: ["servicecharge", "service", "discretionaryservice"], required: [["service", "charge"]], pattern: "number" },
 
+  // ----- Tax / VAT -----
+  { field: "tax", exact: ["tax", "salestax", "taxamount", "taxtotal"], required: [["sales", "tax"], ["tax", "amount"], ["tax", "total"]], any: ["tax"], blockers: ["vat", "rate"], pattern: "number" },
+  { field: "vat", exact: ["vat", "vatamount", "vattotal", "gst", "hst"], required: [["vat", "amount"], ["vat", "total"]], any: ["vat", "gst", "hst"], pattern: "number" },
+
+  // ----- Currency / basis declarations -----
+  { field: "currency", exact: ["currency", "ccy", "currencycode", "iso4217"], required: [["currency", "code"]], any: ["currency", "ccy"], pattern: "categorical" },
+  { field: "sales_basis", exact: ["salesbasis", "basis"], required: [["sales", "basis"]], any: ["basis"], pattern: "categorical" },
+  { field: "labour_basis", exact: ["labourbasis", "laborbasis"], required: [["labour", "basis"], ["labor", "basis"]], any: ["basis"], pattern: "categorical" },
+
+
   // ----- Payment -----
   { field: "payment_method", exact: ["paymentmethod", "tendertype", "tender", "paymenttype"], required: [["payment", "method"], ["tender", "type"]], pattern: "categorical" },
   { field: "payment_total", exact: ["paymenttotal", "paid", "amountpaid"], required: [["payment", "total"], ["amount", "paid"]], pattern: "positive_number" },
