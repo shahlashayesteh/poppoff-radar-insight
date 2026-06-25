@@ -65,6 +65,22 @@ function ImportsListPage() {
           </p>
         </header>
 
+        {!entitlement.loading && !entitlement.canImport && (
+          <div
+            role="alert"
+            data-testid="import-blocked-banner"
+            className="rounded-xl border border-red-300 bg-red-50 p-3 text-sm text-red-900"
+          >
+            Production imports are disabled — subscription status is <strong>{statusLabel(entitlement.status)}</strong>.
+            Existing batches remain readable, but new files cannot be staged or committed until billing is active.
+          </div>
+        )}
+        {entitlement.showPastDueWarning && (
+          <div className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+            Your subscription is past due. Imports continue to work during the grace period — update billing to avoid interruption.
+          </div>
+        )}
+
         {loading && <div className="text-sm text-muted-foreground">Loading…</div>}
         {err && <div className="text-sm text-rose-600">{err}</div>}
         {!loading && !err && batches.length === 0 && (
