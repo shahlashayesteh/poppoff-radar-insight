@@ -217,15 +217,73 @@ export type Database = {
         }
         Relationships: []
       }
+      employee_identity_merges: {
+        Row: {
+          action: string
+          created_at: string
+          id: string
+          payload: Json
+          performed_by: string | null
+          primary_employee_id: string | null
+          secondary_employee_id: string | null
+          venue_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          id?: string
+          payload?: Json
+          performed_by?: string | null
+          primary_employee_id?: string | null
+          secondary_employee_id?: string | null
+          venue_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          id?: string
+          payload?: Json
+          performed_by?: string | null
+          primary_employee_id?: string | null
+          secondary_employee_id?: string | null
+          venue_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_identity_merges_primary_employee_id_fkey"
+            columns: ["primary_employee_id"]
+            isOneToOne: false
+            referencedRelation: "employee_master"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_identity_merges_secondary_employee_id_fkey"
+            columns: ["secondary_employee_id"]
+            isOneToOne: false
+            referencedRelation: "employee_master"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_identity_merges_venue_id_fkey"
+            columns: ["venue_id"]
+            isOneToOne: false
+            referencedRelation: "venues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employee_master: {
         Row: {
           created_at: string
           created_by: string | null
+          cross_venue_eligible: boolean
           display_name: string
           id: string
+          internal_employee_code: string | null
           labour_employee_id: string | null
           manager_confirmed: boolean
           normalised_name: string
+          organisation_id: string | null
           outlet_id: string | null
           pos_employee_id: string | null
           status: string
@@ -235,11 +293,14 @@ export type Database = {
         Insert: {
           created_at?: string
           created_by?: string | null
+          cross_venue_eligible?: boolean
           display_name: string
           id?: string
+          internal_employee_code?: string | null
           labour_employee_id?: string | null
           manager_confirmed?: boolean
           normalised_name: string
+          organisation_id?: string | null
           outlet_id?: string | null
           pos_employee_id?: string | null
           status?: string
@@ -249,11 +310,14 @@ export type Database = {
         Update: {
           created_at?: string
           created_by?: string | null
+          cross_venue_eligible?: boolean
           display_name?: string
           id?: string
+          internal_employee_code?: string | null
           labour_employee_id?: string | null
           manager_confirmed?: boolean
           normalised_name?: string
+          organisation_id?: string | null
           outlet_id?: string | null
           pos_employee_id?: string | null
           status?: string
@@ -261,6 +325,13 @@ export type Database = {
           venue_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "employee_master_organisation_id_fkey"
+            columns: ["organisation_id"]
+            isOneToOne: false
+            referencedRelation: "organisations"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "employee_master_venue_id_fkey"
             columns: ["venue_id"]

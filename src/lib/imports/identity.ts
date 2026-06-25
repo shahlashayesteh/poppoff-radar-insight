@@ -180,12 +180,33 @@ export function resolveIdentityIndexed(
   // 3. exact normalised name within the same venue.
   const sameName = idx.byName.get(nm) ?? [];
   if (nm && sameName.length === 1) {
+    // Phase 19: if the row carries an UNKNOWN source-system ID AND the single
+    // same-name candidate already has a known different source ID for THAT
+    // system, we are almost certainly looking at a different real person who
+    // happens to share a name. Do NOT silently merge — surface as ambiguous
+    // so the manager can either link the new ID as an alias of the existing
+    // employee or create a new identity.
+    if (sid) {
+      const sysIsPos = sysRaw === "pos";
+      const sysIsLabour = sysRaw === "labour" || sysRaw === "labor";
+      const cand = sameName[0];
+      const candIdForThisSystem = sysIsPos ? cand.pos_employee_id
+        : sysIsLabour ? cand.labour_employee_id
+        : null;
+      if (candIdForThisSystem && candIdForThisSystem !== sid) {
+        return ambiguous([cand],
+          `Reported ${sysRaw || "source"} ID '${sid}' differs from the known ID for '${cand.display_name}' at this venue — manager must confirm whether this is the same person (link alias) or a new identity.`);
+      }
+    }
     return done(sameName[0], "exact_name", "resolved", 0.9, false,
       `Exact normalised name match within venue.`);
   }
   if (nm && sameName.length > 1) {
+    // Phase 19: when the row carries a source ID, try to disambiguate by
+    // matching against any candidate that already has THAT source ID slot
+    // free — but never auto-pick when multiple candidates remain plausible.
     return ambiguous(sameName,
-      `Multiple employees share the name '${nameRaw}' at this venue — manager must confirm.`);
+      `Multiple employees share the name '${nameRaw}' at this venue — manager must confirm which identity this row belongs to.`);
   }
 
   // 4. no name and no usable ID → unmatched.
