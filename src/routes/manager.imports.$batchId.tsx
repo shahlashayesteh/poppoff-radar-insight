@@ -410,11 +410,6 @@ function IdentityActions({
   );
 }
 
-      </div>
-    </ManagerLayout>
-  );
-}
-
 function Stat({ label, value, tone }: { label: string; value: string | number; tone?: "ok" | "warn" | "bad" }) {
   const cls =
     tone === "ok" ? "text-emerald-700" :
