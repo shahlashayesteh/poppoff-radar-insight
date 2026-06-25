@@ -42,6 +42,7 @@ const STATUS_COLORS: Record<string, string> = {
 
 function ImportsListPage() {
   const fetchList = useServerFn(listImportBatches);
+  const entitlement = useEntitlement();
   const [batches, setBatches] = useState<Batch[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
