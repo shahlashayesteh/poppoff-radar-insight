@@ -696,6 +696,7 @@ export const getWeeklyScorecard = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }): Promise<ScorecardResult> => {
     const { supabase, userId } = context;
+    await requirePaidManagerEntitlement(supabase, userId);
     const venueId = await getManagerVenueId(supabase, userId);
 
     const ws = data.weekStart;
