@@ -16,6 +16,7 @@ type Status = "ai_suggested" | "approved" | "sent_to_servers" | "rejected" | "ar
 type Priority = {
   id: string;
   item_name: string;
+  title: string | null;
   category: string | null;
   priority_flag: string;
   status: Status;
@@ -154,7 +155,7 @@ function Priorities() {
     }
     if (next === "rejected") { patch.rejected_at = now; }
     if (next === "archived") { patch.archived_at = now; }
-    const { error } = await supabase.from("weekly_priorities").update(patch).eq("id", it.id);
+    const { error } = await supabase.from("weekly_priorities").update(patch as never).eq("id", it.id);
     if (error) { toast.error(error.message); setBusy(null); return; }
     await logAudit(venueId, it.id, it.status, next, note);
     await load(venueId);
