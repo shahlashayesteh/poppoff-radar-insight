@@ -15,6 +15,7 @@ import { listWeeklyPriorities } from "@/lib/manager-data.functions";
 import { useActiveVenue } from "@/hooks/use-active-venue";
 import { NoVenueState } from "@/components/manager/no-venue-state";
 import { EvidenceBasis } from "@/components/reliability";
+import { buildRecommendationEvidence, recommendationConfidence } from "@/lib/provenance";
 
 
 export const Route = createFileRoute("/manager/priorities")({
