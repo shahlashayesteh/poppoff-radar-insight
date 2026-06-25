@@ -137,8 +137,12 @@ function MenuIntel() {
   };
 
   const loadMenus = async (v: string) => {
-    const { data } = await supabase.from("venue_menu").select("id, menu_text, parsed_items, uploaded_at").eq("venue_id", v).order("uploaded_at", { ascending: false }).limit(MAX_MENUS);
-    setMenus(((data ?? []) as unknown) as Menu[]);
+    try {
+      const res = await fetchMenus({ data: { venueId: v } });
+      setMenus(((res?.rows ?? []) as unknown as Menu[]).slice(0, MAX_MENUS));
+    } catch {
+      setMenus([]);
+    }
   };
 
   const loadPairings = async (v: string) => {
