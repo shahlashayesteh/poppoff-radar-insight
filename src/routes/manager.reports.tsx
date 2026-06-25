@@ -5,8 +5,8 @@
 
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { ManagerLayout } from "@/components/manager-layout";
-import { supabase } from "@/integrations/supabase/client";
 import { getManagerVenue } from "@/lib/manager-venue";
 import { useRoleGate } from "@/lib/auth-gate";
 import { getMondayOfWeek, toISODate, formatWeekRange } from "@/lib/week";
@@ -17,6 +17,9 @@ import {
 } from "@/components/manager/operations-status-strip";
 import { Download } from "lucide-react";
 import { PaidManagerGate } from "@/components/manager/PaidManagerGate";
+import { getManagerReportsData } from "@/lib/manager-data.functions";
+
+import { useVerifyPaidManagerAccess } from "@/hooks/use-verify-paid-manager-access";
 
 export const Route = createFileRoute("/manager/reports")({
   component: () => (
@@ -80,6 +83,8 @@ function downloadCsv(rows: WeekRow[]) {
 
 function Page() {
   useRoleGate("manager");
+  useVerifyPaidManagerAccess();
+  const fetchReports = useServerFn(getManagerReportsData);
   const [weeks, setWeeks] = useState<WeekRow[]>([]);
   const [loaded, setLoaded] = useState(false);
 
@@ -91,41 +96,15 @@ function Page() {
         setLoaded(true);
         return;
       }
-      const { data: st } = await supabase
-        .from("server_stats")
-        .select("week_start, total_covers, total_sales")
-        .eq("venue_id", v)
-        .order("week_start", { ascending: false });
-      const grouped = new Map<string, { covers: number; sales: number; servers: number }>();
-      (st ?? []).forEach((r) => {
-        const cur = grouped.get(r.week_start) || { covers: 0, sales: 0, servers: 0 };
-        cur.covers += r.total_covers || 0;
-        cur.sales += Number(r.total_sales || 0);
-        cur.servers += 1;
-        grouped.set(r.week_start, cur);
-      });
-      const sorted = Array.from(grouped.entries())
-        .map(([week_start, x]) => ({
-          week_start,
-          covers: x.covers,
-          sales: x.sales,
-          servers: x.servers,
-          rpc: x.covers > 0 ? x.sales / x.covers : 0,
-          wowSalesPct: null as number | null,
-          wowRpcPct: null as number | null,
-        }))
-        .sort((a, b) => (a.week_start < b.week_start ? 1 : -1));
-      // Compute WoW deltas vs previous (older) week.
-      for (let i = 0; i < sorted.length - 1; i++) {
-        const cur = sorted[i];
-        const prev = sorted[i + 1];
-        cur.wowSalesPct = prev.sales > 0 ? ((cur.sales - prev.sales) / prev.sales) * 100 : null;
-        cur.wowRpcPct = prev.rpc > 0 ? ((cur.rpc - prev.rpc) / prev.rpc) * 100 : null;
+      try {
+        const res = await fetchReports({ data: { venueId: v } });
+        setWeeks((res?.weeks ?? []) as WeekRow[]);
+      } catch {
+        setWeeks([]);
       }
-      setWeeks(sorted);
       setLoaded(true);
     })();
-  }, []);
+  }, [fetchReports]);
 
   const currentWeek = toISODate(getMondayOfWeek());
 

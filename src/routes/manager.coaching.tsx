@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { ManagerLayout } from "@/components/manager-layout";
 import { supabase } from "@/integrations/supabase/client";
 import { getManagerVenue } from "@/lib/manager-venue";
@@ -13,6 +14,7 @@ import { toast } from "sonner";
 // manager review. This is the manager-only "truth behind the game".
 import { PaidManagerGate } from "@/components/manager/PaidManagerGate";
 import { useVerifyPaidManagerAccess } from "@/hooks/use-verify-paid-manager-access";
+import { listCoachingPriorities } from "@/lib/manager-data.functions";
 
 
 export const Route = createFileRoute("/manager/coaching")({
@@ -41,6 +43,7 @@ type Priority = {
 function Page() {
   useRoleGate("manager");
   useVerifyPaidManagerAccess();
+  const fetchCoaching = useServerFn(listCoachingPriorities);
 
   const [venueId, setVenueId] = useState<string | null>(null);
   const [priorities, setPriorities] = useState<Priority[]>([]);
@@ -60,13 +63,14 @@ function Page() {
         weekStart,
       );
       setWeekStart(visibleWeek);
-      const { data: pr } = await supabase
-        .from("weekly_priorities")
-        .select("id,item_name,title,category,priority_flag,status,reason,expected_behaviour,expected_impact,expected_impact_basis")
-        .eq("venue_id", v).eq("week_start", visibleWeek);
-      setPriorities(((pr ?? []) as unknown) as Priority[]);
+      try {
+        const res = await fetchCoaching({ data: { venueId: v, weekStart: visibleWeek } });
+        setPriorities(((res?.rows ?? []) as unknown) as Priority[]);
+      } catch {
+        setPriorities([]);
+      }
     })();
-  }, [weekStart]);
+  }, [weekStart, fetchCoaching]);
 
   const generate = async () => {
     if (!venueId) return;

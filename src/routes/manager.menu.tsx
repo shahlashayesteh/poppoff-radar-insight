@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { ManagerLayout } from "@/components/manager-layout";
 import { supabase } from "@/integrations/supabase/client";
 import { getManagerVenue } from "@/lib/manager-venue";
@@ -10,6 +11,7 @@ import { toast } from "sonner";
 import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
 import { PaidManagerGate } from "@/components/manager/PaidManagerGate";
 import { useVerifyPaidManagerAccess } from "@/hooks/use-verify-paid-manager-access";
+import { listMenuSuggestions, listVenueMenus } from "@/lib/manager-data.functions";
 
 export const Route = createFileRoute("/manager/menu")({
   component: () => (
@@ -40,6 +42,8 @@ const MAX_MENUS = 10;
 function MenuIntel() {
   useRoleGate("manager");
   useVerifyPaidManagerAccess();
+  const fetchSuggestions = useServerFn(listMenuSuggestions);
+  const fetchMenus = useServerFn(listVenueMenus);
 
   const [venueId, setVenueId] = useState<string | null>(null);
   const [menus, setMenus] = useState<Menu[]>([]);
@@ -59,12 +63,12 @@ function MenuIntel() {
   const [busySug, setBusySug] = useState<string | null>(null);
 
   const loadSuggestions = async (v: string) => {
-    const { data } = await supabase
-      .from("menu_item_suggestions")
-      .select("id,item_name,category,price,margin,ai_reason,status,source_file,rejected_reason")
-      .eq("venue_id", v)
-      .order("created_at", { ascending: false });
-    setSuggestions(((data ?? []) as unknown) as Suggestion[]);
+    try {
+      const res = await fetchSuggestions({ data: { venueId: v } });
+      setSuggestions((res?.rows ?? []) as unknown as Suggestion[]);
+    } catch {
+      setSuggestions([]);
+    }
   };
 
   const logSugAudit = async (v: string, id: string, from: string | null, to: string, note?: string) => {
@@ -133,8 +137,12 @@ function MenuIntel() {
   };
 
   const loadMenus = async (v: string) => {
-    const { data } = await supabase.from("venue_menu").select("id, menu_text, parsed_items, uploaded_at").eq("venue_id", v).order("uploaded_at", { ascending: false }).limit(MAX_MENUS);
-    setMenus(((data ?? []) as unknown) as Menu[]);
+    try {
+      const res = await fetchMenus({ data: { venueId: v } });
+      setMenus(((res?.rows ?? []) as unknown as Menu[]).slice(0, MAX_MENUS));
+    } catch {
+      setMenus([]);
+    }
   };
 
   const loadPairings = async (v: string) => {

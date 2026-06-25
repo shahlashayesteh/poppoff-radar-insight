@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { ManagerLayout } from "@/components/manager-layout";
 import { supabase } from "@/integrations/supabase/client";
 import { getManagerVenue } from "@/lib/manager-venue";
@@ -10,6 +11,7 @@ import { toast } from "sonner";
 import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
 import { PaidManagerGate } from "@/components/manager/PaidManagerGate";
 import { useVerifyPaidManagerAccess } from "@/hooks/use-verify-paid-manager-access";
+import { listWeeklyPriorities } from "@/lib/manager-data.functions";
 
 
 export const Route = createFileRoute("/manager/priorities")({
@@ -81,6 +83,7 @@ async function logAudit(
 function Priorities() {
   useRoleGate("manager");
   useVerifyPaidManagerAccess();
+  const fetchPriorities = useServerFn(listWeeklyPriorities);
 
   const [venueId, setVenueId] = useState<string | null>(null);
   const [items, setItems] = useState<Priority[]>([]);
@@ -97,13 +100,14 @@ function Priorities() {
   const [busy, setBusy] = useState<string | null>(null);
 
   const load = async (v: string, ws = weekStart) => {
-    const { data } = await supabase
-      .from("weekly_priorities")
-      .select("*")
-      .eq("venue_id", v)
-      .eq("week_start", ws)
-      .order("created_at", { ascending: true });
-    setItems(((data ?? []) as unknown) as Priority[]);
+    try {
+      const res = await fetchPriorities({ data: { venueId: v, weekStart: ws } });
+      // Sort ascending by created_at (server returns desc) to preserve UX.
+      const rows = ((res?.rows ?? []) as unknown as Priority[]).slice().reverse();
+      setItems(rows);
+    } catch {
+      setItems([]);
+    }
   };
 
   useEffect(() => {
