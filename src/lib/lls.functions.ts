@@ -758,7 +758,58 @@ export const getWeeklyScorecard = createServerFn({ method: "POST" })
       .lt("shift_date", iso(weekEnd));
     if (error) throw new Error(error.message);
 
-    return computeWeeklyScorecardFromRows((shifts ?? []) as ScorecardInputRow[], ws, thresholds);
+    // Phase 20A — pull 12 weeks of history for OF v2 preview computation.
+    // Preview is read-only and does NOT mutate stored shift values.
+    const previewStart = new Date(wsDate);
+    previewStart.setDate(previewStart.getDate() - 7 * 12);
+    const { data: previewHistory } = await supabase
+      .from("shifts")
+      .select("shift_date, day_of_week, daypart, gross_sales, covers_served, labor_cost, opportunity_factor")
+      .eq("venue_id", venueId)
+      .gte("shift_date", iso(previewStart))
+      .lt("shift_date", iso(weekEnd));
+
+    const result = computeWeeklyScorecardFromRows(
+      (shifts ?? []) as ScorecardInputRow[],
+      ws,
+      thresholds,
+    );
+
+    // Build the OF v2 preview. Failures are non-fatal — never crash the LLS page.
+    try {
+      const toWeekStart = (date: string): string => {
+        const d = new Date(date + "T00:00:00");
+        const day = d.getDay();
+        const diff = day === 0 ? -6 : 1 - day;
+        d.setDate(d.getDate() + diff);
+        return d.toISOString().slice(0, 10);
+      };
+      const historyRows = ((previewHistory ?? []) as any[]).map((r) => ({
+        shift_date: r.shift_date as string,
+        week_start: toWeekStart(r.shift_date as string),
+        day_of_week: Number(r.day_of_week),
+        daypart: (r.daypart as string | null) ?? null,
+        outlet: null,
+        gross_sales: r.gross_sales != null ? Number(r.gross_sales) : null,
+        covers: r.covers_served != null ? Number(r.covers_served) : null,
+        labor_cost: r.labor_cost != null ? Number(r.labor_cost) : null,
+        opportunity_factor:
+          r.opportunity_factor != null ? Number(r.opportunity_factor) : null,
+      }));
+      const selectedWeek = historyRows.filter((r) => r.week_start === ws);
+      result.opportunity_factor_preview = buildOfV2Preview({
+        venueId,
+        weekStart: ws,
+        history: historyRows,
+        selectedWeek,
+        salesBasis: "gross", // v1 schema only stores gross
+        laborHoursEstimated: true, // hours unavailable in v1 scorecard query
+      });
+    } catch {
+      result.opportunity_factor_preview = null;
+    }
+
+    return result;
   });
 
 // ---------- scheduling leverage matrix ----------
