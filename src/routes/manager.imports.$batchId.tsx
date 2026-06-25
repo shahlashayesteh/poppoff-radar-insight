@@ -155,7 +155,7 @@ function ImportBatchDetail() {
 
   const onApprove = async () => {
     setBusy(true);
-    try { await doApprove({ data: { batchId } }); toast.success("Batch approved"); await load(); }
+    try { await doApprove({ data: { batchId, venueId } }); toast.success("Batch approved"); await load(); }
     catch (e: any) { toast.error(e?.message ?? "Approve failed"); }
     finally { setBusy(false); }
   };
@@ -163,7 +163,7 @@ function ImportBatchDetail() {
     if (!confirm("Commit this batch to live LLS data? This applies the accepted rows to the shifts table.")) return;
     setBusy(true);
     try {
-      const res = await doCommit({ data: { batchId } });
+      const res = await doCommit({ data: { batchId, venueId } });
       toast.success(`Committed ${(res.result as any)?.committed ?? "?"} rows`);
       await load();
     } catch (e: any) { toast.error(e?.message ?? "Commit failed"); }
@@ -173,7 +173,7 @@ function ImportBatchDetail() {
     if (!confirm("Roll back this batch? Committed shifts still tagged with this batch will be removed.")) return;
     setBusy(true);
     try {
-      const res = await doRollback({ data: { batchId } });
+      const res = await doRollback({ data: { batchId, venueId } });
       const r = res.result as any;
       toast.success(`Rolled back. Removed ${r?.deleted ?? 0}, skipped ${r?.skipped ?? 0} (later imports preserved).`);
       await load();
@@ -181,6 +181,15 @@ function ImportBatchDetail() {
     finally { setBusy(false); }
   };
 
+  if (active.status !== "ready") {
+    return (
+      <ManagerLayout>
+        <div className="mx-auto max-w-6xl px-4 py-6">
+          <NoVenueState status={active.status} venues={active.venues} />
+        </div>
+      </ManagerLayout>
+    );
+  }
   if (loading) {
     return <ManagerLayout><div className="mx-auto max-w-6xl px-4 py-6">Loading…</div></ManagerLayout>;
   }
