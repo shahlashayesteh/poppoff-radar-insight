@@ -183,10 +183,10 @@ export function validateRows(
       if (!trimOrNull(r.shift_start_time)) {
         reasons.push("missing_start_time"); missingStartTime++; status = "warning";
       }
-      if (!trimOrNull(r.outlet) && !dOutlet) {
+      if (!suppressOutletWarn && !trimOrNull(r.outlet) && !dOutlet) {
         reasons.push("missing_outlet"); missingOutlet++; status = status === "accepted" ? "warning" : status;
       }
-      if (!trimOrNull(r.revenue_centre) && !dRC) {
+      if (!suppressRCWarn && !trimOrNull(r.revenue_centre) && !dRC) {
         reasons.push("missing_revenue_centre"); missingRevenueCentre++;
         status = status === "accepted" ? "warning" : status;
       }
