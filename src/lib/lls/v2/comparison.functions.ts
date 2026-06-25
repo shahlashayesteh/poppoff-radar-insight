@@ -20,18 +20,27 @@ function addDays(iso: string, days: number): string {
 }
 
 async function resolveVenue(supabase: any, userId: string) {
+  // Deterministic single-venue resolution. See lls.functions.ts:getManagerVenueId
+  // for the carried-forward multi-site note — once tenant schema lands, swap
+  // this for an explicit activeVenueId argument validated by membership.
   const { data, error } = await supabase
     .from("venues")
-    .select("id, name, lls_compare_mode, lls_active_model_version, lls_v2_baseline_weeks")
+    .select("id, name, lls_compare_mode, lls_active_model_version, lls_v2_baseline_weeks, created_at")
     .eq("manager_id", userId)
-    .limit(1)
-    .maybeSingle();
+    .order("created_at", { ascending: true })
+    .order("id", { ascending: true });
   if (error) throw new Error(error.message);
-  if (!data) throw new Error("No venue found for this manager");
-  return data as {
+  const rows = (data ?? []) as Array<{
     id: string; name: string; lls_compare_mode: boolean;
     lls_active_model_version: string; lls_v2_baseline_weeks: number;
-  };
+  }>;
+  if (rows.length === 0) throw new Error("No venue found for this manager");
+  if (rows.length > 1) {
+    console.warn(
+      `[lls.compare] manager ${userId} owns ${rows.length} venues; using earliest (${rows[0].id}).`,
+    );
+  }
+  return rows[0];
 }
 
 export interface ComparisonPayload {
