@@ -222,6 +222,9 @@ function ImportBatchDetail() {
           </CardContent>
         </Card>
 
+        {/* Identity Quality (Phase 7) */}
+        <IdentityQualityCard rows={rows} batchValidation={batch.validation_summary} />
+
         {/* Approval actions */}
         <div className="flex flex-wrap gap-2">
           <Button onClick={onApprove} disabled={!canApprove || busy} variant="outline">
@@ -235,6 +238,10 @@ function ImportBatchDetail() {
           </Button>
           <Button onClick={() => navigate({ to: "/manager/imports" })} variant="ghost">Back</Button>
         </div>
+        <p className="text-xs text-muted-foreground">
+          Commit is blocked while any non-excluded row has an unresolved or ambiguous employee identity.
+          Rollback is best-effort — only shifts still tagged with this batch are removed.
+        </p>
 
         {batch.committed_shift_ids && batch.committed_shift_ids.length > 0 && (
           <p className="text-xs text-muted-foreground">
@@ -243,7 +250,7 @@ function ImportBatchDetail() {
           </p>
         )}
 
-        {/* Row preview */}
+        {/* Row preview with identity resolution + manager actions */}
         <Card>
           <CardHeader><CardTitle>Rows (first 500)</CardTitle></CardHeader>
           <CardContent className="overflow-x-auto">
@@ -252,33 +259,157 @@ function ImportBatchDetail() {
                 <tr className="text-left text-muted-foreground">
                   <th className="pr-2">#</th>
                   <th className="pr-2">Date</th>
-                  <th className="pr-2">Server</th>
+                  <th className="pr-2">Reported</th>
+                  <th className="pr-2">Identity</th>
                   <th className="pr-2">Status</th>
-                  <th>Reasons</th>
+                  <th className="pr-2">Reasons</th>
+                  <th>Action</th>
                 </tr>
               </thead>
               <tbody>
                 {rows.map((r) => (
-                  <tr key={r.id} className="border-t">
+                  <tr key={r.id} className="border-t align-top">
                     <td className="pr-2 py-1 text-muted-foreground">{r.source_row_index}</td>
                     <td className="pr-2 py-1">{r.service_date ?? "—"}</td>
-                    <td className="pr-2 py-1">{r.reported_identity_name ?? "—"}</td>
+                    <td className="pr-2 py-1">
+                      <div>{r.reported_identity_name ?? "—"}</div>
+                      {r.reported_identity_id && (
+                        <div className="text-muted-foreground font-mono">{r.reported_identity_id}</div>
+                      )}
+                    </td>
+                    <td className="pr-2 py-1">
+                      <IdentityBadge row={r} />
+                    </td>
                     <td className="pr-2 py-1">
                       {r.excluded_from_canonical
-                        ? <span className="text-rose-700">rejected</span>
+                        ? <span className="text-rose-700">excluded</span>
                         : r.reconciliation_status === "duplicate_pending"
                           ? <span className="text-amber-700">duplicate</span>
-                          : r.status_reason
-                            ? <span className="text-amber-700">warning</span>
-                            : <span className="text-emerald-700">accepted</span>}
+                          : r.identity_status === "ambiguous"
+                            ? <span className="text-rose-700">ambiguous</span>
+                            : r.identity_status === "new_unverified"
+                              ? <span className="text-amber-700">new (unverified)</span>
+                              : r.status_reason
+                                ? <span className="text-amber-700">warning</span>
+                                : <span className="text-emerald-700">accepted</span>}
                     </td>
-                    <td className="py-1 text-muted-foreground">{r.status_reason || "—"}</td>
+                    <td className="pr-2 py-1 text-muted-foreground">{r.status_reason || "—"}</td>
+                    <td className="py-1">
+                      {!r.excluded_from_canonical && (r.identity_status === "ambiguous" || r.identity_status === "new_unverified" || r.manual_review_required) ? (
+                        <IdentityActions
+                          row={r} employees={employees} busy={busy}
+                          onConfirm={onConfirm} onCreate={onCreate}
+                          onAlias={onAlias} onExclude={onExclude}
+                        />
+                      ) : null}
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </CardContent>
         </Card>
+      </div>
+    </ManagerLayout>
+  );
+}
+
+function IdentityQualityCard({ rows, batchValidation }: { rows: Row[]; batchValidation: Record<string, unknown> }) {
+  const counts = {
+    resolved: 0, ambiguous: 0, unmatched: 0, new_unverified: 0, manual: 0, confirmed: 0,
+  };
+  for (const r of rows) {
+    if (r.identity_status === "resolved") counts.resolved++;
+    else if (r.identity_status === "ambiguous") counts.ambiguous++;
+    else if (r.identity_status === "unmatched") counts.unmatched++;
+    else if (r.identity_status === "new_unverified") counts.new_unverified++;
+    if (r.manual_review_required) counts.manual++;
+    if (r.manager_confirmed_match) counts.confirmed++;
+  }
+  const summary = (batchValidation as any)?.identity ?? null;
+  return (
+    <Card>
+      <CardHeader><CardTitle>Identity Quality</CardTitle></CardHeader>
+      <CardContent className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+        <Stat label="Matched employees" value={counts.resolved} tone="ok" />
+        <Stat label="Ambiguous" value={counts.ambiguous} tone="bad" />
+        <Stat label="New (unverified)" value={counts.new_unverified} tone="warn" />
+        <Stat label="Unmatched" value={counts.unmatched} tone="warn" />
+        <Stat label="Manual review needed" value={counts.manual} tone={counts.manual > 0 ? "warn" : "ok"} />
+        <Stat label="Manager-confirmed" value={counts.confirmed} tone="ok" />
+        {summary && (
+          <Stat label="High-confidence (batch)" value={Number((summary as any).high_confidence ?? 0)} />
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function IdentityBadge({ row }: { row: Row }) {
+  const conf = row.identity_confidence != null ? `${Math.round(row.identity_confidence * 100)}%` : "—";
+  const status = row.identity_status || "pending";
+  const tone =
+    status === "resolved" ? "text-emerald-700" :
+    status === "ambiguous" || status === "unmatched" ? "text-rose-700" :
+    status === "new_unverified" ? "text-amber-700" : "text-muted-foreground";
+  return (
+    <div className={`text-xs ${tone}`}>
+      <div className="font-medium">{status}</div>
+      <div className="text-muted-foreground">confidence {conf}</div>
+      {row.manager_confirmed_match && <div className="text-emerald-700">manager-confirmed</div>}
+    </div>
+  );
+}
+
+function IdentityActions({
+  row, employees, busy, onConfirm, onCreate, onAlias, onExclude,
+}: {
+  row: Row; employees: Employee[]; busy: boolean;
+  onConfirm: (sid: string, eid: string) => void;
+  onCreate: (sid: string, name: string) => void;
+  onAlias: (sid: string, eid: string, alias: string) => void;
+  onExclude: (sid: string) => void;
+}) {
+  const [pick, setPick] = useState<string>("");
+  const candidates = row.identity_candidates ?? [];
+  return (
+    <div className="flex flex-col gap-1">
+      {candidates.length > 0 && candidates.map((c) => (
+        <Button key={c.employee_id} size="sm" variant="outline" disabled={busy}
+          onClick={() => onConfirm(row.id, c.employee_id)}>
+          Confirm: {c.display_name}
+        </Button>
+      ))}
+      <div className="flex gap-1">
+        <select
+          className="border rounded text-xs px-1"
+          value={pick}
+          onChange={(e) => setPick(e.target.value)}
+        >
+          <option value="">— pick existing —</option>
+          {employees.map((e) => (
+            <option key={e.id} value={e.id}>{e.display_name}</option>
+          ))}
+        </select>
+        <Button size="sm" variant="outline" disabled={!pick || busy}
+          onClick={() => onConfirm(row.id, pick)}>Match</Button>
+        <Button size="sm" variant="outline" disabled={!pick || busy}
+          onClick={() => onAlias(row.id, pick, row.reported_identity_name ?? "")}>
+          Link alias
+        </Button>
+      </div>
+      <div className="flex gap-1">
+        <Button size="sm" variant="secondary" disabled={busy}
+          onClick={() => onCreate(row.id, row.reported_identity_name ?? "")}>
+          Create new
+        </Button>
+        <Button size="sm" variant="destructive" disabled={busy}
+          onClick={() => onExclude(row.id)}>Exclude</Button>
+      </div>
+    </div>
+  );
+}
+
       </div>
     </ManagerLayout>
   );
