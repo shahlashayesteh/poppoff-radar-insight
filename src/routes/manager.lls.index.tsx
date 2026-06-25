@@ -545,26 +545,12 @@ function LlsPage() {
             <div className="mt-2 flex items-center gap-2 flex-wrap">
               <LaborBasisBadge basis={laborBasis} />
               <ReliabilityBadge
-                field={
-                  laborBasis === "fully_loaded" || laborBasis === "total" || laborBasis === "wage_plus_oncost" || laborBasis === "wage_only"
-                    ? "labour_wage_cost_known_basis"
-                    : laborBasis === "rate_times_hours"
-                      ? "hours_times_rate_labour"
-                      : "labour_wage_cost_unknown_basis"
-                }
+                field={mapLaborBasisToReliability(laborBasis as unknown as string | null)}
                 prefix="Labour basis"
               />
               <SalesBasisBadge basis={salesBasis ?? undefined} />
               <ReliabilityBadge
-                field={
-                  salesBasis === "net_sales_source" || salesBasis === "gross_sales_source"
-                    ? "pos_check_total"
-                    : salesBasis === "net_sales_derived"
-                      ? "rpc"
-                      : salesBasis === "gross_used_as_net_estimate" || salesBasis === "mixed"
-                        ? "gross_used_as_net"
-                        : "unknown"
-                }
+                field={mapSalesBasisToReliability(salesBasis as unknown as string | null)}
                 prefix="Sales basis"
               />
               <ReliabilityBadge field="lls_base" prefix="LLS" />
