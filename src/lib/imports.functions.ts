@@ -186,6 +186,69 @@ export const stageImport = createServerFn({ method: "POST" })
       }
     }
 
+    // ---- Phase 7: resolve employee identity for each non-rejected row ----
+    const directory = await loadIdentityDirectory(supabase, venueId);
+    const idx = indexDirectory(directory);
+    const sourceSystem = sourceKind === "sales" ? "pos" : "labour";
+
+    const resolutions = data.rows.map((r, i) => {
+      const stagingId = idByIdx.get(i);
+      if (!stagingId) return null;
+      const v = validation.rows[i];
+      if (v.status === "rejected") return null;
+      return {
+        stagingId,
+        index: i,
+        resolution: resolveIdentityIndexed(
+          {
+            source_system: sourceSystem,
+            source_employee_id: (r.server_id ?? "").toString().trim() || null,
+            reported_name: (r.server_name ?? "").toString().trim() || null,
+            outlet_id: (r.outlet ?? "").toString().trim() || null,
+            service_date: r.shift_date ?? null,
+            shift_start_time: r.shift_start_time ?? null,
+          },
+          idx,
+        ),
+      };
+    });
+
+    // Batch-update staging rows with identity outcome.
+    for (const item of resolutions) {
+      if (!item) continue;
+      const { stagingId, resolution } = item;
+      await supabase
+        .from("shift_staging_rows")
+        .update({
+          resolved_identity_id: resolution.employee_id,
+          identity_match_method: resolution.method,
+          identity_confidence: resolution.confidence,
+          identity_status: resolution.status,
+          manual_review_required: resolution.manual_review_required,
+          identity_candidates: resolution.candidates as any,
+          reconciliation_status:
+            resolution.status === "ambiguous" || resolution.status === "pending"
+              ? "identity_pending"
+              : undefined,
+        } as any)
+        .eq("id", stagingId);
+    }
+
+    const identitySummary = summarise(
+      resolutions.filter((x): x is NonNullable<typeof x> => x !== null).map((r) => r.resolution),
+    );
+
+    // Persist identity summary onto the batch (for the Data Quality panel).
+    await supabase
+      .from("shift_import_batches_v2")
+      .update({
+        validation_summary: {
+          ...(validation.summary as any),
+          identity: identitySummary,
+        } as any,
+      })
+      .eq("id", batchId);
+
     // Audit event for staged batch
     await supabase.from("lls_v2_audit_events").insert({
       venue_id: venueId,
@@ -199,6 +262,7 @@ export const stageImport = createServerFn({ method: "POST" })
         accepted: validation.summary.accepted,
         rejected: validation.summary.rejected,
         warnings: validation.summary.warnings,
+        identity: identitySummary,
       },
     });
 
@@ -208,8 +272,32 @@ export const stageImport = createServerFn({ method: "POST" })
       totals: validation.totals,
       salesBasis: validation.salesBasis,
       labourBasis: validation.labourBasis,
+      identity: identitySummary,
     };
   });
+
+// ---- Phase 7: identity directory loader ----
+async function loadIdentityDirectory(supabase: any, venueId: string): Promise<IdentityDirectory> {
+  const [emp, sids, aliases] = await Promise.all([
+    supabase.from("employee_master")
+      .select("id, venue_id, display_name, normalised_name, pos_employee_id, labour_employee_id, outlet_id")
+      .eq("venue_id", venueId),
+    supabase.from("source_employee_ids")
+      .select("venue_id, source_system, source_employee_id, employee_master_id")
+      .eq("venue_id", venueId),
+    supabase.from("venue_identity_aliases")
+      .select("venue_id, normalised_alias, canonical_identity_id")
+      .eq("venue_id", venueId),
+  ]);
+  if (emp.error) throw new Error(emp.error.message);
+  return {
+    venueId,
+    employees: (emp.data ?? []) as EmployeeRecord[],
+    sourceIds: (sids.data ?? []) as SourceIdLink[],
+    aliases: (aliases.data ?? []) as AliasLink[],
+  };
+}
+
 
 // ---- list batches ----
 export const listImportBatches = createServerFn({ method: "GET" })
