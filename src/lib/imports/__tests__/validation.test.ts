@@ -45,8 +45,12 @@ describe("validateRows — warnings", () => {
     const r = validateRows([{ server_name: "B", shift_date: "2026-06-01", shift_start_time: "17:00", labor_cost: 200 }], "labor");
     expect(r.summary.unknownLaborBasis).toBe(1);
   });
-  it("warns on missing outlet and revenue centre", () => {
-    const r = validateRows([baseSale({ outlet: null, revenue_centre: null })], "sales");
+  it("warns on missing outlet and revenue centre when other rows declare them (mixed → real signal)", () => {
+    const rows = [
+      baseSale({ outlet: null, revenue_centre: null }),
+      baseSale({ shift_date: "2026-06-02" }), // has outlet + revenue_centre
+    ];
+    const r = validateRows(rows, "sales");
     expect(r.summary.missingOutlet).toBe(1);
     expect(r.summary.missingRevenueCentre).toBe(1);
   });
