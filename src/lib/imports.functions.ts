@@ -11,6 +11,30 @@ import {
   resolveIdentityIndexed, indexDirectory, normaliseName, summarise,
   type IdentityDirectory, type EmployeeRecord, type SourceIdLink, type AliasLink,
 } from "@/lib/imports/identity";
+import { normaliseStatus, canImportProductionData } from "@/lib/entitlements";
+
+// Phase 12 — entitlement gate. Blocks cancelled/expired/unknown accounts from
+// staging or committing production import data. Trialing/active/enterprise pass.
+async function requireImportEntitlement(supabase: any, userId: string): Promise<void> {
+  const { data } = await supabase
+    .from("subscriptions")
+    .select("status, current_period_end, cancel_at_period_end")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  // No row → unknown. Block production imports.
+  const status = normaliseStatus({
+    status: data?.status ?? null,
+    currentPeriodEnd: data?.current_period_end ?? null,
+    cancelAtPeriodEnd: data?.cancel_at_period_end ?? false,
+  });
+  if (!canImportProductionData(status)) {
+    throw new Error(
+      `Subscription required to import production data (current status: ${status}).`,
+    );
+  }
+}
 
 
 // ---- venue resolver (same deterministic policy as lls.functions.ts) ----
@@ -59,6 +83,7 @@ export const stageImport = createServerFn({ method: "POST" })
   .inputValidator((d: z.input<typeof StageInput>) => StageInput.parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
+    await requireImportEntitlement(supabase, userId);
     const venueId = await getManagerVenueId(supabase, userId);
 
     const sourceKind = data.sourceKind as SourceKind;
@@ -365,7 +390,8 @@ export const commitImportBatch = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: z.input<typeof BatchIdInput>) => BatchIdInput.parse(d))
   .handler(async ({ data, context }) => {
-    const { supabase } = context;
+    const { supabase, userId } = context;
+    await requireImportEntitlement(supabase, userId);
     const { data: res, error } = await supabase.rpc(
       "lls_v2_commit_batch" as never,
       { _batch_id: data.batchId } as never,

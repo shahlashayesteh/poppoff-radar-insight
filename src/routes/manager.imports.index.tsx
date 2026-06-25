@@ -6,6 +6,7 @@ import { listImportBatches } from "@/lib/imports.functions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ManagerLayout } from "@/components/manager-layout";
+import { useEntitlement, statusLabel } from "@/lib/entitlements";
 
 export const Route = createFileRoute("/manager/imports/")({
   component: ImportsListPage,
@@ -41,6 +42,7 @@ const STATUS_COLORS: Record<string, string> = {
 
 function ImportsListPage() {
   const fetchList = useServerFn(listImportBatches);
+  const entitlement = useEntitlement();
   const [batches, setBatches] = useState<Batch[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
@@ -62,6 +64,22 @@ function ImportsListPage() {
             before it affects LLS.
           </p>
         </header>
+
+        {!entitlement.loading && !entitlement.canImport && (
+          <div
+            role="alert"
+            data-testid="import-blocked-banner"
+            className="rounded-xl border border-red-300 bg-red-50 p-3 text-sm text-red-900"
+          >
+            Production imports are disabled — subscription status is <strong>{statusLabel(entitlement.status)}</strong>.
+            Existing batches remain readable, but new files cannot be staged or committed until billing is active.
+          </div>
+        )}
+        {entitlement.showPastDueWarning && (
+          <div className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+            Your subscription is past due. Imports continue to work during the grace period — update billing to avoid interruption.
+          </div>
+        )}
 
         {loading && <div className="text-sm text-muted-foreground">Loading…</div>}
         {err && <div className="text-sm text-rose-600">{err}</div>}
