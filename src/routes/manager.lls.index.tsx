@@ -194,6 +194,26 @@ function LaborBasisBadge({ basis }: { basis: LaborBasisLocal }) {
   );
 }
 
+// Phase 17B — map local basis enums into the Data Source Reliability Framework
+// registry keys so manager surfaces can render Measured / Derived / Estimated
+// badges next to the existing basis chips.
+function mapLaborBasisToReliability(basis: string | null | undefined): string {
+  if (!basis) return "unknown";
+  if (basis === "fully_loaded" || basis === "wage") return "labour_wage_cost_known_basis";
+  if (basis === "derived" || basis === "rate_times_hours") return "hours_times_rate_labour";
+  if (basis === "wage_plus_oncost" || basis === "total") return "labour_wage_cost_known_basis";
+  if (basis === "mixed" || basis === "unknown") return "labour_wage_cost_unknown_basis";
+  return "unknown";
+}
+
+function mapSalesBasisToReliability(basis: string | null | undefined): string {
+  if (!basis) return "unknown";
+  if (basis === "net_sales_source" || basis === "gross_sales_source") return "pos_check_total";
+  if (basis === "net_sales_derived") return "rpc";
+  if (basis === "gross_used_as_net_estimate" || basis === "mixed") return "gross_used_as_net";
+  return "unknown";
+}
+
 function LlsPage() {
   useRoleGate("manager");
   // Phase 16A — active venue plumbing. Single-venue managers get their venue
