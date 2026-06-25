@@ -11,6 +11,8 @@ import { ChevronLeft, ChevronRight, ArrowLeft, AlertCircle } from "lucide-react"
 import { MetricTooltip, ModelledValueLabel } from "@/components/metrics";
 import { useRoleGate } from "@/lib/auth-gate";
 import { PaidManagerGate } from "@/components/manager/PaidManagerGate";
+import { useActiveVenue } from "@/hooks/use-active-venue";
+import { NoVenueState } from "@/components/manager/no-venue-state";
 
 export const Route = createFileRoute("/manager/lls/compare")({
   component: () => (
