@@ -160,7 +160,7 @@ function MenuIntel() {
       const v = venue?.id;
       if (!v) return;
       setVenueId(v);
-      await Promise.all([loadMenus(v), loadPairings(v)]);
+      await Promise.all([loadMenus(v), loadPairings(v), loadSuggestions(v)]);
     })();
   }, []);
 
