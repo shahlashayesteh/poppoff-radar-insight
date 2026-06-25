@@ -51,6 +51,9 @@ const StageInput = z.object({
   fileHash: z.string().optional(),
   sourceSystem: z.string().optional(),
   rows: z.array(RawRowSchema).min(1).max(20000),
+  // Phase 16A — optional explicit venue. Single-venue managers may omit it;
+  // multi-venue / head-office callers MUST send it.
+  venueId: z.string().uuid().optional(),
 });
 
 export const stageImport = createServerFn({ method: "POST" })
@@ -59,7 +62,7 @@ export const stageImport = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     await requireImportEntitlement(supabase, userId);
-    const venueId = await getManagerVenueId(supabase, userId);
+    const venueId = await getManagerVenueId(supabase, userId, data.venueId);
 
     const sourceKind = data.sourceKind as SourceKind;
     const importType = sourceKind === "sales" ? "sales" : "labour";
