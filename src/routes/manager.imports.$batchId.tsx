@@ -236,10 +236,33 @@ function ImportBatchDetail() {
             <Stat label="Labour total" value={batch.labour_total != null ? `£${Math.round(batch.labour_total).toLocaleString()}` : "—"} />
             <Stat label="Covers total" value={batch.covers_total ?? "—"} />
 
-            <Stat label="Sales basis" value={String((batch.sales_basis_summary as any)?.mode ?? "—")} />
-            <Stat label="Labour basis" value={String((batch.labour_basis_summary as any)?.mode ?? "—")} />
+            <StatWithReliability
+              label="Sales basis"
+              value={String((batch.sales_basis_summary as any)?.mode ?? "—")}
+              field={salesBasisToReliability((batch.sales_basis_summary as any)?.mode)}
+            />
+            <StatWithReliability
+              label="Labour basis"
+              value={String((batch.labour_basis_summary as any)?.mode ?? "—")}
+              field={labourBasisToReliability((batch.labour_basis_summary as any)?.mode)}
+            />
             <Stat label="Missing start time" value={Number((batch.validation_summary as any)?.missingStartTime ?? 0)} tone="warn" />
             <Stat label="Duplicates" value={Number((batch.validation_summary as any)?.duplicates ?? 0)} tone="warn" />
+          </CardContent>
+        </Card>
+
+        {/* Phase 17B — Per-field reliability key */}
+        <Card>
+          <CardHeader><CardTitle>Field reliability key</CardTitle></CardHeader>
+          <CardContent className="flex flex-wrap gap-2 text-xs">
+            <ReliabilityBadge field="pos_check_total" prefix="Sales rows" />
+            <ReliabilityBadge field="labour_paid_hours" prefix="Labour hours" />
+            <ReliabilityBadge field="pos_server_id" prefix="Server ID" />
+            <ReliabilityBadge field="sevenrooms_section" prefix="Sections" />
+            <ReliabilityBadge field="missing_server_id" prefix="Missing server ID" />
+            <p className="basis-full text-[11px] text-muted-foreground mt-1">
+              Measured POS / labour rows feed scoring. Sections and bookings are context only unless verified. Rows missing server ID are blocked from server-level scoring.
+            </p>
           </CardContent>
         </Card>
 
