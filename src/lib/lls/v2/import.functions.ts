@@ -17,7 +17,8 @@ export const v2IngestBatch = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: z.input<typeof IngestSchema>) => IngestSchema.parse(d))
   .handler(async ({ data, context }) => {
-    const { supabase } = context;
+    const { supabase, userId } = context;
+    await requirePaidManagerEntitlement(supabase, userId, "import");
     const { data: batchId, error } = await supabase.rpc("lls_v2_ingest_batch", {
       _venue_id: data.venue_id,
       _payload: data.payload,
