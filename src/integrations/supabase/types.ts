@@ -217,6 +217,59 @@ export type Database = {
         }
         Relationships: []
       }
+      employee_master: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          display_name: string
+          id: string
+          labour_employee_id: string | null
+          manager_confirmed: boolean
+          normalised_name: string
+          outlet_id: string | null
+          pos_employee_id: string | null
+          status: string
+          updated_at: string
+          venue_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          display_name: string
+          id?: string
+          labour_employee_id?: string | null
+          manager_confirmed?: boolean
+          normalised_name: string
+          outlet_id?: string | null
+          pos_employee_id?: string | null
+          status?: string
+          updated_at?: string
+          venue_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          display_name?: string
+          id?: string
+          labour_employee_id?: string | null
+          manager_confirmed?: boolean
+          normalised_name?: string
+          outlet_id?: string | null
+          pos_employee_id?: string | null
+          status?: string
+          updated_at?: string
+          venue_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_master_venue_id_fkey"
+            columns: ["venue_id"]
+            isOneToOne: false
+            referencedRelation: "venues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lls_v2_audit_events: {
         Row: {
           actor: string | null
@@ -1175,15 +1228,19 @@ export type Database = {
           duplicate_status: string
           excluded_from_canonical: boolean
           id: string
+          identity_candidates: Json
           identity_confidence: number | null
           identity_match_method: string | null
           identity_status: string
           last_reconciled_at: string | null
+          manager_confirmed_match: boolean
+          manual_review_required: boolean
           raw_row: Json
           raw_row_hash: string
           reconciliation_status: string
           reported_identity_id: string | null
           reported_identity_name: string | null
+          reported_outlet: string | null
           resolved_identity_id: string | null
           service_date: string | null
           source_kind: string
@@ -1200,15 +1257,19 @@ export type Database = {
           duplicate_status?: string
           excluded_from_canonical?: boolean
           id?: string
+          identity_candidates?: Json
           identity_confidence?: number | null
           identity_match_method?: string | null
           identity_status?: string
           last_reconciled_at?: string | null
+          manager_confirmed_match?: boolean
+          manual_review_required?: boolean
           raw_row: Json
           raw_row_hash: string
           reconciliation_status?: string
           reported_identity_id?: string | null
           reported_identity_name?: string | null
+          reported_outlet?: string | null
           resolved_identity_id?: string | null
           service_date?: string | null
           source_kind: string
@@ -1225,15 +1286,19 @@ export type Database = {
           duplicate_status?: string
           excluded_from_canonical?: boolean
           id?: string
+          identity_candidates?: Json
           identity_confidence?: number | null
           identity_match_method?: string | null
           identity_status?: string
           last_reconciled_at?: string | null
+          manager_confirmed_match?: boolean
+          manual_review_required?: boolean
           raw_row?: Json
           raw_row_hash?: string
           reconciliation_status?: string
           reported_identity_id?: string | null
           reported_identity_name?: string | null
+          reported_outlet?: string | null
           resolved_identity_id?: string | null
           service_date?: string | null
           source_kind?: string
@@ -1475,6 +1540,51 @@ export type Database = {
           },
           {
             foreignKeyName: "shifts_v2_venue_id_fkey"
+            columns: ["venue_id"]
+            isOneToOne: false
+            referencedRelation: "venues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      source_employee_ids: {
+        Row: {
+          confirmed_at: string
+          confirmed_by: string | null
+          employee_master_id: string
+          id: string
+          source_employee_id: string
+          source_system: string
+          venue_id: string
+        }
+        Insert: {
+          confirmed_at?: string
+          confirmed_by?: string | null
+          employee_master_id: string
+          id?: string
+          source_employee_id: string
+          source_system: string
+          venue_id: string
+        }
+        Update: {
+          confirmed_at?: string
+          confirmed_by?: string | null
+          employee_master_id?: string
+          id?: string
+          source_employee_id?: string
+          source_system?: string
+          venue_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "source_employee_ids_employee_master_id_fkey"
+            columns: ["employee_master_id"]
+            isOneToOne: false
+            referencedRelation: "employee_master"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "source_employee_ids_venue_id_fkey"
             columns: ["venue_id"]
             isOneToOne: false
             referencedRelation: "venues"
