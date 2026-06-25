@@ -83,6 +83,7 @@ export const stageImport = createServerFn({ method: "POST" })
   .inputValidator((d: z.input<typeof StageInput>) => StageInput.parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
+    await requireImportEntitlement(supabase, userId);
     const venueId = await getManagerVenueId(supabase, userId);
 
     const sourceKind = data.sourceKind as SourceKind;
