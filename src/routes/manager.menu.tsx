@@ -714,9 +714,8 @@ function MenuIntel() {
                     {s.status === "ai_suggested" && (
                       <EvidenceBasis
                         compact
-                        className="mt-1.5 max-w-xl"
-                        fields={["menu_document", "pos_menu_category"]}
-                        excluded={["sevenrooms_section"]}
+                        className="mt-1.5"
+                        fields={["pos_menu_category", "sevenrooms_section"]}
                       />
                     )}
                   </div>
