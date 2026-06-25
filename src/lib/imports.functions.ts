@@ -520,6 +520,19 @@ export const confirmIdentityMatch = createServerFn({ method: "POST" })
       employee_master_id: emp.id, employee_name: emp.display_name,
       reported_name: row.reported_identity_name, reported_id: row.reported_identity_id,
     });
+    // Phase 19: merge/link audit trail.
+    await supabase.from("employee_identity_merges").insert({
+      venue_id: venueId,
+      action: "link_source_id",
+      primary_employee_id: emp.id,
+      payload: {
+        kind: "confirm_match",
+        reported_id: row.reported_identity_id,
+        reported_name: row.reported_identity_name,
+        source_kind: row.source_kind,
+      },
+      performed_by: userId,
+    });
     return { ok: true };
   });
 
