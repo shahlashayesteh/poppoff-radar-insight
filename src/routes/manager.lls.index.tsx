@@ -42,6 +42,7 @@ import { hashFileContent } from "@/lib/imports/hash";
 import { Link } from "@tanstack/react-router";
 import { Upload, ChevronLeft, ChevronRight, AlertTriangle, TrendingUp, TrendingDown, Trash2, Gauge, Sparkles, Info } from "lucide-react";
 import { MetricTooltip, DataQualityChip, SalesBasisBadge, GrossEstimateWarning } from "@/components/metrics";
+import { ReliabilityBadge } from "@/components/reliability";
 import { SchedulingLeverageMatrix } from "@/components/lls/scheduling-leverage-matrix";
 import { MARKETS, MARKET_ORDER, type MarketId } from "@/lib/markets";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -191,6 +192,26 @@ function LaborBasisBadge({ basis }: { basis: LaborBasisLocal }) {
       <span>{label}</span>
     </div>
   );
+}
+
+// Phase 17B — map local basis enums into the Data Source Reliability Framework
+// registry keys so manager surfaces can render Measured / Derived / Estimated
+// badges next to the existing basis chips.
+function mapLaborBasisToReliability(basis: string | null | undefined): string {
+  if (!basis) return "unknown";
+  if (basis === "fully_loaded" || basis === "wage") return "labour_wage_cost_known_basis";
+  if (basis === "derived" || basis === "rate_times_hours") return "hours_times_rate_labour";
+  if (basis === "wage_plus_oncost" || basis === "total") return "labour_wage_cost_known_basis";
+  if (basis === "mixed" || basis === "unknown") return "labour_wage_cost_unknown_basis";
+  return "unknown";
+}
+
+function mapSalesBasisToReliability(basis: string | null | undefined): string {
+  if (!basis) return "unknown";
+  if (basis === "net_sales_source" || basis === "gross_sales_source") return "pos_check_total";
+  if (basis === "net_sales_derived") return "rpc";
+  if (basis === "gross_used_as_net_estimate" || basis === "mixed") return "gross_used_as_net";
+  return "unknown";
 }
 
 function LlsPage() {
@@ -543,7 +564,17 @@ function LlsPage() {
             </p>
             <div className="mt-2 flex items-center gap-2 flex-wrap">
               <LaborBasisBadge basis={laborBasis} />
+              <ReliabilityBadge
+                field={mapLaborBasisToReliability(laborBasis as unknown as string | null)}
+                prefix="Labour basis"
+              />
               <SalesBasisBadge basis={salesBasis ?? undefined} />
+              <ReliabilityBadge
+                field={mapSalesBasisToReliability(salesBasis as unknown as string | null)}
+                prefix="Sales basis"
+              />
+              <ReliabilityBadge field="lls_base" prefix="LLS" />
+              <ReliabilityBadge field="pos_server_id" prefix="Server ID" />
             </div>
             {salesBasis === "gross_used_as_net_estimate" ? (
               <GrossEstimateWarning className="mt-3 max-w-xl" />

@@ -17,6 +17,7 @@ import { useVerifyPaidManagerAccess } from "@/hooks/use-verify-paid-manager-acce
 import { listCoachingPriorities } from "@/lib/manager-data.functions";
 import { useActiveVenue } from "@/hooks/use-active-venue";
 import { NoVenueState } from "@/components/manager/no-venue-state";
+import { EvidenceBasis } from "@/components/reliability";
 
 
 export const Route = createFileRoute("/manager/coaching")({
@@ -149,6 +150,12 @@ function Page() {
                       Expected impact <em>({p.expected_impact_basis})</em>: {p.expected_impact}
                     </div>
                   )}
+                  <div className="mt-1.5">
+                    <EvidenceBasis
+                      compact
+                      fields={["pos_item_sold", "pos_check_total", "pos_menu_category"]}
+                    />
+                  </div>
                 </li>
               ))}
             </ul>

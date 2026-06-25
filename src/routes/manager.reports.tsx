@@ -11,6 +11,7 @@ import { getManagerVenue } from "@/lib/manager-venue";
 import { useRoleGate } from "@/lib/auth-gate";
 import { getMondayOfWeek, toISODate, formatWeekRange } from "@/lib/week";
 import { MetricTooltip } from "@/components/metrics";
+import { ReliabilityBadge } from "@/components/reliability";
 import {
   OperationsStatusStrip,
   ProvenanceLegend,
@@ -231,8 +232,12 @@ function Page() {
                 <tr className="text-left">
                   <th className="px-5 py-3 font-medium">Week</th>
                   <th className="px-3 py-3 font-medium">Servers</th>
-                  <th className="px-3 py-3 font-medium">Covers</th>
-                  <th className="px-3 py-3 font-medium">Sales</th>
+                  <th className="px-3 py-3 font-medium">
+                    <div className="inline-flex items-center gap-1.5">Covers <ReliabilityBadge field="pos_check_total" /></div>
+                  </th>
+                  <th className="px-3 py-3 font-medium">
+                    <div className="inline-flex items-center gap-1.5">Sales <ReliabilityBadge field="pos_check_total" /></div>
+                  </th>
                   <th className="px-3 py-3 font-medium inline-flex items-center gap-1">
                     RPC
                     <MetricTooltip
@@ -242,6 +247,7 @@ function Page() {
                       sourceFields={["total_sales", "total_covers"]}
                       provenance="derived"
                     />
+                    <ReliabilityBadge field="rpc" />
                   </th>
                   <th className="px-3 py-3 font-medium">WoW sales</th>
                   <th className="px-3 py-3 font-medium">WoW RPC</th>

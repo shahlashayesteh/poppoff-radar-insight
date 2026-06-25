@@ -14,6 +14,7 @@ import { useVerifyPaidManagerAccess } from "@/hooks/use-verify-paid-manager-acce
 import { listWeeklyPriorities } from "@/lib/manager-data.functions";
 import { useActiveVenue } from "@/hooks/use-active-venue";
 import { NoVenueState } from "@/components/manager/no-venue-state";
+import { EvidenceBasis } from "@/components/reliability";
 
 
 export const Route = createFileRoute("/manager/priorities")({
@@ -295,6 +296,17 @@ function Priorities() {
                       Expected impact <em>({it.expected_impact_basis})</em>: {it.expected_impact}
                     </div>}
                     {it.rejected_reason && <div className="text-[11px] text-muted-foreground mt-0.5">Rejected: {it.rejected_reason}</div>}
+                    {it.status === "ai_suggested" && (
+                      <EvidenceBasis
+                        className="mt-2 max-w-xl"
+                        fields={[
+                          "pos_item_sold",
+                          "pos_check_total",
+                          "pos_menu_category",
+                          "sevenrooms_section",
+                        ]}
+                      />
+                    )}
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     {it.status === "ai_suggested" && (
