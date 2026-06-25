@@ -304,6 +304,8 @@ export const stageImport = createServerFn({ method: "POST" })
       salesBasis: validation.salesBasis,
       labourBasis: validation.labourBasis,
       identity: identitySummary,
+      appliedDefaults: inferred.defaults,
+      inferredReasons: inferred.reasons,
     };
   });
 
