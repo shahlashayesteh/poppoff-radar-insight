@@ -8,8 +8,15 @@ import { Target, Plus, Trash2, CheckCircle2, Send, Archive, Ban, Sparkles } from
 import { getMondayOfWeek, toISODate, formatWeekRange, latestStatsWeek } from "@/lib/week";
 import { toast } from "sonner";
 import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
+import { PaidManagerGate } from "@/components/manager/PaidManagerGate";
 
-export const Route = createFileRoute("/manager/priorities")({ component: Priorities });
+export const Route = createFileRoute("/manager/priorities")({
+  component: () => (
+    <PaidManagerGate feature="weekly priorities">
+      <Priorities />
+    </PaidManagerGate>
+  ),
+});
 
 type Status = "ai_suggested" | "approved" | "sent_to_servers" | "rejected" | "archived";
 
