@@ -4,7 +4,7 @@ import { ManagerLayout } from "@/components/manager-layout";
 import { supabase } from "@/integrations/supabase/client";
 import { getManagerVenue } from "@/lib/manager-venue";
 import { useRoleGate } from "@/lib/auth-gate";
-import { Brain, Sparkles, Wand2, ChevronRight, Plus, Trash2, FileText, Upload } from "lucide-react";
+import { Brain, Sparkles, Wand2, ChevronRight, Plus, Trash2, FileText, Upload, CheckCircle2, Ban, Archive, Send } from "lucide-react";
 import { getMondayOfWeek, toISODate } from "@/lib/week";
 import { toast } from "sonner";
 import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
@@ -14,6 +14,18 @@ export const Route = createFileRoute("/manager/menu")({ component: MenuIntel });
 type ParsedItem = { name: string; category?: string; price?: string; pairing?: string; priority?: string };
 type Menu = { id: string; menu_text: string; parsed_items: ParsedItem[] | null; uploaded_at: string };
 type Pairing = { item: string; pair_with: string; why: string; priority?: string; category?: string };
+type SuggestionStatus = "ai_suggested" | "approved" | "sent_to_servers" | "rejected" | "archived";
+type Suggestion = {
+  id: string;
+  item_name: string;
+  category: string | null;
+  price: number | null;
+  margin: number | null;
+  ai_reason: string | null;
+  status: SuggestionStatus;
+  source_file: string | null;
+  rejected_reason: string | null;
+};
 
 const MAX_MENUS = 10;
 
