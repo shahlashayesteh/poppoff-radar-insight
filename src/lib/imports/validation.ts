@@ -140,6 +140,16 @@ export function validateRows(
   const dRC = trimOrNull(defaults.revenue_centre);
   const dSalesBasis = trimOrNull(defaults.sales_basis);
   const dLabourBasis = trimOrNull(defaults.labour_basis);
+
+  // Pre-scan: if NO row in the batch carries an outlet / revenue_centre AND no
+  // batch default is supplied, the venue clearly doesn't track that dimension
+  // — suppress the per-row warning entirely instead of flagging every row.
+  // (Real provenance is unaffected; this only quiets advisory noise.)
+  const anyOutletProvided = rows.some((r) => trimOrNull(r.outlet) != null);
+  const anyRCProvided = rows.some((r) => trimOrNull(r.revenue_centre) != null);
+  const suppressOutletWarn = !anyOutletProvided && !dOutlet;
+  const suppressRCWarn = !anyRCProvided && !dRC;
+
   const out: ValidatedRow[] = [];
   const seen = new Map<string, number>();
   let accepted = 0, rejected = 0, warnings = 0, duplicates = 0;
