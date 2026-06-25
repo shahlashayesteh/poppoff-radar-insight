@@ -2,6 +2,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requirePaidManagerEntitlement } from "@/lib/entitlements-guard";
 
 const IngestSchema = z.object({
   venue_id: z.string().uuid(),
