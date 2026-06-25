@@ -24,10 +24,11 @@ export class VenueAccessError extends Error {
   }
 }
 
-type SupabaseLike = {
-  rpc: (name: string, args?: Record<string, unknown>) => Promise<{ data: any; error: any }>;
-  from: (table: string) => any;
-};
+// Supabase client typings vary between the user-scoped client (typed RPC
+// union) and the publishable client (untyped). Accept `any` here so callers
+// pass either without casting; runtime shape is identical.
+type SupabaseLike = any;
+
 
 export async function listAccessibleVenueIds(supabase: SupabaseLike): Promise<string[]> {
   const { data, error } = await supabase.rpc("get_my_accessible_venues");
