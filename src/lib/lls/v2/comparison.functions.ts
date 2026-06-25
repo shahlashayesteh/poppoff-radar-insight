@@ -4,6 +4,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requirePaidManagerEntitlement } from "@/lib/entitlements-guard";
 import { buildComparison, type V1WeeklyView, type V2WeeklyView } from "./comparison";
 import { benchmarkConfidence, resultConfidence, lowerBand, ragStatus } from "./confidence";
 import { performanceGap, modelledRevenueOpportunity } from "./calculations";
@@ -62,6 +63,7 @@ export const getLlsComparison = createServerFn({ method: "POST" })
   .inputValidator((d: z.input<typeof Input>) => Input.parse(d))
   .handler(async ({ data, context }): Promise<ComparisonPayload> => {
     const { supabase, userId } = context;
+    await requirePaidManagerEntitlement(supabase, userId);
     const venue = await resolveVenue(supabase, userId);
     if (!venue.lls_compare_mode) {
       throw new Error("Comparison mode is not enabled for this venue.");

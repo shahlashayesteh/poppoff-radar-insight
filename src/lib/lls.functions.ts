@@ -1,6 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+// Phase 12A — paid-feature entitlement guard applied to manager LLS handlers.
+import { requirePaidManagerEntitlement } from "@/lib/entitlements-guard";
 
 // ---------- shared helpers ----------
 
@@ -212,6 +214,7 @@ export const importShifts = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
+    await requirePaidManagerEntitlement(supabase, userId, "import");
     const venueId = await getManagerVenueId(supabase, userId);
 
     // Create batch
@@ -323,6 +326,7 @@ export const suggestOpportunityFactors = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { supabase, userId } = context;
+    await requirePaidManagerEntitlement(supabase, userId);
     const venueId = await getManagerVenueId(supabase, userId);
 
     const { data: rows, error } = await supabase
@@ -390,6 +394,7 @@ export const rollbackBatch = createServerFn({ method: "POST" })
   .inputValidator((d: { batchId: string }) => z.object({ batchId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
+    await requirePaidManagerEntitlement(supabase, userId, "import");
     const venueId = await getManagerVenueId(supabase, userId);
 
     // Verify batch belongs to this venue
@@ -444,6 +449,7 @@ export const listRecentBatches = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { supabase, userId } = context;
+    await requirePaidManagerEntitlement(supabase, userId);
     const venueId = await getManagerVenueId(supabase, userId);
     const { data } = await supabase
       .from("shift_import_batches")
@@ -690,6 +696,7 @@ export const getWeeklyScorecard = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }): Promise<ScorecardResult> => {
     const { supabase, userId } = context;
+    await requirePaidManagerEntitlement(supabase, userId);
     const venueId = await getManagerVenueId(supabase, userId);
 
     const ws = data.weekStart;
@@ -747,6 +754,7 @@ export const getSchedulingLeverage = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }): Promise<SchedulingLeverageResult> => {
     const { supabase, userId } = context;
+    await requirePaidManagerEntitlement(supabase, userId);
     const venueId = await getManagerVenueId(supabase, userId);
     const weeks = data.weeks ?? 12;
 

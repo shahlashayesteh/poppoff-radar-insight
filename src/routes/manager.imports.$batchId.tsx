@@ -19,9 +19,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { ManagerLayout } from "@/components/manager-layout";
+import { PaidManagerGate } from "@/components/manager/PaidManagerGate";
 
 export const Route = createFileRoute("/manager/imports/$batchId")({
-  component: ImportBatchDetail,
+  component: () => (
+    <PaidManagerGate feature="imports">
+      <ImportBatchDetail />
+    </PaidManagerGate>
+  ),
 });
 
 type Batch = {

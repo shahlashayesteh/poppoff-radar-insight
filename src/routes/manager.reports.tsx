@@ -16,8 +16,15 @@ import {
   ProvenanceLegend,
 } from "@/components/manager/operations-status-strip";
 import { Download } from "lucide-react";
+import { PaidManagerGate } from "@/components/manager/PaidManagerGate";
 
-export const Route = createFileRoute("/manager/reports")({ component: Page });
+export const Route = createFileRoute("/manager/reports")({
+  component: () => (
+    <PaidManagerGate feature="reports">
+      <Page />
+    </PaidManagerGate>
+  ),
+});
 
 type WeekRow = {
   week_start: string;

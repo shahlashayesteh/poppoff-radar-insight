@@ -10,8 +10,15 @@ import { getLlsComparison, type ComparisonPayload } from "@/lib/lls/v2/compariso
 import { ChevronLeft, ChevronRight, ArrowLeft, AlertCircle } from "lucide-react";
 import { MetricTooltip, ModelledValueLabel } from "@/components/metrics";
 import { useRoleGate } from "@/lib/auth-gate";
+import { PaidManagerGate } from "@/components/manager/PaidManagerGate";
 
-export const Route = createFileRoute("/manager/lls/compare")({ component: ComparePage });
+export const Route = createFileRoute("/manager/lls/compare")({
+  component: () => (
+    <PaidManagerGate feature="LLS comparison">
+      <ComparePage />
+    </PaidManagerGate>
+  ),
+});
 
 const VARIANCE_LABEL: Record<string, string> = {
   historical_benchmark_replaced_same_week_benchmark: "Same-week comparable benchmark",

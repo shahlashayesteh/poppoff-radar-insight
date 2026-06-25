@@ -2,6 +2,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requirePaidManagerEntitlement } from "@/lib/entitlements-guard";
 
 const IngestSchema = z.object({
   venue_id: z.string().uuid(),
@@ -16,7 +17,8 @@ export const v2IngestBatch = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: z.input<typeof IngestSchema>) => IngestSchema.parse(d))
   .handler(async ({ data, context }) => {
-    const { supabase } = context;
+    const { supabase, userId } = context;
+    await requirePaidManagerEntitlement(supabase, userId, "import");
     const { data: batchId, error } = await supabase.rpc("lls_v2_ingest_batch", {
       _venue_id: data.venue_id,
       _payload: data.payload,
@@ -31,7 +33,8 @@ export const v2RunReconciliation = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: z.input<typeof ReconcileSchema>) => ReconcileSchema.parse(d))
   .handler(async ({ data, context }) => {
-    const { supabase } = context;
+    const { supabase, userId } = context;
+    await requirePaidManagerEntitlement(supabase, userId);
     const { data: res, error } = await supabase.rpc("lls_v2_run_reconciliation", {
       _venue_id: data.venue_id,
       _batch_id: data.batch_id,
@@ -44,6 +47,7 @@ export const v2SupersedeBatch = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { batch_id: string }) => d)
   .handler(async ({ data, context }) => {
+    await requirePaidManagerEntitlement(context.supabase, context.userId, "import");
     const { error } = await context.supabase.rpc("lls_v2_supersede_batch", { _batch_id: data.batch_id });
     if (error) throw new Error(error.message);
     return { ok: true };
