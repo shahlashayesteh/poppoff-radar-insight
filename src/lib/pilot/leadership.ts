@@ -259,7 +259,7 @@ export function buildLeadershipSummary(input: LeadershipSummaryInput): string {
     for (const l of measured.regressionLines) lines.push(`  ✗ ${l}`);
   }
   lines.push("");
-  lines.push("Modelled remaining opportunity (NOT guaranteed revenue)");
+  lines.push("Modelled remaining opportunity (modelled only — not a revenue commitment)");
   if (modelled.noGap) {
     lines.push("  Current RPC already meets or exceeds baseline RPC — no modelled gap remaining for this period.");
   } else {
