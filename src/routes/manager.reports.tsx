@@ -83,6 +83,7 @@ function downloadCsv(rows: WeekRow[]) {
 
 function Page() {
   useRoleGate("manager");
+  useVerifyPaidManagerAccess();
   const fetchReports = useServerFn(getManagerReportsData);
   const [weeks, setWeeks] = useState<WeekRow[]>([]);
   const [loaded, setLoaded] = useState(false);
