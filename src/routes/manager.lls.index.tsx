@@ -733,7 +733,24 @@ function LlsPage() {
 
         {/* Scorecard */}
         <div className="mt-6 rounded-2xl bg-white border border-border p-6">
-          <h2 className="font-display text-lg font-bold">Weekly scorecard</h2>
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="font-display text-lg font-bold">Weekly scorecard</h2>
+            <ManagerTraceDrawer
+              label="View evidence"
+              title={`Weekly scorecard evidence · ${weekStart}`}
+              payload={llsTrace}
+              onOpen={async () => {
+                if (!venueId) return;
+                setLlsTrace({ kind: "loading" });
+                try {
+                  const res = await fetchLlsTrace({ data: { venueId, weekStart } });
+                  setLlsTrace({ kind: "lls", weekStart: res.weekStart, sampleCount: res.sampleCount, reliabilityTally: res.reliabilityTally, samples: res.samples as any });
+                } catch (e: any) {
+                  setLlsTrace({ kind: "error", message: e?.message ?? "Failed to load trace" });
+                }
+              }}
+            />
+          </div>
           {scorecard?.servers.length ? (
             <div className="mt-4 overflow-x-auto">
               <table className="w-full text-sm">
