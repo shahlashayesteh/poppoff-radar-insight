@@ -59,7 +59,9 @@ export function PaidManagerGate({ children, feature = "this feature" }: PaidMana
           data-testid="paid-gate-past-due-banner"
         >
           Payment past due — please update your billing details to avoid losing
-          access.{" "}
+          access.{ent.pastDueGraceDaysRemaining !== null ? (
+            <> You have <strong>{ent.pastDueGraceDaysRemaining}</strong> day{ent.pastDueGraceDaysRemaining === 1 ? "" : "s"} of grace remaining.</>
+          ) : null}{" "}
           <Link to="/manager/settings" hash="billing" className="underline font-medium">
             Manage billing
           </Link>
@@ -67,5 +69,6 @@ export function PaidManagerGate({ children, feature = "this feature" }: PaidMana
       ) : null}
       {children}
     </>
+
   );
 }

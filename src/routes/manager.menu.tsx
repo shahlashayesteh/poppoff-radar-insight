@@ -9,6 +9,7 @@ import { getMondayOfWeek, toISODate } from "@/lib/week";
 import { toast } from "sonner";
 import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
 import { PaidManagerGate } from "@/components/manager/PaidManagerGate";
+import { useVerifyPaidManagerAccess } from "@/hooks/use-verify-paid-manager-access";
 
 export const Route = createFileRoute("/manager/menu")({
   component: () => (
@@ -38,6 +39,8 @@ const MAX_MENUS = 10;
 
 function MenuIntel() {
   useRoleGate("manager");
+  useVerifyPaidManagerAccess();
+
   const [venueId, setVenueId] = useState<string | null>(null);
   const [menus, setMenus] = useState<Menu[]>([]);
   const [text, setText] = useState("");

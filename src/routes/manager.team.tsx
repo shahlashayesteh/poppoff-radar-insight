@@ -13,6 +13,7 @@ import { engineRagFromPerf } from "@/lib/metrics/server-rag";
 import { MetricTooltip, ModelledValueLabel } from "@/components/metrics";
 import { OperationsStatusStrip } from "@/components/manager/operations-status-strip";
 import { PaidManagerGate } from "@/components/manager/PaidManagerGate";
+import { useVerifyPaidManagerAccess } from "@/hooks/use-verify-paid-manager-access";
 
 
 export const Route = createFileRoute("/manager/team")({
@@ -27,6 +28,8 @@ type Member = { id: string; full_name: string | null };
 
 function TeamPage() {
   useRoleGate("manager");
+  useVerifyPaidManagerAccess();
+
   const [members, setMembers] = useState<Member[]>([]);
   const [perf, setPerf] = useState<VenuePerformance | null>(null);
   const [loginCounts, setLoginCounts] = useState<Record<string, number>>({});
