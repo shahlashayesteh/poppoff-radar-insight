@@ -478,8 +478,13 @@ function LlsPage() {
             <p className="mt-1 text-sm text-muted-foreground">
               Compare server LLS against the venue benchmark using sales, covers, labor cost, and shift opportunity.
             </p>
-            <LaborBasisBadge basis={laborBasis} />
-
+            <div className="mt-2 flex items-center gap-2 flex-wrap">
+              <LaborBasisBadge basis={laborBasis} />
+              <SalesBasisBadge basis={salesBasis ?? undefined} />
+            </div>
+            {salesBasis === "gross_used_as_net_estimate" ? (
+              <GrossEstimateWarning className="mt-3 max-w-xl" />
+            ) : null}
           </div>
           <div className="flex items-center gap-3 flex-wrap">
             <div className="flex flex-col">
