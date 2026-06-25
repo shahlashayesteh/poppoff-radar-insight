@@ -654,6 +654,14 @@ export const linkIdentityAlias = createServerFn({ method: "POST" })
       staging_row_id: row.id, batch_id: row.batch_id,
       employee_master_id: data.employeeMasterId, alias: data.aliasName.trim(),
     });
+    // Phase 19: merge/link audit trail.
+    await supabase.from("employee_identity_merges").insert({
+      venue_id: venueId,
+      action: "link_alias",
+      primary_employee_id: data.employeeMasterId,
+      payload: { alias: data.aliasName.trim(), source_kind: row.source_kind },
+      performed_by: userId,
+    });
     return { ok: true };
   });
 
