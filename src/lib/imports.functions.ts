@@ -6,7 +6,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { validateRows, type RawImportRow, type SourceKind } from "@/lib/imports/validation";
+import { validateRows, type RawImportRow, type SourceKind, type BatchDefaults } from "@/lib/imports/validation";
+import { inferBatchDefaults, SALES_BASIS_OPTIONS, LABOUR_BASIS_OPTIONS } from "@/lib/imports/defaults";
 import {
   resolveIdentityIndexed, indexDirectory, normaliseName, summarise,
   type IdentityDirectory, type EmployeeRecord, type SourceIdLink, type AliasLink,
@@ -66,7 +67,32 @@ export const stageImport = createServerFn({ method: "POST" })
 
     const sourceKind = data.sourceKind as SourceKind;
     const importType = sourceKind === "sales" ? "sales" : "labour";
-    const validation = validateRows(data.rows as RawImportRow[], sourceKind);
+
+    // Phase: infer per-batch defaults from venue context + filename/column shape.
+    // These suppress per-row "missing optional context" warnings on minimal
+    // CSVs (any POS vendor) without losing the underlying provenance signal.
+    const { data: venueRow } = await supabase
+      .from("venues")
+      .select("name, organisation_id")
+      .eq("id", venueId)
+      .maybeSingle();
+    let singleSite = true;
+    const orgId = (venueRow as any)?.organisation_id ?? null;
+    if (orgId) {
+      const { count } = await supabase
+        .from("venues")
+        .select("id", { count: "exact", head: true })
+        .eq("organisation_id", orgId);
+      if ((count ?? 1) > 1) singleSite = false;
+    }
+    const inferred = inferBatchDefaults(data.rows as RawImportRow[], sourceKind, {
+      venueName: (venueRow as any)?.name ?? null,
+      singleSite,
+      filename: data.filename ?? null,
+      sourceSystem: data.sourceSystem ?? null,
+    });
+
+    const validation = validateRows(data.rows as RawImportRow[], sourceKind, inferred.defaults);
 
     // Create the batch (status = needs_review — manager must approve before commit)
     const { data: batch, error: bErr } = await supabase
@@ -91,6 +117,7 @@ export const stageImport = createServerFn({ method: "POST" })
         sales_basis_summary: validation.salesBasis as any,
         labour_basis_summary: validation.labourBasis as any,
         validation_summary: validation.summary as any,
+        batch_defaults: { ...inferred.defaults, inferred_reasons: inferred.reasons } as any,
         status: "needs_review",
       })
       .select("id")
@@ -277,6 +304,8 @@ export const stageImport = createServerFn({ method: "POST" })
       salesBasis: validation.salesBasis,
       labourBasis: validation.labourBasis,
       identity: identitySummary,
+      appliedDefaults: inferred.defaults,
+      inferredReasons: inferred.reasons,
     };
   });
 
@@ -709,3 +738,102 @@ export const listVenueEmployees = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { employees: rows ?? [] };
   });
+
+// ============================================================
+// Apply / update per-batch defaults and re-validate staged rows.
+// Lets the manager declare outlet / revenue centre / sales basis /
+// labour basis once, and clears the "missing optional context"
+// warnings that were emitted at stage time. Real warnings
+// (duplicates, identity ambiguity, missing dates) are unaffected.
+// ============================================================
+const ApplyDefaultsInput = z.object({
+  batchId: z.string().uuid(),
+  defaults: z.object({
+    outlet: z.string().max(120).nullable().optional(),
+    revenue_centre: z.string().max(120).nullable().optional(),
+    sales_basis: z.enum(SALES_BASIS_OPTIONS).nullable().optional(),
+    labour_basis: z.enum(LABOUR_BASIS_OPTIONS).nullable().optional(),
+  }),
+  ...OptionalVenue,
+});
+
+export const applyBatchDefaults = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: z.input<typeof ApplyDefaultsInput>) => ApplyDefaultsInput.parse(d))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    await requirePaidManagerEntitlement(supabase, userId);
+    const venueId = await getManagerVenueId(supabase, userId, data.venueId);
+    await assertBatchInVenue(supabase, data.batchId, venueId);
+
+    // Load batch source_kind + every staged row's raw_row so we can re-validate.
+    const { data: batchRow, error: bErr } = await supabase
+      .from("shift_import_batches_v2")
+      .select("id, source_kind, batch_defaults")
+      .eq("id", data.batchId)
+      .maybeSingle();
+    if (bErr) throw new Error(bErr.message);
+    if (!batchRow) throw new Error("Batch not found");
+
+    const { data: stagedRows, error: rErr } = await supabase
+      .from("shift_staging_rows")
+      .select("id, source_row_index, raw_row, excluded_from_canonical, identity_status, manager_confirmed_match, duplicate_status")
+      .eq("batch_id", data.batchId)
+      .order("source_row_index", { ascending: true });
+    if (rErr) throw new Error(rErr.message);
+
+    const defaults: BatchDefaults = {
+      outlet: (data.defaults.outlet ?? null) || null,
+      revenue_centre: (data.defaults.revenue_centre ?? null) || null,
+      sales_basis: (data.defaults.sales_basis ?? null) || null,
+      labour_basis: (data.defaults.labour_basis ?? null) || null,
+    };
+
+    const sourceKind = batchRow.source_kind as SourceKind;
+    const rawRows = (stagedRows ?? []).map((r: any) => r.raw_row as RawImportRow);
+    const validation = validateRows(rawRows, sourceKind, defaults);
+
+    // Re-stamp per-row reasons (preserve manager actions: identity / excluded / duplicate).
+    for (let i = 0; i < (stagedRows ?? []).length; i++) {
+      const sr = (stagedRows as any[])[i];
+      const v = validation.rows[i];
+      // Preserve any identity / exclusion / duplicate reasons already on the row
+      // by merging — but the validator output is authoritative for context warnings.
+      const newReason = v.reasons.join(",") || null;
+      await supabase
+        .from("shift_staging_rows")
+        .update({
+          status_reason: newReason,
+          status_evidence: { reasons: v.reasons, ...(v.evidence as Record<string, unknown>) } as any,
+        } as any)
+        .eq("id", sr.id);
+    }
+
+    // Persist defaults + refreshed summary on the batch.
+    const existingDefaults = (batchRow.batch_defaults as any) ?? {};
+    const { error: uErr } = await supabase
+      .from("shift_import_batches_v2")
+      .update({
+        accepted_count: validation.summary.accepted,
+        warning_count: validation.summary.warnings,
+        rejected_count: validation.summary.rejected,
+        sales_basis_summary: validation.salesBasis as any,
+        labour_basis_summary: validation.labourBasis as any,
+        validation_summary: validation.summary as any,
+        batch_defaults: {
+          ...existingDefaults,
+          ...defaults,
+          updated_by: userId,
+          updated_at: new Date().toISOString(),
+        } as any,
+      } as any)
+      .eq("id", data.batchId);
+    if (uErr) throw new Error(uErr.message);
+
+    await audit(supabase, venueId, userId, "batch_defaults_applied", {
+      batch_id: data.batchId, defaults, summary: validation.summary,
+    });
+
+    return { ok: true, summary: validation.summary, defaults };
+  });
+

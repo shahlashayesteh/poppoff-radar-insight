@@ -1376,6 +1376,7 @@ export type Database = {
           accepted_count: number
           approved_at: string | null
           approved_by: string | null
+          batch_defaults: Json
           committed_at: string | null
           committed_shift_ids: string[]
           covers_total: number | null
@@ -1411,6 +1412,7 @@ export type Database = {
           accepted_count?: number
           approved_at?: string | null
           approved_by?: string | null
+          batch_defaults?: Json
           committed_at?: string | null
           committed_shift_ids?: string[]
           covers_total?: number | null
@@ -1446,6 +1448,7 @@ export type Database = {
           accepted_count?: number
           approved_at?: string | null
           approved_by?: string | null
+          batch_defaults?: Json
           committed_at?: string | null
           committed_shift_ids?: string[]
           covers_total?: number | null
