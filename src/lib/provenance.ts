@@ -70,7 +70,7 @@ export function deriveReliabilityClass(args: {
   identity_match_confidence?: number | null;
   ambiguous_identity?: boolean;
 }): ReliabilityClass {
-  if (args.ambiguous_identity) return "blocked";
+  if (args.ambiguous_identity) return "untrusted";
   const salesEstimated = args.sales_basis === "gross_as_net_estimated" || args.sales_basis === "unknown";
   const laborEstimated = args.labor_basis === "unknown_estimated";
   if (salesEstimated || laborEstimated) return "estimated";
