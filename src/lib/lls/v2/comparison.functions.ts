@@ -63,7 +63,6 @@ export const getLlsComparison = createServerFn({ method: "POST" })
   .inputValidator((d: z.input<typeof Input>) => Input.parse(d))
   .handler(async ({ data, context }): Promise<ComparisonPayload> => {
     const { supabase, userId } = context;
-    const { requirePaidManagerEntitlement } = await import("@/lib/entitlements-guard");
     await requirePaidManagerEntitlement(supabase, userId);
     const venue = await resolveVenue(supabase, userId);
     if (!venue.lls_compare_mode) {
