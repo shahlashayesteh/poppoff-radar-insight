@@ -51,16 +51,30 @@ const STATUS_COLORS: Record<string, string> = {
 function ImportsListPage() {
   const fetchList = useServerFn(listImportBatches);
   const entitlement = useEntitlement();
+  const active = useActiveVenue();
+  const venueId = active.venueId ?? undefined;
   const [batches, setBatches] = useState<Batch[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchList()
+    if (!venueId) return;
+    setLoading(true);
+    fetchList({ data: { venueId } })
       .then((r) => setBatches((r.batches ?? []) as Batch[]))
       .catch((e) => setErr(e?.message ?? "Failed to load"))
       .finally(() => setLoading(false));
-  }, [fetchList]);
+  }, [fetchList, venueId]);
+
+  if (active.status !== "ready") {
+    return (
+      <ManagerLayout>
+        <div className="mx-auto max-w-6xl px-4 py-6">
+          <NoVenueState status={active.status} venues={active.venues} />
+        </div>
+      </ManagerLayout>
+    );
+  }
 
   return (
     <ManagerLayout>
