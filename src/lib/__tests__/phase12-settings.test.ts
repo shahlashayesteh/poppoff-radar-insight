@@ -47,7 +47,7 @@ describe("manager.settings.tsx structure", () => {
 });
 
 describe("imports server functions gate by entitlement", () => {
-  const importsFn = readFileSync(join(src, "../lib/imports.functions.ts"), "utf-8");
+  const importsFn = readFileSync(join(src, "lib/imports.functions.ts"), "utf-8");
   it("stageImport guards via requireImportEntitlement", () => {
     expect(importsFn).toMatch(/requireImportEntitlement/);
     expect(importsFn).toMatch(/canImportProductionData/);
