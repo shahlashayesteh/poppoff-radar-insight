@@ -96,6 +96,8 @@ function ImportBatchDetail() {
   const doAlias = useServerFn(linkIdentityAlias);
   const doExclude = useServerFn(excludeStagingRow);
   const fetchEmployees = useServerFn(listVenueEmployees);
+  const fetchImportTrace = useServerFn(getImportTrace);
+  const [importTrace, setImportTrace] = useState<TracePayload>({ kind: "loading" });
 
   const active = useActiveVenue();
   const venueId = active.venueId ?? undefined;
