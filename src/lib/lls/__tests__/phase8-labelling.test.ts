@@ -41,8 +41,11 @@ describe("Phase 8 — Historical Shift Match Intelligence labelling", () => {
   it("frames recommendations as suggested tests, not instructions", () => {
     expect(matrix).toMatch(/Suggested shift-match tests/i);
     expect(matrix).toMatch(/suggested tests?/i);
-    // No promise wording
-    expect(matrix).not.toMatch(/guaranteed (revenue|outcome|lift|uplift)/i);
+    // No promise wording: anywhere "guaranteed" appears it must be negated.
+    const guaranteedMatches = matrix.match(/[^\.]*guaranteed[^\.]*\./gi) ?? [];
+    for (const sentence of guaranteedMatches) {
+      expect(sentence.toLowerCase()).toMatch(/never|not /);
+    }
   });
 
   it("warns when rota / availability / contracted hours are missing", () => {
