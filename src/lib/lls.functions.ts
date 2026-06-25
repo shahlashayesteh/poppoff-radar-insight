@@ -331,12 +331,15 @@ export const importShifts = createServerFn({ method: "POST" })
 
 // ---------- suggest opportunity factors from venue history ----------
 
-export const suggestOpportunityFactors = createServerFn({ method: "GET" })
+export const suggestOpportunityFactors = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
+  .inputValidator((d: { venueId?: string } | undefined) =>
+    z.object(OptionalVenue).parse(d ?? {}),
+  )
+  .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     await requirePaidManagerEntitlement(supabase, userId);
-    const venueId = await getManagerVenueId(supabase, userId);
+    const venueId = await getManagerVenueId(supabase, userId, data.venueId);
 
     const { data: rows, error } = await supabase
       .from("shifts")
