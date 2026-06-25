@@ -324,6 +324,22 @@ function Priorities() {
                     )}
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
+                    <ManagerTraceDrawer
+                      label="Evidence"
+                      title={`Priority · ${it.title || it.item_name}`}
+                      payload={recTrace}
+                      onOpen={async () => {
+                        if (!venueId) return;
+                        setRecTrace({ kind: "loading" });
+                        try {
+                          const res = await fetchRecTrace({ data: { venueId, recordType: "weekly_priority", recordId: it.id } });
+                          if (!res.found) setRecTrace({ kind: "empty", message: "No evidence recorded for this priority." });
+                          else setRecTrace({ kind: "recommendation", recordType: "weekly_priority", evidence: res.evidence, created_at: res.created_at });
+                        } catch (e: any) {
+                          setRecTrace({ kind: "error", message: e?.message ?? "Failed to load evidence" });
+                        }
+                      }}
+                    />
                     {it.status === "ai_suggested" && (
                       <>
                         <button disabled={busy === it.id} onClick={() => transition(it, "approved")} className="text-xs font-semibold rounded-lg px-3 py-1.5 text-white" style={{ background: "var(--brand-green)" }}>
