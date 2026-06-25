@@ -86,10 +86,31 @@ function numOrNull(n: unknown): number | null {
   return Number.isFinite(v) ? v : null;
 }
 
-function dupKey(r: RawImportRow): string {
+function dupKey(r: RawImportRow, sourceKind: SourceKind): string {
   const sid = trimOrNull(r.server_id);
   const name = trimOrNull(r.server_name);
-  return [sid ?? name ?? "", r.shift_date ?? "", r.shift_start_time ?? ""].join("|").toLowerCase();
+  const start = trimOrNull(r.shift_start_time);
+  // When start_time is missing (common in POS sales exports that aggregate per
+  // server per day), the legacy key (identity|date|"") collapsed multiple real
+  // shifts on the same date into "duplicates". Use a per-row signature
+  // (amount/hours, end-time, covers) as a tiebreaker so legitimate multi-shift
+  // days aren't false-flagged. Identical rows (true duplicates) still collide.
+  const tiebreak = start
+    ? ""
+    : sourceKind === "sales"
+      ? [
+          numOrNull(r.gross_sales) ?? "",
+          numOrNull(r.net_sales) ?? "",
+          numOrNull(r.covers_served) ?? "",
+          trimOrNull(r.shift_end_time) ?? "",
+          trimOrNull(r.daypart) ?? "",
+        ].join(":")
+      : [
+          numOrNull(r.labor_cost) ?? "",
+          trimOrNull(r.shift_end_time) ?? "",
+          trimOrNull(r.daypart) ?? "",
+        ].join(":");
+  return [sourceKind, sid ?? name ?? "", r.shift_date ?? "", start ?? "", tiebreak].join("|").toLowerCase();
 }
 
 function inferBasis(mode: SourceKind, _r: RawImportRow, declared: string | null): { basis: string; known: boolean } {
