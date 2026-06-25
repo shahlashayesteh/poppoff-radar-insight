@@ -11,6 +11,9 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { requirePaidManagerEntitlement } from "@/lib/entitlements-guard";
+// Phase 16 — validate the requested venue belongs to the caller before any read.
+import { assertVenueAccess } from "@/lib/venue-access";
+
 
 /**
  * Lightweight verification endpoint. Returns "ok" if the caller is entitled,
