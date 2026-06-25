@@ -39,7 +39,7 @@ import {
   type Daypart,
 } from "@/lib/lls.functions";
 import { Upload, ChevronLeft, ChevronRight, AlertTriangle, TrendingUp, TrendingDown, Trash2, Gauge, Sparkles, Info } from "lucide-react";
-import { MetricTooltip, DataQualityChip } from "@/components/metrics";
+import { MetricTooltip, DataQualityChip, SalesBasisBadge, GrossEstimateWarning } from "@/components/metrics";
 import { SchedulingLeverageMatrix } from "@/components/lls/scheduling-leverage-matrix";
 import { MARKETS, MARKET_ORDER, type MarketId } from "@/lib/markets";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -215,6 +215,10 @@ function LlsPage() {
   // the UI can disclose whether LLS is computed against fully-loaded labour
   // cost or gross wage cost — never silently conflate the two.
   const [laborBasis, setLaborBasis] = useState<LaborBasis>(null);
+  // Phase 4: track sales basis from the most recent sales upload so the UI
+  // can disclose whether financial calculations are based on net sales or
+  // gross-as-net estimate — never silently relabel one as the other.
+  const [salesBasis, setSalesBasis] = useState<SalesBasisLocal>(null);
 
   const fetchScorecard = useServerFn(getWeeklyScorecard);
   const fetchOF = useServerFn(getOpportunityFactors);
@@ -266,8 +270,9 @@ function LlsPage() {
     }
     const fieldsRO = source === "sales" ? SALES_FIELDS : LABOR_FIELDS;
     const fields = [...fieldsRO];
-    const { mapping: auto, ambiguous, laborBasis: detectedBasis } = autoMap(parsed.headers, fields, parsed.rows.slice(0, 25));
+    const { mapping: auto, ambiguous, laborBasis: detectedBasis, salesBasis: detectedSalesBasis } = autoMap(parsed.headers, fields, parsed.rows.slice(0, 25));
     if (source === "labor") setLaborBasis(detectedBasis);
+    if (source === "sales") setSalesBasis(detectedSalesBasis);
 
     // Saved per-venue mapping wins over auto if its headers still exist.
     let saved: Record<string, string> = {};
@@ -473,8 +478,13 @@ function LlsPage() {
             <p className="mt-1 text-sm text-muted-foreground">
               Compare server LLS against the venue benchmark using sales, covers, labor cost, and shift opportunity.
             </p>
-            <LaborBasisBadge basis={laborBasis} />
-
+            <div className="mt-2 flex items-center gap-2 flex-wrap">
+              <LaborBasisBadge basis={laborBasis} />
+              <SalesBasisBadge basis={salesBasis ?? undefined} />
+            </div>
+            {salesBasis === "gross_used_as_net_estimate" ? (
+              <GrossEstimateWarning className="mt-3 max-w-xl" />
+            ) : null}
           </div>
           <div className="flex items-center gap-3 flex-wrap">
             <div className="flex flex-col">
@@ -1010,6 +1020,7 @@ const LLS_FIELD_TO_CANONICAL: Record<string, CanonicalField> = {
 };
 
 export type LaborBasis = "fully_loaded" | "wage" | "derived" | null;
+export type SalesBasisLocal = "net_sales_source" | "gross_used_as_net_estimate" | null;
 
 function autoMap(
   headers: string[],
@@ -1019,6 +1030,7 @@ function autoMap(
   mapping: Record<string, string>;
   ambiguous: Set<string>;
   laborBasis: LaborBasis;
+  salesBasis: SalesBasisLocal;
 } {
   const canonicalNeeded = fields
     .map((f) => LLS_FIELD_TO_CANONICAL[f.key])
@@ -1031,13 +1043,11 @@ function autoMap(
   const mapping: Record<string, string> = {};
   const ambiguous = new Set<string>();
   let laborBasis: LaborBasis = null;
+  let salesBasis: SalesBasisLocal = null;
   for (const f of fields) {
     const canon = LLS_FIELD_TO_CANONICAL[f.key];
     if (!canon) continue;
     let m = det.mappings[canon];
-    // Labor cost: PREFER fully-loaded labour cost when present; fall back
-    // to gross wage cost. Never silently treat wage cost as fully loaded —
-    // the basis is tracked separately and surfaced in the UI.
     if (canon === "labor_cost") {
       const fullyLoaded = det.mappings.fully_loaded_labor_cost;
       const wage = det.mappings.labor_cost;
@@ -1049,13 +1059,24 @@ function autoMap(
         laborBasis = "wage";
       }
     }
-    // Gross sales: fall back to net sales if needed.
-    if (!m && canon === "gross_sales") m = det.mappings.net_sales;
+    // Sales: prefer net_sales when uploaded; otherwise treat gross as net
+    // estimate (Phase 4 — never silently relabel gross as net).
+    if (canon === "gross_sales") {
+      const net = det.mappings.net_sales;
+      const gross = det.mappings.gross_sales;
+      if (net) {
+        m = net;
+        salesBasis = "net_sales_source";
+      } else if (gross) {
+        m = gross;
+        salesBasis = "gross_used_as_net_estimate";
+      }
+    }
     if (!m) continue;
     mapping[f.key] = m.header;
     if (m.confidence === "low") ambiguous.add(f.key);
   }
-  return { mapping, ambiguous, laborBasis };
+  return { mapping, ambiguous, laborBasis, salesBasis };
 }
 
 export const __test = { autoMap };

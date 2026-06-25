@@ -19,6 +19,8 @@ export type SalesBasis =
   | "net_sales_source" // uploaded net sales column
   | "net_sales_derived" // gross − discounts − comps − voids − refunds
   | "gross_sales_source"
+  | "gross_used_as_net_estimate" // only gross uploaded; used as net with WARNING
+  | "mixed" // aggregate spans inconsistent bases
   | "unknown";
 
 export type LaborBasis =
@@ -27,6 +29,8 @@ export type LaborBasis =
   | "wage_plus_oncost" // gross wage + employer on-cost
   | "wage_only" // gross wage only
   | "rate_times_hours" // hourly_rate × paid_hours
+  | "mixed" // aggregate spans inconsistent bases
+  | "unknown"
   | "none";
 
 export type HoursBasis =
