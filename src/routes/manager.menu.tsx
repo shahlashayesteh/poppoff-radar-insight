@@ -711,6 +711,14 @@ function MenuIntel() {
                     </div>
                     {s.ai_reason && <div className="text-xs text-muted-foreground mt-0.5">AI reason: {s.ai_reason}</div>}
                     {s.rejected_reason && <div className="text-xs text-muted-foreground mt-0.5">Rejected: {s.rejected_reason}</div>}
+                    {s.status === "ai_suggested" && (
+                      <EvidenceBasis
+                        compact
+                        className="mt-1.5 max-w-xl"
+                        fields={["menu_document", "pos_menu_category"]}
+                        excluded={["sevenrooms_section"]}
+                      />
+                    )}
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     {s.status === "ai_suggested" && (
