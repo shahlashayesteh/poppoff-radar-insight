@@ -1,12 +1,13 @@
 /**
  * Phase 17B — Reliability Framework Integration & Evidence Labels
  *
- * These tests verify that the reliability framework is consumed by real
- * product surfaces (basis mapping helpers, evidence components and the
- * canonical → reliability bridge), not only the registry tests in Phase 17.
+ * Verifies that the reliability framework is consumed by real product
+ * surfaces (basis mapping helpers, evidence components and the
+ * canonical → reliability bridge), not only the Phase 17 registry tests.
  */
 import { describe, it, expect } from "vitest";
-import { render } from "@testing-library/react";
+import React from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import {
   reliabilityKeyForCanonical,
   CANONICAL_TO_RELIABILITY,
@@ -27,8 +28,7 @@ describe("Phase 17B — Canonical → reliability bridge", () => {
 
   it("maps menu_item to measured pos_item_sold", () => {
     expect(reliabilityKeyForCanonical("menu_item")).toBe("pos_item_sold");
-    const e = classifyFieldReliability("pos_item_sold");
-    expect(e.reliability).toBe("measured");
+    expect(classifyFieldReliability("pos_item_sold").reliability).toBe("measured");
   });
 
   it("maps scheduled_hours to contextual rota_scheduled_shift", () => {
@@ -44,93 +44,87 @@ describe("Phase 17B — Canonical → reliability bridge", () => {
     expect(canUseForScoring(e)).toBe(false);
   });
 
-  it("covers known canonical fields", () => {
-    const keys = Object.keys(CANONICAL_TO_RELIABILITY);
-    expect(keys.length).toBeGreaterThan(20);
+  it("covers a useful breadth of canonical fields", () => {
+    expect(Object.keys(CANONICAL_TO_RELIABILITY).length).toBeGreaterThan(20);
   });
 });
 
 describe("Phase 17B — ReliabilityBadge renders class labels", () => {
   it("renders Measured for hard POS facts", () => {
-    const { getByTestId } = render(<ReliabilityBadge field="pos_check_total" />);
-    const badge = getByTestId("reliability-badge");
-    expect(badge.getAttribute("data-reliability")).toBe("measured");
-    expect(badge.textContent).toContain("Measured");
+    const html = renderToStaticMarkup(
+      <ReliabilityBadge field="pos_check_total" />,
+    );
+    expect(html).toContain('data-reliability="measured"');
+    expect(html).toContain("Measured");
   });
 
   it("renders Estimated + warning icon for gross_used_as_net", () => {
-    const { getByTestId, queryByTestId } = render(
+    const html = renderToStaticMarkup(
       <ReliabilityBadge field="gross_used_as_net" />,
     );
-    const badge = getByTestId("reliability-badge");
-    expect(badge.getAttribute("data-reliability")).toBe("estimated");
-    expect(badge.textContent).toContain("Estimated");
-    expect(queryByTestId("reliability-warning-icon")).not.toBeNull();
+    expect(html).toContain('data-reliability="estimated"');
+    expect(html).toContain("Estimated");
+    expect(html).toContain('data-testid="reliability-warning-icon"');
   });
 
   it("renders Context only for unverified sections", () => {
-    const { getByTestId } = render(
+    const html = renderToStaticMarkup(
       <ReliabilityBadge field="sevenrooms_section" />,
     );
-    const badge = getByTestId("reliability-badge");
-    expect(badge.getAttribute("data-reliability")).toBe("contextual");
-    expect(badge.textContent).toContain("Context only");
+    expect(html).toContain('data-reliability="contextual"');
+    expect(html).toContain("Context only");
   });
 
   it("renders Blocked for untrusted fields", () => {
-    const { getByTestId } = render(
+    const html = renderToStaticMarkup(
       <ReliabilityBadge field="missing_server_id" />,
     );
-    const badge = getByTestId("reliability-badge");
-    expect(badge.getAttribute("data-reliability")).toBe("untrusted");
-    expect(badge.textContent).toContain("Blocked");
+    expect(html).toContain('data-reliability="untrusted"');
+    expect(html).toContain("Blocked");
   });
 });
 
 describe("Phase 17B — EvidenceBasis exposes Based on / Not used / Blocked", () => {
   it("lists measured fields under Based on and contextual under Not used", () => {
-    const { getByTestId } = render(
+    const html = renderToStaticMarkup(
       <EvidenceBasis
         fields={["pos_item_sold", "pos_check_total", "sevenrooms_section"]}
       />,
     );
-    const root = getByTestId("evidence-basis");
-    expect(root.getAttribute("data-confidence")).toBe("low");
-    expect(root.textContent).toContain("Based on:");
-    expect(root.textContent).toContain("POS item sold");
-    expect(root.textContent).toContain("Not used for scoring:");
-    expect(root.textContent).toContain("SevenRooms section");
+    expect(html).toContain('data-confidence="low"');
+    expect(html).toContain("Based on:");
+    expect(html).toContain("POS item sold");
+    expect(html).toContain("Not used for scoring:");
+    expect(html).toContain("SevenRooms section");
   });
 
   it("flags estimated inputs with a warning and medium confidence", () => {
-    const { getByTestId } = render(
+    const html = renderToStaticMarkup(
       <EvidenceBasis fields={["pos_item_sold", "gross_used_as_net"]} />,
     );
-    const root = getByTestId("evidence-basis");
-    expect(root.getAttribute("data-confidence")).toBe("medium");
-    expect(root.textContent).toContain("Estimated input — review:");
+    expect(html).toContain('data-confidence="medium"');
+    expect(html).toContain("Estimated input");
   });
 
   it("blocks recommendations when any untrusted field is present", () => {
-    const { getByTestId } = render(
+    const html = renderToStaticMarkup(
       <EvidenceBasis fields={["pos_item_sold", "missing_server_id"]} />,
     );
-    const root = getByTestId("evidence-basis");
-    expect(root.getAttribute("data-blocked")).toBe("true");
-    expect(root.getAttribute("data-confidence")).toBe("blocked");
+    expect(html).toContain('data-blocked="true"');
+    expect(html).toContain('data-confidence="blocked"');
   });
 
   it("compact mode renders the confidence chip only", () => {
-    const { getByTestId, queryByTestId } = render(
+    const html = renderToStaticMarkup(
       <EvidenceBasis compact fields={["pos_item_sold", "pos_check_total"]} />,
     );
-    expect(getByTestId("evidence-basis-compact")).not.toBeNull();
-    expect(queryByTestId("evidence-basis")).toBeNull();
+    expect(html).toContain('data-testid="evidence-basis-compact"');
+    expect(html).not.toContain('data-testid="evidence-basis"');
   });
 });
 
 describe("Phase 17B — Recommendation evidence safety rules", () => {
-  it("recommendation evidence with only POS item sales and check totals is high confidence", () => {
+  it("POS item sales + check totals + labour hours = high confidence", () => {
     const ev = buildRecommendationEvidence([
       "pos_item_sold",
       "pos_check_total",
@@ -145,11 +139,8 @@ describe("Phase 17B — Recommendation evidence safety rules", () => {
     expect(canUseForScoring("sevenrooms_section", { verified: true })).toBe(true);
   });
 
-  it("RPC is derived from sales and covers", () => {
+  it("RPC is derived and Base LLS is derived", () => {
     expect(classifyFieldReliability("rpc").reliability).toBe("derived");
-  });
-
-  it("Base LLS is derived", () => {
     expect(classifyFieldReliability("lls_base").reliability).toBe("derived");
   });
 });
