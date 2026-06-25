@@ -68,6 +68,9 @@ function TeamPage() {
         <h1 className="font-display text-4xl font-extrabold tracking-tight mt-2">Your servers</h1>
         <div className="mt-1 text-xs text-muted-foreground">{formatWeekRange(displayWeekStart)} · ranked by commercial impact (engine RAG vs benchmark)</div>
 
+        <OperationsStatusStrip />
+
+
         {members.length === 0 ? (
           <div className="mt-8 rounded-2xl bg-white border border-border p-6 text-sm text-muted-foreground">
             No team members yet. Share your join code from the dashboard.
