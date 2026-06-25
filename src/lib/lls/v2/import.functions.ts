@@ -33,7 +33,8 @@ export const v2RunReconciliation = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: z.input<typeof ReconcileSchema>) => ReconcileSchema.parse(d))
   .handler(async ({ data, context }) => {
-    const { supabase } = context;
+    const { supabase, userId } = context;
+    await requirePaidManagerEntitlement(supabase, userId);
     const { data: res, error } = await supabase.rpc("lls_v2_run_reconciliation", {
       _venue_id: data.venue_id,
       _batch_id: data.batch_id,
