@@ -18,6 +18,8 @@ import {
 import { Download } from "lucide-react";
 import { PaidManagerGate } from "@/components/manager/PaidManagerGate";
 import { getManagerReportsData } from "@/lib/manager-data.functions";
+import { useActiveVenue } from "@/hooks/use-active-venue";
+import { NoVenueState } from "@/components/manager/no-venue-state";
 
 import { useVerifyPaidManagerAccess } from "@/hooks/use-verify-paid-manager-access";
 
