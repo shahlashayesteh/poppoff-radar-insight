@@ -248,20 +248,23 @@ function LlsPage() {
   const doRollback = useServerFn(rollbackBatch);
   const fetchLeverage = useServerFn(getSchedulingLeverage);
 
+  const venueId = active.venueId;
+
   const refresh = async () => {
+    if (!venueId) return;
     setLoading(true);
     try {
       const [sc, of, bs] = await Promise.all([
-        fetchScorecard({ data: { weekStart } }),
-        fetchOF(),
-        fetchBatches(),
+        fetchScorecard({ data: { weekStart, venueId } }),
+        fetchOF({ data: { venueId } }),
+        fetchBatches({ data: { venueId } }),
       ]);
       setScorecard(sc);
       setGrid(of.grid);
       setBatches(bs.batches);
       // Scheduling leverage uses a longer window — fire-and-forget so the
       // main scorecard renders quickly even if leverage is slow.
-      fetchLeverage({ data: { weekStart, weeks: 12 } })
+      fetchLeverage({ data: { weekStart, weeks: 12, venueId } })
         .then(setLeverage)
         .catch(() => setLeverage(null));
     } catch (e: any) {
@@ -272,15 +275,17 @@ function LlsPage() {
   };
 
   useEffect(() => {
+    if (!venueId) return;
     void refresh();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [weekStart]);
+  }, [weekStart, venueId]);
 
   useEffect(() => {
-    fetchPending()
+    if (!venueId) return;
+    fetchPending({ data: { venueId } })
       .then((r) => setPendingBatch((r.batch as any) ?? null))
       .catch(() => {});
-  }, [fetchPending]);
+  }, [fetchPending, venueId]);
 
   const fieldsForSource = pendingSource === "sales" ? SALES_FIELDS : LABOR_FIELDS;
 
