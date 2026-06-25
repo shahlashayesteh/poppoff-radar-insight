@@ -53,11 +53,11 @@ export const PROVENANCE_DESCRIPTION: Record<Provenance, string> = {
 };
 
 export const LABOR_BASIS_LABEL: Record<LaborBasis, string> = {
-  fully_loaded: "Fully loaded labour",
-  total: "Total labour",
-  wage_plus_oncost: "Wage + employer on-cost",
-  wage_only: "Wage only",
-  rate_times_hours: "Hours × rate (estimate)",
+  fully_loaded: "Fully loaded labour cost",
+  total: "Total labour cost",
+  wage_plus_oncost: "Wage cost + employer on-cost",
+  wage_only: "Wage cost only (not fully loaded)",
+  rate_times_hours: "Hours × rate (wage approximation)",
   mixed: "Mixed labour basis",
   unknown: "Unknown labour basis",
   none: "No labour cost basis",
