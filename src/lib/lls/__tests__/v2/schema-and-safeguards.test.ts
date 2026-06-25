@@ -16,7 +16,7 @@
  *       UI, or src/lib/lls.functions.ts. The v1 parity suite continues to run
  *       separately under src/lib/lls/__tests__/v1-regression/.
  */
-import { describe, test, expect } from 'bun:test'
+import { describe, test, expect } from 'vitest'
 import { execFileSync } from 'node:child_process'
 
 const HAS_DB = !!process.env.PGHOST

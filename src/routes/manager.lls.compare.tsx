@@ -122,6 +122,15 @@ function ComparePage() {
             <div className="rounded-2xl border border-border bg-amber-50/60 p-3 text-xs text-foreground/80">
               <strong>Benchmark window:</strong> both v1 and v2 use the prior <strong>{data.baselineWeeks} weeks</strong> of venue history (weighted, fully-loaded labour where uploaded) for an apples-to-apples comparison.
             </div>
+            <div className="rounded-2xl border border-border bg-white p-3 text-xs text-muted-foreground">
+              <strong className="text-foreground">Sales &amp; labour basis:</strong> v1 / v2 totals on this page are computed
+              from venue-level sums. Per-row <em>sales_basis</em> (gross vs net) and <em>labour_basis</em> (wage / total /
+              fully-loaded) badges, plus mixed-basis warnings, surface here once the import/schema phase persists those
+              columns. Until then, treat figures as <ModelledValueLabel kind="modelled" /> at the basis the active
+              model declares (<code>{data.venue.active_model_version}</code>).
+
+            </div>
+
 
             <div className="grid md:grid-cols-2 gap-4">
               <ModelCard title="v1 (production)" version={data.venue.active_model_version} accent="var(--muted-foreground)">

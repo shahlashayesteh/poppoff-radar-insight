@@ -2,7 +2,7 @@
 // These tests cover the deterministic math + decision rules required by the
 // approved Phase 2/3 specification. The DB-backed reconciliation engine is
 // tested separately in v2/schema-and-safeguards.test.ts (under PGHOST).
-import { describe, test, expect } from "bun:test";
+import { describe, test, expect } from "vitest";
 
 import { calcShift, calcWeekly, performanceGap, modelledRevenueOpportunity } from "../../v2/calculations";
 import { computeOpportunityFactor, durationTierFromHours, filterBaselinePeriods } from "../../v2/opportunity";

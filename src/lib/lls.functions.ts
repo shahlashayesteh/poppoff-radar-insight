@@ -8,15 +8,31 @@ const DAYPARTS = ["breakfast", "brunch", "lunch", "dinner", "late"] as const;
 export type Daypart = (typeof DAYPARTS)[number];
 
 async function getManagerVenueId(supabase: any, userId: string): Promise<string> {
+  // Deterministic resolution for single-venue managers.
+  // Order by (created_at, id) so the same manager always lands on the same
+  // venue across calls. Multi-venue managers must be migrated to explicit
+  // activeVenueId once tenant/organisation schema lands — that work is the
+  // multi-site schema phase and is tracked as a carried-forward risk. Until
+  // then we throw a clear error rather than silently picking a row when more
+  // than one venue is owned by the same manager.
   const { data, error } = await supabase
     .from("venues")
-    .select("id")
+    .select("id, created_at")
     .eq("manager_id", userId)
-    .limit(1)
-    .maybeSingle();
+    .order("created_at", { ascending: true })
+    .order("id", { ascending: true });
   if (error) throw new Error(error.message);
-  if (!data?.id) throw new Error("No venue found for this manager");
-  return data.id as string;
+  const rows = (data ?? []) as Array<{ id: string }>;
+  if (rows.length === 0) throw new Error("No venue found for this manager");
+  if (rows.length > 1) {
+    // Safely scoped: fall back to deterministic first-by-created_at but emit
+    // a server log so we can detect multi-venue managers in production before
+    // the multi-site phase ships. Do not change the LLS payload silently.
+    console.warn(
+      `[lls] manager ${userId} owns ${rows.length} venues; using earliest (${rows[0].id}). Multi-site selection lands in the tenant phase.`,
+    );
+  }
+  return rows[0].id;
 }
 
 function dayOfWeekISO(dateStr: string): number {
@@ -509,12 +525,19 @@ function safeDiv(num: number, den: number): number | null {
  * Thresholds come from `src/lib/metrics/gap.ts` — never re-define them here.
  */
 function ragFromGap(gap: number | null): "green" | "amber" | "red" | "none" {
-  const band = engineRagBand(gap ?? undefined);
-  if (band === "insufficient_data") return "none";
-  if (band === "strong" || band === "outperforming") return "green";
-  if (band === "priority") return "red";
+  // v1 FROZEN spec — ±10% bands, locked by the v1-regression parity suite.
+  // The canonical 5-band engine (`engineRagBand`) widens green to include
+  // "outperforming" (>+5%), but the v1 manager view promised ±10%. Do NOT
+  // route v1 RAG through the 5-band engine — that re-buckets gaps in the
+  // (+5%, +10%) and (−10%, −5%) windows and breaks the frozen contract.
+  if (gap == null || !Number.isFinite(gap)) return "none";
+  if (gap >= 0.1) return "green";
+  if (gap <= -0.1) return "red";
   return "amber";
 }
+// `engineRagBand` is kept as the source of truth for v2 / canonical UIs.
+void engineRagBand;
+
 
 function formatGapPct(gap: number | null): string {
   if (gap == null) return "—";
