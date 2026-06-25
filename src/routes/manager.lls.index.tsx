@@ -24,7 +24,6 @@ import {
 } from "@/components/ui/select";
 import { getMondayOfWeek, toISODate, formatWeekRange, previousMonday } from "@/lib/week";
 import {
-  importShifts,
   getWeeklyScorecard,
   getOpportunityFactors,
   updateOpportunityFactor,
@@ -38,6 +37,9 @@ import {
   type SchedulingLeverageResult,
   type Daypart,
 } from "@/lib/lls.functions";
+import { stageImport, latestPendingImportBatch } from "@/lib/imports.functions";
+import { hashFileContent } from "@/lib/imports/hash";
+import { Link } from "@tanstack/react-router";
 import { Upload, ChevronLeft, ChevronRight, AlertTriangle, TrendingUp, TrendingDown, Trash2, Gauge, Sparkles, Info } from "lucide-react";
 import { MetricTooltip, DataQualityChip, SalesBasisBadge, GrossEstimateWarning } from "@/components/metrics";
 import { SchedulingLeverageMatrix } from "@/components/lls/scheduling-leverage-matrix";
