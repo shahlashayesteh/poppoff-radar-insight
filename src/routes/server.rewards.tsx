@@ -10,7 +10,7 @@ import { Flame, Trophy, Award, Sparkles, Lock, ChevronRight, Crown } from "lucid
 
 // Phase 10 — Server Rewards.
 // Achievements, streaks, badges, personal bests and next unlock. Fun and
-// motivational language only. No labour, profitability or manager metrics.
+// motivational language only. No labour or manager-grade financial metrics.
 export const Route = createFileRoute("/server/rewards")({ component: ServerRewards });
 
 type Badge = {
