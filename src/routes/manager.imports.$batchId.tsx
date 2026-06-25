@@ -292,6 +292,25 @@ function ImportBatchDetail() {
           </CardContent>
         </Card>
 
+        {/* Per-batch defaults (suppress noise from minimal CSVs) */}
+        <BatchDefaultsCard
+          batch={batch}
+          busy={busy}
+          onSave={async (next) => {
+            if (!venueId) return;
+            setBusy(true);
+            try {
+              const res = await doApplyDefaults({ data: { batchId, venueId, defaults: next } });
+              toast.success(`Defaults applied · ${res.summary.warnings} advisory flag${res.summary.warnings === 1 ? "" : "s"} remain.`);
+              await load();
+            } catch (e: any) { toast.error(e?.message ?? "Apply failed"); }
+            finally { setBusy(false); }
+          }}
+        />
+
+        {/* Warning breakdown — explains what 'N warnings' actually is */}
+        <WarningBreakdownCard batch={batch} rows={rows} />
+
         {/* Identity Quality (Phase 7) */}
         <IdentityQualityCard rows={rows} batchValidation={batch.validation_summary} />
 
