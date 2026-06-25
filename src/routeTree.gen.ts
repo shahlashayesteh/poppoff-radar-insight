@@ -49,6 +49,7 @@ import { Route as ManagerLlsRouteImport } from './routes/manager.lls'
 import { Route as ManagerImportsRouteImport } from './routes/manager.imports'
 import { Route as ManagerDataOnboardingRouteImport } from './routes/manager.data-onboarding'
 import { Route as ManagerCoachingRouteImport } from './routes/manager.coaching'
+import { Route as ManagerAdoptionRouteImport } from './routes/manager.adoption'
 import { Route as EmailUnsubscribeRouteImport } from './routes/email/unsubscribe'
 import { Route as DemoServerScorecardRouteImport } from './routes/demo.server-scorecard'
 import { Route as DemoManagerDashboardRouteImport } from './routes/demo.manager-dashboard'
@@ -288,6 +289,11 @@ const ManagerCoachingRoute = ManagerCoachingRouteImport.update({
   path: '/manager/coaching',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ManagerAdoptionRoute = ManagerAdoptionRouteImport.update({
+  id: '/manager/adoption',
+  path: '/manager/adoption',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const EmailUnsubscribeRoute = EmailUnsubscribeRouteImport.update({
   id: '/email/unsubscribe',
   path: '/email/unsubscribe',
@@ -482,6 +488,7 @@ export interface FileRoutesByFullPath {
   '/demo/manager-dashboard': typeof DemoManagerDashboardRoute
   '/demo/server-scorecard': typeof DemoServerScorecardRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
+  '/manager/adoption': typeof ManagerAdoptionRoute
   '/manager/coaching': typeof ManagerCoachingRoute
   '/manager/data-onboarding': typeof ManagerDataOnboardingRoute
   '/manager/imports': typeof ManagerImportsRouteWithChildren
@@ -555,6 +562,7 @@ export interface FileRoutesByTo {
   '/demo/manager-dashboard': typeof DemoManagerDashboardRoute
   '/demo/server-scorecard': typeof DemoServerScorecardRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
+  '/manager/adoption': typeof ManagerAdoptionRoute
   '/manager/coaching': typeof ManagerCoachingRoute
   '/manager/data-onboarding': typeof ManagerDataOnboardingRoute
   '/manager/menu': typeof ManagerMenuRoute
@@ -629,6 +637,7 @@ export interface FileRoutesById {
   '/demo/manager-dashboard': typeof DemoManagerDashboardRoute
   '/demo/server-scorecard': typeof DemoServerScorecardRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
+  '/manager/adoption': typeof ManagerAdoptionRoute
   '/manager/coaching': typeof ManagerCoachingRoute
   '/manager/data-onboarding': typeof ManagerDataOnboardingRoute
   '/manager/imports': typeof ManagerImportsRouteWithChildren
@@ -706,6 +715,7 @@ export interface FileRouteTypes {
     | '/demo/manager-dashboard'
     | '/demo/server-scorecard'
     | '/email/unsubscribe'
+    | '/manager/adoption'
     | '/manager/coaching'
     | '/manager/data-onboarding'
     | '/manager/imports'
@@ -779,6 +789,7 @@ export interface FileRouteTypes {
     | '/demo/manager-dashboard'
     | '/demo/server-scorecard'
     | '/email/unsubscribe'
+    | '/manager/adoption'
     | '/manager/coaching'
     | '/manager/data-onboarding'
     | '/manager/menu'
@@ -852,6 +863,7 @@ export interface FileRouteTypes {
     | '/demo/manager-dashboard'
     | '/demo/server-scorecard'
     | '/email/unsubscribe'
+    | '/manager/adoption'
     | '/manager/coaching'
     | '/manager/data-onboarding'
     | '/manager/imports'
@@ -927,6 +939,7 @@ export interface RootRouteChildren {
   DemoManagerDashboardRoute: typeof DemoManagerDashboardRoute
   DemoServerScorecardRoute: typeof DemoServerScorecardRoute
   EmailUnsubscribeRoute: typeof EmailUnsubscribeRoute
+  ManagerAdoptionRoute: typeof ManagerAdoptionRoute
   ManagerCoachingRoute: typeof ManagerCoachingRoute
   ManagerDataOnboardingRoute: typeof ManagerDataOnboardingRoute
   ManagerImportsRoute: typeof ManagerImportsRouteWithChildren
@@ -1254,6 +1267,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ManagerCoachingRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/manager/adoption': {
+      id: '/manager/adoption'
+      path: '/manager/adoption'
+      fullPath: '/manager/adoption'
+      preLoaderRoute: typeof ManagerAdoptionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/email/unsubscribe': {
       id: '/email/unsubscribe'
       path: '/email/unsubscribe'
@@ -1567,6 +1587,7 @@ const rootRouteChildren: RootRouteChildren = {
   DemoManagerDashboardRoute: DemoManagerDashboardRoute,
   DemoServerScorecardRoute: DemoServerScorecardRoute,
   EmailUnsubscribeRoute: EmailUnsubscribeRoute,
+  ManagerAdoptionRoute: ManagerAdoptionRoute,
   ManagerCoachingRoute: ManagerCoachingRoute,
   ManagerDataOnboardingRoute: ManagerDataOnboardingRoute,
   ManagerImportsRoute: ManagerImportsRouteWithChildren,
