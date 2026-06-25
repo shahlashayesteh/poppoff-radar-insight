@@ -47,13 +47,13 @@ describe("manager.settings.tsx structure", () => {
 });
 
 describe("imports server functions gate by entitlement", () => {
-  const importsFn = readFileSync(join(root, "../lib/imports.functions.ts"), "utf-8");
+  const importsFn = readFileSync(join(src, "../lib/imports.functions.ts"), "utf-8");
   it("stageImport guards via requireImportEntitlement", () => {
     expect(importsFn).toMatch(/requireImportEntitlement/);
     expect(importsFn).toMatch(/canImportProductionData/);
   });
   it("imports list page surfaces import-blocked banner", () => {
-    const idx = readFileSync(join(root, "routes/manager.imports.index.tsx"), "utf-8");
+    const idx = readFileSync(join(src, "routes/manager.imports.index.tsx"), "utf-8");
     expect(idx).toContain('data-testid="import-blocked-banner"');
     expect(idx).toContain("useEntitlement");
   });
@@ -67,7 +67,7 @@ describe("server routes do not expose manager-only billing / entitlement intelli
   ];
   it.each(serverFiles)("%s does not import entitlement helpers", (rel) => {
     let src: string;
-    try { src = readFileSync(join(root, rel), "utf-8"); }
+    try { src = readFileSync(join(src, rel), "utf-8"); }
     catch { return; } // file may not exist; skip silently
     expect(src).not.toMatch(/from\s+["']@\/lib\/entitlements["']/);
     expect(src).not.toMatch(/billing-status/);
