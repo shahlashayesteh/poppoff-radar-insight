@@ -33,6 +33,7 @@ type Member = { id: string; full_name: string | null };
 function TeamPage() {
   useRoleGate("manager");
   useVerifyPaidManagerAccess();
+  const active = useActiveVenue();
   const fetchTeam = useServerFn(getTeamAnalytics);
 
   const [members, setMembers] = useState<Member[]>([]);
