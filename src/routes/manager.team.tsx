@@ -11,6 +11,7 @@ import {
 } from "@/lib/performance-engine";
 import { engineRagFromPerf } from "@/lib/metrics/server-rag";
 import { MetricTooltip, ModelledValueLabel } from "@/components/metrics";
+import { OperationsStatusStrip } from "@/components/manager/operations-status-strip";
 
 
 export const Route = createFileRoute("/manager/team")({ component: TeamPage });
@@ -66,6 +67,9 @@ function TeamPage() {
         <div className="text-xs uppercase tracking-widest text-muted-foreground">Team</div>
         <h1 className="font-display text-4xl font-extrabold tracking-tight mt-2">Your servers</h1>
         <div className="mt-1 text-xs text-muted-foreground">{formatWeekRange(displayWeekStart)} · ranked by commercial impact (engine RAG vs benchmark)</div>
+
+        <OperationsStatusStrip />
+
 
         {members.length === 0 ? (
           <div className="mt-8 rounded-2xl bg-white border border-border p-6 text-sm text-muted-foreground">

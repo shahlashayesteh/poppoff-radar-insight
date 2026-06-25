@@ -36,6 +36,7 @@ import { getManagerVenue } from "@/lib/manager-venue";
 import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
 import { toast } from "sonner";
 import { MetricTooltip } from "@/components/metrics";
+import { OperationsStatusStrip } from "@/components/manager/operations-status-strip";
 
 export const Route = createFileRoute("/manager/")({ component: ManagerDashboard });
 
@@ -526,6 +527,10 @@ function ManagerDashboard() {
           </div>
           <div className="text-sm text-muted-foreground">{formatWeekRange(displayWeekStart)}</div>
         </div>
+
+        {/* Phase 9 — Operations status: import quality, identity quality, basis confidence. */}
+        <OperationsStatusStrip />
+
 
         {/* Join code + CSV upload */}
         <div className="mt-6 grid lg:grid-cols-2 gap-4">
