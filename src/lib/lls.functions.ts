@@ -754,6 +754,7 @@ export const getSchedulingLeverage = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }): Promise<SchedulingLeverageResult> => {
     const { supabase, userId } = context;
+    await requirePaidManagerEntitlement(supabase, userId);
     const venueId = await getManagerVenueId(supabase, userId);
     const weeks = data.weeks ?? 12;
 
