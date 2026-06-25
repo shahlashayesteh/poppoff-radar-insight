@@ -525,12 +525,19 @@ function safeDiv(num: number, den: number): number | null {
  * Thresholds come from `src/lib/metrics/gap.ts` — never re-define them here.
  */
 function ragFromGap(gap: number | null): "green" | "amber" | "red" | "none" {
-  const band = engineRagBand(gap ?? undefined);
-  if (band === "insufficient_data") return "none";
-  if (band === "strong" || band === "outperforming") return "green";
-  if (band === "priority") return "red";
+  // v1 FROZEN spec — ±10% bands, locked by the v1-regression parity suite.
+  // The canonical 5-band engine (`engineRagBand`) widens green to include
+  // "outperforming" (>+5%), but the v1 manager view promised ±10%. Do NOT
+  // route v1 RAG through the 5-band engine — that re-buckets gaps in the
+  // (+5%, +10%) and (−10%, −5%) windows and breaks the frozen contract.
+  if (gap == null || !Number.isFinite(gap)) return "none";
+  if (gap >= 0.1) return "green";
+  if (gap <= -0.1) return "red";
   return "amber";
 }
+// `engineRagBand` is kept as the source of truth for v2 / canonical UIs.
+void engineRagBand;
+
 
 function formatGapPct(gap: number | null): string {
   if (gap == null) return "—";
