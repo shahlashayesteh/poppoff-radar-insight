@@ -11,6 +11,8 @@ import { ChevronLeft, ChevronRight, ArrowLeft, AlertCircle } from "lucide-react"
 import { MetricTooltip, ModelledValueLabel } from "@/components/metrics";
 import { useRoleGate } from "@/lib/auth-gate";
 import { PaidManagerGate } from "@/components/manager/PaidManagerGate";
+import { useActiveVenue } from "@/hooks/use-active-venue";
+import { NoVenueState } from "@/components/manager/no-venue-state";
 
 export const Route = createFileRoute("/manager/lls/compare")({
   component: () => (
@@ -63,12 +65,15 @@ function ragColour(r: string | null): string {
 
 function ComparePage() {
   useRoleGate("manager");
+  const active = useActiveVenue();
+  const venueId = active.venueId ?? undefined;
   const [weekStart, setWeekStart] = useState<string>(toISODate(getMondayOfWeek()));
   const fetchComparison = useServerFn(getLlsComparison);
 
   const { data, error, isLoading, refetch } = useQuery<ComparisonPayload>({
-    queryKey: ["lls-comparison", weekStart],
-    queryFn: () => fetchComparison({ data: { weekStart } }),
+    queryKey: ["lls-comparison", weekStart, venueId ?? "_pending"],
+    queryFn: () => fetchComparison({ data: { weekStart, venueId } }),
+    enabled: !!venueId,
     retry: false,
   });
 
@@ -77,6 +82,16 @@ function ComparePage() {
     const next = dir === -1 ? previousMonday(cur) : new Date(cur.getTime() + 7 * 86400_000);
     setWeekStart(toISODate(getMondayOfWeek(next)));
   };
+
+  if (active.status !== "ready") {
+    return (
+      <ManagerLayout>
+        <div className="px-8 py-8 max-w-6xl">
+          <NoVenueState status={active.status} venues={active.venues} />
+        </div>
+      </ManagerLayout>
+    );
+  }
 
   return (
     <ManagerLayout>

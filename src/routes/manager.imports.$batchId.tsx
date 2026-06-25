@@ -20,6 +20,8 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { ManagerLayout } from "@/components/manager-layout";
 import { PaidManagerGate } from "@/components/manager/PaidManagerGate";
+import { useActiveVenue } from "@/hooks/use-active-venue";
+import { NoVenueState } from "@/components/manager/no-venue-state";
 
 export const Route = createFileRoute("/manager/imports/$batchId")({
   component: () => (
@@ -92,6 +94,9 @@ function ImportBatchDetail() {
   const doExclude = useServerFn(excludeStagingRow);
   const fetchEmployees = useServerFn(listVenueEmployees);
 
+  const active = useActiveVenue();
+  const venueId = active.venueId ?? undefined;
+
   const [batch, setBatch] = useState<Batch | null>(null);
   const [rows, setRows] = useState<Row[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -100,10 +105,11 @@ function ImportBatchDetail() {
 
 
   const load = useCallback(async () => {
+    if (!venueId) return;
     try {
       const [res, emp] = await Promise.all([
-        fetchDetail({ data: { batchId } }),
-        fetchEmployees({}).catch(() => ({ employees: [] as Employee[] })),
+        fetchDetail({ data: { batchId, venueId } }),
+        fetchEmployees({ data: { venueId } }).catch(() => ({ employees: [] as Employee[] })),
       ]);
       setBatch(res.batch as Batch);
       setRows((res.rows ?? []) as Row[]);
@@ -113,7 +119,7 @@ function ImportBatchDetail() {
     } finally {
       setLoading(false);
     }
-  }, [fetchDetail, fetchEmployees, batchId]);
+  }, [fetchDetail, fetchEmployees, batchId, venueId]);
 
   useEffect(() => { void load(); }, [load]);
 
@@ -149,7 +155,7 @@ function ImportBatchDetail() {
 
   const onApprove = async () => {
     setBusy(true);
-    try { await doApprove({ data: { batchId } }); toast.success("Batch approved"); await load(); }
+    try { await doApprove({ data: { batchId, venueId } }); toast.success("Batch approved"); await load(); }
     catch (e: any) { toast.error(e?.message ?? "Approve failed"); }
     finally { setBusy(false); }
   };
@@ -157,7 +163,7 @@ function ImportBatchDetail() {
     if (!confirm("Commit this batch to live LLS data? This applies the accepted rows to the shifts table.")) return;
     setBusy(true);
     try {
-      const res = await doCommit({ data: { batchId } });
+      const res = await doCommit({ data: { batchId, venueId } });
       toast.success(`Committed ${(res.result as any)?.committed ?? "?"} rows`);
       await load();
     } catch (e: any) { toast.error(e?.message ?? "Commit failed"); }
@@ -167,7 +173,7 @@ function ImportBatchDetail() {
     if (!confirm("Roll back this batch? Committed shifts still tagged with this batch will be removed.")) return;
     setBusy(true);
     try {
-      const res = await doRollback({ data: { batchId } });
+      const res = await doRollback({ data: { batchId, venueId } });
       const r = res.result as any;
       toast.success(`Rolled back. Removed ${r?.deleted ?? 0}, skipped ${r?.skipped ?? 0} (later imports preserved).`);
       await load();
@@ -175,6 +181,15 @@ function ImportBatchDetail() {
     finally { setBusy(false); }
   };
 
+  if (active.status !== "ready") {
+    return (
+      <ManagerLayout>
+        <div className="mx-auto max-w-6xl px-4 py-6">
+          <NoVenueState status={active.status} venues={active.venues} />
+        </div>
+      </ManagerLayout>
+    );
+  }
   if (loading) {
     return <ManagerLayout><div className="mx-auto max-w-6xl px-4 py-6">Loading…</div></ManagerLayout>;
   }

@@ -12,6 +12,8 @@ import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
 import { PaidManagerGate } from "@/components/manager/PaidManagerGate";
 import { useVerifyPaidManagerAccess } from "@/hooks/use-verify-paid-manager-access";
 import { listWeeklyPriorities } from "@/lib/manager-data.functions";
+import { useActiveVenue } from "@/hooks/use-active-venue";
+import { NoVenueState } from "@/components/manager/no-venue-state";
 
 
 export const Route = createFileRoute("/manager/priorities")({
@@ -83,6 +85,7 @@ async function logAudit(
 function Priorities() {
   useRoleGate("manager");
   useVerifyPaidManagerAccess();
+  const active = useActiveVenue();
   const fetchPriorities = useServerFn(listWeeklyPriorities);
 
   const [venueId, setVenueId] = useState<string | null>(null);
@@ -195,6 +198,16 @@ function Priorities() {
     return out;
   })();
   const visible = activeTab === "all" ? items : items.filter((i) => i.status === activeTab);
+
+  if (active.status !== "ready") {
+    return (
+      <ManagerLayout>
+        <div className="px-8 py-7">
+          <NoVenueState status={active.status} venues={active.venues} />
+        </div>
+      </ManagerLayout>
+    );
+  }
 
   return (
     <ManagerLayout>

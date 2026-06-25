@@ -16,6 +16,8 @@ import { OperationsStatusStrip } from "@/components/manager/operations-status-st
 import { PaidManagerGate } from "@/components/manager/PaidManagerGate";
 import { useVerifyPaidManagerAccess } from "@/hooks/use-verify-paid-manager-access";
 import { getTeamAnalytics } from "@/lib/manager-data.functions";
+import { useActiveVenue } from "@/hooks/use-active-venue";
+import { NoVenueState } from "@/components/manager/no-venue-state";
 
 
 export const Route = createFileRoute("/manager/team")({
@@ -31,6 +33,7 @@ type Member = { id: string; full_name: string | null };
 function TeamPage() {
   useRoleGate("manager");
   useVerifyPaidManagerAccess();
+  const active = useActiveVenue();
   const fetchTeam = useServerFn(getTeamAnalytics);
 
   const [members, setMembers] = useState<Member[]>([]);
@@ -72,6 +75,16 @@ function TeamPage() {
   const ranking = perf?.ranked.map((e, i) => ({ id: e.userId, rank: i + 1 })) ?? [];
   const rankById = Object.fromEntries(ranking.map((r) => [r.id, r.rank]));
   const sortedMembers = members.slice().sort((a, b) => (rankById[a.id] ?? 999) - (rankById[b.id] ?? 999));
+
+  if (active.status !== "ready") {
+    return (
+      <ManagerLayout>
+        <div className="px-8 py-8">
+          <NoVenueState status={active.status} venues={active.venues} />
+        </div>
+      </ManagerLayout>
+    );
+  }
 
   return (
     <ManagerLayout>

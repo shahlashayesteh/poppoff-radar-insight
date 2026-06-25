@@ -10,8 +10,13 @@ import { benchmarkConfidence, resultConfidence, lowerBand, ragStatus } from "./c
 import { performanceGap, modelledRevenueOpportunity } from "./calculations";
 import type { ConfidenceBand } from "./config";
 
+import { resolveManagerVenueId } from "@/lib/venue-access";
+
 const Input = z.object({
   weekStart: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  // Phase 16A — optional explicit venue. Multi-venue / head-office callers
+  // MUST supply it; single-venue managers can omit.
+  venueId: z.string().uuid().optional(),
 });
 
 function addDays(iso: string, days: number): string {
@@ -20,28 +25,22 @@ function addDays(iso: string, days: number): string {
   return d.toISOString().slice(0, 10);
 }
 
-async function resolveVenue(supabase: any, userId: string) {
-  // Deterministic single-venue resolution. See lls.functions.ts:getManagerVenueId
-  // for the carried-forward multi-site note — once tenant schema lands, swap
-  // this for an explicit activeVenueId argument validated by membership.
+// Phase 16A: replace owner-only earliest-venue lookup with the membership-
+// validated resolver. Falls through to a venue row read so we can keep the
+// existing compare-mode + baseline metadata in the payload.
+async function resolveVenue(supabase: any, userId: string, requestedVenueId?: string) {
+  const venueId = await resolveManagerVenueId(supabase, userId, requestedVenueId);
   const { data, error } = await supabase
     .from("venues")
-    .select("id, name, lls_compare_mode, lls_active_model_version, lls_v2_baseline_weeks, created_at")
-    .eq("manager_id", userId)
-    .order("created_at", { ascending: true })
-    .order("id", { ascending: true });
+    .select("id, name, lls_compare_mode, lls_active_model_version, lls_v2_baseline_weeks")
+    .eq("id", venueId)
+    .maybeSingle();
   if (error) throw new Error(error.message);
-  const rows = (data ?? []) as Array<{
+  if (!data) throw new Error("Selected venue not found");
+  return data as {
     id: string; name: string; lls_compare_mode: boolean;
     lls_active_model_version: string; lls_v2_baseline_weeks: number;
-  }>;
-  if (rows.length === 0) throw new Error("No venue found for this manager");
-  if (rows.length > 1) {
-    console.warn(
-      `[lls.compare] manager ${userId} owns ${rows.length} venues; using earliest (${rows[0].id}).`,
-    );
-  }
-  return rows[0];
+  };
 }
 
 export interface ComparisonPayload {
@@ -64,7 +63,7 @@ export const getLlsComparison = createServerFn({ method: "POST" })
   .handler(async ({ data, context }): Promise<ComparisonPayload> => {
     const { supabase, userId } = context;
     await requirePaidManagerEntitlement(supabase, userId);
-    const venue = await resolveVenue(supabase, userId);
+    const venue = await resolveVenue(supabase, userId, data.venueId);
     if (!venue.lls_compare_mode) {
       throw new Error("Comparison mode is not enabled for this venue.");
     }

@@ -98,11 +98,20 @@ export async function getActiveManagerVenue(): Promise<ManagerVenue | null> {
   if (rows.length === 0) { writeStored(null); return null; }
   const stored = readStored();
   const match = stored ? rows.find((v) => v.id === stored) : undefined;
-  // Multi-venue: never silently pick one when the stored choice is invalid;
-  // surface the first only as a transient default so the UI can prompt.
-  const chosen = match ?? (rows.length === 1 ? rows[0] : rows[0]);
-  writeStored(chosen.id);
-  return chosen;
+  if (match) {
+    writeStored(match.id);
+    return match;
+  }
+  // Single-venue users get their only venue auto-selected.
+  if (rows.length === 1) {
+    writeStored(rows[0].id);
+    return rows[0];
+  }
+  // Phase 16A: multi-venue users MUST explicitly pick. Do NOT silently default
+  // to the first venue — that previously created cross-venue data exposure
+  // when stored selection was missing. Callers should render <NoVenueState />.
+  writeStored(null);
+  return null;
 }
 
 export async function listManagerVenues(): Promise<ManagerVenue[]> {

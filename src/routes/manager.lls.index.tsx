@@ -47,6 +47,8 @@ import { MARKETS, MARKET_ORDER, type MarketId } from "@/lib/markets";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useRoleGate } from "@/lib/auth-gate";
 import { PaidManagerGate } from "@/components/manager/PaidManagerGate";
+import { useActiveVenue } from "@/hooks/use-active-venue";
+import { NoVenueState } from "@/components/manager/no-venue-state";
 
 export const Route = createFileRoute("/manager/lls/")({
   component: () => (
@@ -193,6 +195,10 @@ function LaborBasisBadge({ basis }: { basis: LaborBasisLocal }) {
 
 function LlsPage() {
   useRoleGate("manager");
+  // Phase 16A — active venue plumbing. Single-venue managers get their venue
+  // automatically; multi-venue managers see the venue picker (rendered by the
+  // ManagerLayout) and a NoVenueState until they choose one.
+  const active = useActiveVenue();
   const [weekStart, setWeekStart] = useState(toISODate(getMondayOfWeek()));
   // Phase G.1: display-only market currency selector for SLM money formatting.
   // Does NOT affect any engine math (LLS, SLM, Server-Gap, FLC). Persisted in
@@ -242,20 +248,23 @@ function LlsPage() {
   const doRollback = useServerFn(rollbackBatch);
   const fetchLeverage = useServerFn(getSchedulingLeverage);
 
+  const venueId = active.venueId ?? undefined;
+
   const refresh = async () => {
+    if (!venueId) return;
     setLoading(true);
     try {
       const [sc, of, bs] = await Promise.all([
-        fetchScorecard({ data: { weekStart } }),
-        fetchOF(),
-        fetchBatches(),
+        fetchScorecard({ data: { weekStart, venueId } }),
+        fetchOF({ data: { venueId } }),
+        fetchBatches({ data: { venueId } }),
       ]);
       setScorecard(sc);
       setGrid(of.grid);
       setBatches(bs.batches);
       // Scheduling leverage uses a longer window — fire-and-forget so the
       // main scorecard renders quickly even if leverage is slow.
-      fetchLeverage({ data: { weekStart, weeks: 12 } })
+      fetchLeverage({ data: { weekStart, weeks: 12, venueId } })
         .then(setLeverage)
         .catch(() => setLeverage(null));
     } catch (e: any) {
@@ -266,15 +275,17 @@ function LlsPage() {
   };
 
   useEffect(() => {
+    if (!venueId) return;
     void refresh();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [weekStart]);
+  }, [weekStart, venueId]);
 
   useEffect(() => {
-    fetchPending()
+    if (!venueId) return;
+    fetchPending({ data: { venueId } })
       .then((r) => setPendingBatch((r.batch as any) ?? null))
       .catch(() => {});
-  }, [fetchPending]);
+  }, [fetchPending, venueId]);
 
   const fieldsForSource = pendingSource === "sales" ? SALES_FIELDS : LABOR_FIELDS;
 
@@ -294,7 +305,7 @@ function LlsPage() {
     // Saved per-venue mapping wins over auto if its headers still exist.
     let saved: Record<string, string> = {};
     try {
-      const r = await loadMapping({ data: { sourceType: source } });
+      const r = await loadMapping({ data: { sourceType: source, venueId } });
       for (const [k, v] of Object.entries(r.mapping ?? {})) {
         if (typeof v === "string" && parsed.headers.includes(v)) saved[k] = v;
       }
@@ -392,7 +403,7 @@ function LlsPage() {
     }
     setLoading(true);
     try {
-      await persistMapping({ data: { sourceType: source, mapping: map } });
+      await persistMapping({ data: { sourceType: source, mapping: map, venueId } });
       // Phase 6: upload no longer writes direct to public.shifts.
       // Stage the rows first; manager must approve in /manager/imports before LLS changes.
       const fileHash = await hashFileContent(JSON.stringify({ filename: file.filename, rows }));
@@ -402,6 +413,7 @@ function LlsPage() {
           filename: file.filename,
           fileHash,
           rows: rows as any,
+          venueId,
         },
       });
       const summary = res.summary;
@@ -447,7 +459,7 @@ function LlsPage() {
     const clamped = Math.min(1.4, Math.max(0.7, value));
     setGrid((g) => (g ? { ...g, [dow]: { ...g[dow], [dp]: clamped } } : g));
     try {
-      await updateOF({ data: { dayOfWeek: dow, daypart: dp, factor: clamped, weekStart } });
+      await updateOF({ data: { dayOfWeek: dow, daypart: dp, factor: clamped, weekStart, venueId } });
       await refresh();
     } catch (e: any) {
       toast.error(e?.message ?? "Failed to update factor");
@@ -457,7 +469,7 @@ function LlsPage() {
   const generateSuggestedFactors = async () => {
     setLoading(true);
     try {
-      const res = await suggestOF();
+      const res = await suggestOF({ data: { venueId } });
       if (!res.enoughData) {
         toast.info(
           `Suggested factors need at least 20 completed historical shifts. This venue currently has ${res.totalCompleted ?? 0} completed shifts. Start with 1.0 and refine after more uploads.`,
@@ -468,7 +480,7 @@ function LlsPage() {
       for (let dow = 0; dow < 7; dow++) {
         for (const dp of DAYPARTS) {
           const f = res.suggestions[dow][dp];
-          await updateOF({ data: { dayOfWeek: dow, daypart: dp, factor: f, weekStart } });
+          await updateOF({ data: { dayOfWeek: dow, daypart: dp, factor: f, weekStart, venueId } });
         }
       }
       if (res.lowConfidence) {
@@ -491,6 +503,17 @@ function LlsPage() {
     d.setDate(d.getDate() + 7);
     setWeekStart(toISODate(d));
   };
+
+  // Phase 16A: short-circuit before fetching anything venue-scoped.
+  if (active.status !== "ready") {
+    return (
+      <ManagerLayout>
+        <div className="px-8 py-8 max-w-7xl">
+          <NoVenueState status={active.status} venues={active.venues} />
+        </div>
+      </ManagerLayout>
+    );
+  }
 
   return (
     <ManagerLayout>
@@ -625,7 +648,7 @@ function LlsPage() {
                       onClick={async () => {
                         if (!confirm("Roll back this batch?")) return;
                         try {
-                          await doRollback({ data: { batchId: b.id } });
+                          await doRollback({ data: { batchId: b.id, venueId } });
                           toast.success("Batch rolled back");
                           await refresh();
                         } catch (e: any) {

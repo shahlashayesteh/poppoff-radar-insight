@@ -15,6 +15,8 @@ import { toast } from "sonner";
 import { PaidManagerGate } from "@/components/manager/PaidManagerGate";
 import { useVerifyPaidManagerAccess } from "@/hooks/use-verify-paid-manager-access";
 import { listCoachingPriorities } from "@/lib/manager-data.functions";
+import { useActiveVenue } from "@/hooks/use-active-venue";
+import { NoVenueState } from "@/components/manager/no-venue-state";
 
 
 export const Route = createFileRoute("/manager/coaching")({
@@ -43,6 +45,7 @@ type Priority = {
 function Page() {
   useRoleGate("manager");
   useVerifyPaidManagerAccess();
+  const active = useActiveVenue();
   const fetchCoaching = useServerFn(listCoachingPriorities);
 
   const [venueId, setVenueId] = useState<string | null>(null);
@@ -95,6 +98,16 @@ function Page() {
   const pending = byStatus("ai_suggested");
   const rejected = byStatus("rejected");
   const archived = byStatus("archived");
+
+  if (active.status !== "ready") {
+    return (
+      <ManagerLayout>
+        <div className="px-8 py-8 max-w-5xl">
+          <NoVenueState status={active.status} venues={active.venues} />
+        </div>
+      </ManagerLayout>
+    );
+  }
 
   return (
     <ManagerLayout>
