@@ -15,6 +15,8 @@ import { toast } from "sonner";
 import { PaidManagerGate } from "@/components/manager/PaidManagerGate";
 import { useVerifyPaidManagerAccess } from "@/hooks/use-verify-paid-manager-access";
 import { listCoachingPriorities } from "@/lib/manager-data.functions";
+import { useActiveVenue } from "@/hooks/use-active-venue";
+import { NoVenueState } from "@/components/manager/no-venue-state";
 
 
 export const Route = createFileRoute("/manager/coaching")({
