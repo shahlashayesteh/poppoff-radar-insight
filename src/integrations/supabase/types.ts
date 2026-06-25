@@ -695,6 +695,114 @@ export type Database = {
           },
         ]
       }
+      opportunity_factor_assessments: {
+        Row: {
+          applied_factor_version: string
+          applied_v1_factor: number | null
+          basis: string | null
+          bucket_key: string
+          bucket_type: string
+          can_drive_hard_recommendation: boolean
+          comparable_count: number | null
+          comparison_level: number | null
+          confidence: string | null
+          created_at: string
+          created_by: string | null
+          decision_grade: string | null
+          delta: number | null
+          explanation: string | null
+          fallback_reason: string | null
+          generated_at: string
+          hours_source: string | null
+          id: string
+          inputs_excluded: Json
+          inputs_used: Json
+          organisation_id: string | null
+          period_end: string | null
+          period_start: string | null
+          preview_factor_version: string
+          preview_v2_factor: number | null
+          venue_id: string
+          warnings: Json
+          week_start: string
+        }
+        Insert: {
+          applied_factor_version?: string
+          applied_v1_factor?: number | null
+          basis?: string | null
+          bucket_key?: string
+          bucket_type: string
+          can_drive_hard_recommendation?: boolean
+          comparable_count?: number | null
+          comparison_level?: number | null
+          confidence?: string | null
+          created_at?: string
+          created_by?: string | null
+          decision_grade?: string | null
+          delta?: number | null
+          explanation?: string | null
+          fallback_reason?: string | null
+          generated_at?: string
+          hours_source?: string | null
+          id?: string
+          inputs_excluded?: Json
+          inputs_used?: Json
+          organisation_id?: string | null
+          period_end?: string | null
+          period_start?: string | null
+          preview_factor_version?: string
+          preview_v2_factor?: number | null
+          venue_id: string
+          warnings?: Json
+          week_start: string
+        }
+        Update: {
+          applied_factor_version?: string
+          applied_v1_factor?: number | null
+          basis?: string | null
+          bucket_key?: string
+          bucket_type?: string
+          can_drive_hard_recommendation?: boolean
+          comparable_count?: number | null
+          comparison_level?: number | null
+          confidence?: string | null
+          created_at?: string
+          created_by?: string | null
+          decision_grade?: string | null
+          delta?: number | null
+          explanation?: string | null
+          fallback_reason?: string | null
+          generated_at?: string
+          hours_source?: string | null
+          id?: string
+          inputs_excluded?: Json
+          inputs_used?: Json
+          organisation_id?: string | null
+          period_end?: string | null
+          period_start?: string | null
+          preview_factor_version?: string
+          preview_v2_factor?: number | null
+          venue_id?: string
+          warnings?: Json
+          week_start?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "opportunity_factor_assessments_organisation_id_fkey"
+            columns: ["organisation_id"]
+            isOneToOne: false
+            referencedRelation: "organisations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opportunity_factor_assessments_venue_id_fkey"
+            columns: ["venue_id"]
+            isOneToOne: false
+            referencedRelation: "venues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organisation_memberships: {
         Row: {
           created_at: string

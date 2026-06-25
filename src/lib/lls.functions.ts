@@ -528,9 +528,79 @@ export type ScorecardServer = {
 import {
   buildOfV2Preview,
   type OpportunityFactorPreview,
+  type PreviewHistoryRow,
 } from "@/lib/lls/opportunity-factor-v2-preview";
+import {
+  buildAssessmentRows,
+  persistAssessmentRows,
+} from "@/lib/lls/opportunity-factor-assessments";
 
 export type { OpportunityFactorPreview } from "@/lib/lls/opportunity-factor-v2-preview";
+
+/**
+ * Phase 20C — derive real hours per (service_date, daypart) from shifts_v2
+ * so OF v2 preview can prefer paid / clock / labour-export hours over the
+ * labour-cost proxy. Returns a map keyed by `${date}|${daypart}`.
+ */
+type V2HoursPick = { hours: number; source: "clock_hours" | "labour_export_hours" };
+function buildV2HoursLookup(
+  shiftsV2: Array<{
+    service_date: string;
+    dominant_daypart: string | null;
+    labor_span_hours: number | null;
+    service_duration_hours: number | null;
+    clock_in: string | null;
+    clock_out: string | null;
+  }>,
+): Map<string, V2HoursPick> {
+  const acc = new Map<string, { clock: number; export_: number }>();
+  for (const r of shiftsV2) {
+    if (!r.service_date || !r.dominant_daypart) continue;
+    const key = `${r.service_date}|${r.dominant_daypart}`;
+    const cur = acc.get(key) ?? { clock: 0, export_: 0 };
+    // Clock-derived hours: prefer labor_span_hours when clock_in & clock_out present.
+    if (r.clock_in && r.clock_out && typeof r.labor_span_hours === "number" && r.labor_span_hours > 0) {
+      cur.clock += r.labor_span_hours;
+    } else if (typeof r.service_duration_hours === "number" && r.service_duration_hours > 0) {
+      cur.export_ += r.service_duration_hours;
+    } else if (typeof r.labor_span_hours === "number" && r.labor_span_hours > 0) {
+      // labor_span_hours without clock_in/out -> treat as labour_export_hours.
+      cur.export_ += r.labor_span_hours;
+    }
+    acc.set(key, cur);
+  }
+  const out = new Map<string, V2HoursPick>();
+  for (const [k, v] of acc) {
+    if (v.clock > 0) out.set(k, { hours: v.clock, source: "clock_hours" });
+    else if (v.export_ > 0) out.set(k, { hours: v.export_, source: "labour_export_hours" });
+  }
+  return out;
+}
+
+/** Apply v2-derived hours onto v1 preview history rows (per date+daypart). */
+function attachV2Hours(
+  rows: PreviewHistoryRow[],
+  lookup: Map<string, V2HoursPick>,
+): PreviewHistoryRow[] {
+  if (lookup.size === 0) return rows;
+  // Count how many v1 rows share each key, so we can apportion hours evenly.
+  const counts = new Map<string, number>();
+  for (const r of rows) {
+    const key = `${r.shift_date}|${r.daypart ?? ""}`;
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+  return rows.map((r) => {
+    const key = `${r.shift_date}|${r.daypart ?? ""}`;
+    const pick = lookup.get(key);
+    if (!pick) return r;
+    const n = counts.get(key) ?? 1;
+    const per = pick.hours / Math.max(1, n);
+    if (pick.source === "clock_hours") {
+      return { ...r, clock_hours: per };
+    }
+    return { ...r, labour_export_hours: per };
+  });
+}
 
 export type ScorecardResult = {
   weekStart: string;
@@ -759,15 +829,24 @@ export const getWeeklyScorecard = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
 
     // Phase 20A — pull 12 weeks of history for OF v2 preview computation.
-    // Preview is read-only and does NOT mutate stored shift values.
+    // Phase 20C — also pull shifts_v2 to derive real hours where available.
     const previewStart = new Date(wsDate);
     previewStart.setDate(previewStart.getDate() - 7 * 12);
-    const { data: previewHistory } = await supabase
-      .from("shifts")
-      .select("shift_date, day_of_week, daypart, gross_sales, covers_served, labor_cost, opportunity_factor")
-      .eq("venue_id", venueId)
-      .gte("shift_date", iso(previewStart))
-      .lt("shift_date", iso(weekEnd));
+    const [{ data: previewHistory }, { data: shiftsV2History }] = await Promise.all([
+      supabase
+        .from("shifts")
+        .select("shift_date, day_of_week, daypart, gross_sales, covers_served, labor_cost, opportunity_factor")
+        .eq("venue_id", venueId)
+        .gte("shift_date", iso(previewStart))
+        .lt("shift_date", iso(weekEnd)),
+      supabase
+        .from("shifts_v2")
+        .select("service_date, dominant_daypart, labor_span_hours, service_duration_hours, clock_in, clock_out")
+        .eq("venue_id", venueId)
+        .eq("is_active", true)
+        .gte("service_date", iso(previewStart))
+        .lt("service_date", iso(weekEnd)),
+    ]);
 
     const result = computeWeeklyScorecardFromRows(
       (shifts ?? []) as ScorecardInputRow[],
@@ -784,7 +863,7 @@ export const getWeeklyScorecard = createServerFn({ method: "POST" })
         d.setDate(d.getDate() + diff);
         return d.toISOString().slice(0, 10);
       };
-      const historyRows = ((previewHistory ?? []) as any[]).map((r) => ({
+      const baseRows: PreviewHistoryRow[] = ((previewHistory ?? []) as any[]).map((r) => ({
         shift_date: r.shift_date as string,
         week_start: toWeekStart(r.shift_date as string),
         day_of_week: Number(r.day_of_week),
@@ -796,15 +875,40 @@ export const getWeeklyScorecard = createServerFn({ method: "POST" })
         opportunity_factor:
           r.opportunity_factor != null ? Number(r.opportunity_factor) : null,
       }));
+      const v2Lookup = buildV2HoursLookup((shiftsV2History ?? []) as any[]);
+      const historyRows = attachV2Hours(baseRows, v2Lookup);
       const selectedWeek = historyRows.filter((r) => r.week_start === ws);
-      result.opportunity_factor_preview = buildOfV2Preview({
+      const hasRealHours = historyRows.some(
+        (r) => (r.clock_hours ?? 0) > 0 || (r.labour_export_hours ?? 0) > 0 || (r.paid_hours ?? 0) > 0,
+      );
+      const preview = buildOfV2Preview({
         venueId,
         weekStart: ws,
         history: historyRows,
         selectedWeek,
         salesBasis: "gross", // v1 schema only stores gross
-        laborHoursEstimated: true, // hours unavailable in v1 scorecard query
+        // Phase 20C: if shifts_v2 provided real hours, the adapter will pick them up
+        // and classify accordingly. Only flag estimated when nothing real exists.
+        laborHoursEstimated: !hasRealHours,
       });
+      result.opportunity_factor_preview = preview;
+
+      // Phase 20C — persist preview assessment metadata. Audit only; never
+      // changes committed factors or LLS. Best-effort; failures swallowed.
+      const { data: venueOrg } = await supabase
+        .from("venues")
+        .select("organisation_id")
+        .eq("id", venueId)
+        .maybeSingle();
+      const rows = buildAssessmentRows({
+        venueId,
+        organisationId: (venueOrg as any)?.organisation_id ?? null,
+        weekStart: ws,
+        periodStart: iso(previewStart),
+        periodEnd: iso(weekEnd),
+        preview,
+      });
+      await persistAssessmentRows(supabase, rows);
     } catch {
       result.opportunity_factor_preview = null;
     }
@@ -921,6 +1025,7 @@ export const getSchedulingLeverage = createServerFn({ method: "POST" })
 
     // Phase 20A — attach OF v2 preview metadata. Read-only; does NOT change
     // any baseline, matrix cell or recommendation. Failures are non-fatal.
+    // Phase 20C — prefer real hours from shifts_v2; persist preview assessment.
     try {
       const toWeekStart = (date: string): string => {
         const d = new Date(date + "T00:00:00");
@@ -929,7 +1034,17 @@ export const getSchedulingLeverage = createServerFn({ method: "POST" })
         d.setDate(d.getDate() + diff);
         return d.toISOString().slice(0, 10);
       };
-      const historyRows = rows.map((r) => ({
+
+      const { data: shiftsV2History } = await supabase
+        .from("shifts_v2")
+        .select("service_date, dominant_daypart, labor_span_hours, service_duration_hours, clock_in, clock_out")
+        .eq("venue_id", venueId)
+        .eq("is_active", true)
+        .gte("service_date", iso(start))
+        .lt("service_date", iso(weekEnd));
+      const v2Lookup = buildV2HoursLookup((shiftsV2History ?? []) as any[]);
+
+      const baseHistoryRows: PreviewHistoryRow[] = rows.map((r) => ({
         shift_date: r.shift_date,
         week_start: toWeekStart(r.shift_date),
         day_of_week: r.day_of_week,
@@ -938,19 +1053,41 @@ export const getSchedulingLeverage = createServerFn({ method: "POST" })
         gross_sales: r.gross_sales,
         net_sales: r.net_sales ?? null,
         covers: r.covers,
-        hours: r.hours ?? null,
+        // Phase 20C — leverage path already infers clock_hours from start/end
+        // times where present; mark them as clock_hours to keep classification honest.
+        clock_hours: typeof r.hours === "number" && r.hours > 0 ? r.hours : null,
         labor_cost: r.labor_cost,
         opportunity_factor: r.opportunity_factor,
       }));
+      const historyRows = attachV2Hours(baseHistoryRows, v2Lookup);
       const selectedWeek = historyRows.filter((r) => r.week_start === ws);
-      leverage.opportunity_factor_preview = buildOfV2Preview({
+      const hasRealHours = historyRows.some(
+        (r) => (r.clock_hours ?? 0) > 0 || (r.labour_export_hours ?? 0) > 0 || (r.paid_hours ?? 0) > 0,
+      );
+      const preview = buildOfV2Preview({
         venueId,
         weekStart: ws,
         history: historyRows,
         selectedWeek,
         salesBasis: "gross",
-        laborHoursEstimated: !rows.some((r) => typeof r.hours === "number" && r.hours > 0),
+        laborHoursEstimated: !hasRealHours,
       });
+      leverage.opportunity_factor_preview = preview;
+
+      const { data: venueOrg } = await supabase
+        .from("venues")
+        .select("organisation_id")
+        .eq("id", venueId)
+        .maybeSingle();
+      const assessmentRows = buildAssessmentRows({
+        venueId,
+        organisationId: (venueOrg as any)?.organisation_id ?? null,
+        weekStart: ws,
+        periodStart: iso(start),
+        periodEnd: iso(weekEnd),
+        preview,
+      });
+      await persistAssessmentRows(supabase, assessmentRows);
     } catch {
       leverage.opportunity_factor_preview = null;
     }
