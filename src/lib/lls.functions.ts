@@ -394,6 +394,7 @@ export const rollbackBatch = createServerFn({ method: "POST" })
   .inputValidator((d: { batchId: string }) => z.object({ batchId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
+    await requirePaidManagerEntitlement(supabase, userId, "import");
     const venueId = await getManagerVenueId(supabase, userId);
 
     // Verify batch belongs to this venue
