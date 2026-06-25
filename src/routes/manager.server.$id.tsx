@@ -13,6 +13,7 @@ import {
 } from "@/lib/performance-engine";
 import { engineRagFromPerf } from "@/lib/metrics/server-rag";
 import { MetricTooltip, ModelledValueLabel } from "@/components/metrics";
+import { ProvenanceLegend } from "@/components/manager/operations-status-strip";
 
 import { Sparkles, Wand2 } from "lucide-react";
 import { toast } from "sonner";
