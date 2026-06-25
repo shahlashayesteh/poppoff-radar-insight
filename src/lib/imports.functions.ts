@@ -67,7 +67,32 @@ export const stageImport = createServerFn({ method: "POST" })
 
     const sourceKind = data.sourceKind as SourceKind;
     const importType = sourceKind === "sales" ? "sales" : "labour";
-    const validation = validateRows(data.rows as RawImportRow[], sourceKind);
+
+    // Phase: infer per-batch defaults from venue context + filename/column shape.
+    // These suppress per-row "missing optional context" warnings on minimal
+    // CSVs (any POS vendor) without losing the underlying provenance signal.
+    const { data: venueRow } = await supabase
+      .from("venues")
+      .select("name, organisation_id")
+      .eq("id", venueId)
+      .maybeSingle();
+    let singleSite = true;
+    const orgId = (venueRow as any)?.organisation_id ?? null;
+    if (orgId) {
+      const { count } = await supabase
+        .from("venues")
+        .select("id", { count: "exact", head: true })
+        .eq("organisation_id", orgId);
+      if ((count ?? 1) > 1) singleSite = false;
+    }
+    const inferred = inferBatchDefaults(data.rows as RawImportRow[], sourceKind, {
+      venueName: (venueRow as any)?.name ?? null,
+      singleSite,
+      filename: data.filename ?? null,
+      sourceSystem: data.sourceSystem ?? null,
+    });
+
+    const validation = validateRows(data.rows as RawImportRow[], sourceKind, inferred.defaults);
 
     // Create the batch (status = needs_review — manager must approve before commit)
     const { data: batch, error: bErr } = await supabase
@@ -92,6 +117,7 @@ export const stageImport = createServerFn({ method: "POST" })
         sales_basis_summary: validation.salesBasis as any,
         labour_basis_summary: validation.labourBasis as any,
         validation_summary: validation.summary as any,
+        batch_defaults: { ...inferred.defaults, inferred_reasons: inferred.reasons } as any,
         status: "needs_review",
       })
       .select("id")
