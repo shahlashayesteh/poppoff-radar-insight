@@ -829,15 +829,24 @@ export const getWeeklyScorecard = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
 
     // Phase 20A — pull 12 weeks of history for OF v2 preview computation.
-    // Preview is read-only and does NOT mutate stored shift values.
+    // Phase 20C — also pull shifts_v2 to derive real hours where available.
     const previewStart = new Date(wsDate);
     previewStart.setDate(previewStart.getDate() - 7 * 12);
-    const { data: previewHistory } = await supabase
-      .from("shifts")
-      .select("shift_date, day_of_week, daypart, gross_sales, covers_served, labor_cost, opportunity_factor")
-      .eq("venue_id", venueId)
-      .gte("shift_date", iso(previewStart))
-      .lt("shift_date", iso(weekEnd));
+    const [{ data: previewHistory }, { data: shiftsV2History }] = await Promise.all([
+      supabase
+        .from("shifts")
+        .select("shift_date, day_of_week, daypart, gross_sales, covers_served, labor_cost, opportunity_factor")
+        .eq("venue_id", venueId)
+        .gte("shift_date", iso(previewStart))
+        .lt("shift_date", iso(weekEnd)),
+      supabase
+        .from("shifts_v2")
+        .select("service_date, dominant_daypart, labor_span_hours, service_duration_hours, clock_in, clock_out")
+        .eq("venue_id", venueId)
+        .eq("is_active", true)
+        .gte("service_date", iso(previewStart))
+        .lt("service_date", iso(weekEnd)),
+    ]);
 
     const result = computeWeeklyScorecardFromRows(
       (shifts ?? []) as ScorecardInputRow[],
@@ -854,7 +863,7 @@ export const getWeeklyScorecard = createServerFn({ method: "POST" })
         d.setDate(d.getDate() + diff);
         return d.toISOString().slice(0, 10);
       };
-      const historyRows = ((previewHistory ?? []) as any[]).map((r) => ({
+      const baseRows: PreviewHistoryRow[] = ((previewHistory ?? []) as any[]).map((r) => ({
         shift_date: r.shift_date as string,
         week_start: toWeekStart(r.shift_date as string),
         day_of_week: Number(r.day_of_week),
@@ -866,15 +875,40 @@ export const getWeeklyScorecard = createServerFn({ method: "POST" })
         opportunity_factor:
           r.opportunity_factor != null ? Number(r.opportunity_factor) : null,
       }));
+      const v2Lookup = buildV2HoursLookup((shiftsV2History ?? []) as any[]);
+      const historyRows = attachV2Hours(baseRows, v2Lookup);
       const selectedWeek = historyRows.filter((r) => r.week_start === ws);
-      result.opportunity_factor_preview = buildOfV2Preview({
+      const hasRealHours = historyRows.some(
+        (r) => (r.clock_hours ?? 0) > 0 || (r.labour_export_hours ?? 0) > 0 || (r.paid_hours ?? 0) > 0,
+      );
+      const preview = buildOfV2Preview({
         venueId,
         weekStart: ws,
         history: historyRows,
         selectedWeek,
         salesBasis: "gross", // v1 schema only stores gross
-        laborHoursEstimated: true, // hours unavailable in v1 scorecard query
+        // Phase 20C: if shifts_v2 provided real hours, the adapter will pick them up
+        // and classify accordingly. Only flag estimated when nothing real exists.
+        laborHoursEstimated: !hasRealHours,
       });
+      result.opportunity_factor_preview = preview;
+
+      // Phase 20C — persist preview assessment metadata. Audit only; never
+      // changes committed factors or LLS. Best-effort; failures swallowed.
+      const { data: venueOrg } = await supabase
+        .from("venues")
+        .select("organisation_id")
+        .eq("id", venueId)
+        .maybeSingle();
+      const rows = buildAssessmentRows({
+        venueId,
+        organisationId: (venueOrg as any)?.organisation_id ?? null,
+        weekStart: ws,
+        periodStart: iso(previewStart),
+        periodEnd: iso(weekEnd),
+        preview,
+      });
+      await persistAssessmentRows(supabase, rows);
     } catch {
       result.opportunity_factor_preview = null;
     }
