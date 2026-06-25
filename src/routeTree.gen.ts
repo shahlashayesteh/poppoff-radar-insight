@@ -43,6 +43,7 @@ import { Route as ManagerSettingsRouteImport } from './routes/manager.settings'
 import { Route as ManagerRoiRouteImport } from './routes/manager.roi'
 import { Route as ManagerReportsRouteImport } from './routes/manager.reports'
 import { Route as ManagerPrioritiesRouteImport } from './routes/manager.priorities'
+import { Route as ManagerPilotRouteImport } from './routes/manager.pilot'
 import { Route as ManagerMenuRouteImport } from './routes/manager.menu'
 import { Route as ManagerLlsRouteImport } from './routes/manager.lls'
 import { Route as ManagerImportsRouteImport } from './routes/manager.imports'
@@ -50,6 +51,7 @@ import { Route as ManagerCoachingRouteImport } from './routes/manager.coaching'
 import { Route as EmailUnsubscribeRouteImport } from './routes/email/unsubscribe'
 import { Route as DemoServerScorecardRouteImport } from './routes/demo.server-scorecard'
 import { Route as DemoManagerDashboardRouteImport } from './routes/demo.manager-dashboard'
+import { Route as DemoJourneyRouteImport } from './routes/demo.journey'
 import { Route as CheckoutSuccessRouteImport } from './routes/checkout.success'
 import { Route as CheckoutRetryRouteImport } from './routes/checkout.retry'
 import { Route as CalculatorServerGapRouteImport } from './routes/calculator.server-gap'
@@ -255,6 +257,11 @@ const ManagerPrioritiesRoute = ManagerPrioritiesRouteImport.update({
   path: '/manager/priorities',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ManagerPilotRoute = ManagerPilotRouteImport.update({
+  id: '/manager/pilot',
+  path: '/manager/pilot',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ManagerMenuRoute = ManagerMenuRouteImport.update({
   id: '/manager/menu',
   path: '/manager/menu',
@@ -288,6 +295,11 @@ const DemoServerScorecardRoute = DemoServerScorecardRouteImport.update({
 const DemoManagerDashboardRoute = DemoManagerDashboardRouteImport.update({
   id: '/demo/manager-dashboard',
   path: '/demo/manager-dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DemoJourneyRoute = DemoJourneyRouteImport.update({
+  id: '/demo/journey',
+  path: '/demo/journey',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CheckoutSuccessRoute = CheckoutSuccessRouteImport.update({
@@ -460,6 +472,7 @@ export interface FileRoutesByFullPath {
   '/calculator/server-gap': typeof CalculatorServerGapRoute
   '/checkout/retry': typeof CheckoutRetryRoute
   '/checkout/success': typeof CheckoutSuccessRoute
+  '/demo/journey': typeof DemoJourneyRoute
   '/demo/manager-dashboard': typeof DemoManagerDashboardRoute
   '/demo/server-scorecard': typeof DemoServerScorecardRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
@@ -467,6 +480,7 @@ export interface FileRoutesByFullPath {
   '/manager/imports': typeof ManagerImportsRouteWithChildren
   '/manager/lls': typeof ManagerLlsRouteWithChildren
   '/manager/menu': typeof ManagerMenuRoute
+  '/manager/pilot': typeof ManagerPilotRoute
   '/manager/priorities': typeof ManagerPrioritiesRoute
   '/manager/reports': typeof ManagerReportsRoute
   '/manager/roi': typeof ManagerRoiRoute
@@ -530,11 +544,13 @@ export interface FileRoutesByTo {
   '/calculator/server-gap': typeof CalculatorServerGapRoute
   '/checkout/retry': typeof CheckoutRetryRoute
   '/checkout/success': typeof CheckoutSuccessRoute
+  '/demo/journey': typeof DemoJourneyRoute
   '/demo/manager-dashboard': typeof DemoManagerDashboardRoute
   '/demo/server-scorecard': typeof DemoServerScorecardRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/manager/coaching': typeof ManagerCoachingRoute
   '/manager/menu': typeof ManagerMenuRoute
+  '/manager/pilot': typeof ManagerPilotRoute
   '/manager/priorities': typeof ManagerPrioritiesRoute
   '/manager/reports': typeof ManagerReportsRoute
   '/manager/roi': typeof ManagerRoiRoute
@@ -601,6 +617,7 @@ export interface FileRoutesById {
   '/calculator/server-gap': typeof CalculatorServerGapRoute
   '/checkout/retry': typeof CheckoutRetryRoute
   '/checkout/success': typeof CheckoutSuccessRoute
+  '/demo/journey': typeof DemoJourneyRoute
   '/demo/manager-dashboard': typeof DemoManagerDashboardRoute
   '/demo/server-scorecard': typeof DemoServerScorecardRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
@@ -608,6 +625,7 @@ export interface FileRoutesById {
   '/manager/imports': typeof ManagerImportsRouteWithChildren
   '/manager/lls': typeof ManagerLlsRouteWithChildren
   '/manager/menu': typeof ManagerMenuRoute
+  '/manager/pilot': typeof ManagerPilotRoute
   '/manager/priorities': typeof ManagerPrioritiesRoute
   '/manager/reports': typeof ManagerReportsRoute
   '/manager/roi': typeof ManagerRoiRoute
@@ -675,6 +693,7 @@ export interface FileRouteTypes {
     | '/calculator/server-gap'
     | '/checkout/retry'
     | '/checkout/success'
+    | '/demo/journey'
     | '/demo/manager-dashboard'
     | '/demo/server-scorecard'
     | '/email/unsubscribe'
@@ -682,6 +701,7 @@ export interface FileRouteTypes {
     | '/manager/imports'
     | '/manager/lls'
     | '/manager/menu'
+    | '/manager/pilot'
     | '/manager/priorities'
     | '/manager/reports'
     | '/manager/roi'
@@ -745,11 +765,13 @@ export interface FileRouteTypes {
     | '/calculator/server-gap'
     | '/checkout/retry'
     | '/checkout/success'
+    | '/demo/journey'
     | '/demo/manager-dashboard'
     | '/demo/server-scorecard'
     | '/email/unsubscribe'
     | '/manager/coaching'
     | '/manager/menu'
+    | '/manager/pilot'
     | '/manager/priorities'
     | '/manager/reports'
     | '/manager/roi'
@@ -815,6 +837,7 @@ export interface FileRouteTypes {
     | '/calculator/server-gap'
     | '/checkout/retry'
     | '/checkout/success'
+    | '/demo/journey'
     | '/demo/manager-dashboard'
     | '/demo/server-scorecard'
     | '/email/unsubscribe'
@@ -822,6 +845,7 @@ export interface FileRouteTypes {
     | '/manager/imports'
     | '/manager/lls'
     | '/manager/menu'
+    | '/manager/pilot'
     | '/manager/priorities'
     | '/manager/reports'
     | '/manager/roi'
@@ -887,6 +911,7 @@ export interface RootRouteChildren {
   TermsRoute: typeof TermsRoute
   CheckoutRetryRoute: typeof CheckoutRetryRoute
   CheckoutSuccessRoute: typeof CheckoutSuccessRoute
+  DemoJourneyRoute: typeof DemoJourneyRoute
   DemoManagerDashboardRoute: typeof DemoManagerDashboardRoute
   DemoServerScorecardRoute: typeof DemoServerScorecardRoute
   EmailUnsubscribeRoute: typeof EmailUnsubscribeRoute
@@ -894,6 +919,7 @@ export interface RootRouteChildren {
   ManagerImportsRoute: typeof ManagerImportsRouteWithChildren
   ManagerLlsRoute: typeof ManagerLlsRouteWithChildren
   ManagerMenuRoute: typeof ManagerMenuRoute
+  ManagerPilotRoute: typeof ManagerPilotRoute
   ManagerPrioritiesRoute: typeof ManagerPrioritiesRoute
   ManagerReportsRoute: typeof ManagerReportsRoute
   ManagerRoiRoute: typeof ManagerRoiRoute
@@ -1173,6 +1199,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ManagerPrioritiesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/manager/pilot': {
+      id: '/manager/pilot'
+      path: '/manager/pilot'
+      fullPath: '/manager/pilot'
+      preLoaderRoute: typeof ManagerPilotRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/manager/menu': {
       id: '/manager/menu'
       path: '/manager/menu'
@@ -1220,6 +1253,13 @@ declare module '@tanstack/react-router' {
       path: '/demo/manager-dashboard'
       fullPath: '/demo/manager-dashboard'
       preLoaderRoute: typeof DemoManagerDashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/demo/journey': {
+      id: '/demo/journey'
+      path: '/demo/journey'
+      fullPath: '/demo/journey'
+      preLoaderRoute: typeof DemoJourneyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/checkout/success': {
@@ -1503,6 +1543,7 @@ const rootRouteChildren: RootRouteChildren = {
   TermsRoute: TermsRoute,
   CheckoutRetryRoute: CheckoutRetryRoute,
   CheckoutSuccessRoute: CheckoutSuccessRoute,
+  DemoJourneyRoute: DemoJourneyRoute,
   DemoManagerDashboardRoute: DemoManagerDashboardRoute,
   DemoServerScorecardRoute: DemoServerScorecardRoute,
   EmailUnsubscribeRoute: EmailUnsubscribeRoute,
@@ -1510,6 +1551,7 @@ const rootRouteChildren: RootRouteChildren = {
   ManagerImportsRoute: ManagerImportsRouteWithChildren,
   ManagerLlsRoute: ManagerLlsRouteWithChildren,
   ManagerMenuRoute: ManagerMenuRoute,
+  ManagerPilotRoute: ManagerPilotRoute,
   ManagerPrioritiesRoute: ManagerPrioritiesRoute,
   ManagerReportsRoute: ManagerReportsRoute,
   ManagerRoiRoute: ManagerRoiRoute,
