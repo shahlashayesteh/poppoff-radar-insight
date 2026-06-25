@@ -5,8 +5,8 @@
 
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { ManagerLayout } from "@/components/manager-layout";
-import { supabase } from "@/integrations/supabase/client";
 import { getManagerVenue } from "@/lib/manager-venue";
 import { useRoleGate } from "@/lib/auth-gate";
 import { getMondayOfWeek, toISODate, formatWeekRange } from "@/lib/week";
@@ -17,6 +17,7 @@ import {
 } from "@/components/manager/operations-status-strip";
 import { Download } from "lucide-react";
 import { PaidManagerGate } from "@/components/manager/PaidManagerGate";
+import { getManagerReportsData } from "@/lib/manager-data.functions";
 
 export const Route = createFileRoute("/manager/reports")({
   component: () => (
