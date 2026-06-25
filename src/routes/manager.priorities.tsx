@@ -85,6 +85,7 @@ async function logAudit(
 function Priorities() {
   useRoleGate("manager");
   useVerifyPaidManagerAccess();
+  const active = useActiveVenue();
   const fetchPriorities = useServerFn(listWeeklyPriorities);
 
   const [venueId, setVenueId] = useState<string | null>(null);
