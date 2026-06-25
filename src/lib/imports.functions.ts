@@ -413,6 +413,7 @@ export const rollbackImportBatch = createServerFn({ method: "POST" })
   .inputValidator((d: z.input<typeof BatchIdInput>) => BatchIdInput.parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
+    await requirePaidManagerEntitlement(supabase, userId, "import");
     const venueId = await getManagerVenueId(supabase, userId, data.venueId);
     await assertBatchInVenue(supabase, data.batchId, venueId);
     const { data: res, error } = await supabase.rpc(
