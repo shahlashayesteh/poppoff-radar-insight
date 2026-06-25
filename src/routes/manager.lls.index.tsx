@@ -193,6 +193,10 @@ function LaborBasisBadge({ basis }: { basis: LaborBasisLocal }) {
 
 function LlsPage() {
   useRoleGate("manager");
+  // Phase 16A — active venue plumbing. Single-venue managers get their venue
+  // automatically; multi-venue managers see the venue picker (rendered by the
+  // ManagerLayout) and a NoVenueState until they choose one.
+  const active = useActiveVenue();
   const [weekStart, setWeekStart] = useState(toISODate(getMondayOfWeek()));
   // Phase G.1: display-only market currency selector for SLM money formatting.
   // Does NOT affect any engine math (LLS, SLM, Server-Gap, FLC). Persisted in
