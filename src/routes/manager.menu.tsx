@@ -14,6 +14,8 @@ import { useVerifyPaidManagerAccess } from "@/hooks/use-verify-paid-manager-acce
 import { listMenuSuggestions, listVenueMenus } from "@/lib/manager-data.functions";
 import { useActiveVenue } from "@/hooks/use-active-venue";
 import { NoVenueState } from "@/components/manager/no-venue-state";
+import { EvidenceBasis } from "@/components/reliability";
+import { buildRecommendationEvidence, recommendationConfidence } from "@/lib/provenance";
 
 export const Route = createFileRoute("/manager/menu")({
   component: () => (
@@ -88,17 +90,33 @@ function MenuIntel() {
     const items = (latest.parsed_items ?? []).filter((it) => it.name?.trim());
     if (items.length === 0) { toast.error("No parsed items in latest menu"); return; }
     const { data: u } = await supabase.auth.getUser();
-    const rows = items.slice(0, 200).map((it) => ({
-      venue_id: venueId,
-      item_name: it.name.trim(),
-      category: it.category ?? null,
-      price: it.price ? Number(String(it.price).replace(/[^0-9.]/g, "")) || null : null,
-      ai_reason: it.pairing ? `Pairs with ${it.pairing}` : it.priority ? `AI flagged ${it.priority}` : null,
-      source_menu_id: latest.id,
-      source_file: (latest.menu_text || "").split("\n")[0]?.replace(/^#\s*/, "") || null,
-      status: "ai_suggested" as const,
-      created_by: u.user?.id ?? null,
-    }));
+    const rows = items.slice(0, 200).map((it) => {
+      // Phase 18A — persist evidence at suggestion creation. Menu items are
+      // derived from the uploaded menu file (a measured artefact), not from
+      // POS sales, so we record that explicitly. Sections / SevenRooms data
+      // are contextual-only and never enter based_on.
+      const evidence = buildRecommendationEvidence({
+        based_on: ["menu_document"],
+        excluded_contextual_fields: ["sevenrooms_section"],
+        explanation_basis: it.pairing
+          ? `Suggested from latest menu (pairs with ${it.pairing}).`
+          : "Suggested from latest menu upload.",
+        source_metrics: { source_menu_id: latest.id },
+      });
+      return {
+        venue_id: venueId,
+        item_name: it.name.trim(),
+        category: it.category ?? null,
+        price: it.price ? Number(String(it.price).replace(/[^0-9.]/g, "")) || null : null,
+        ai_reason: it.pairing ? `Pairs with ${it.pairing}` : it.priority ? `AI flagged ${it.priority}` : null,
+        source_menu_id: latest.id,
+        source_file: (latest.menu_text || "").split("\n")[0]?.replace(/^#\s*/, "") || null,
+        status: "ai_suggested" as const,
+        created_by: u.user?.id ?? null,
+        evidence: evidence as never,
+        recommendation_confidence: recommendationConfidence(evidence),
+      };
+    });
     const { data: inserted, error } = await supabase.from("menu_item_suggestions").insert(rows).select("id");
     if (error) { toast.error(error.message); return; }
     for (const r of inserted ?? []) await logSugAudit(venueId, r.id, null, "ai_suggested", "Staged from latest menu");
@@ -125,6 +143,13 @@ function MenuIntel() {
     // When sending to servers, also create a weekly_priorities row so it surfaces to the team.
     if (next === "sent_to_servers") {
       const week = toISODate(getMondayOfWeek());
+      // Phase 18A — carry forward evidence: this priority traces back to the
+      // approved menu suggestion (a manager-reviewed artefact).
+      const evidence = buildRecommendationEvidence({
+        based_on: ["menu_document", "manager_approval"],
+        explanation_basis: `Sent from approved menu suggestion: ${s.item_name}.`,
+        source_metrics: { source_suggestion_id: s.id },
+      });
       await supabase.from("weekly_priorities").insert({
         venue_id: venueId, week_start: week,
         item_name: s.item_name, category: s.category,
@@ -133,6 +158,8 @@ function MenuIntel() {
         status: "sent_to_servers",
         approved_by: u.user?.id ?? null, approved_at: now, sent_to_servers_at: now,
         source_suggestion_id: s.id,
+        evidence: evidence as never,
+        recommendation_confidence: recommendationConfidence(evidence),
       });
     }
     setBusySug(null);
@@ -684,6 +711,13 @@ function MenuIntel() {
                     </div>
                     {s.ai_reason && <div className="text-xs text-muted-foreground mt-0.5">AI reason: {s.ai_reason}</div>}
                     {s.rejected_reason && <div className="text-xs text-muted-foreground mt-0.5">Rejected: {s.rejected_reason}</div>}
+                    {s.status === "ai_suggested" && (
+                      <EvidenceBasis
+                        compact
+                        className="mt-1.5"
+                        fields={["pos_menu_category", "sevenrooms_section"]}
+                      />
+                    )}
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     {s.status === "ai_suggested" && (
