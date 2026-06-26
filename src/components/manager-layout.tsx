@@ -31,19 +31,21 @@ import { VenueSelector } from "@/components/venue-selector";
 
 type NavItem = { to: string; label: string; icon: typeof LayoutDashboard; key?: string };
 const items: NavItem[] = [
+  { to: "/manager/imports", label: "Imports", icon: Upload, key: "imports" },
   { to: "/manager", label: "Dashboard", icon: LayoutDashboard },
   { to: "/manager/team", label: "Team", icon: Users },
   { to: "/manager/server", label: "Individual", icon: User },
-  { to: "/manager/team", label: "Trends", icon: TrendingUp, key: "trends" },
+  { to: "/manager/scheduling", label: "Shift Match Planner", icon: CalendarCheck, key: "scheduling" },
   { to: "/manager/menu", label: "Menu Intelligence", icon: BookOpen },
   { to: "/manager/priorities", label: "Weekly Priorities", icon: CalendarCheck },
   { to: "/manager/coaching", label: "Coaching", icon: Target },
   { to: "/manager/lls", label: "Labor Leverage", icon: Gauge },
-  { to: "/manager/scheduling", label: "Shift Match Planner", icon: CalendarCheck, key: "scheduling" },
+  { to: "/manager/team", label: "Trends", icon: TrendingUp, key: "trends" },
   { to: "/manager/reports", label: "Reports", icon: FileBarChart },
   { to: "/manager/roi", label: "Enterprise ROI", icon: Sparkles },
   { to: "/manager/pilot", label: "Pilot Readiness", icon: Rocket },
   { to: "/manager/adoption", label: "Adoption", icon: HelpCircle },
+  { to: "/manager/data-onboarding", label: "Data Onboarding", icon: Database, key: "onboarding" },
   { to: "/manager/settings", label: "Settings", icon: SettingsIcon },
 ];
 
