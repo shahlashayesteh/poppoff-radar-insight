@@ -179,6 +179,8 @@ function ImportsHubPage() {
   const fetchList = useServerFn(listImportBatches);
   const stage = useServerFn(stageImport);
   const stageMenu = useServerFn(stageMenuImport);
+  const purge = useServerFn(purgeImportBatch);
+
   const entitlement = useEntitlement();
   const active = useActiveVenue();
   const venueId = active.venueId ?? undefined;
