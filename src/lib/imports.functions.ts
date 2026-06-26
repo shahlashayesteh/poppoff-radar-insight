@@ -868,3 +868,46 @@ export const applyBatchDefaults = createServerFn({ method: "POST" })
     return { ok: true, summary: validation.summary, defaults };
   });
 
+
+// ============================================================
+// Imports Hub — Menu upload staging.
+// Writes raw menu text to venue_menu. AI parsing + suggestion
+// staging continues to happen through Menu Intelligence; this
+// function never writes to menu_item_suggestions directly and
+// never exposes data to server routes. Manager approval is
+// still required inside Menu Intelligence before suggestions
+// reach servers (see Phase 11 workflow).
+// ============================================================
+const StageMenuInput = z.object({
+  filename: z.string().min(1).max(200),
+  menuText: z.string().min(1).max(200_000),
+  ...OptionalVenue,
+});
+
+export const stageMenuImport = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: z.input<typeof StageMenuInput>) => StageMenuInput.parse(d))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    await requirePaidManagerEntitlement(supabase, userId, "menu");
+    const venueId = await getManagerVenueId(supabase, userId, data.venueId);
+
+    const label = `# ${data.filename.replace(/\.[^.]+$/, "")}\n\n`;
+    const { data: row, error } = await supabase
+      .from("venue_menu")
+      .insert({
+        venue_id: venueId,
+        menu_text: label + data.menuText,
+        parsed_items: null,
+      } as any)
+      .select("id")
+      .single();
+    if (error) throw new Error(error.message);
+
+    await audit(supabase, venueId, userId, "menu_uploaded", {
+      menu_id: (row as any).id,
+      filename: data.filename,
+      bytes: data.menuText.length,
+    });
+    return { ok: true, menuId: (row as any).id };
+  });
