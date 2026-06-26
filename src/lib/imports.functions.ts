@@ -889,7 +889,7 @@ export const stageMenuImport = createServerFn({ method: "POST" })
   .inputValidator((d: z.input<typeof StageMenuInput>) => StageMenuInput.parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    await requirePaidManagerEntitlement(supabase, userId, "menu");
+    await requirePaidManagerEntitlement(supabase, userId);
     const venueId = await getManagerVenueId(supabase, userId, data.venueId);
 
     const label = `# ${data.filename.replace(/\.[^.]+$/, "")}\n\n`;
