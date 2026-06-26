@@ -429,6 +429,15 @@ function MenuIntel() {
           </div>
         </div>
 
+        <div className="mt-4 rounded-2xl bg-emerald-50 border border-emerald-200 p-3 flex items-center justify-between gap-3 flex-wrap">
+          <div className="text-sm text-emerald-900">
+            <strong>Menu data lives in Imports.</strong> Upload menu CSVs from the central <strong>Imports</strong> hub. Suggestions still need your approval here before they reach servers.
+          </div>
+          <Link to="/manager/imports" className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 inline-flex items-center gap-1">
+            <Upload className="h-3 w-3" /> Upload Menu Data
+          </Link>
+        </div>
+
         <div className="mt-6 grid lg:grid-cols-12 gap-5">
           <div className="lg:col-span-5 rounded-2xl bg-white border border-border p-5">
             <h3 className="font-display font-bold mb-3">Add a menu</h3>
