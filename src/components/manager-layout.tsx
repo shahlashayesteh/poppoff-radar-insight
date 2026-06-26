@@ -15,6 +15,8 @@ import {
   LogOut,
   HelpCircle,
   ChevronDown,
+  Upload,
+  Database,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
