@@ -286,11 +286,12 @@ function ImportsHubPage() {
         <header className="space-y-1">
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <h1 className="text-2xl font-bold">Imports</h1>
-            {active.venueName && (
-              <Badge variant="outline" className="text-xs">
-                Active venue: {active.venueName}
-              </Badge>
-            )}
+            {(() => {
+              const v = active.venues.find((vv) => vv.id === active.venueId);
+              return v ? (
+                <Badge variant="outline" className="text-xs">Active venue: {v.name}</Badge>
+              ) : null;
+            })()}
           </div>
           <p className="text-sm text-muted-foreground max-w-3xl">
             Upload all restaurant data here once. PoppOff will validate it, stage it, and route it to the right
