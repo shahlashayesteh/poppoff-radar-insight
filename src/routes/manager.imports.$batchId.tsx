@@ -7,6 +7,8 @@ import {
   approveImportBatch,
   commitImportBatch,
   rollbackImportBatch,
+  purgeImportBatch,
+
   confirmIdentityMatch,
   createEmployeeIdentity,
   linkIdentityAlias,
