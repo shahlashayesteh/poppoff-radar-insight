@@ -484,6 +484,24 @@ export const rollbackImportBatch = createServerFn({ method: "POST" })
     return { result: res };
   });
 
+// ---- purge (hard delete file + everything derived from it) ----
+export const purgeImportBatch = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: z.input<typeof BatchIdInput>) => BatchIdInput.parse(d))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    await requirePaidManagerEntitlement(supabase, userId, "import");
+    const venueId = await getManagerVenueId(supabase, userId, data.venueId);
+    await assertBatchInVenue(supabase, data.batchId, venueId);
+    const { data: res, error } = await supabase.rpc(
+      "lls_v2_purge_batch" as never,
+      { _batch_id: data.batchId } as never,
+    );
+    if (error) throw new Error(error.message);
+    return { result: res };
+  });
+
+
 // ---- the latest needs-review batch (for the LLS banner) ----
 export const latestPendingImportBatch = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
