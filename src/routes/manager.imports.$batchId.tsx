@@ -357,10 +357,7 @@ function ImportBatchDetail() {
           Delete file permanently erases the file, every staged row, any shifts it committed, and any server names created by it that aren't referenced elsewhere.
         </p>
 
-        <p className="text-xs text-muted-foreground">
-          Commit is blocked while any non-excluded row has an unresolved or ambiguous employee identity.
-          Rollback is best-effort — only shifts still tagged with this batch are removed.
-        </p>
+
 
         {batch.committed_shift_ids && batch.committed_shift_ids.length > 0 && (
           <p className="text-xs text-muted-foreground">
