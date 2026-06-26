@@ -708,9 +708,17 @@ function LlsPage() {
 
 
 
-        {/* Upload card */}
+        {/* Upload card — Imports Hub is the central place; this remains here as
+            the mapping wizard's natural home for files that need column confirmation. */}
+        <div className="mt-6 rounded-2xl bg-emerald-50 border border-emerald-200 p-4 flex items-center justify-between gap-3">
+          <div className="text-sm text-emerald-900">
+            <strong>Imports is the central upload hub.</strong> Upload POS sales, labour, menu and combined files from one place. This page hosts the column-mapping wizard for files that need confirmation.
+          </div>
+          <a href="/manager/imports" className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700">Open Imports</a>
+        </div>
+
         <div className="mt-6 rounded-2xl bg-white border border-border p-6">
-          <h2 className="font-display text-lg font-bold flex items-center gap-2"><Upload className="h-4 w-4" /> Import shift data</h2>
+          <h2 className="font-display text-lg font-bold flex items-center gap-2"><Upload className="h-4 w-4" /> Import shift data (mapping wizard)</h2>
           <p className="mt-1 text-xs text-muted-foreground">CSV or XLSX from any POS or back-office system. Upload sales and labor separately — they merge by server + date + start time.</p>
           <div className="mt-4 grid sm:grid-cols-2 gap-4">
             <UploadZone label="Sales export" sublabel="Required: server name or ID, shift date, daypart, covers served, gross sales" onFile={(f) => openUpload("sales", f)} />

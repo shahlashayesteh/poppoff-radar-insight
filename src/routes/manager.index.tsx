@@ -569,12 +569,19 @@ function ManagerDashboard() {
 
           <div className="rounded-2xl p-5 border border-border bg-white">
             <div className="text-xs uppercase tracking-widest text-muted-foreground font-bold">
-              Upload weekly stats
+              Upload weekly stats <span className="ml-2 text-amber-700 normal-case tracking-normal">(legacy)</span>
             </div>
             <p className="mt-2 text-sm text-foreground/75">
-              Upload a stats CSV or a photo/screenshot (PNG/JPEG) of a server-performance report. We
-              auto-detect names, totals, covers and categories. Images go through OCR and you can
-              review &amp; edit before importing.
+              Need to upload POS sales, labour or menu data? Use the central <strong>Imports</strong> hub.
+            </p>
+            <div className="mt-2">
+              <a href="/manager/imports" className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700">
+                <Upload className="h-3 w-3" /> Open Imports
+              </a>
+            </div>
+            <p className="mt-3 text-sm text-foreground/75">
+              This box stays here for the legacy weekly server scorecard CSV / image OCR flow. We
+              auto-detect names, totals, covers and categories.
             </p>
             <div className="mt-3 flex items-center gap-2 flex-wrap">
               <label
