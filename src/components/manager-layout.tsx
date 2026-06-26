@@ -37,6 +37,7 @@ const items: NavItem[] = [
   { to: "/manager/priorities", label: "Weekly Priorities", icon: CalendarCheck },
   { to: "/manager/coaching", label: "Coaching", icon: Target },
   { to: "/manager/lls", label: "Labor Leverage", icon: Gauge },
+  { to: "/manager/scheduling", label: "Shift Match Planner", icon: CalendarCheck, key: "scheduling" },
   { to: "/manager/reports", label: "Reports", icon: FileBarChart },
   { to: "/manager/roi", label: "Enterprise ROI", icon: Sparkles },
   { to: "/manager/pilot", label: "Pilot Readiness", icon: Rocket },
