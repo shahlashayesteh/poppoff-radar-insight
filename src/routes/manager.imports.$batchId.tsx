@@ -95,6 +95,8 @@ function ImportBatchDetail() {
   const doApprove = useServerFn(approveImportBatch);
   const doCommit = useServerFn(commitImportBatch);
   const doRollback = useServerFn(rollbackImportBatch);
+  const doPurge = useServerFn(purgeImportBatch);
+
   const doConfirm = useServerFn(confirmIdentityMatch);
   const doCreate = useServerFn(createEmployeeIdentity);
   const doAlias = useServerFn(linkIdentityAlias);
