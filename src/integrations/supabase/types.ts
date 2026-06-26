@@ -2994,6 +2994,7 @@ export type Database = {
         Returns: string
       }
       lls_v2_is_manager: { Args: { _venue_id: string }; Returns: boolean }
+      lls_v2_purge_batch: { Args: { _batch_id: string }; Returns: Json }
       lls_v2_recalculate_canonical_totals: {
         Args: { _shift_id: string }
         Returns: undefined

@@ -7,6 +7,8 @@ import {
   approveImportBatch,
   commitImportBatch,
   rollbackImportBatch,
+  purgeImportBatch,
+
   confirmIdentityMatch,
   createEmployeeIdentity,
   linkIdentityAlias,
@@ -93,6 +95,8 @@ function ImportBatchDetail() {
   const doApprove = useServerFn(approveImportBatch);
   const doCommit = useServerFn(commitImportBatch);
   const doRollback = useServerFn(rollbackImportBatch);
+  const doPurge = useServerFn(purgeImportBatch);
+
   const doConfirm = useServerFn(confirmIdentityMatch);
   const doCreate = useServerFn(createEmployeeIdentity);
   const doAlias = useServerFn(linkIdentityAlias);
@@ -188,6 +192,23 @@ function ImportBatchDetail() {
     } catch (e: any) { toast.error(e?.message ?? "Rollback failed"); }
     finally { setBusy(false); }
   };
+  const onPurge = async () => {
+    const label = batch?.source_filename || "this file";
+    if (!confirm(
+      `Delete "${label}" permanently?\n\nThis erases the file, all staged rows, any committed shifts from it, and any server names it created that aren't used elsewhere. This cannot be undone.`,
+    )) return;
+    setBusy(true);
+    try {
+      const res: any = await doPurge({ data: { batchId, venueId } });
+      const r = res?.result ?? {};
+      toast.success(
+        `Deleted. ${r.deleted_shifts ?? 0} shifts, ${r.deleted_staging_rows ?? 0} staged rows, ${r.deleted_employees ?? 0} server names removed.`,
+      );
+      navigate({ to: "/manager/imports" });
+    } catch (e: any) { toast.error(e?.message ?? "Delete failed"); }
+    finally { setBusy(false); }
+  };
+
 
   if (active.status !== "ready") {
     return (
@@ -325,12 +346,18 @@ function ImportBatchDetail() {
           <Button onClick={onRollback} disabled={!canRollback || busy} variant="destructive">
             Rollback
           </Button>
+          <Button onClick={onPurge} disabled={busy} variant="destructive">
+            Delete file
+          </Button>
           <Button onClick={() => navigate({ to: "/manager/imports" })} variant="ghost">Back</Button>
         </div>
         <p className="text-xs text-muted-foreground">
           Commit is blocked while any non-excluded row has an unresolved or ambiguous employee identity.
           Rollback is best-effort — only shifts still tagged with this batch are removed.
+          Delete file permanently erases the file, every staged row, any shifts it committed, and any server names created by it that aren't referenced elsewhere.
         </p>
+
+
 
         {batch.committed_shift_ids && batch.committed_shift_ids.length > 0 && (
           <p className="text-xs text-muted-foreground">
