@@ -346,8 +346,17 @@ function ImportBatchDetail() {
           <Button onClick={onRollback} disabled={!canRollback || busy} variant="destructive">
             Rollback
           </Button>
+          <Button onClick={onPurge} disabled={busy} variant="destructive">
+            Delete file
+          </Button>
           <Button onClick={() => navigate({ to: "/manager/imports" })} variant="ghost">Back</Button>
         </div>
+        <p className="text-xs text-muted-foreground">
+          Commit is blocked while any non-excluded row has an unresolved or ambiguous employee identity.
+          Rollback is best-effort — only shifts still tagged with this batch are removed.
+          Delete file permanently erases the file, every staged row, any shifts it committed, and any server names created by it that aren't referenced elsewhere.
+        </p>
+
         <p className="text-xs text-muted-foreground">
           Commit is blocked while any non-excluded row has an unresolved or ambiguous employee identity.
           Rollback is best-effort — only shifts still tagged with this batch are removed.
