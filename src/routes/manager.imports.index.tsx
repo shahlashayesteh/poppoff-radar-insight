@@ -147,7 +147,7 @@ function buildRowsForSource(
     if (!date || !name) continue;
     const base: any = {
       server_name: name,
-      server_id: get("server_id") ? String(get("server_id")) : null,
+      server_id: get("employee_id") ? String(get("employee_id")) : null,
       shift_date: date,
       outlet: get("outlet") ? String(get("outlet")) : null,
       revenue_centre: get("revenue_centre") ? String(get("revenue_centre")) : null,
