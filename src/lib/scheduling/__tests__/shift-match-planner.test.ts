@@ -99,19 +99,24 @@ describe("buildShiftMatchPlan", () => {
 
   it("preserves inferred weekly shift quotas (no single server gets every slot)", () => {
     const rows: HistoricalShift[] = [];
-    const servers = ["s1", "s2", "s3"];
+    // s1 (the best server) only works 2 days/week historically -> quota 2.
+    // s2 and s3 work all 5 days -> quotas 5.
     for (let w = 0; w < 6; w++) {
       for (let d = 1; d <= 5; d++) {
-        for (const s of servers) {
+        const here: Array<{ id: string; sales: number }> = [];
+        if (d <= 2) here.push({ id: "s1", sales: 2000 });
+        here.push({ id: "s2", sales: 900 });
+        here.push({ id: "s3", sales: 900 });
+        for (const s of here) {
           rows.push(
             shift({
               shiftDate: `2024-02-${String(w * 7 + d + 1).padStart(2, "0")}`,
               dayOfWeek: d,
               daypart: "Dinner",
-              serverId: s,
-              serverName: s.toUpperCase(),
-              grossSales: s === "s1" ? 2000 : 900,
-              netSales: (s === "s1" ? 2000 : 900) * 0.9,
+              serverId: s.id,
+              serverName: s.id.toUpperCase(),
+              grossSales: s.sales,
+              netSales: s.sales * 0.9,
             }),
           );
         }
