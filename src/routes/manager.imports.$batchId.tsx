@@ -192,6 +192,23 @@ function ImportBatchDetail() {
     } catch (e: any) { toast.error(e?.message ?? "Rollback failed"); }
     finally { setBusy(false); }
   };
+  const onPurge = async () => {
+    const label = batch?.source_filename || "this file";
+    if (!confirm(
+      `Delete "${label}" permanently?\n\nThis erases the file, all staged rows, any committed shifts from it, and any server names it created that aren't used elsewhere. This cannot be undone.`,
+    )) return;
+    setBusy(true);
+    try {
+      const res: any = await doPurge({ data: { batchId, venueId } });
+      const r = res?.result ?? {};
+      toast.success(
+        `Deleted. ${r.deleted_shifts ?? 0} shifts, ${r.deleted_staging_rows ?? 0} staged rows, ${r.deleted_employees ?? 0} server names removed.`,
+      );
+      navigate({ to: "/manager/imports" });
+    } catch (e: any) { toast.error(e?.message ?? "Delete failed"); }
+    finally { setBusy(false); }
+  };
+
 
   if (active.status !== "ready") {
     return (
