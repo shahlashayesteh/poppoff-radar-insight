@@ -441,9 +441,37 @@ function ImportsHubPage() {
                         {b.source_filename || "(no filename)"}
                       </Link>
                     </CardTitle>
-                    <Badge className={STATUS_COLORS[b.status] ?? "bg-slate-200 text-slate-800"}>
-                      {b.status.replace(/_/g, " ")}
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                      <Badge className={STATUS_COLORS[b.status] ?? "bg-slate-200 text-slate-800"}>
+                        {b.status.replace(/_/g, " ")}
+                      </Badge>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        disabled={busy === b.id || !venueId}
+                        onClick={async () => {
+                          const label = b.source_filename || "this file";
+                          if (!window.confirm(
+                            `Delete "${label}" permanently?\n\nThis erases the file, all staged rows, any committed shifts from it, and any server names it created that aren't used elsewhere. This cannot be undone.`,
+                          )) return;
+                          try {
+                            setBusy(b.id);
+                            const res: any = await purge({ data: { batchId: b.id, venueId: venueId! } });
+                            const r = res?.result ?? {};
+                            toast.success(
+                              `Deleted. ${r.deleted_shifts ?? 0} shifts, ${r.deleted_staging_rows ?? 0} staged rows, ${r.deleted_employees ?? 0} server names removed.`,
+                            );
+                            refresh();
+                          } catch (e: any) {
+                            toast.error(e?.message ?? "Delete failed");
+                          } finally {
+                            setBusy(null);
+                          }
+                        }}
+                      >
+                        {busy === b.id ? "Deleting…" : "Delete"}
+                      </Button>
+                    </div>
                   </div>
                   <p className="text-xs text-muted-foreground">
                     {b.source_kind} · {b.source_system ?? "unknown source"} · {new Date(b.created_at).toLocaleString()}
@@ -461,6 +489,7 @@ function ImportsHubPage() {
                 </CardContent>
               </Card>
             ))}
+
           </div>
         </section>
       </div>
