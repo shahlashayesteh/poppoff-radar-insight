@@ -79,9 +79,16 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
         return_url: data.returnUrl,
         ...(customerId && { customer: customerId }),
         ...(!isRecurring && productDescription && { payment_intent_data: { description: productDescription } }),
+        ...(isRecurring && {
+          payment_method_collection: "always",
+          subscription_data: {
+            trial_period_days: 30,
+            trial_settings: { end_behavior: { missing_payment_method: "cancel" } },
+            ...(data.userId && { metadata: { userId: data.userId } }),
+          },
+        }),
         ...(data.userId && {
           metadata: { userId: data.userId },
-          ...(isRecurring && { subscription_data: { metadata: { userId: data.userId } } }),
         }),
       });
 
