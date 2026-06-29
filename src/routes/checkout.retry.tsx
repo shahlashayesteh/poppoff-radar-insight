@@ -54,15 +54,16 @@ function CheckoutRetry() {
         <Logo className="text-2xl justify-center" />
         <h1 className="mt-5 font-display text-2xl font-extrabold">Finish your subscription</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          {businessName ? <>Complete payment to activate <b>{businessName}</b>.</> : "Complete payment to activate your venue."}
+          {businessName ? <>Start your 30‑day free trial for <b>{businessName}</b>.</> : "Start your 30‑day free trial."}
         </p>
+        <p className="mt-2 text-xs text-muted-foreground">No charge today. Card required — we'll bill after 30 days. Cancel anytime.</p>
         <button
           disabled={!ready || !priceId}
           onClick={() => setShowCheckout(true)}
           className="mt-6 w-full rounded-xl py-3 text-sm font-bold text-white disabled:opacity-60"
           style={{ background: "var(--brand-orange)" }}
         >
-          Complete payment
+          Start 30‑day free trial
         </button>
         <Link to="/" className="mt-4 inline-block text-xs text-muted-foreground">Back to home</Link>
       </div>
