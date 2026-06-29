@@ -1,40 +1,15 @@
-## Goal
+## Approach
 
-New subscribers enter card details at checkout but are not charged until day 30. After the trial, Stripe automatically bills the saved card on the chosen plan interval.
+Keep `hello@poppoffstats.com` visible as the public-facing address, but stop using `mailto:` links that send users to a mailbox that doesn't exist. Replace every `mailto:hello@poppoffstats.com` with a link to the existing `/contact` page — that form already routes submissions server-side to `sholoola@yahoo.com` (your real inbox), and the visitor never sees your personal address.
 
 ## Changes
 
-### 1. `src/utils/payments.functions.ts` — `createCheckoutSession`
-For recurring prices only, add a 30-day trial to the session:
-
-```ts
-subscription_data: {
-  trial_period_days: 30,
-  trial_settings: {
-    end_behavior: { missing_payment_method: "cancel" },
-  },
-  ...(data.userId && { metadata: { userId: data.userId } }),
-},
-payment_method_collection: "always", // force card capture during trial
-```
-
-Notes:
-- `payment_method_collection: "always"` ensures the card is collected up front so Stripe can charge automatically when the trial ends.
-- `trial_settings.end_behavior.missing_payment_method: "cancel"` is a safety net (cancels if no card on file for any reason).
-- One-time (`mode: "payment"`) prices are untouched.
-- Existing `subscription_data.metadata` merge preserved.
-
-### 2. Status handling — already compatible
-`src/lib/entitlements.ts` already maps Stripe's `trialing` status to `"trialing"` and `canAccessPaidManagerFeatures` already grants access during trial. No change needed.
-
-The webhook (`src/routes/api/public/payments/webhook.ts`) already upserts whatever status Stripe sends (`trialing` → `active` after conversion), so no change needed.
-
-### 3. UI copy (light touch)
-Update the pay button / pricing surfaces that mention "Complete payment" to reflect the trial. Minimal scope:
-- `src/routes/checkout.retry.tsx` — button label "Start 30‑day free trial" and helper text "No charge today. Card required; we'll bill after 30 days. Cancel anytime."
-
-Other pricing/CTA pages can be updated in a follow-up if you want — flag if you'd like them included now.
+- `src/routes/contact.tsx` — drop the "Prefer email? Write to hello@…" line (the form on this page already does the job).
+- `src/routes/terms.tsx` — "Questions? Email hello@…" → "Questions? [Contact us](/contact)." Keep the address shown but not as a mailto.
+- `src/routes/privacy.tsx` — both references: keep `hello@poppoffstats.com` shown as plain text, replace the mailto with a "via our [contact form](/contact)" link for data requests and questions.
+- `src/components/manager-layout.tsx` — two sidebar "Support" links: change `mailto:hello@…` to a `<Link to="/contact">` (label stays "Support" / shows hello@ as caption text only).
+- `public/llms.txt` — leave the visible address but rephrase the line so it points crawlers/agents to the contact page.
 
 ## Out of scope
-- Trial length variation per plan (single 30-day trial for all recurring plans).
-- Trial-eligibility checks (Stripe will give a trial to any new subscription created through this endpoint; if you want to prevent repeat trials per customer, that's a follow-up using `trial_period_days` only when the customer has no prior subs).
+
+Setting up real inbound mail at `hello@poppoffstats.com` (would require MX/forwarding at your DNS host — say the word and I'll write up that path separately). Outgoing notification recipient stays `sholoola@yahoo.com` and is never exposed in the UI.
