@@ -6,7 +6,7 @@ PoppOff turns POS data into per-server scorecards and weekly coaching priorities
 
 ## Pages
 - [Home](https://poppoffstats.com/): Product overview — what PoppOff does, how it works, and pricing
-- [Contact](https://poppoffstats.com/contact): Contact the PoppOff team — email hello@poppoffstats.com
+- [Contact](https://poppoffstats.com/contact): Reach the PoppOff team via the contact form on this page
 - [Privacy Policy](https://poppoffstats.com/privacy): How PoppOff collects and protects data from restaurants and their teams
 - [Terms of Service](https://poppoffstats.com/terms): Terms governing use of PoppOff
 - [Restaurant server performance software](https://poppoffstats.com/restaurant-server-performance-software): How PoppOff makes server performance visible across a restaurant
