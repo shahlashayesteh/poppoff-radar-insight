@@ -67,7 +67,7 @@ function Terms() {
           <h2 className="font-bold text-base mt-6">Disclaimer</h2>
           <p>The service is provided "as is" without warranties. To the extent permitted by law, PoppOff is not liable for indirect or consequential damages.</p>
           <h2 className="font-bold text-base mt-6">Contact</h2>
-          <p>Questions? Email <a className="text-brand-green font-semibold" href="mailto:hello@poppoffstats.com">hello@poppoffstats.com</a>.</p>
+          <p>Questions? <a className="text-brand-green font-semibold" href="/contact">Contact us</a>.</p>
         </div>
       </main>
     </div>

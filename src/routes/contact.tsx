@@ -168,8 +168,9 @@ function ContactPage() {
               </li>
             </ul>
             <p className="mt-8 text-xs text-foreground/60">
-              Prefer email? Write to <a className="underline" href="mailto:hello@poppoffstats.com">hello@poppoffstats.com</a>.
+              Use the form on this page and we'll reply within one business day.
             </p>
+
           </div>
 
           <div className="rounded-2xl border border-border bg-white p-6 md:p-8 shadow-sm">

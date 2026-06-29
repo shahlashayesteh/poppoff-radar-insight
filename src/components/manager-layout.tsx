@@ -125,9 +125,10 @@ export function ManagerLayout({ children }: { children: React.ReactNode }) {
               <div className="text-[11px] text-muted-foreground truncate">{businessName || "General Manager"}</div>
             </div>
           </div>
-          <a href="mailto:hello@poppoffstats.com" className="flex items-center gap-2 rounded-xl px-3 py-2 text-xs text-muted-foreground hover:text-foreground">
+          <a href="/contact" className="flex items-center gap-2 rounded-xl px-3 py-2 text-xs text-muted-foreground hover:text-foreground">
             <HelpCircle className="h-3.5 w-3.5" /> Need help?
           </a>
+
           <button onClick={signOut} className="w-full text-left flex items-center gap-2 rounded-xl px-3 py-2 text-xs text-muted-foreground hover:text-foreground">
             <LogOut className="h-3.5 w-3.5" /> Sign out
           </button>
@@ -162,9 +163,10 @@ export function ManagerLayout({ children }: { children: React.ReactNode }) {
                 );
               })}
               <div className="mt-1 pt-1 border-t border-border">
-                <a href="mailto:hello@poppoffstats.com" className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs text-muted-foreground hover:text-foreground">
+                <a href="/contact" className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs text-muted-foreground hover:text-foreground">
                   <HelpCircle className="h-3.5 w-3.5" /> Need help?
                 </a>
+
                 <button onClick={signOut} className="w-full text-left flex items-center gap-2 rounded-lg px-3 py-2 text-xs text-muted-foreground hover:text-foreground">
                   <LogOut className="h-3.5 w-3.5" /> Sign out
                 </button>
