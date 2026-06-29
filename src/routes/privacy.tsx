@@ -63,9 +63,10 @@ function Privacy() {
           <h2 className="font-bold text-base mt-6">Sharing</h2>
           <p>We do not sell personal information. We share data only with service providers needed to run PoppOff, and where required by law.</p>
           <h2 className="font-bold text-base mt-6">Your rights</h2>
-          <p>You may request access, correction or deletion of your data at any time by contacting hello@poppoffstats.com.</p>
+          <p>You may request access, correction or deletion of your data at any time via our <a className="text-brand-green font-semibold" href="/contact">contact form</a>.</p>
           <h2 className="font-bold text-base mt-6">Contact</h2>
-          <p>Questions about this policy? Email <a className="text-brand-green font-semibold" href="mailto:hello@poppoffstats.com">hello@poppoffstats.com</a>.</p>
+          <p>Questions about this policy? Reach us via our <a className="text-brand-green font-semibold" href="/contact">contact form</a>.</p>
+
         </div>
       </main>
     </div>
